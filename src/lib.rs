@@ -8,3 +8,5 @@ mod environment;
 
 
 pub use self::{as_handle::AsHandle, environment::Environment, error::Error, connection::Connection};
+// Rexports
+pub use widestring::{U16String, U16Str};
