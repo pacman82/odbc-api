@@ -1,7 +1,7 @@
-use crate::{error::ToResult, AsHandle, Error};
+use crate::{error::ToResult, logging::log_diagnostics, AsHandle, Connection, Error};
 use odbc_sys::{
-    AttrOdbcVersion, EnvironmentAttribute, HEnv, Handle, HandleType, SQLAllocHandle, SQLFreeHandle,
-    SQLSetEnvAttr, SqlReturn,
+    AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
+    SQLFreeHandle, SQLSetEnvAttr, SqlReturn,
 };
 use std::{ptr::null_mut, thread::panicking};
 
@@ -75,11 +75,13 @@ impl Environment {
             handle: handle as HEnv,
         };
         if info {
-            // log_diagnostics(&env);
+            log_diagnostics(&env);
         }
         Ok(env)
     }
 
+    /// Declares which Version of the ODBC API we want to use. This is the first thing that should
+    /// be done with any ODBC environment.
     pub fn declare_version(&self, version: AttrOdbcVersion) -> Result<(), Error> {
         unsafe {
             SQLSetEnvAttr(
@@ -89,6 +91,14 @@ impl Environment {
                 0,
             )
             .to_result(self)
+        }
+    }
+
+    pub fn allocate_connection(&self) -> Result<Connection, Error> {
+        let mut handle = null_mut();
+        unsafe {
+            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).to_result(self)?;
+            Ok(Connection::new(handle as HDbc))
         }
     }
 

@@ -5,7 +5,7 @@ use log::warn;
 /// is going to print placeholder characters, if it cannot convert the message to UTF-8.
 pub fn log_diagnostics(handle: &dyn AsHandle) {
     let mut rec_number = 1;
-    let mut rec = Record::new();
+    let mut rec = Record::default();
     // Log results, while there are diagnostic records
     while rec.fill_from(handle, rec_number) {
         warn!("{}", rec);

@@ -121,6 +121,7 @@ pub fn diagnostics(
 ///
 /// The `description` method of the `std::error::Error` trait only returns the message. Use
 /// `std::fmt::Display` to retrieve status code and other information.
+#[derive(Default)]
 pub struct Record {
     // All elements but the last one, may not be null. The last one must be null.
     pub state: State,
@@ -132,14 +133,6 @@ pub struct Record {
 }
 
 impl Record {
-    /// Create a new empty record.
-    pub fn new() -> Record {
-        Record {
-            state: [0; SQLSTATE_SIZEW + 1],
-            message: Vec::new(),
-            native_error: 0,
-        }
-    }
 
     /// Fill this diagnostic `Record` from any ODBC handle.
     ///
@@ -193,7 +186,7 @@ mod test {
         let message: Vec<_> = "[Microsoft][ODBC Driver Manager] Function sequence error"
             .encode_utf16()
             .collect();
-        let mut rec = Record::new();
+        let mut rec = Record::default();
 
         for (index, letter) in "HY010".encode_utf16().enumerate() {
             rec.state[index] = letter;

@@ -30,7 +30,7 @@ impl ToResult for SqlReturn {
                 Ok(())
             }
             SqlReturn::ERROR => {
-                let mut rec = DiagnosticRecord::new();
+                let mut rec = DiagnosticRecord::default();
                 if rec.fill_from(handle, 1) {
                     Err(Error::Diagnostics(rec))
                 } else {
