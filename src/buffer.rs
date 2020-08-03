@@ -1,5 +1,8 @@
 use odbc_sys::SmallInt;
-use std::{cmp::min, ptr::{null, null_mut}};
+use std::{
+    cmp::min,
+    ptr::{null, null_mut},
+};
 
 /// Clamps a usize between `0` and `SmallInt::MAX`.
 pub fn clamp_small_int(n: usize) -> SmallInt {

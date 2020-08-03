@@ -1,4 +1,5 @@
 use crate::{error::ToResult, logging::log_diagnostics, AsHandle, Connection, Error};
+use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
     SQLFreeHandle, SQLSetEnvAttr, SqlReturn,
@@ -71,6 +72,8 @@ impl Environment {
             ),
         };
 
+        debug!("ODBC Environment created.");
+
         let env = Environment {
             handle: handle as HEnv,
         };
@@ -94,6 +97,7 @@ impl Environment {
         }
     }
 
+    /// Allocate a new connection handle. The `Connection` must not outlive the `Environment`.
     pub fn allocate_connection(&self) -> Result<Connection, Error> {
         let mut handle = null_mut();
         unsafe {

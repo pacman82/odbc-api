@@ -1,12 +1,15 @@
 mod as_handle;
 mod buffer;
-mod diagnostics;
-mod logging;
-mod error;
 mod connection;
+mod diagnostics;
 mod environment;
+mod error;
+mod logging;
+mod statement;
 
-
-pub use self::{as_handle::AsHandle, environment::Environment, error::Error, connection::Connection};
+pub use self::{
+    as_handle::AsHandle, connection::Connection, environment::Environment, error::Error,
+    statement::Statement,
+};
 // Rexports
-pub use widestring::{U16String, U16Str};
+pub use widestring::{U16Str, U16String};

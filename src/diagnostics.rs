@@ -133,7 +133,6 @@ pub struct Record {
 }
 
 impl Record {
-
     /// Fill this diagnostic `Record` from any ODBC handle.
     ///
     /// # Return
