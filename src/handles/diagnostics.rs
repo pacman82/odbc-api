@@ -1,4 +1,4 @@
-use crate::{
+use super::{
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
 };

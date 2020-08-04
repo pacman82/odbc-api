@@ -1,55 +1,22 @@
-use crate::{error::ToResult, logging::log_diagnostics, AsHandle, Connection, Error};
-use log::debug;
-use odbc_sys::{
-    AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
-    SQLFreeHandle, SQLSetEnvAttr, SqlReturn,
-};
-use std::{ptr::null_mut, thread::panicking};
+use crate::{Error, handles, Connection};
+use odbc_sys::AttrOdbcVersion;
+use widestring::U16Str;
 
-/// An `Environment` is a global context, in which to access data.
-///
-/// Associated with an `Environment` is any information that is global in nature, such as:
+/// An ODBC 3.8 environment. Associated with an `Environment` is any information that is global in
+/// nature, such as:
 ///
 /// * The `Environment`'s state
 /// * The current environment-level diagnostics
 /// * The handles of connections currently allocated on the environment
 /// * The current stetting of each environment attribute
-#[derive(Debug)]
 pub struct Environment {
-    /// Invariant: Should always point to a valid ODBC Environment
-    handle: HEnv,
-}
-
-unsafe impl AsHandle for Environment {
-    fn as_handle(&self) -> Handle {
-        self.handle as Handle
-    }
-
-    fn handle_type(&self) -> HandleType {
-        HandleType::Env
-    }
-}
-
-impl Drop for Environment {
-    fn drop(&mut self) {
-        unsafe {
-            match SQLFreeHandle(HandleType::Env, self.handle as Handle) {
-                SqlReturn::SUCCESS => (),
-                other => {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the
-                    // original error.
-                    if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
-            }
-        }
-    }
+    environment: handles::Environment  
 }
 
 impl Environment {
-    /// An allocated ODBC Environment handle
-    ///
+
+    /// Allocates a new ODBC Environment and declares that the Application wants to use ODBC version
+    /// 3.8.
     /// # Safety
     ///
     /// There may only be one Odbc environment in any process at any time. Take care using this
@@ -60,54 +27,46 @@ impl Environment {
     ///
     /// Creating one environment in your binary is safe however.
     pub unsafe fn new() -> Result<Self, Error> {
-        let mut handle = null_mut();
-        let (handle, info) = match SQLAllocHandle(HandleType::Env, null_mut(), &mut handle) {
-            // We can't provide nay diagnostics, as we don't have
-            SqlReturn::ERROR => return Err(Error::NoDiagnostics),
-            SqlReturn::SUCCESS => (handle, false),
-            SqlReturn::SUCCESS_WITH_INFO => (handle, true),
-            other => panic!(
-                "Unexpected Return value for allocating ODBC Environment: {:?}",
-                other
-            ),
-        };
-
-        debug!("ODBC Environment created.");
-
-        let env = Environment {
-            handle: handle as HEnv,
-        };
-        if info {
-            log_diagnostics(&env);
-        }
-        Ok(env)
+        let environment = crate::handles::Environment::new()?;
+        environment.declare_version(AttrOdbcVersion::Odbc3_80)?;
+        Ok(Self { environment })
     }
 
-    /// Declares which Version of the ODBC API we want to use. This is the first thing that should
-    /// be done with any ODBC environment.
-    pub fn declare_version(&self, version: AttrOdbcVersion) -> Result<(), Error> {
-        unsafe {
-            SQLSetEnvAttr(
-                self.handle,
-                EnvironmentAttribute::OdbcVersion,
-                version.into(),
-                0,
-            )
-            .to_result(self)
-        }
+    /// Allocates a connection handle and establishes connections to a driver and a data source.
+    ///
+    /// * See [Connecting with SQLConnect][1]
+    /// * See [SQLConnectFunction][2]
+    ///
+    /// # Arguments
+    ///
+    /// * `data_source_name` - Data source name. The data might be located on the same computer as
+    /// the program, or on another computer somewhere on a network.
+    /// * `user` - User identifier.
+    /// * `pwd` - Authentication string (typically the password).
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
+    pub fn connect(
+        &mut self,
+        data_source_name: &U16Str,
+        user: &U16Str,
+        pwd: &U16Str,
+    ) -> Result<Connection, Error> {
+        let mut connection = self.environment.allocate_connection()?;
+        connection.connect(data_source_name, user, pwd)?;
+        Ok(Connection::new(connection))
     }
 
-    /// Allocate a new connection handle. The `Connection` must not outlive the `Environment`.
-    pub fn allocate_connection(&self) -> Result<Connection, Error> {
-        let mut handle = null_mut();
-        unsafe {
-            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).to_result(self)?;
-            Ok(Connection::new(handle as HDbc))
-        }
-    }
-
-    /// Provides access to the raw ODBC environment handle.
-    pub fn as_raw(&self) -> HEnv {
-        self.handle
+    /// Allocates a connection handle and establishes connections to a driver and a data source.
+    ///
+    /// An alternative to `connect`. It supports data sources that require more connection
+    /// information than the three arguments in `connect` and data sources that are not defined in
+    /// the system information.
+    pub fn connect_with_connection_string(
+        &mut self,
+        connection_string: &U16Str,
+    ) -> Result<Connection, Error> {
+        let mut connection = self.environment.allocate_connection()?;
+        connection.connect_with_connection_string(connection_string)?;
+        Ok(Connection::new(connection))
     }
 }

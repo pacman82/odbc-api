@@ -1,9 +1,9 @@
-use crate::{buffer::buf_ptr, error::ToResult, AsHandle, Error};
+use super::{buffer::buf_ptr, error::ToResult, as_handle::AsHandle, error::Error};
+use widestring::U16Str;
 use odbc_sys::{
     HDbc, HStmt, Handle, HandleType, SQLCloseCursor, SQLExecDirectW, SQLFreeHandle, SqlReturn,
 };
 use std::{convert::TryInto, marker::PhantomData, thread::panicking};
-use widestring::U16Str;
 
 pub struct Statement<'s> {
     parent: PhantomData<&'s HDbc>,

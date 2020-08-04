@@ -1,4 +1,4 @@
-use crate::{as_handle::AsHandle, diagnostics::Record};
+use super::{as_handle::AsHandle, diagnostics::Record};
 use log::warn;
 
 /// This function inspectas all the diagnostics of an ODBC handle and logs their text messages. It

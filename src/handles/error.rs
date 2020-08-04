@@ -1,4 +1,6 @@
-use crate::{diagnostics::Record as DiagnosticRecord, logging::log_diagnostics, AsHandle};
+use super::{
+    as_handle::AsHandle, diagnostics::Record as DiagnosticRecord, logging::log_diagnostics,
+};
 use odbc_sys::SqlReturn;
 use thiserror::Error as ThisError;
 

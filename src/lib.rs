@@ -1,15 +1,12 @@
-mod as_handle;
-mod buffer;
-mod connection;
-mod diagnostics;
-mod environment;
-mod error;
-mod logging;
-mod statement;
+pub mod column_description;
+pub mod connection;
+pub mod cursor;
+pub mod environment;
+pub mod handles;
 
 pub use self::{
-    as_handle::AsHandle, connection::Connection, environment::Environment, error::Error,
-    statement::Statement,
+    column_description::ColumnDescription, connection::Connection, cursor::Cursor,
+    environment::Environment, handles::Error,
 };
 // Rexports
 pub use widestring::{U16Str, U16String};
