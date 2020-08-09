@@ -1,4 +1,12 @@
-use odbc_sys::{Nullable, SqlDataType, WChar, SmallInt, ULen};
+use odbc_sys::{SqlDataType, WChar, SmallInt, ULen};
+
+/// Indication of wether a column is nullable or not.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Nullable {
+    Unknown,
+    Nullable,
+    NoNulls,
+}
 
 /// Describes the type and attributes of a column.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,7 +29,7 @@ impl Default for ColumnDescription {
             data_type: SqlDataType::UnknownType,
             column_size: 0,
             decimal_digits: 0,
-            nullable: Nullable::UNKNOWN,
+            nullable: Nullable::Unknown,
         }
     }
 }

@@ -5,13 +5,15 @@
 
 mod as_handle;
 mod buffer;
+mod column_description;
+mod connection;
 mod diagnostics;
+mod environment;
 mod error;
 mod logging;
-mod connection;
-mod environment;
 mod statement;
 
 pub use {
-    as_handle::AsHandle, connection::Connection, environment::Environment, statement::Statement, error::Error
+    as_handle::AsHandle, column_description::{ColumnDescription, Nullable}, connection::Connection,
+    environment::Environment, error::Error, statement::Statement,
 };

@@ -1,5 +1,5 @@
 [package]
-name = "odbc-array"
+name = "odbc-api"
 version = "0.1.0"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-sys = { git = "https://github.com/pacman82/odbc-sys", branch = "Renaming-and-safe-usage" }
+odbc-sys = "0.10.0"
 thiserror = "1.0.20"
 log = "0.4.11"
 widestring = "0.4.2"
