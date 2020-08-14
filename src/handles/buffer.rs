@@ -1,4 +1,4 @@
-use odbc_sys::{CDataType, SmallInt, Pointer, Len};
+use odbc_sys::SmallInt;
 use std::{
     cmp::min,
     ptr::{null, null_mut},
@@ -27,11 +27,4 @@ pub fn buf_ptr<T>(buffer: &[T]) -> *const T {
     } else {
         buffer.as_ptr()
     }
-}
-
-/// A buffer suitable to bind to a cursor using `bind_col`.
-pub unsafe trait Buffer {
-    fn target_type(&self) -> CDataType;
-    fn target_value(&self) -> Pointer;
-    fn buffer_length(&self) -> Len;
 }

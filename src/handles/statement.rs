@@ -1,16 +1,16 @@
 use super::{
     as_handle::AsHandle,
-    buffer::{buf_ptr, clamp_small_int, mut_buf_ptr, Buffer},
+    buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     error::{Error, ToResult},
 };
 use odbc_sys::{
-    FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, Pointer, SQLBindCol, SQLCloseCursor,
-    SQLDescribeColW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLFreeStmt, SQLNumResultCols,
-    SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen,
-    USmallInt,
+    CDataType, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, Pointer, SQLBindCol,
+    SQLCloseCursor, SQLDescribeColW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLFreeStmt,
+    SQLNumResultCols, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute,
+    UInteger, ULen, USmallInt,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
+use std::{convert::TryInto, marker::PhantomData, thread::panicking};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -79,6 +79,7 @@ impl<'s> Statement<'s> {
         }
     }
 
+    /// Close an open cursor.
     pub fn close_cursor(&mut self) -> Result<(), Error> {
         unsafe { SQLCloseCursor(self.handle) }.to_result(self)
     }
@@ -203,32 +204,38 @@ impl<'s> Statement<'s> {
         unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.to_result(self)
     }
 
-    /// Binds application data buffers to columns in the result set
+    /// Binds application data buffers to columns in the result set.
     ///
     /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
     /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
     /// column than there are columns in the result set. This error cannot be detected until the
     /// result set has been created, so it is returned by `fetch`, not `bind_col`.
+    /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
+    /// retrieving data from the data source with `fetch`, the driver converts the data to this
+    /// type. When it sends data to the source, the driver converts the data from this type.
+    /// * `target_value`: Pointer to the data buffer to bind to the column.
+    /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
+    /// aka. block fetching data).
+    /// * `indicator`: Buffer is going to hold length or indicator values.
     ///
     /// # Safety
+    ///
     /// It is the callers responsibility to make sure the bound columns live until they are no
     /// longer bound.
-    pub unsafe fn bind_col<T>(
+    pub unsafe fn bind_col(
         &mut self,
         column_number: USmallInt,
-        value: &mut T,
-        indicator: Option<&mut [Len]>,
-    ) -> Result<(), Error>
-    where
-        T: Buffer + ?Sized,
-    {
-        let indicator = indicator.map(mut_buf_ptr).unwrap_or_else(null_mut);
+        target_type: CDataType,
+        target_value: Pointer,
+        target_length: Len,
+        indicator: *mut Len,
+    ) -> Result<(), Error> {
         SQLBindCol(
             self.handle,
             column_number,
-            value.target_type(),
-            value.target_value(),
-            value.buffer_length(),
+            target_type,
+            target_value,
+            target_length,
             indicator,
         )
         .to_result(self)

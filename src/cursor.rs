@@ -1,5 +1,5 @@
 use crate::{handles::Statement, ColumnDescription, Error};
-use odbc_sys::{SmallInt, USmallInt, UInteger, ULen};
+use odbc_sys::{SmallInt, USmallInt, UInteger, ULen, Len, CDataType, Pointer};
 use std::thread::panicking;
 
 pub struct Cursor<'open_connection> {
@@ -73,5 +73,39 @@ impl<'o> Cursor<'o> {
     /// columnar binding.
     pub unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error> {
         self.statement.set_row_bind_type(row_size)
+    }
+
+    /// Release all columen buffers bound by `bind_col`. Except bookmark column.
+    pub fn unbind_cols(&mut self) -> Result<(), Error> {
+        self.statement.unbind_cols()
+    }
+
+    /// Binds application data buffers to columns in the result set
+    ///
+    /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
+    /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
+    /// column than there are columns in the result set. This error cannot be detected until the
+    /// result set has been created, so it is returned by `fetch`, not `bind_col`.
+    /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
+    /// retrieving data from the data source with `fetch`, the driver converts the data to this
+    /// type. When it sends data to the source, the driver converts the data from this type.
+    /// * `target_value`: Pointer to the data buffer to bind to the column.
+    /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
+    /// aka. block fetching data).
+    /// * `indicator`: Buffer is going to hold length or indicator values.
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to make sure the bound columns live until they are no
+    /// longer bound.
+    pub unsafe fn bind_col(
+        &mut self,
+        column_number: USmallInt,
+        target_type: CDataType,
+        target_value: Pointer,
+        target_length: Len,
+        indicator: *mut Len,
+    ) -> Result<(), Error> {
+        self.statement.bind_col(column_number, target_type, target_value, target_length, indicator)
     }
 }

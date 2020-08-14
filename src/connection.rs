@@ -23,7 +23,7 @@ impl<'c> Connection<'c> {
         Self{ connection }
     }
 
-    pub fn exec_direct(&self, query: &U16Str) -> Result<Option<Cursor>, Error>{
+    pub fn exec_direct(&mut self, query: &U16Str) -> Result<Option<Cursor>, Error>{
         let mut stmt = self.connection.allocate_statement()?;
         if stmt.exec_direct(query)?{
             Ok(Some(Cursor::new(stmt)))

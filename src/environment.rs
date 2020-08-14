@@ -46,7 +46,7 @@ impl Environment {
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(
-        &mut self,
+        &self,
         data_source_name: &U16Str,
         user: &U16Str,
         pwd: &U16Str,
@@ -61,8 +61,10 @@ impl Environment {
     /// An alternative to `connect`. It supports data sources that require more connection
     /// information than the three arguments in `connect` and data sources that are not defined in
     /// the system information.
+    ///
+    /// To find out your connection string try: <https://www.connectionstrings.com/>
     pub fn connect_with_connection_string(
-        &mut self,
+        &self,
         connection_string: &U16Str,
     ) -> Result<Connection, Error> {
         let mut connection = self.environment.allocate_connection()?;
