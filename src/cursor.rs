@@ -108,4 +108,12 @@ impl<'o> Cursor<'o> {
     ) -> Result<(), Error> {
         self.statement.bind_col(column_number, target_type, target_value, target_length, indicator)
     }
+
+    /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
+    /// otherwise.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn is_unsigned_column(&self, column_number: USmallInt) -> Result<bool, Error> {
+        self.statement.is_unsigned_column(column_number)
+    }
 }

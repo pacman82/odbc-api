@@ -41,4 +41,13 @@ impl ColumnDescription {
     pub fn name_to_string(&self) -> Result<String, DecodeUtf16Error> {
         decode_utf16(self.name.iter().copied()).collect()
     }
+
+    /// `true` if the column is `Nullable` or it is not know wether the column is nullable. `false`
+    /// if and only if the column is `NoNulls`.
+    pub fn could_be_nullable(&self) -> bool {
+        match self.nullable {
+            Nullable::Nullable | Nullable::Unknown => true,
+            Nullable::NoNulls => false,
+        }
+    }
 }

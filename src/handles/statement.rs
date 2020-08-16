@@ -5,12 +5,12 @@ use super::{
     error::{Error, ToResult},
 };
 use odbc_sys::{
-    CDataType, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, Pointer, SQLBindCol,
-    SQLCloseCursor, SQLDescribeColW, SQLExecDirectW, SQLFetch, SQLFreeHandle, SQLFreeStmt,
-    SQLNumResultCols, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute,
-    UInteger, ULen, USmallInt,
+    CDataType, Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, Pointer, SQLBindCol,
+    SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLFetch, SQLFreeHandle,
+    SQLFreeStmt, SQLNumResultCols, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn,
+    StatementAttribute, UInteger, ULen, USmallInt,
 };
-use std::{convert::TryInto, marker::PhantomData, thread::panicking};
+use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -239,5 +239,30 @@ impl<'s> Statement<'s> {
             indicator,
         )
         .to_result(self)
+    }
+
+    /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
+    /// otherwise.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn is_unsigned_column(&self, column_number: USmallInt) -> Result<bool, Error> {
+        let mut out: Len = 0;
+        unsafe {
+            SQLColAttributeW(
+                self.handle,
+                column_number,
+                Desc::Unsigned,
+                null_mut(),
+                0,
+                null_mut(),
+                &mut out as *mut Len,
+            )
+            .to_result(self)?;
+        };
+        match out {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => panic!("Unsigend column attrubte must be either 0 or 1."),
+        }
     }
 }

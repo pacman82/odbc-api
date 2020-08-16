@@ -1,6 +1,6 @@
 use crate::{Error, handles, Connection};
 use odbc_sys::AttrOdbcVersion;
-use widestring::U16Str;
+use widestring::{U16String, U16Str};
 
 /// An ODBC 3.8 environment. Associated with an `Environment` is any information that is global in
 /// nature, such as:
@@ -64,6 +64,23 @@ impl Environment {
     ///
     /// To find out your connection string try: <https://www.connectionstrings.com/>
     pub fn connect_with_connection_string(
+        &self,
+        connection_string: &str,
+    ) -> Result<Connection, Error> {
+        let connection_string = U16String::from_str(connection_string);
+        let mut connection = self.environment.allocate_connection()?;
+        connection.connect_with_connection_string(&connection_string)?;
+        Ok(Connection::new(connection))
+    }
+
+    /// Allocates a connection handle and establishes connections to a driver and a data source.
+    ///
+    /// An alternative to `connect`. It supports data sources that require more connection
+    /// information than the three arguments in `connect` and data sources that are not defined in
+    /// the system information.
+    ///
+    /// To find out your connection string try: <https://www.connectionstrings.com/>
+    pub fn connect_with_connection_string_utf16(
         &self,
         connection_string: &U16Str,
     ) -> Result<Connection, Error> {
