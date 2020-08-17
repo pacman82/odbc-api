@@ -1,6 +1,6 @@
 pub use crate::{handles, Cursor, Error};
-use widestring::{U16String, U16Str};
 use std::thread::panicking;
+use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -15,12 +15,12 @@ impl<'conn> Drop for Connection<'conn> {
 }
 
 pub struct Connection<'c> {
-    connection: handles::Connection<'c>
+    connection: handles::Connection<'c>,
 }
 
 impl<'c> Connection<'c> {
-    pub (crate) fn new(connection: handles::Connection<'c>) -> Self {
-        Self{ connection }
+    pub(crate) fn new(connection: handles::Connection<'c>) -> Self {
+        Self { connection }
     }
 
     /// Executes a preparable statement, using the current values of the parameter marker variables
@@ -32,9 +32,9 @@ impl<'c> Connection<'c> {
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct_utf16(&mut self, query: &U16Str) -> Result<Option<Cursor>, Error>{
+    pub fn exec_direct_utf16(&mut self, query: &U16Str) -> Result<Option<Cursor>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
-        if stmt.exec_direct(query)?{
+        if stmt.exec_direct(query)? {
             Ok(Some(Cursor::new(stmt)))
         } else {
             // ODBC Driver returned NoData.
@@ -51,7 +51,7 @@ impl<'c> Connection<'c> {
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct(&mut self, query: &str) -> Result<Option<Cursor>, Error>{
+    pub fn exec_direct(&mut self, query: &str) -> Result<Option<Cursor>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query)
     }

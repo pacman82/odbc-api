@@ -1,5 +1,5 @@
 use crate::{handles::Statement, ColumnDescription, Error};
-use odbc_sys::{SmallInt, USmallInt, UInteger, ULen, Len, CDataType, Pointer};
+use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt};
 use std::thread::panicking;
 
 pub struct Cursor<'open_connection> {
@@ -58,7 +58,7 @@ impl<'o> Cursor<'o> {
     }
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
-    pub unsafe fn set_row_array_size(&mut self, size: UInteger) -> Result<(), Error>{
+    pub unsafe fn set_row_array_size(&mut self, size: UInteger) -> Result<(), Error> {
         self.statement.set_row_array_size(size)
     }
 
@@ -106,7 +106,13 @@ impl<'o> Cursor<'o> {
         target_length: Len,
         indicator: *mut Len,
     ) -> Result<(), Error> {
-        self.statement.bind_col(column_number, target_type, target_value, target_length, indicator)
+        self.statement.bind_col(
+            column_number,
+            target_type,
+            target_value,
+            target_length,
+            indicator,
+        )
     }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`

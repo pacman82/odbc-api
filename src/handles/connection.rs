@@ -1,13 +1,13 @@
 use super::{
     as_handle::AsHandle, buffer::buf_ptr, error::Error, error::ToResult, statement::Statement,
 };
-use widestring::U16Str;
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
     HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
     SQLFreeHandle, SQLSetConnectAttrW, SqlReturn,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
+use widestring::U16Str;
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.

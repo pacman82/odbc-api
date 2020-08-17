@@ -1,9 +1,9 @@
-use super::{error::ToResult, logging::log_diagnostics, as_handle::AsHandle, Connection, Error};
+use super::{as_handle::AsHandle, error::ToResult, logging::log_diagnostics, Connection, Error};
+use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
     SQLFreeHandle, SQLSetEnvAttr, SqlReturn,
 };
-use log::debug;
 use std::{ptr::null_mut, thread::panicking};
 
 /// An `Environment` is a global context, in which to access data.

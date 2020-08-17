@@ -14,6 +14,10 @@ mod logging;
 mod statement;
 
 pub use {
-    as_handle::AsHandle, column_description::{ColumnDescription, Nullable}, connection::Connection,
-    environment::Environment, error::Error, statement::Statement,
+    as_handle::AsHandle,
+    column_description::{ColumnDescription, Nullable},
+    connection::Connection,
+    environment::Environment,
+    error::Error,
+    statement::Statement,
 };

@@ -1,6 +1,6 @@
-use crate::{Error, handles, Connection};
+use crate::{handles, Connection, Error};
 use odbc_sys::AttrOdbcVersion;
-use widestring::{U16String, U16Str};
+use widestring::{U16Str, U16String};
 
 /// An ODBC 3.8 environment. Associated with an `Environment` is any information that is global in
 /// nature, such as:
@@ -10,11 +10,10 @@ use widestring::{U16String, U16Str};
 /// * The handles of connections currently allocated on the environment
 /// * The current stetting of each environment attribute
 pub struct Environment {
-    environment: handles::Environment  
+    environment: handles::Environment,
 }
 
 impl Environment {
-
     /// Allocates a new ODBC Environment and declares that the Application wants to use ODBC version
     /// 3.8.
     /// # Safety
