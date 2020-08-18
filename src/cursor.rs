@@ -58,11 +58,20 @@ impl<'o> Cursor<'o> {
     }
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
+    /// specified amount of rows.
     pub unsafe fn set_row_array_size(&mut self, size: UInteger) -> Result<(), Error> {
         self.statement.set_row_array_size(size)
     }
 
     /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
+    ///
+    /// # Safety
+    ///
+    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
     pub unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut ULen) -> Result<(), Error> {
         self.statement.set_num_rows_fetched(num_rows)
     }
@@ -71,6 +80,11 @@ impl<'o> Cursor<'o> {
     ///
     /// Any Positive number indicates a row wise binding with that row length. `0` indicates a
     /// columnar binding.
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to ensure that the bound buffers match the memory layout
+    /// specified by this function.
     pub unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error> {
         self.statement.set_row_bind_type(row_size)
     }
