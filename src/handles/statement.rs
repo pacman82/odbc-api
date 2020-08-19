@@ -102,7 +102,7 @@ impl<'s> Statement<'s> {
         // Use maximum available capacity.
         name.resize(name.capacity(), 0);
         let mut name_length: SmallInt = 0;
-        column_description.data_type = SqlDataType::UnknownType;
+        column_description.data_type = SqlDataType::UNKNOWN_TYPE;
         column_description.column_size = 0;
         column_description.decimal_digits = 0;
         let mut nullable = odbc_sys::Nullable::UNKNOWN;
@@ -278,5 +278,50 @@ impl<'s> Statement<'s> {
             1 => Ok(true),
             _ => panic!("Unsigend column attrubte must be either 0 or 1."),
         }
+    }
+
+    /// Returns a number identifying the SQL type of the column in the result set.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_data_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+        let out = unsafe { self.numeric_col_attribute(Desc::Type, column_number)? };
+        Ok(SqlDataType(out.try_into().unwrap()))
+    }
+
+    /// Returns the size in bytes of the columns. For variable sized types the maximum size is
+    /// returned, excluding a terminating zero.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_octet_length(&self, column_number: USmallInt) -> Result<Len, Error> {
+        unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
+    }
+
+    /// Maximum number of characters required to display data from the column.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_display_size(&self, column_number: USmallInt) -> Result<Len, Error> {
+        unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
+    }
+
+    /// # Safety
+    ///
+    /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
+    unsafe fn numeric_col_attribute(
+        &self,
+        attribute: Desc,
+        column_number: USmallInt,
+    ) -> Result<Len, Error> {
+        let mut out: Len = 0;
+        SQLColAttributeW(
+            self.handle,
+            column_number,
+            attribute,
+            null_mut(),
+            0,
+            null_mut(),
+            &mut out as *mut Len,
+        )
+        .to_result(self)?;
+        Ok(out)
     }
 }

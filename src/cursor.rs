@@ -1,5 +1,5 @@
 use crate::{handles::Statement, ColumnDescription, Error};
-use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt};
+use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt, SqlDataType};
 use std::thread::panicking;
 
 pub struct Cursor<'open_connection> {
@@ -135,5 +135,77 @@ impl<'o> Cursor<'o> {
     /// `column_number`: Index of the column, starting at 1.
     pub fn is_unsigned_column(&self, column_number: USmallInt) -> Result<bool, Error> {
         self.statement.is_unsigned_column(column_number)
+    }
+
+    /// Binds this cursor to a buffer holding a row set.
+    pub fn bind_row_set_buffer<'r, B>(
+        &'r mut self,
+        row_set_buffer: &'r mut B,
+    ) -> Result<RowSetCursor<'r, 'o, B>, Error>
+    where
+        B: RowSetBuffer,
+        'o: 'r,
+    {
+        unsafe {
+            row_set_buffer.bind_to_cursor(self)?;
+        }
+        Ok(RowSetCursor::new(row_set_buffer, self))
+    }
+
+    /// SqlDataType
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_data_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+        self.statement.col_data_type(column_number)
+    }
+
+    /// Returns the size in bytes of the columns. For variable sized types the maximum size is
+    /// returned, excluding a terminating zero.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_octet_length(&self, column_number: USmallInt) -> Result<Len, Error> {
+        self.statement.col_octet_length(column_number)
+    }
+
+    /// Maximum number of characters required to display data from the column.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_display_size(&self, column_number: USmallInt) -> Result<Len, Error> {
+        self.statement.col_display_size(column_number)
+    }
+}
+
+pub unsafe trait RowSetBuffer {
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut Cursor) -> Result<(), Error>;
+}
+
+pub struct RowSetCursor<'r, 'o, B> {
+    buffer: &'r mut B,
+    cursor: &'r mut Cursor<'o>,
+}
+
+impl<'r, 'o, B> RowSetCursor<'r, 'o, B> {
+    fn new(buffer: &'r mut B, cursor: &'r mut Cursor<'o>) -> Self {
+        Self { buffer, cursor }
+    }
+
+    pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
+        if self.cursor.fetch()? {
+            Ok(Some(self.buffer))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl<'r, 'o, B> Drop for RowSetCursor<'r, 'o, B> {
+    fn drop(&mut self) {
+        if let Err(e) = self.cursor.unbind_cols() {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexepected error unbinding columns: {:?}", e)
+            }
+        }
     }
 }

@@ -5,7 +5,7 @@ pub mod handles;
 
 pub use self::{
     connection::Connection,
-    cursor::Cursor,
+    cursor::{Cursor, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, Error, Nullable},
 };

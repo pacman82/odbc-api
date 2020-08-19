@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+* Adds `col_display_size`, `col_data_type` and `col_octet_length` to `Cursor`.
+
 ## 0.1.1
 
 * Adds convinience methods, which take UTF-8 in public interface.

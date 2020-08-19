@@ -27,7 +27,7 @@ impl Default for ColumnDescription {
     fn default() -> Self {
         Self {
             name: Vec::new(),
-            data_type: SqlDataType::UnknownType,
+            data_type: SqlDataType::UNKNOWN_TYPE,
             column_size: 0,
             decimal_digits: 0,
             nullable: Nullable::Unknown,
