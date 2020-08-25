@@ -1,7 +1,9 @@
-pub mod connection;
-pub mod cursor;
-pub mod environment;
+mod connection;
+mod cursor;
+mod environment;
+
 pub mod handles;
+pub mod buffers;
 
 pub use self::{
     connection::Connection,
