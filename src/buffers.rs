@@ -1,8 +1,9 @@
 //! This module contains buffers intended to be bound to ODBC statement handles.
 mod text_column;
-use odbc_sys::{Pointer, CDataType, Len};
+mod text_row_set;
+use odbc_sys::{CDataType, Len, Pointer};
 
-pub use text_column::TextColumn;
+pub use self::{text_column::TextColumn, text_row_set::TextRowSet};
 
 /// Arguments used to descripbe the buffer then binding this column to a cursor.
 pub struct BindColParameters {
@@ -21,7 +22,6 @@ pub struct BindColParameters {
 
 /// A type implementing this trait can be bound to a column of a cursor.
 pub unsafe trait ColumnBuffer {
-
     /// Arguments used to descripbe the buffer then binding this column to a cursor.
     fn bind_arguments(&mut self) -> BindColParameters;
 }

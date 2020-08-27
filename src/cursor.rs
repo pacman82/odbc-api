@@ -138,16 +138,15 @@ impl<'o> Cursor<'o> {
     }
 
     /// Binds this cursor to a buffer holding a row set.
-    pub fn bind_row_set_buffer<'r, B>(
-        &'r mut self,
-        row_set_buffer: &'r mut B,
-    ) -> Result<RowSetCursor<'r, 'o, B>, Error>
+    pub fn bind_row_set_buffer<'b, B>(
+        mut self,
+        row_set_buffer: &'b mut B,
+    ) -> Result<RowSetCursor<'b, 'o, B>, Error>
     where
         B: RowSetBuffer,
-        'o: 'r,
     {
         unsafe {
-            row_set_buffer.bind_to_cursor(self)?;
+            row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
     }
@@ -175,20 +174,31 @@ impl<'o> Cursor<'o> {
     }
 }
 
+/// A Row set buffer binds row, or column wise buffers to a cursor in order to fill them with row
+/// sets with each call to fetch.
 pub unsafe trait RowSetBuffer {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut Cursor) -> Result<(), Error>;
 }
 
-pub struct RowSetCursor<'r, 'o, B> {
-    buffer: &'r mut B,
-    cursor: &'r mut Cursor<'o>,
+
+/// A row set cursor iterates blockwise over row sets, filling them in buffers, instead of iterating
+/// the result set row by row.
+pub struct RowSetCursor<'b, 'o, B> {
+    buffer: &'b mut B,
+    cursor: Cursor<'o>,
 }
 
-impl<'r, 'o, B> RowSetCursor<'r, 'o, B> {
-    fn new(buffer: &'r mut B, cursor: &'r mut Cursor<'o>) -> Self {
+impl<'b, 'o, B> RowSetCursor<'b, 'o, B> {
+    fn new(buffer: &'b mut B, cursor: Cursor<'o>) -> Self {
         Self { buffer, cursor }
     }
 
+    /// Fills the bound buffer with the next row set.
+    ///
+    /// # Return
+    ///
+    /// `None` if the result set is empty and all row sets have been extracetd. `Some` with a
+    /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
         if self.cursor.fetch()? {
             Ok(Some(self.buffer))
@@ -196,16 +206,10 @@ impl<'r, 'o, B> RowSetCursor<'r, 'o, B> {
             Ok(None)
         }
     }
-}
 
-impl<'r, 'o, B> Drop for RowSetCursor<'r, 'o, B> {
-    fn drop(&mut self) {
-        if let Err(e) = self.cursor.unbind_cols() {
-            // Avoid panicking, if we already have a panic. We don't want to mask the original
-            // error.
-            if !panicking() {
-                panic!("Unexepected error unbinding columns: {:?}", e)
-            }
-        }
+    /// Unbind the buffer, leaving the cursor free to bind another buffer to it.
+    pub fn unbind(mut self) -> Result<Cursor<'o>, Error> {
+        self.cursor.unbind_cols()?;
+        Ok(self.cursor)
     }
 }
