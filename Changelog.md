@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+Adds `buffers::TextRowSet`.
+
 ## 0.1.2
 
 * Adds `col_display_size`, `col_data_type` and `col_octet_length` to `Cursor`.
