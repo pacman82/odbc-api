@@ -2,8 +2,9 @@ use crate::{handles, Connection, Error};
 use odbc_sys::AttrOdbcVersion;
 use widestring::{U16Str, U16String};
 
-/// An ODBC 3.8 environment. Associated with an `Environment` is any information that is global in
-/// nature, such as:
+/// An ODBC 3.8 environment.
+///
+/// Associated with an `Environment` is any information that is global in nature, such as:
 ///
 /// * The `Environment`'s state
 /// * The current environment-level diagnostics
@@ -42,6 +43,7 @@ impl Environment {
     /// the program, or on another computer somewhere on a network.
     /// * `user` - User identifier.
     /// * `pwd` - Authentication string (typically the password).
+    ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(

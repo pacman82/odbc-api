@@ -2,6 +2,7 @@ use crate::{handles::Statement, ColumnDescription, Error};
 use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt, SqlDataType};
 use std::thread::panicking;
 
+/// Cursors are used to process and iterate the result sets returned by executing queries.
 pub struct Cursor<'open_connection> {
     statement: Statement<'open_connection>,
 }

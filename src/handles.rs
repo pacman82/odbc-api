@@ -17,6 +17,7 @@ pub use {
     as_handle::AsHandle,
     column_description::{ColumnDescription, Nullable},
     connection::Connection,
+    diagnostics::Record,
     environment::Environment,
     error::Error,
     statement::Statement,

@@ -14,6 +14,8 @@ impl<'conn> Drop for Connection<'conn> {
     }
 }
 
+/// The connection handle references storage of all information about the connection to the data
+/// source, including status, transaction state, and error information.
 pub struct Connection<'c> {
     connection: handles::Connection<'c>,
 }
