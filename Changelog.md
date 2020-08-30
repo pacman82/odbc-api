@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+* Fix: `buffers::TextColumn` now correctly adjusts the target length by +1 for terminating zero.
+
 ## 0.2.0
 
 Adds `buffers::TextRowSet`.
