@@ -29,7 +29,8 @@ impl TextColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elments. Each value may
     /// have a maximum length of `max_str_len`. This implies that max_str_len is increased by one in
     /// order to make space for the null terminating zero at the end of strings.
-    pub fn new(batch_size: usize, max_str_len: usize) -> Self {
+    pub fn new(batch_size: usize, mut max_str_len: usize) -> Self {
+        max_str_len += 1;
         TextColumn {
             max_str_len,
             values: vec![0; (max_str_len + 1) * batch_size],
