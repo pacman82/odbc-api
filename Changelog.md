@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+* Add trait `buffers::FixSizedCType`.
+
 ## 0.2.1
 
 * Fix: `buffers::TextColumn` now correctly adjusts the target length by +1 for terminating zero.

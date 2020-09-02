@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use env_logger;
 use std::sync::Mutex;
 
-const MSSQL: &str = "Driver={SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 // Therefore synchronize test execution.
