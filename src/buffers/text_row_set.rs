@@ -1,6 +1,7 @@
+use super::{BindColParameters, ColumnBuffer, TextColumn};
 use crate::{Cursor, Error, RowSetBuffer};
-use super::{BindColParameters, TextColumn, ColumnBuffer};
 use odbc_sys::{UInteger, ULen, USmallInt};
+use std::str::Utf8Error;
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
@@ -34,11 +35,18 @@ impl TextRowSet {
         unsafe { self.buffers[col_index].value_at(row_index) }
     }
 
+    /// Access the element at the specified position in the row set.
+    pub fn at_as_str(&self, col_index: usize, row_index: usize) -> Result<Option<&str>, Utf8Error> {
+        self.at(col_index, row_index)
+            .map(std::str::from_utf8)
+            .transpose()
+    }
+
     /// Return the number of columns in the row set.
     pub fn num_cols(&self) -> usize {
         self.buffers.len()
     }
- 
+
     /// Return the number of rows in the row set.
     pub fn num_rows(&self) -> usize {
         self.num_rows_fetched as usize

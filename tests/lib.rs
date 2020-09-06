@@ -1,9 +1,10 @@
-use odbc_api::{ColumnDescription, Environment, Nullable, U16String};
-use lazy_static::lazy_static;
 use env_logger;
+use lazy_static::lazy_static;
+use odbc_api::{buffers, ColumnDescription, Environment, Nullable, U16String};
 use std::sync::Mutex;
 
-const MSSQL: &str = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+const MSSQL: &str =
+    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 // Therefore synchronize test execution.
@@ -34,7 +35,7 @@ fn connect_to_movies_db() {
 }
 
 #[test]
-fn describe_columns() {
+fn mssql_describe_columns() {
     let _ = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
@@ -45,7 +46,6 @@ fn describe_columns() {
     assert_eq!(cursor.num_result_cols().unwrap(), 2);
     let mut cd = ColumnDescription::default();
     cursor.describe_col(1, &mut cd).unwrap();
-
 
     cursor.describe_col(1, &mut cd).unwrap();
     let name = U16String::from_str("title");
@@ -74,4 +74,26 @@ fn describe_columns() {
     };
 
     assert_eq!(year_desc, cd);
+}
+
+#[test]
+fn mssql_text_buffer() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title, year FROM Movies ORDER BY year;";
+    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let batch_size = 2;
+    let mut buffer = buffers::TextRowSet::new(batch_size, &cursor).unwrap();
+    let mut row_set_cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+    let mut row_set = row_set_cursor.fetch().unwrap().unwrap();
+    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Interstellar"); 
+    assert!(row_set.at_as_str(1, 0).unwrap().is_none());
+    assert_eq!(row_set.at_as_str(0, 1).unwrap().unwrap(), "2001: A Space Odyssey"); 
+    assert_eq!(row_set.at_as_str(1, 1).unwrap().unwrap(), "1968"); 
+    row_set = row_set_cursor.fetch().unwrap().unwrap();
+    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Jurassic Park"); 
+    assert_eq!(row_set.at_as_str(1, 0).unwrap().unwrap(), "1993"); 
 }
