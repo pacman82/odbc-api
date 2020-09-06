@@ -1,0 +1,40 @@
+[package]
+name = "odbcsv"
+version = "0.1.4"
+authors = ["Markus Klein <markus-klein@live.de>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pacman82/odbc-api"
+documentation = "https://docs.rs/odbcsv/"
+
+# A short blurb about the package. This is not rendered in any format when
+# uploaded to crates.io (aka this is not markdown).
+description = "Query an ODBC data source and print the result as csv."
+
+# This is a list of up to five keywords that describe this crate. Keywords
+# are searchable on crates.io, and you may choose any words that would
+# help someone find this crate.
+keywords = ["odbc", "csv", "sql"]
+
+# This is a list of up to five categories where this crate would fit.
+# Categories are a fixed list available at crates.io/category_slugs, and
+# they must match exactly.
+categories = ["command-line-utilities"]
+
+# This points to a file under the package root (relative to this `Cargo.toml`).
+# The contents of this file are stored and indexed in the registry.
+# crates.io will render this file and place the result on the crate's page.
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+odbc-api = { path = "../odbc-api" }
+csv = "1.1.3"
+anyhow = "1.0.32"
+stderrlog = "0.4.3"
+structopt = "0.3.17"
+
+[dev-dependencies]
+assert_cmd = "1.0.1"
+
