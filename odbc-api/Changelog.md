@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+* Adds `cursor::col_precision`.
+* Adds `cursor::col_scale`.
+* Adds `cursor::col_name`.
+
 ## 0.2.2
 
 * Add trait `buffers::FixSizedCType`.

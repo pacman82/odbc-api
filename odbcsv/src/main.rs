@@ -2,9 +2,10 @@ use anyhow::Error;
 use odbc_api::{
     buffers::TextRowSet,
     sys::{UInteger, USmallInt},
-    ColumnDescription, Environment,
+    Environment,
 };
 use std::{
+    char::decode_utf16,
     fs::File,
     io::{stdout, Write},
     path::PathBuf,
@@ -63,13 +64,15 @@ fn main() -> Result<(), Error> {
     match connection.exec_direct(&opt.query)? {
         Some(cursor) => {
             let num_cols = cursor.num_result_cols()?;
-            let mut column_description = ColumnDescription::default();
+            let mut buf_wchar = Vec::new();
             let mut headline = Vec::new();
             let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
 
             for index in 1..(num_cols as USmallInt + 1) {
-                cursor.describe_col(index as USmallInt, &mut column_description)?;
-                headline.push(column_description.name_to_string()?);
+                cursor.col_name(index, &mut buf_wchar)?;
+                let name =
+                    decode_utf16(buf_wchar.iter().copied()).collect::<Result<String, _>>()?;
+                headline.push(name);
             }
 
             let mut row_set_cursor = cursor.bind_row_set_buffer(&mut buffers)?;
