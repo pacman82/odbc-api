@@ -14,7 +14,7 @@ lazy_static! {
 
 fn init() -> &'static Mutex<()> {
     // Set environment to something like:
-    // RUST_LOG=autodbc=info cargo test
+    // RUST_LOG=odbc-api=info cargo test
     let _ = env_logger::builder().is_test(true).try_init();
     &SERIALIZE
 }
@@ -96,4 +96,25 @@ fn mssql_text_buffer() {
     row_set = row_set_cursor.fetch().unwrap().unwrap();
     assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Jurassic Park"); 
     assert_eq!(row_set.at_as_str(1, 0).unwrap().unwrap(), "1993"); 
+}
+
+#[test]
+fn mssql_column_attributes() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title, year FROM Movies;";
+    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let mut buf = Vec::new();
+
+    cursor.col_name(1, &mut buf).unwrap();
+    let buf = U16String::from_vec(buf);
+    assert_eq!("title", buf.to_string().unwrap());
+
+    let mut buf = buf.into_vec();
+    cursor.col_name(2, &mut buf).unwrap();
+    let name = U16String::from_vec(buf);
+    assert_eq!("year", name.to_string().unwrap());
 }

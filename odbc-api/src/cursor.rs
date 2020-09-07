@@ -1,5 +1,5 @@
 use crate::{handles::Statement, ColumnDescription, Error};
-use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt, SqlDataType};
+use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt, SqlDataType, WChar};
 use std::thread::panicking;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
@@ -172,6 +172,27 @@ impl<'o> Cursor<'o> {
     /// `column_number`: Index of the column, starting at 1.
     pub fn col_display_size(&self, column_number: USmallInt) -> Result<Len, Error> {
         self.statement.col_display_size(column_number)
+    }
+
+    /// Precision of the column.
+    ///
+    /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
+    /// the interval data types that represent a time interval, its value is the applicable
+    /// precision of the fractional seconds component.
+    pub fn col_precision(&self, column_number: USmallInt) -> Result<Len, Error> {
+        self.statement.col_precision(column_number)
+    }
+
+    /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
+    /// the defined scale. It is undefined for all other data types.
+    pub fn col_scale(&self, column_number: USmallInt) -> Result<Len, Error> {
+        self.statement.col_scale(column_number)
+    }
+
+    /// The column alias, if it applies. If the column alias does not apply, the column name is
+    /// returned. If there is no column name or a column alias, an empty string is returned.
+    pub fn col_name(&self, column_number: USmallInt, buf: &mut Vec<WChar>) -> Result<(), Error> {
+        self.statement.col_name(column_number, buf)
     }
 }
 
