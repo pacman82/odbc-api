@@ -271,8 +271,17 @@ impl<'s> Statement<'s> {
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_data_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+    pub fn col_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
         let out = unsafe { self.numeric_col_attribute(Desc::Type, column_number)? };
+        Ok(SqlDataType(out.try_into().unwrap()))
+    }
+
+    /// The concise data type. For the datetime and interval data types, this field returns the
+    /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_concise_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+        let out = unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number)? };
         Ok(SqlDataType(out.try_into().unwrap()))
     }
 

@@ -158,24 +158,4 @@ impl<'c> Connection<'c> {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback).to_result(self)
         }
     }
-
-    // /// `true` if the data source is read only
-    // pub fn is_read_only(&mut self) -> Result<bool, Error> {
-    //     unsafe {
-    //         let mut buffer:[WChar; 2] = [0; 2];
-    //         SQLGetInfoW(
-    //             self.handle,
-    //             InfoType::DataSourceReadOnly,
-    //             mut_buf_ptr(&mut buffer) as Pointer,
-    //             (buffer.len() * size_of::<WChar>()) as SmallInt,
-    //             null_mut(),
-    //         )
-    //         .to_result(self)?;
-    //         Ok(match buffer[0] as char {
-    //             'N' => false,
-    //             'Y' => true,
-    //             _ => panic!(r#"Driver may only return "N" or "Y""#),
-    //         })
-    //     }
-    // }
 }

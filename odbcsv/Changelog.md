@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.1.6
+
+* Column aliases are for headlines are no more reliably retrieved, even for ODBC data sources with drivers not reporting the column name length.
+
 ## 0.1.5
 
-* Use Column attributes instead of describe column to deduce names.
+* Use column attributes instead of describe column to deduce names.
 
 ## 0.1.4
 

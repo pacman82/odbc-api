@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+* Renamed `cursor::col_data_type` to `cursor::col_type`.
+* Adds `cursor::col_concise_type`.
+
 ## 0.2.3
 
 * Adds `cursor::col_precision`.

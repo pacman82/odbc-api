@@ -155,8 +155,16 @@ impl<'o> Cursor<'o> {
     /// SqlDataType
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_data_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
-        self.statement.col_data_type(column_number)
+    pub fn col_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+        self.statement.col_type(column_number)
+    }
+
+    /// The concise data type. For the datetime and interval data types, this field returns the
+    /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_concise_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+        self.statement.col_type(column_number)
     }
 
     /// Returns the size in bytes of the columns. For variable sized types the maximum size is

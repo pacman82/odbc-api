@@ -1,4 +1,5 @@
 use anyhow::Error;
+use log::info;
 use odbc_api::{
     buffers::TextRowSet,
     sys::{UInteger, USmallInt},
@@ -64,7 +65,10 @@ fn main() -> Result<(), Error> {
     match connection.exec_direct(&opt.query)? {
         Some(cursor) => {
             let num_cols = cursor.num_result_cols()?;
-            let mut buf_wchar = Vec::new();
+            // Some ODBC drivers do not report the required size to hold the column name. Starting
+            // with a reasonable sized buffers, allows us to fetch reasonable sized column alias
+            // even from those.
+            let mut buf_wchar = Vec::with_capacity(128);
             let mut headline = Vec::new();
             let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
 
@@ -79,7 +83,14 @@ fn main() -> Result<(), Error> {
 
             writer.write_record(headline)?;
 
-            while let Some(ref buffer) = row_set_cursor.fetch()? {
+            let mut num_batch = 0;
+            while let Some(buffer) = row_set_cursor.fetch()? {
+                num_batch += 1;
+                info!(
+                    "Fetched batch {} with {} rows.",
+                    num_batch,
+                    buffer.num_rows()
+                );
                 for row_index in 0..buffer.num_rows() {
                     let record = (0..buffer.num_cols())
                         .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
