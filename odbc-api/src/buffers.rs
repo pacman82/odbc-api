@@ -1,11 +1,19 @@
 //! This module contains buffers intended to be bound to ODBC statement handles.
+mod fixed_sized;
 mod text_column;
 mod text_row_set;
-mod fixed_sized_c_type;
 
 use odbc_sys::{CDataType, Len, Pointer};
 
-pub use self::{text_column::TextColumn, text_row_set::TextRowSet, fixed_sized_c_type::FixedSizedCType};
+pub use self::{
+    fixed_sized::{
+        FixedSizedCType, OptDateColumnBuffer, OptF32ColumnBuffer, OptF64ColumnBuffer,
+        OptFixedSizedColumnBuffer, OptI32ColumnBuffer, OptI64ColumnBuffer,
+        OptTimestampColumnBuffer,
+    },
+    text_column::TextColumn,
+    text_row_set::TextRowSet,
+};
 
 /// Arguments used to descripbe the buffer then binding this column to a cursor.
 pub struct BindColParameters {

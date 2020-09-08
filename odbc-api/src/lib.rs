@@ -7,8 +7,8 @@ mod connection;
 mod cursor;
 mod environment;
 
-pub mod handles;
 pub mod buffers;
+pub mod handles;
 
 pub use self::{
     connection::Connection,

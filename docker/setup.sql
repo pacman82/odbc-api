@@ -1,6 +1,6 @@
 CREATE TABLE Movies(
     title VARCHAR(255) NOT NULL,
-    year int
+    year INT
 );
 
 INSERT INTO Movies (title, year) Values ('Jurassic Park', 1993);
@@ -13,4 +13,15 @@ CREATE TABLE Birthdays(
 )
 
 INSERT INTO BIRTHDAYS (name, birthday) Values ('Keanu Reeves', '1964-09-02');
-INSERT INTO BIRTHDAYS (name, birthday) Values ('Robin Wiliams', '1951-07-21'); 
+INSERT INTO BIRTHDAYS (name, birthday) Values ('Robin Wiliams', '1951-07-21');
+
+CREATE TABLE Sales(
+    id INT PRIMARY KEY,
+    time TIMESTAMP,
+    product INT,
+    price DECIMAL(10,2)
+)
+
+INSERT INTO SALES (id, time, product, price) Values (1, '2020-09-09 00:05:34', 54, 9.99);
+INSERT INTO SALES (id, time, product, price) Values (2, '2020-09-10 12:05:32', 54, 9.99);
+INSERT INTO SALES (id, time, product, price) Values (3, '2020-09-10 14:05:32', 34, 2.00);

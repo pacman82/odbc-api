@@ -1,6 +1,6 @@
 use env_logger;
 use lazy_static::lazy_static;
-use odbc_api::{buffers, ColumnDescription, Environment, Nullable, U16String};
+use odbc_api::{buffers, sys::SqlDataType, ColumnDescription, Environment, Nullable, U16String};
 use std::sync::Mutex;
 
 const MSSQL: &str =
@@ -89,13 +89,16 @@ fn mssql_text_buffer() {
     let mut buffer = buffers::TextRowSet::new(batch_size, &cursor).unwrap();
     let mut row_set_cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
     let mut row_set = row_set_cursor.fetch().unwrap().unwrap();
-    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Interstellar"); 
+    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Interstellar");
     assert!(row_set.at_as_str(1, 0).unwrap().is_none());
-    assert_eq!(row_set.at_as_str(0, 1).unwrap().unwrap(), "2001: A Space Odyssey"); 
-    assert_eq!(row_set.at_as_str(1, 1).unwrap().unwrap(), "1968"); 
+    assert_eq!(
+        row_set.at_as_str(0, 1).unwrap().unwrap(),
+        "2001: A Space Odyssey"
+    );
+    assert_eq!(row_set.at_as_str(1, 1).unwrap().unwrap(), "1968");
     row_set = row_set_cursor.fetch().unwrap().unwrap();
-    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Jurassic Park"); 
-    assert_eq!(row_set.at_as_str(1, 0).unwrap().unwrap(), "1993"); 
+    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Jurassic Park");
+    assert_eq!(row_set.at_as_str(1, 0).unwrap().unwrap(), "1993");
 }
 
 #[test]
@@ -117,4 +120,18 @@ fn mssql_column_attributes() {
     cursor.col_name(2, &mut buf).unwrap();
     let name = U16String::from_vec(buf);
     assert_eq!("year", name.to_string().unwrap());
+}
+
+#[test]
+fn mssql_prices_decimal() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT price FROM Sales ORDER BY id;";
+    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(1).unwrap());
+    assert_eq!(10, cursor.col_precision(1).unwrap());
+    assert_eq!(2, cursor.col_scale(1).unwrap());
 }

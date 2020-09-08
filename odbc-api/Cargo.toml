@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 license = "MIT"
@@ -29,7 +29,7 @@ readme = "Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-sys = "0.12.1"
+odbc-sys = "0.12.5"
 thiserror = "1.0.20"
 log = "0.4.11"
 widestring = "0.4.2"

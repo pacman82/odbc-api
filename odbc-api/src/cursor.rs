@@ -1,5 +1,5 @@
-use crate::{handles::Statement, ColumnDescription, Error};
-use odbc_sys::{CDataType, Len, Pointer, SmallInt, UInteger, ULen, USmallInt, SqlDataType, WChar};
+use crate::{buffers::BindColParameters, handles::Statement, ColumnDescription, Error};
+use odbc_sys::{Len, SmallInt, SqlDataType, UInteger, ULen, USmallInt, WChar};
 use std::thread::panicking;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
@@ -116,11 +116,14 @@ impl<'o> Cursor<'o> {
     pub unsafe fn bind_col(
         &mut self,
         column_number: USmallInt,
-        target_type: CDataType,
-        target_value: Pointer,
-        target_length: Len,
-        indicator: *mut Len,
+        bind_params: BindColParameters,
     ) -> Result<(), Error> {
+        let BindColParameters {
+            target_type,
+            target_value,
+            target_length,
+            indicator,
+        } = bind_params;
         self.statement.bind_col(
             column_number,
             target_type,
@@ -209,7 +212,6 @@ impl<'o> Cursor<'o> {
 pub unsafe trait RowSetBuffer {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut Cursor) -> Result<(), Error>;
 }
-
 
 /// A row set cursor iterates blockwise over row sets, filling them in buffers, instead of iterating
 /// the result set row by row.
