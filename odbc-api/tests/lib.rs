@@ -1,7 +1,9 @@
+use buffers::ColumnBuffer;
 use env_logger;
 use lazy_static::lazy_static;
 use odbc_api::{buffers, sys::SqlDataType, ColumnDescription, Environment, Nullable, U16String};
-use std::sync::Mutex;
+use odbc_sys::Integer;
+use std::{convert::TryInto, sync::Mutex};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -129,7 +131,7 @@ fn mssql_prices() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
-    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
 
     // Test names
     let mut buf = Vec::new();
@@ -146,6 +148,27 @@ fn mssql_prices() {
     assert_eq!("time", name(3));
     assert_eq!("product", name(4));
     assert_eq!("price", name(5));
+
+    // Test binding id int buffer
+    let batch_size = 10;
+    assert_eq!(SqlDataType::INTEGER, cursor.col_concise_type(1).unwrap());
+    let mut id_buffer: Vec<Integer> = vec![0; batch_size];
+    unsafe {
+        cursor
+            .set_row_array_size(batch_size.try_into().unwrap())
+            .unwrap();
+
+        // Bind id integer column
+        cursor.bind_col(1, id_buffer.bind_arguments()).unwrap();
+        let mut num_rows_fetched = 0;
+        cursor.set_num_rows_fetched(&mut num_rows_fetched).unwrap();
+
+        cursor.fetch().unwrap();
+
+        assert_eq!([1, 2, 3], id_buffer[0..num_rows_fetched as usize]);
+    }
+
+    cursor.fetch().unwrap();
 
     // Test types
 
