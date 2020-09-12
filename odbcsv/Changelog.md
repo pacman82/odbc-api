@@ -1,5 +1,9 @@
 # Changelog
 
+## Next version
+
+* Renaming: Drops `Buffer` suffix from `OptDateColumn`, `OptF32Column`, `OptF64Column`, `OptFixedSizedColumn`, `OptI32Column`, `OptI64Column`, `OptTimestampColumn`.
+
 ## 0.1.6
 
 * Column aliases are for headlines are no more reliably retrieved, even for ODBC data sources with drivers not reporting the column name length.
@@ -14,8 +18,8 @@
 
 ## 0.1.3
 
-* Update metadata
-* Update dependencies
+* Updated metadata
+* Updated dependencies
 
 ## 0.1.2
 

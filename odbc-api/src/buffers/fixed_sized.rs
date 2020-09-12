@@ -6,20 +6,20 @@ use odbc_sys::{
     USmallInt, NULL_DATA,
 };
 
-pub type OptF64ColumnBuffer = OptFixedSizedColumnBuffer<f64>;
-pub type OptF32ColumnBuffer = OptFixedSizedColumnBuffer<f32>;
-pub type OptDateColumnBuffer = OptFixedSizedColumnBuffer<Date>;
-pub type OptTimestampColumnBuffer = OptFixedSizedColumnBuffer<Timestamp>;
-pub type OptI32ColumnBuffer = OptFixedSizedColumnBuffer<i32>;
-pub type OptI64ColumnBuffer = OptFixedSizedColumnBuffer<i64>;
+pub type OptF64Column = OptFixedSizedColumn<f64>;
+pub type OptF32Column = OptFixedSizedColumn<f32>;
+pub type OptDateColumn = OptFixedSizedColumn<Date>;
+pub type OptTimestampColumn = OptFixedSizedColumn<Timestamp>;
+pub type OptI32Column = OptFixedSizedColumn<i32>;
+pub type OptI64Column = OptFixedSizedColumn<i64>;
 
 /// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
-pub struct OptFixedSizedColumnBuffer<T> {
+pub struct OptFixedSizedColumn<T> {
     values: Vec<T>,
     indicators: Vec<Len>,
 }
 
-impl<T> OptFixedSizedColumnBuffer<T>
+impl<T> OptFixedSizedColumn<T>
 where
     T: Default + Clone,
 {
@@ -47,7 +47,7 @@ where
     }
 }
 
-unsafe impl<T> ColumnBuffer for OptFixedSizedColumnBuffer<T>
+unsafe impl<T> ColumnBuffer for OptFixedSizedColumn<T>
 where
     T: FixedSizedCType,
 {
