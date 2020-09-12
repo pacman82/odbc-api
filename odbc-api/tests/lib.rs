@@ -123,15 +123,33 @@ fn mssql_column_attributes() {
 }
 
 #[test]
-fn mssql_prices_decimal() {
+fn mssql_prices() {
     let _ = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT price FROM Sales ORDER BY id;";
+    let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
     let cursor = conn.exec_direct(sql).unwrap().unwrap();
 
-    assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(1).unwrap());
-    assert_eq!(10, cursor.col_precision(1).unwrap());
-    assert_eq!(2, cursor.col_scale(1).unwrap());
+    // Test names
+    let mut buf = Vec::new();
+
+    let mut name = |column_number| {
+        cursor.col_name(column_number, &mut buf).unwrap();
+        std::char::decode_utf16(buf.iter().copied())
+            .collect::<Result<String, _>>()
+            .unwrap()
+    };
+
+    assert_eq!("id", name(1));
+    assert_eq!("day", name(2));
+    assert_eq!("time", name(3));
+    assert_eq!("product", name(4));
+    assert_eq!("price", name(5));
+
+    // Test types
+
+    assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(5).unwrap());
+    assert_eq!(10, cursor.col_precision(5).unwrap());
+    assert_eq!(2, cursor.col_scale(5).unwrap());
 }
