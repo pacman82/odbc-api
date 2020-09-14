@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+* Implements `FixedCSizedCType` for `odbc_sys::Time`.
+
 ## 0.3.0
 
 * Renamed `cursor::col_data_type` to `cursor::col_type`.

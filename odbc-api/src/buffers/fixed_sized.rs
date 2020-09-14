@@ -4,12 +4,13 @@ use super::{BindColParameters, ColumnBuffer};
 use odbc_sys::{
     CDataType, Char, Date, Integer, Len, Numeric, Pointer, SChar, SmallInt, Timestamp, UInteger,
     USmallInt, NULL_DATA,
-};
+Time};
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
 pub type OptDateColumn = OptFixedSizedColumn<Date>;
 pub type OptTimestampColumn = OptFixedSizedColumn<Timestamp>;
+pub type OptTimeColumn = OptFixedSizedColumn<Time>;
 pub type OptI32Column = OptFixedSizedColumn<i32>;
 pub type OptI64Column = OptFixedSizedColumn<i64>;
 
@@ -95,6 +96,10 @@ unsafe impl FixedSizedCType for Date {
 
 unsafe impl FixedSizedCType for Timestamp {
     const C_DATA_TYPE: CDataType = CDataType::TypeTimestamp;
+}
+
+unsafe impl FixedSizedCType for Time {
+    const C_DATA_TYPE: CDataType = CDataType::TypeTime;
 }
 
 unsafe impl FixedSizedCType for Numeric {
