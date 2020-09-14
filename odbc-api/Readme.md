@@ -2,6 +2,29 @@
 
 ODBC (Open Database Connectivity) bindings for Rust.
 
+## Usage
+
+```rust
+let env = unsafe { Environment::new().unwrap() };
+
+let mut conn = env.connect_with_connection_string(CONNECTION_STRING)?;
+let sql = "SELECT title, year FROM Movies ORDER BY year;";
+let cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+let batch_size = 1000;
+let mut buffer = buffers::TextRowSet::new(batch_size, &cursor).unwrap();
+let mut row_set_cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+while let Some(row_set_buffer) = row_set_cursor.fetch()? {
+    for row_index in 0..buffer.num_rows() {
+        println!(
+            "title: {}, year: {}",
+            row_set_buffer.at_as_str(0, row_index)?.unwrap_or("NULL"),
+            row_set_buffer.at_as_str(1, row_index)?.unwrap_or("NULL"),
+        );
+    }
+}
+```
+
 ## Motivation
 
 Supports writing ODBC Application in Rust. Prior work in this area has been done:
@@ -26,4 +49,4 @@ ODBC calls produce a Result. If successful they may also produce any number of w
 
 ## State
 
-This library is in an early state and very much a work in progress. I add features as I need them.
+Currently this libray enables you to efficiently query data and retrieve the results in blocks rather than line row by row, making efficient use of how odbc manages and bind buffers. This is as far as I know the only ODBC rust wrapper which does this.
