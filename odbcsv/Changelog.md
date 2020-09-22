@@ -2,7 +2,9 @@
 
 ## Next version
 
-* Renaming: Drops `Buffer` suffix from `OptDateColumn`, `OptF32Column`, `OptF64Column`, `OptFixedSizedColumn`, `OptI32Column`, `OptI64Column`, `OptTimestampColumn`.
+## 0.1.7
+
+* Updated Dependencies
 
 ## 0.1.6
 

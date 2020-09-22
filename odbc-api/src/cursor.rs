@@ -1,4 +1,4 @@
-use crate::{buffers::BindColParameters, handles::Statement, ColumnDescription, Error};
+use crate::{buffers::BindColParameters, handles::Statement, ColumnDescription, Error, handles::Description};
 use odbc_sys::{Len, SmallInt, SqlDataType, UInteger, ULen, USmallInt, WChar};
 use std::thread::panicking;
 
@@ -13,7 +13,7 @@ impl<'o> Drop for Cursor<'o> {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
-                panic!("Unexepected error disconnecting: {:?}", e)
+                panic!("Unexepected error closing cursor: {:?}", e)
             }
         }
     }
@@ -204,6 +204,10 @@ impl<'o> Cursor<'o> {
     /// returned. If there is no column name or a column alias, an empty string is returned.
     pub fn col_name(&self, column_number: USmallInt, buf: &mut Vec<WChar>) -> Result<(), Error> {
         self.statement.col_name(column_number, buf)
+    }
+
+    pub fn application_row_descriptor(&self) -> Result<Description, Error> {
+        self.statement.application_row_descriptor()
     }
 }
 

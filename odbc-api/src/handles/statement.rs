@@ -2,13 +2,14 @@ use super::{
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
+    data_type::DataType,
     error::{Error, ToResult},
-};
+Description};
 use odbc_sys::{
-    CDataType, Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, Pointer, SQLBindCol,
-    SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLFetch, SQLFreeHandle,
-    SQLFreeStmt, SQLNumResultCols, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn,
-    StatementAttribute, UInteger, ULen, USmallInt, WChar,
+    CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, Pointer,
+    SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLFetch,
+    SQLFreeHandle, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLSetStmtAttrW, SmallInt,
+    SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
 use widestring::U16Str;
@@ -102,9 +103,9 @@ impl<'s> Statement<'s> {
         // Use maximum available capacity.
         name.resize(name.capacity(), 0);
         let mut name_length: SmallInt = 0;
-        column_description.data_type = SqlDataType::UNKNOWN_TYPE;
-        column_description.column_size = 0;
-        column_description.decimal_digits = 0;
+        let mut data_type = SqlDataType::UNKNOWN_TYPE;
+        let mut column_size = 0;
+        let mut decimal_digits = 0;
         let mut nullable = odbc_sys::Nullable::UNKNOWN;
 
         unsafe {
@@ -114,9 +115,9 @@ impl<'s> Statement<'s> {
                 mut_buf_ptr(name),
                 clamp_small_int(name.len()),
                 &mut name_length,
-                &mut column_description.data_type,
-                &mut column_description.column_size,
-                &mut column_description.decimal_digits,
+                &mut data_type,
+                &mut column_size,
+                &mut decimal_digits,
                 &mut nullable,
             )
             .to_result(self)?;
@@ -129,12 +130,13 @@ impl<'s> Statement<'s> {
             other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
         };
 
-        if name_length > clamp_small_int(name.len()) {
+        if name_length + 1 > clamp_small_int(name.len()) {
             // Buffer is to small to hold name, retry with larger buffer
             name.resize(name_length as usize + 1, 0);
             self.describe_col(column_number, column_description)
         } else {
             name.resize(name_length as usize, 0);
+            column_description.data_type = DataType::new(data_type, column_size, decimal_digits);
             Ok(())
         }
     }
@@ -349,6 +351,21 @@ impl<'s> Statement<'s> {
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
         }
         Ok(())
+    }
+
+    pub fn application_row_descriptor(&self) -> Result<Description, Error> {
+        let mut hdesc: HDesc = null_mut();
+        unsafe {
+            SQLGetStmtAttr(
+                self.handle,
+                StatementAttribute::AppRowDesc,
+                &mut hdesc as *mut HDesc as Pointer,
+                0,
+                null_mut(),
+            )
+            .to_result(self)?;
+            Ok(Description::new(hdesc))
+        }
     }
 
     /// # Safety

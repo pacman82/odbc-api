@@ -7,6 +7,8 @@ mod as_handle;
 mod buffer;
 mod column_description;
 mod connection;
+mod data_type;
+mod description;
 mod diagnostics;
 mod environment;
 mod error;
@@ -17,6 +19,8 @@ pub use {
     as_handle::AsHandle,
     column_description::{ColumnDescription, Nullable},
     connection::Connection,
+    data_type::DataType,
+    description::Description,
     diagnostics::Record,
     environment::Environment,
     error::Error,

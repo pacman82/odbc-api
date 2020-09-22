@@ -1,4 +1,5 @@
-use odbc_sys::{SmallInt, SqlDataType, ULen, WChar};
+use super::data_type::DataType;
+use odbc_sys::WChar;
 use std::char::{decode_utf16, DecodeUtf16Error};
 
 /// Indication of wether a column is nullable or not.
@@ -9,30 +10,21 @@ pub enum Nullable {
     NoNulls,
 }
 
+impl Default for Nullable {
+    fn default() -> Self {
+        Nullable::Unknown
+    }
+}
+
 /// Describes the type and attributes of a column.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct ColumnDescription {
     /// Colmun name. May be empty if unavailable.
     pub name: Vec<WChar>,
     /// Type of the column
-    pub data_type: SqlDataType,
-    /// Size of column element
-    pub column_size: ULen,
-    pub decimal_digits: SmallInt,
+    pub data_type: DataType,
     /// Indicates wether the column is nullable or not.
     pub nullable: Nullable,
-}
-
-impl Default for ColumnDescription {
-    fn default() -> Self {
-        Self {
-            name: Vec::new(),
-            data_type: SqlDataType::UNKNOWN_TYPE,
-            column_size: 0,
-            decimal_digits: 0,
-            nullable: Nullable::Unknown,
-        }
-    }
 }
 
 impl ColumnDescription {

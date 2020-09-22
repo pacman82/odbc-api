@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+* Introduced `DataType` into the `ColumnDescription` struct.
+* Renaming: Drops `Buffer` suffix from `OptDateColumn`, `OptF32Column`, `OptF64Column`, `OptFixedSizedColumn`, `OptI32Column`, `OptI64Column`, `OptTimestampColumn`.
+
 ## 0.3.1
 
 * Implements `FixedCSizedCType` for `odbc_sys::Time`.

@@ -14,7 +14,7 @@ pub use self::{
     connection::Connection,
     cursor::{Cursor, RowSetBuffer, RowSetCursor},
     environment::Environment,
-    handles::{ColumnDescription, Error, Nullable},
+    handles::{ColumnDescription, DataType, Error, Nullable},
 };
 // Rexports
 /// Rexport `odbc-sys` as sys to enable applications to always use the same version as this crate.

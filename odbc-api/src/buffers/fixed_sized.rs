@@ -2,9 +2,9 @@ use std::ptr::null_mut;
 
 use super::{BindColParameters, ColumnBuffer};
 use odbc_sys::{
-    CDataType, Char, Date, Integer, Len, Numeric, Pointer, SChar, SmallInt, Timestamp, UInteger,
-    USmallInt, NULL_DATA,
-Time};
+    CDataType, Char, Date, Integer, Len, Numeric, Pointer, SChar, SmallInt, Time, Timestamp,
+    UInteger, USmallInt, NULL_DATA,
+};
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
@@ -13,6 +13,7 @@ pub type OptTimestampColumn = OptFixedSizedColumn<Timestamp>;
 pub type OptTimeColumn = OptFixedSizedColumn<Time>;
 pub type OptI32Column = OptFixedSizedColumn<i32>;
 pub type OptI64Column = OptFixedSizedColumn<i64>;
+pub type OptNumericColumn = OptFixedSizedColumn<Numeric>;
 
 /// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
 pub struct OptFixedSizedColumn<T> {

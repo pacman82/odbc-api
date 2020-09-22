@@ -1,8 +1,11 @@
-use buffers::ColumnBuffer;
+use buffers::{ColumnBuffer, TextColumn};
 use env_logger;
 use lazy_static::lazy_static;
-use odbc_api::{buffers, sys::SqlDataType, ColumnDescription, Environment, Nullable, U16String};
-use odbc_sys::Integer;
+use odbc_api::{
+    buffers,
+    sys::{Integer, SqlDataType},
+    ColumnDescription, DataType, Environment, Nullable, U16String,
+};
 use std::{convert::TryInto, sync::Mutex};
 
 const MSSQL: &str =
@@ -55,9 +58,7 @@ fn mssql_describe_columns() {
     // Expectation title column
     let title_desc = ColumnDescription {
         name: name.into_vec(),
-        data_type: odbc_sys::SqlDataType::VARCHAR,
-        column_size: 255,
-        decimal_digits: 0,
+        data_type: DataType::Varchar { length: 255 },
         nullable: Nullable::NoNulls,
     };
 
@@ -66,12 +67,10 @@ fn mssql_describe_columns() {
     cursor.describe_col(2, &mut cd).unwrap();
     let name = U16String::from_str("year");
 
-    // Expectation title column
+    // Expectation year column
     let year_desc = ColumnDescription {
         name: name.into_vec(),
-        data_type: odbc_sys::SqlDataType::INTEGER,
-        column_size: 10,
-        decimal_digits: 0,
+        data_type: DataType::Integer,
         nullable: Nullable::Nullable,
     };
 
@@ -175,4 +174,83 @@ fn mssql_prices() {
     assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(5).unwrap());
     assert_eq!(10, cursor.col_precision(5).unwrap());
     assert_eq!(2, cursor.col_scale(5).unwrap());
+}
+
+#[test]
+fn mssql_bind_char() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT my_char FROM AllTheTypes;";
+    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let mut buf = TextColumn::new(1, 5);
+    unsafe {
+        cursor.set_row_array_size(1).unwrap();
+        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+    }
+
+    cursor.fetch().unwrap();
+
+    unsafe {
+        assert_eq!(
+            Some("abcde"),
+            buf
+                .value_at(0)
+                .map(|bytes| std::str::from_utf8(bytes).unwrap())
+        );
+    }
+}
+
+#[test]
+fn mssql_bind_varchar() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT my_varchar FROM AllTheTypes;";
+    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let mut buf = TextColumn::new(1, 100);
+    unsafe {
+        cursor.set_row_array_size(1).unwrap();
+        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+    }
+
+    cursor.fetch().unwrap();
+
+    unsafe {
+        assert_eq!(
+            Some("Hello, World!"),
+            buf
+                .value_at(0)
+                .map(|bytes| std::str::from_utf8(bytes).unwrap())
+        );
+    }
+}
+
+#[test]
+fn mssql_all_types() {
+    let _ = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT my_char, my_numeric, my_varchar FROM AllTheTypes;";
+    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let mut cd = ColumnDescription::default();
+    // Assert types
+    cursor.describe_col(1, &mut cd).unwrap();
+    assert_eq!(DataType::Char { length: 5 }, cd.data_type);
+    cursor.describe_col(2, &mut cd).unwrap();
+    assert_eq!(
+        DataType::Numeric {
+            precision: 3,
+            scale: 2
+        },
+        cd.data_type
+    );
+    cursor.describe_col(3, &mut cd).unwrap();
+    assert_eq!(DataType::Varchar { length: 100 }, cd.data_type);
 }
