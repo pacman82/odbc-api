@@ -1,9 +1,13 @@
 # Changelog
 
-## 0.4.0
+## 0.5.0
 
 * Introduced `DataType` into the `ColumnDescription` struct.
 * Renaming: Drops `Buffer` suffix from `OptDateColumn`, `OptF32Column`, `OptF64Column`, `OptFixedSizedColumn`, `OptI32Column`, `OptI64Column`, `OptTimestampColumn`.
+
+## 0.4.0
+
+* Adds buffer implementation for fixed sized types
 
 ## 0.3.1
 
