@@ -1,5 +1,4 @@
 use buffers::{ColumnBuffer, TextColumn};
-use env_logger;
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
@@ -26,7 +25,7 @@ fn init() -> &'static Mutex<()> {
 
 #[test]
 fn bogus_connection_string() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
     let conn = env.connect_with_connection_string("foobar");
     assert!(matches!(conn, Err(_)));
@@ -34,14 +33,14 @@ fn bogus_connection_string() {
 
 #[test]
 fn connect_to_movies_db() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
     let _conn = env.connect_with_connection_string(MSSQL).unwrap();
 }
 
 #[test]
 fn mssql_describe_columns() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -79,7 +78,7 @@ fn mssql_describe_columns() {
 
 #[test]
 fn mssql_text_buffer() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -104,7 +103,7 @@ fn mssql_text_buffer() {
 
 #[test]
 fn mssql_column_attributes() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -125,7 +124,7 @@ fn mssql_column_attributes() {
 
 #[test]
 fn mssql_prices() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -178,7 +177,7 @@ fn mssql_prices() {
 
 #[test]
 fn mssql_bind_char() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -205,7 +204,7 @@ fn mssql_bind_char() {
 
 #[test]
 fn mssql_bind_varchar() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
@@ -232,7 +231,7 @@ fn mssql_bind_varchar() {
 
 #[test]
 fn mssql_all_types() {
-    let _ = init().lock();
+    let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
