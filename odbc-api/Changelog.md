@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+* Extend `ColumnDescription` enum with `Bigint`, `Tinyint` and `Bit`.
+
 ## 0.5.0
 
 * Introduced `DataType` into the `ColumnDescription` struct.

@@ -32,6 +32,8 @@ pub enum DataType {
     SmallInt,
     /// `Float(p)`. Signed, approximate, numeric value with a binary precision of at least p. The
     /// maximum precision is driver-defined.
+    ///
+    /// Depending on the implementation binary precision is either 24 (`f32`) or 53 (`f64`).
     Float,
     /// `Real`. Signed, approximate, numeric value with a binary precision 24 (zero or absolute
     /// value 10[-38] to 10[38]).
@@ -53,6 +55,15 @@ pub enum DataType {
     /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as defined
     /// for the Date and Time variants.
     Timestamp { precision: SmallInt },
+    /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
+    /// (signed: -2[63] <= n <= 2[63] - 1, unsigned: 0 <= n <= 2[64] - 1). Has no corresponding type
+    /// in SQL-92.
+    Bigint,
+    /// `TINYINT`. Exact numeric value with precision 3 and scale 0 (signed: -128 <= n <= 127,
+    /// unsigned: 0 <= n <= 255)
+    Tinyint,
+    /// `BIT`. Single bit binary data.
+    Bit,
     /// The driver returned a type, but it is not among the other types of these enumeration. This
     /// is a catchall, in case the library is incomplete, or the data source supports custom or
     /// non-standard types.
@@ -95,6 +106,9 @@ impl DataType {
             SqlDataType::TIMESTAMP => DataType::Timestamp {
                 precision: decimal_digits,
             },
+            SqlDataType::EXT_BIG_INT => DataType::Bigint,
+            SqlDataType::EXT_TINY_INT => DataType::Tinyint,
+            SqlDataType::EXT_BIT => DataType::Bit,
             other => DataType::Other {
                 data_type: other,
                 column_size,

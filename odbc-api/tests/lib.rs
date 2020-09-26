@@ -1,4 +1,4 @@
-use buffers::{ColumnBuffer, TextColumn};
+use buffers::{ColumnBuffer, OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
@@ -195,12 +195,59 @@ fn mssql_bind_char() {
     unsafe {
         assert_eq!(
             Some("abcde"),
-            buf
-                .value_at(0)
+            buf.value_at(0)
                 .map(|bytes| std::str::from_utf8(bytes).unwrap())
         );
     }
 }
+
+// #[test]
+// fn mssql_bind_numeric() {
+
+//     // See:
+//     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
+//     // https://stackoverflow.com/questions/9177795/how-to-convert-sql-numeric-struct-to-double-and-string
+
+//     let _ = init().lock();
+//     let env = unsafe { Environment::new().unwrap() };
+
+//     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+//     let sql = "SELECT my_numeric FROM AllTheTypes;";
+//     let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+//     let mut buf: Vec<Numeric> = vec![Numeric::default(); 1];
+
+//     let mut ard = cursor.application_row_descriptor().unwrap();
+//     unsafe {
+//         ard.set_field_type(1, SqlDataType::NUMERIC).unwrap();
+//         ard.set_field_scale(1, 2).unwrap();
+//         ard.set_field_precision(1, 3).unwrap();
+//     }
+
+//     let bind_args = BindColParameters {
+//         indicator: null_mut(),
+//         target_length: size_of::<Numeric>() as i64,
+//         target_type: CDataType::Numeric, // CDataType:ArdType
+//         target_value: buf.as_mut_ptr() as Pointer,
+//     };
+
+//     unsafe {
+//         cursor.set_row_array_size(1).unwrap();
+//         cursor.bind_col(1, bind_args).unwrap();
+//     }
+
+//     cursor.fetch().unwrap();
+
+//     assert_eq!(
+//         Numeric {
+//             precision: 0,
+//             scale: 0,
+//             sign: 0,
+//             val: [0; 16]
+//         },
+//         buf[0]
+//     );
+// }
 
 #[test]
 fn mssql_bind_varchar() {
@@ -222,10 +269,31 @@ fn mssql_bind_varchar() {
     unsafe {
         assert_eq!(
             Some("Hello, World!"),
-            buf
-                .value_at(0)
+            buf.value_at(0)
                 .map(|bytes| std::str::from_utf8(bytes).unwrap())
         );
+    }
+}
+
+#[test]
+fn mssql_bind_numeric_to_float() {
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT my_numeric FROM AllTheTypes;";
+    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+    let mut buf = OptF32Column::new(1);
+    unsafe {
+        cursor.set_row_array_size(1).unwrap();
+        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+    }
+
+    cursor.fetch().unwrap();
+
+    unsafe {
+        assert_eq!(Some(&1.23), buf.value_at(0));
     }
 }
 
@@ -235,7 +303,7 @@ fn mssql_all_types() {
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT my_char, my_numeric, my_varchar FROM AllTheTypes;";
+    let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
     let cursor = conn.exec_direct(sql).unwrap().unwrap();
 
     let mut cd = ColumnDescription::default();
@@ -252,4 +320,8 @@ fn mssql_all_types() {
     );
     cursor.describe_col(3, &mut cd).unwrap();
     assert_eq!(DataType::Varchar { length: 100 }, cd.data_type);
+
+    // mssql returns real if type is declared `FLOAT(3)` in transact SQL
+    cursor.describe_col(4, &mut cd).unwrap();
+    assert_eq!(DataType::Real, cd.data_type);
 }

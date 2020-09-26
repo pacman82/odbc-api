@@ -32,6 +32,14 @@ where
         }
     }
 
+    /// Access the value at a specific row index.
+    ///
+    /// # Safety
+    ///
+    /// The buffer size is not automatically adjusted to the size of the last row set. It is the
+    /// callers responsibility to ensure, a value has been written to the indexed position by
+    /// `Cursor::fetch` using the value bound to the cursor with
+    /// `Cursor::set_num_result_rows_fetched`.
     pub unsafe fn value_at(&self, row_index: usize) -> Option<&T> {
         if self.indicators[row_index] == NULL_DATA {
             None

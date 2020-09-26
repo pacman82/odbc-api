@@ -1,4 +1,6 @@
-use crate::{buffers::BindColParameters, handles::Statement, ColumnDescription, Error, handles::Description};
+use crate::{
+    buffers::BindColParameters, handles::Description, handles::Statement, ColumnDescription, Error,
+};
 use odbc_sys::{Len, SmallInt, SqlDataType, UInteger, ULen, USmallInt, WChar};
 use std::thread::panicking;
 

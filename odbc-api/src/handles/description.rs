@@ -58,14 +58,8 @@ impl<'d> Description<'d> {
         scale: Integer,
     ) -> Result<(), Error> {
         unsafe {
-            SQLSetDescFieldW(
-                self.handle,
-                column_number,
-                Desc::Scale,
-                scale as Pointer,
-                0,
-            )
-            .to_result(self)
+            SQLSetDescFieldW(self.handle, column_number, Desc::Scale, scale as Pointer, 0)
+                .to_result(self)
         }
     }
 

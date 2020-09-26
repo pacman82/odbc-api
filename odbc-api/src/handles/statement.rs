@@ -4,7 +4,8 @@ use super::{
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
     error::{Error, ToResult},
-Description};
+    Description,
+};
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, Pointer,
     SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLFetch,
