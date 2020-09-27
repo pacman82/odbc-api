@@ -14,6 +14,27 @@ pub type OptTimeColumn = OptFixedSizedColumn<Time>;
 pub type OptI32Column = OptFixedSizedColumn<i32>;
 pub type OptI64Column = OptFixedSizedColumn<i64>;
 pub type OptNumericColumn = OptFixedSizedColumn<Numeric>;
+pub type OptU8Column = OptFixedSizedColumn<u8>;
+pub type OptI8Column = OptFixedSizedColumn<i8>;
+pub type OptBitColumn = OptFixedSizedColumn<Bit>;
+
+/// Newtype wrapping u8 and binding as SQL_BIT.
+///
+/// If rust would guarantee the representation of `bool` to be an `u8`, `bool` would be the obvious
+/// choice instead. Alas it is not and someday on some platform bool might be something else than a
+/// `u8` so let's use this newtype instead.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Ord, PartialOrd)]
+pub struct Bit(pub u8);
+
+impl Bit {
+    pub fn as_bool(self) -> bool {
+        match self.0 {
+            0 => false,
+            1 => true,
+            _ => panic!("Invalid boolean representation in Bit."),
+        }
+    }
+}
 
 /// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
 pub struct OptFixedSizedColumn<T> {
@@ -137,6 +158,10 @@ unsafe impl FixedSizedCType for SChar {
 
 unsafe impl FixedSizedCType for Char {
     const C_DATA_TYPE: CDataType = CDataType::UTinyInty;
+}
+
+unsafe impl FixedSizedCType for Bit {
+    const C_DATA_TYPE: CDataType = CDataType::Bit;
 }
 
 unsafe impl FixedSizedCType for i64 {

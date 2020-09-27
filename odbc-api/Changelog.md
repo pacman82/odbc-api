@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+
+* Adds `Bit`, `OptBitColumn`, `OptI8Column`, `OptU8Column`.
+
 ## 0.6.0
 
 * Extend `ColumnDescription` enum with `Bigint`, `Tinyint` and `Bit`.

@@ -7,8 +7,9 @@ use odbc_sys::{CDataType, Len, Pointer};
 
 pub use self::{
     fixed_sized::{
-        FixedSizedCType, OptDateColumn, OptF32Column, OptF64Column, OptFixedSizedColumn,
-        OptI32Column, OptI64Column, OptNumericColumn, OptTimeColumn, OptTimestampColumn,
+        Bit, FixedSizedCType, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
+        OptFixedSizedColumn, OptI32Column, OptI64Column, OptI8Column, OptNumericColumn,
+        OptTimeColumn, OptTimestampColumn, OptU8Column,
     },
     text_column::TextColumn,
     text_row_set::TextRowSet,
