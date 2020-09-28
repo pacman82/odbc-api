@@ -92,7 +92,7 @@ impl<'o> Cursor<'o> {
         self.statement.set_row_bind_type(row_size)
     }
 
-    /// Release all columen buffers bound by `bind_col`. Except bookmark column.
+    /// Release all column buffers bound by `bind_col`. Except bookmark column.
     pub fn unbind_cols(&mut self) -> Result<(), Error> {
         self.statement.unbind_cols()
     }
@@ -216,6 +216,12 @@ impl<'o> Cursor<'o> {
 /// A Row set buffer binds row, or column wise buffers to a cursor in order to fill them with row
 /// sets with each call to fetch.
 pub unsafe trait RowSetBuffer {
+    /// Binds the buffer either column or row wise to the cursor.
+    /// 
+    /// # Safety
+    ///
+    /// It's the implementations responsibility to ensure that all bound buffers are valid as
+    /// specified and live long enough.
     unsafe fn bind_to_cursor(&mut self, cursor: &mut Cursor) -> Result<(), Error>;
 }
 

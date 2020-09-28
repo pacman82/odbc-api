@@ -63,6 +63,10 @@ impl<'d> Description<'d> {
         }
     }
 
+    /// # Safety
+    /// 
+    /// Overwrites the field type in the ARD record. This type may be used by odbc to determine
+    /// buffer sizes and such.
     pub unsafe fn set_field_type(
         &mut self,
         column_number: SmallInt,
@@ -78,6 +82,10 @@ impl<'d> Description<'d> {
         .to_result(self)
     }
 
+    /// # Safety
+    /// 
+    /// Overwrites the concise field type in the ARD record. This type may be used by odbc to
+    /// determine buffer sizes and such.
     pub unsafe fn set_field_concise_type(
         &mut self,
         column_number: SmallInt,

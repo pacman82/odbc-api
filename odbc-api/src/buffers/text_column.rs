@@ -40,7 +40,7 @@ impl TextColumn {
 
     /// Return the value for the given row index.
     ///
-    /// #Safety
+    /// # Safety
     ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
