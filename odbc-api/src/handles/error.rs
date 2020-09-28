@@ -34,6 +34,7 @@ impl ToResult for SqlReturn {
             SqlReturn::ERROR => {
                 let mut rec = DiagnosticRecord::default();
                 if rec.fill_from(handle, 1) {
+                    log_diagnostics(handle);
                     Err(Error::Diagnostics(rec))
                 } else {
                     Err(Error::NoDiagnostics)

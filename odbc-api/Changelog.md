@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2 (next)
+
+* Logs all diagnostics in case driver returns multiple errors.
+
 ## 0.6.1
 
 * Adds `Bit`, `OptBitColumn`, `OptI8Column`, `OptU8Column`.
