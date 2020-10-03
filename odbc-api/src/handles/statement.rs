@@ -3,7 +3,7 @@ use super::{
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
-    error::{Error, ToResult},
+    error::{Error, IntoResult},
     Description,
 };
 use odbc_sys::{
@@ -40,7 +40,7 @@ impl<'s> Drop for Statement<'s> {
                     // Avoid panicking, if we already have a panic. We don't want to mask the
                     // original error.
                     if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
                     }
                 }
             }
@@ -59,7 +59,7 @@ impl<'s> Statement<'s> {
         }
     }
 
-    /// Executes a preparable statement, using the current values of the parameter marker variables
+    /// Executes a prepareable statement, using the current values of the parameter marker variables
     /// if any parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
     /// statement for one-time execution.
     ///
@@ -76,14 +76,14 @@ impl<'s> Statement<'s> {
                 statement_text.len().try_into().unwrap(),
             ) {
                 SqlReturn::NO_DATA => Ok(false),
-                other => other.to_result(self).map(|()| true),
+                other => other.into_result(self).map(|()| true),
             }
         }
     }
 
     /// Close an open cursor.
     pub fn close_cursor(&mut self) -> Result<(), Error> {
-        unsafe { SQLCloseCursor(self.handle) }.to_result(self)
+        unsafe { SQLCloseCursor(self.handle) }.into_result(self)
     }
 
     /// Fetch a column description using the column index.
@@ -121,7 +121,7 @@ impl<'s> Statement<'s> {
                 &mut decimal_digits,
                 &mut nullable,
             )
-            .to_result(self)?;
+            .into_result(self)?;
         }
 
         column_description.nullable = match nullable {
@@ -145,7 +145,7 @@ impl<'s> Statement<'s> {
     /// Number of columns in result set.
     pub fn num_result_cols(&self) -> Result<SmallInt, Error> {
         let mut out: SmallInt = 0;
-        unsafe { SQLNumResultCols(self.handle, &mut out) }.to_result(self)?;
+        unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self)?;
         Ok(out)
     }
 
@@ -163,7 +163,7 @@ impl<'s> Statement<'s> {
             size as Pointer,
             0,
         )
-        .to_result(self)
+        .into_result(self)
     }
 
     /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
@@ -178,7 +178,7 @@ impl<'s> Statement<'s> {
             num_rows as *mut ULen as Pointer,
             0,
         )
-        .to_result(self)
+        .into_result(self)
     }
 
     /// Sets the binding type to columnar binding for batch cursors.
@@ -197,7 +197,7 @@ impl<'s> Statement<'s> {
             row_size as Pointer,
             0,
         )
-        .to_result(self)
+        .into_result(self)
     }
 
     /// Returns the next rowset in the result set.
@@ -211,14 +211,14 @@ impl<'s> Statement<'s> {
         unsafe {
             match SQLFetch(self.handle) {
                 SqlReturn::NO_DATA => Ok(false),
-                other => other.to_result(self).map(|()| true),
+                other => other.into_result(self).map(|()| true),
             }
         }
     }
 
-    /// Release all columen buffers bound by `bind_col`. Except bookmark column.
+    /// Release all column buffers bound by `bind_col`. Except bookmark column.
     pub fn unbind_cols(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.to_result(self)
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
     }
 
     /// Binds application data buffers to columns in the result set.
@@ -255,7 +255,7 @@ impl<'s> Statement<'s> {
             target_length,
             indicator,
         )
-        .to_result(self)
+        .into_result(self)
     }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
@@ -267,7 +267,7 @@ impl<'s> Statement<'s> {
         match out {
             0 => Ok(false),
             1 => Ok(true),
-            _ => panic!("Unsigend column attrubte must be either 0 or 1."),
+            _ => panic!("Unsigned column attribute must be either 0 or 1."),
         }
     }
 
@@ -334,7 +334,7 @@ impl<'s> Statement<'s> {
                 &mut string_length_in_bytes as *mut SmallInt,
                 null_mut(),
             )
-            .to_result(self)?;
+            .into_result(self)?;
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
                 SQLColAttributeW(
@@ -346,7 +346,7 @@ impl<'s> Statement<'s> {
                     &mut string_length_in_bytes as *mut SmallInt,
                     null_mut(),
                 )
-                .to_result(self)?;
+                .into_result(self)?;
             }
             // Resize buffer to exact string length without terminal zero
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
@@ -364,7 +364,7 @@ impl<'s> Statement<'s> {
                 0,
                 null_mut(),
             )
-            .to_result(self)?;
+            .into_result(self)?;
             Ok(Description::new(hdesc))
         }
     }
@@ -387,7 +387,7 @@ impl<'s> Statement<'s> {
             null_mut(),
             &mut out as *mut Len,
         )
-        .to_result(self)?;
+        .into_result(self)?;
         Ok(out)
     }
 }

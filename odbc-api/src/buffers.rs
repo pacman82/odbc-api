@@ -15,7 +15,7 @@ pub use self::{
     text_row_set::TextRowSet,
 };
 
-/// Arguments used to descripbe the buffer then binding this column to a cursor.
+/// Arguments used to describe the buffer then binding this column to a cursor.
 pub struct BindColParameters {
     /// The identifier of the C data type of the `value` buffer. When it is retrieving data from the
     /// data source with `fetch`, the driver converts the data to this type. When it sends data to
@@ -26,12 +26,12 @@ pub struct BindColParameters {
     /// Length of a target value in bytes. For a single element in case of block fetching data.
     pub target_length: Len,
     /// Buffer is going to hold length or indicator values. Can be null if the column is not
-    /// nullable and elemnts are of fixed length.
+    /// nullable and elements are of fixed length.
     pub indicator: *mut Len,
 }
 
 /// A type implementing this trait can be bound to a column of a cursor.
 pub unsafe trait ColumnBuffer {
-    /// Arguments used to descripbe the buffer then binding this column to a cursor.
+    /// Arguments used to describe the buffer then binding this column to a cursor.
     fn bind_arguments(&mut self) -> BindColParameters;
 }

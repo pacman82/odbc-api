@@ -1,5 +1,5 @@
 use super::{
-    as_handle::AsHandle, buffer::buf_ptr, error::Error, error::ToResult, statement::Statement,
+    as_handle::AsHandle, buffer::buf_ptr, error::Error, error::IntoResult, statement::Statement,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
@@ -35,7 +35,7 @@ impl<'c> Drop for Connection<'c> {
                     // Avoid panicking, if we already have a panic. We don't want to mask the
                     // original error.
                     if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
                     }
                 }
             }
@@ -83,7 +83,7 @@ impl<'c> Connection<'c> {
                 buf_ptr(pwd.as_slice()),
                 pwd.len().try_into().unwrap(),
             )
-            .to_result(self)?;
+            .into_result(self)?;
             Ok(())
         }
     }
@@ -109,21 +109,21 @@ impl<'c> Connection<'c> {
                 out_connection_string_len,
                 DriverConnectOption::NoPrompt,
             )
-            .to_result(self)?;
+            .into_result(self)?;
             Ok(())
         }
     }
 
     /// Disconnect from an ODBC data source.
     pub fn disconnect(&mut self) -> Result<(), Error> {
-        unsafe { SQLDisconnect(self.handle).to_result(self) }
+        unsafe { SQLDisconnect(self.handle).into_result(self) }
     }
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
     pub fn allocate_statement(&self) -> Result<Statement, Error> {
         let mut out = null_mut();
         unsafe {
-            SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out).to_result(self)?;
+            SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out).into_result(self)?;
             Ok(Statement::new(out as HStmt))
         }
     }
@@ -141,21 +141,21 @@ impl<'c> Connection<'c> {
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
             )
-            .to_result(self)
+            .into_result(self)
         }
     }
 
     /// To commit a transaction in manual-commit mode.
     pub fn commit(&mut self) -> Result<(), Error> {
         unsafe {
-            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit).to_result(self)
+            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit).into_result(self)
         }
     }
 
     /// Roll back a transaction in manual-commit mode.
     pub fn rollback(&mut self) -> Result<(), Error> {
         unsafe {
-            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback).to_result(self)
+            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback).into_result(self)
         }
     }
 }

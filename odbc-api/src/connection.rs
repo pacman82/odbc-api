@@ -8,7 +8,7 @@ impl<'conn> Drop for Connection<'conn> {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
-                panic!("Unexepected error disconnecting: {:?}", e)
+                panic!("Unexpected error disconnecting: {:?}", e)
             }
         }
     }
@@ -25,7 +25,7 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
-    /// Executes a preparable statement, using the current values of the parameter marker variables
+    /// Executes a prepareable statement, using the current values of the parameter marker variables
     /// if any parameters exist in the statement. This is the fastest way to submit an SQL statement
     /// for one-time execution.
     ///
@@ -44,7 +44,7 @@ impl<'c> Connection<'c> {
         }
     }
 
-    /// Executes a preparable statement, using the current values of the parameter marker variables
+    /// Executes a prepareable statement, using the current values of the parameter marker variables
     /// if any parameters exist in the statement. This is the fastest way to submit an SQL statement
     /// for one-time execution.
     ///

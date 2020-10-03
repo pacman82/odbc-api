@@ -17,6 +17,7 @@ pub struct Environment {
 impl Environment {
     /// Allocates a new ODBC Environment and declares that the Application wants to use ODBC version
     /// 3.8.
+    ///
     /// # Safety
     ///
     /// There may only be one Odbc environment in any process at any time. Take care using this
@@ -48,6 +49,32 @@ impl Environment {
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(
         &self,
+        data_source_name: &str,
+        user: &str,
+        pwd: &str,
+    ) -> Result<Connection, Error> {
+        let data_source_name = U16String::from_str(data_source_name);
+        let user = U16String::from_str(user);
+        let pwd = U16String::from_str(pwd);
+        self.connect_utf16(&data_source_name, &user, &pwd)
+    }
+
+    /// Allocates a connection handle and establishes connections to a driver and a data source.
+    ///
+    /// * See [Connecting with SQLConnect][1]
+    /// * See [SQLConnectFunction][2]
+    ///
+    /// # Arguments
+    ///
+    /// * `data_source_name` - Data source name. The data might be located on the same computer as
+    /// the program, or on another computer somewhere on a network.
+    /// * `user` - User identifier.
+    /// * `pwd` - Authentication string (typically the password).
+    ///
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
+    /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
+    pub fn connect_utf16(
+        &self,
         data_source_name: &U16Str,
         user: &U16Str,
         pwd: &U16Str,
@@ -69,9 +96,7 @@ impl Environment {
         connection_string: &str,
     ) -> Result<Connection, Error> {
         let connection_string = U16String::from_str(connection_string);
-        let mut connection = self.environment.allocate_connection()?;
-        connection.connect_with_connection_string(&connection_string)?;
-        Ok(Connection::new(connection))
+        self.connect_with_connection_string_utf16(&connection_string)
     }
 
     /// Allocates a connection handle and establishes connections to a driver and a data source.

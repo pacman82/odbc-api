@@ -15,7 +15,7 @@ impl<'o> Drop for Cursor<'o> {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
-                panic!("Unexepected error closing cursor: {:?}", e)
+                panic!("Unexpected error closing cursor: {:?}", e)
             }
         }
     }
@@ -241,7 +241,7 @@ impl<'b, 'o, B> RowSetCursor<'b, 'o, B> {
     ///
     /// # Return
     ///
-    /// `None` if the result set is empty and all row sets have been extracetd. `Some` with a
+    /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
         if self.cursor.fetch()? {

@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 use crate::Error;
 
-use super::{error::ToResult, AsHandle};
+use super::{error::IntoResult, AsHandle};
 
 /// Wraps a valid description handle.
 pub struct Description<'d> {
@@ -48,7 +48,7 @@ impl<'d> Description<'d> {
                 precision as Pointer,
                 0,
             )
-            .to_result(self)
+            .into_result(self)
         }
     }
 
@@ -59,7 +59,7 @@ impl<'d> Description<'d> {
     ) -> Result<(), Error> {
         unsafe {
             SQLSetDescFieldW(self.handle, column_number, Desc::Scale, scale as Pointer, 0)
-                .to_result(self)
+                .into_result(self)
         }
     }
 
@@ -79,7 +79,7 @@ impl<'d> Description<'d> {
             data_type.0 as Pointer,
             0,
         )
-        .to_result(self)
+        .into_result(self)
     }
 
     /// # Safety
@@ -98,6 +98,6 @@ impl<'d> Description<'d> {
             data_type.0 as Pointer,
             0,
         )
-        .to_result(self)
+        .into_result(self)
     }
 }

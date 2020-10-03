@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+* `Environment::connect` now takes `&str` instead of `&U16Str`.
+* Adds `Environment::connect_utf16`.
+
 ## 0.6.2 (next)
 
 * Logs all diagnostics in case driver returns multiple errors.
@@ -54,7 +59,7 @@ Adds `buffers::TextRowSet`.
 
 ## 0.1.1
 
-* Adds convinience methods, which take UTF-8 in public interface.
+* Adds convenience methods, which take UTF-8 in public interface.
 * Adds `ColmunDescription::could_be_null`.
 * Adds `Cursor::is_unsigned`.
 

@@ -1,7 +1,7 @@
 //! # ODBC
 //!
 //! ODBC (Open Database Connectivity) is a Database standard. This library aims in helping you write
-//! Applicatinos which utilize ODBC to query databases.
+//! Applications which utilize ODBC to query databases.
 
 mod connection;
 mod cursor;
@@ -16,7 +16,7 @@ pub use self::{
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
 };
-// Rexports
-/// Rexport `odbc-sys` as sys to enable applications to always use the same version as this crate.
+// Reexports
+/// Reexports `odbc-sys` as sys to enable applications to always use the same version as this crate.
 pub use odbc_sys as sys;
 pub use widestring::{U16Str, U16String};

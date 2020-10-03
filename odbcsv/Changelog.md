@@ -29,8 +29,8 @@ Use column display size to determine column buffer size.
 
 ## 0.1.1
 
-Varchar typed columns have their size more accuratly buffered.
+Varchar typed columns have their size more accurately buffered.
 
 ## 0.1.0
 
-Initital release
+Initial release

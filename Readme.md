@@ -33,7 +33,7 @@ Supports writing ODBC Application in Rust. Prior work in this area has been done
 * `odbc-safe`: (Mostly) safe wrapper around `odbc-sys`. Apart from protecting against unsafe behaviour, this library also tries to prevent invalid use of the ODBC API by modelling state transitions.
 * `odbc-rs`: Higher level and more idiomatic bindings. Wraps `odbc-safe`.
 
-So why `odbc-api`? This is a somewhat less ambitious and more opinionated rewrite of `odbc-safe`. I never achieved a somewhat feature complete state with `odbc-safe`. This is in part due to the fact that I had significantly less time for Open Source, but also due to the fact that ODBCs way of borrowing and sharing buffers is very much at odds with Rusts type system, introducing significant complexity in an unopinionated general purpose wrapper. Also, there are a lot of possible sate transitions. So for many use cases I found myself going back to the bare `odbc-sys`. On the other hand many reocurring high level scenarios could have quite nice safe abstractions, if you are a bit opinionated about the design.
+So why `odbc-api`? This is a somewhat less ambitious and more opinionated rewrite of `odbc-safe`. I never achieved a somewhat feature complete state with `odbc-safe`. This is in part due to the fact that I had significantly less time for Open Source, but also due to the fact that ODBCs way of borrowing and sharing buffers is very much at odds with Rusts type system, introducing significant complexity in an unopinionated general purpose wrapper. Also, there are a lot of possible sate transitions. So for many use cases I found myself going back to the bare `odbc-sys`. On the other hand many reoccurring high level scenarios could have quite nice safe abstractions, if you are a bit opinionated about the design.
 
 ## Design decisions
 
@@ -49,4 +49,4 @@ ODBC calls produce a Result. If successful they may also produce any number of w
 
 ## State
 
-Currently this libray enables you to efficiently query data and retrieve the results in blocks rather than line row by row, making efficient use of how odbc manages and bind buffers. This is as far as I know the only ODBC rust wrapper which does this.
+Currently this library enables you to efficiently query data and retrieve the results in blocks rather than line row by row, making efficient use of how odbc manages and bind buffers. This is as far as I know the only ODBC rust wrapper which does this.

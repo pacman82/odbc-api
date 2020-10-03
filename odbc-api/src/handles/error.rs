@@ -17,12 +17,12 @@ pub enum Error {
     Diagnostics(DiagnosticRecord),
 }
 
-pub trait ToResult {
-    fn to_result(self, handle: &dyn AsHandle) -> Result<(), Error>;
+pub trait IntoResult {
+    fn into_result(self, handle: &dyn AsHandle) -> Result<(), Error>;
 }
 
-impl ToResult for SqlReturn {
-    fn to_result(self: SqlReturn, handle: &dyn AsHandle) -> Result<(), Error> {
+impl IntoResult for SqlReturn {
+    fn into_result(self: SqlReturn, handle: &dyn AsHandle) -> Result<(), Error> {
         match self {
             // The function has been executed successfully. Holds result.
             SqlReturn::SUCCESS => Ok(()),

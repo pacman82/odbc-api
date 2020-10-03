@@ -24,7 +24,7 @@ struct Cli {
     /// but require more memory during execution.
     #[structopt(long, default_value = "2000")]
     batch_size: UInteger,
-    /// Path to the output csv file the returned values are going to be written to. If ommitted the
+    /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
     #[structopt(long, short = "-o")]
     output: Option<PathBuf>,

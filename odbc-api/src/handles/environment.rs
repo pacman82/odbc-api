@@ -1,4 +1,4 @@
-use super::{as_handle::AsHandle, error::ToResult, logging::log_diagnostics, Connection, Error};
+use super::{as_handle::AsHandle, error::IntoResult, logging::log_diagnostics, Connection, Error};
 use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
@@ -39,7 +39,7 @@ impl Drop for Environment {
                     // Avoid panicking, if we already have a panic. We don't want to mask the
                     // original error.
                     if !panicking() {
-                        panic!("Unexepected return value of SQLFreeHandle: {:?}", other)
+                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
                     }
                 }
             }
@@ -93,7 +93,7 @@ impl Environment {
                 version.into(),
                 0,
             )
-            .to_result(self)
+            .into_result(self)
         }
     }
 
@@ -101,7 +101,7 @@ impl Environment {
     pub fn allocate_connection(&self) -> Result<Connection, Error> {
         let mut handle = null_mut();
         unsafe {
-            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).to_result(self)?;
+            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).into_result(self)?;
             Ok(Connection::new(handle as HDbc))
         }
     }

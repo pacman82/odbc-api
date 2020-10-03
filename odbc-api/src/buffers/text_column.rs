@@ -6,8 +6,8 @@ use std::{cmp::min, convert::TryInto};
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
 /// representation this buffer can be bound to a column of almost any type, ODBC driver and driver
 /// manager should take care of the conversion. Since elements of this type have variable length an
-/// indicator buffer needs to be bound, wether the column is nullable or not, and therefore does not
-/// matter for this buffer.
+/// indicator buffer needs to be bound, whether the column is nullable or not, and therefore does
+/// not matter for this buffer.
 pub struct TextColumn {
     max_str_len: usize,
     values: Vec<u8>,
@@ -26,7 +26,7 @@ unsafe impl ColumnBuffer for TextColumn {
 }
 
 impl TextColumn {
-    /// This will allocate a value and indicator buffer for `batch_size` elments. Each value may
+    /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that max_str_len is increased by one in
     /// order to make space for the null terminating zero at the end of strings.
     pub fn new(batch_size: usize, mut max_str_len: usize) -> Self {
