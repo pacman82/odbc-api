@@ -8,9 +8,10 @@ use super::{
 };
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, Pointer,
-    SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLFetch,
-    SQLFreeHandle, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLSetStmtAttrW, SmallInt,
-    SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
+    SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLExecute,
+    SQLFetch, SQLFreeHandle, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLPrepareW,
+    SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen,
+    USmallInt, WChar,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
 use widestring::U16Str;
@@ -79,6 +80,27 @@ impl<'s> Statement<'s> {
                 other => other.into_result(self).map(|()| true),
             }
         }
+    }
+
+    /// Send an SQL statement to the data source for preparation. The application can include one or
+    /// more parameter markers in the SQL statement. To include a parameter marker, the application
+    /// embeds a question mark (?) into the SQL string at the appropriate position.
+    pub fn prepare(&mut self, statement_text: &U16Str) -> Result<(), Error> {
+        unsafe {
+            SQLPrepareW(
+                self.handle,
+                buf_ptr(statement_text.as_slice()),
+                statement_text.len().try_into().unwrap(),
+            )
+        }
+        .into_result(self)
+    }
+
+    /// Executes a statement prepared by `prepare`. After the application processes or discards the
+    /// results from a call to `execute`, the application can call SQLExecute again with new
+    /// parameter values.
+    pub fn execute(&mut self) -> Result<(), Error> {
+        unsafe { SQLExecute(self.handle) }.into_result(self)
     }
 
     /// Close an open cursor.
@@ -321,8 +343,9 @@ impl<'s> Statement<'s> {
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
     pub fn col_name(&self, column_number: USmallInt, buf: &mut Vec<WChar>) -> Result<(), Error> {
-        // String length in bytes, not characters. Terminal zero is excluded.
+        // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: SmallInt = 0;
+        // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
         unsafe {
             SQLColAttributeW(
