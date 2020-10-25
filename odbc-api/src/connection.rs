@@ -25,9 +25,8 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
-    /// Executes a prepareable statement, using the current values of the parameter marker variables
-    /// if any parameters exist in the statement. This is the fastest way to submit an SQL statement
-    /// for one-time execution.
+    /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
+    /// one-time execution.
     ///
     /// # Return
     ///
@@ -44,9 +43,8 @@ impl<'c> Connection<'c> {
         }
     }
 
-    /// Executes a prepareable statement, using the current values of the parameter marker variables
-    /// if any parameters exist in the statement. This is the fastest way to submit an SQL statement
-    /// for one-time execution.
+    /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
+    /// one-time execution.
     ///
     /// # Return
     ///

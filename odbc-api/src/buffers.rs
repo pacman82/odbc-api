@@ -16,7 +16,7 @@ pub use self::{
 };
 
 /// Arguments used to describe the buffer then binding this column to a cursor.
-pub struct BindColParameters {
+pub struct BindColArgs {
     /// The identifier of the C data type of the `value` buffer. When it is retrieving data from the
     /// data source with `fetch`, the driver converts the data to this type. When it sends data to
     /// the source, the driver converts the data from this type.
@@ -33,5 +33,5 @@ pub struct BindColParameters {
 /// A type implementing this trait can be bound to a column of a cursor.
 pub unsafe trait ColumnBuffer {
     /// Arguments used to describe the buffer then binding this column to a cursor.
-    fn bind_arguments(&mut self) -> BindColParameters;
+    fn bind_arguments(&mut self) -> BindColArgs;
 }

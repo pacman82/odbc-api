@@ -2,6 +2,9 @@
 
 ## Next version
 
+* Unsafe methods for preparing queries and binding parameters added to statement handle.
+* `BindColParameters` renamed to `BindColArgs`.
+
 ## 0.1.7
 
 * Updated Dependencies

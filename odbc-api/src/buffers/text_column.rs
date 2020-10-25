@@ -1,4 +1,4 @@
-use super::{BindColParameters, ColumnBuffer};
+use super::{BindColArgs, ColumnBuffer};
 use odbc_sys::{CDataType, Len, Pointer, NULL_DATA};
 use std::{cmp::min, convert::TryInto};
 
@@ -15,8 +15,8 @@ pub struct TextColumn {
 }
 
 unsafe impl ColumnBuffer for TextColumn {
-    fn bind_arguments(&mut self) -> BindColParameters {
-        BindColParameters {
+    fn bind_arguments(&mut self) -> BindColArgs {
+        BindColArgs {
             target_type: CDataType::Char,
             target_value: self.values.as_mut_ptr() as Pointer,
             target_length: self.max_str_len.try_into().unwrap(),

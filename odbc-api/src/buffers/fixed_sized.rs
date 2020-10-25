@@ -1,6 +1,6 @@
 use std::ptr::null_mut;
 
-use super::{BindColParameters, ColumnBuffer};
+use super::{BindColArgs, ColumnBuffer};
 use odbc_sys::{
     CDataType, Char, Date, Integer, Len, Numeric, Pointer, SChar, SmallInt, Time, Timestamp,
     UInteger, USmallInt, NULL_DATA,
@@ -82,8 +82,8 @@ unsafe impl<T> ColumnBuffer for OptFixedSizedColumn<T>
 where
     T: FixedSizedCType,
 {
-    fn bind_arguments(&mut self) -> BindColParameters {
-        BindColParameters {
+    fn bind_arguments(&mut self) -> BindColArgs {
+        BindColArgs {
             target_type: T::C_DATA_TYPE,
             target_value: self.values.as_mut_ptr() as Pointer,
             target_length: 0,
@@ -96,8 +96,8 @@ unsafe impl<T> ColumnBuffer for Vec<T>
 where
     T: FixedSizedCType,
 {
-    fn bind_arguments(&mut self) -> BindColParameters {
-        BindColParameters {
+    fn bind_arguments(&mut self) -> BindColArgs {
+        BindColArgs {
             target_type: T::C_DATA_TYPE,
             target_value: self.as_mut_ptr() as Pointer,
             target_length: 0,

@@ -8,10 +8,11 @@ use super::{
     Description,
 };
 use odbc_sys::{
-    CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, Pointer,
-    SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLExecute,
-    SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW,
-    SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
+    CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
+    Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
+    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols,
+    SQLPrepareW, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger,
+    ULen, USmallInt, WChar,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
@@ -267,6 +268,41 @@ impl<'s> Statement<'s> {
             target_value,
             target_length,
             indicator,
+        )
+        .into_result(self)
+    }
+
+    /// Binds a buffer to a parameter marker in an SQL statement.
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    pub unsafe fn bind_parameter(
+        &mut self,
+        parameter_number: u16,
+        input_output_type: ParamType,
+        value_type: CDataType,
+        parameter_type: SqlDataType,
+        column_size: u64,
+        decimal_digits: SmallInt,
+        parameter_value_ptr: Pointer,
+        buffer_length: Len,
+        str_len_or_ind_ptr: *mut Len,
+    ) -> Result<(), Error> {
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            input_output_type,
+            value_type,
+            parameter_type,
+            column_size,
+            decimal_digits,
+            parameter_value_ptr,
+            buffer_length,
+            str_len_or_ind_ptr,
         )
         .into_result(self)
     }

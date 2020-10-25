@@ -1,5 +1,5 @@
 use crate::{
-    buffers::BindColParameters, handles::Description, handles::Statement, ColumnDescription, Error,
+    buffers::BindColArgs, handles::Description, handles::Statement, ColumnDescription, Error,
 };
 use odbc_sys::{Len, SmallInt, SqlDataType, UInteger, ULen, USmallInt, WChar};
 use std::thread::panicking;
@@ -118,9 +118,9 @@ impl<'o> Cursor<'o> {
     pub unsafe fn bind_col(
         &mut self,
         column_number: USmallInt,
-        bind_params: BindColParameters,
+        bind_params: BindColArgs,
     ) -> Result<(), Error> {
-        let BindColParameters {
+        let BindColArgs {
             target_type,
             target_value,
             target_length,
