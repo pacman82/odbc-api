@@ -64,7 +64,7 @@ impl<'d> Description<'d> {
     }
 
     /// # Safety
-    /// 
+    ///
     /// Overwrites the field type in the ARD record. This type may be used by odbc to determine
     /// buffer sizes and such.
     pub unsafe fn set_field_type(
@@ -83,7 +83,7 @@ impl<'d> Description<'d> {
     }
 
     /// # Safety
-    /// 
+    ///
     /// Overwrites the concise field type in the ARD record. This type may be used by odbc to
     /// determine buffer sizes and such.
     pub unsafe fn set_field_concise_type(

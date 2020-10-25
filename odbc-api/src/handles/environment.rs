@@ -1,10 +1,13 @@
-use super::{as_handle::AsHandle, error::IntoResult, logging::log_diagnostics, Connection, Error};
+use super::{
+    as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics, Connection,
+    Error,
+};
 use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
-    SQLFreeHandle, SQLSetEnvAttr, SqlReturn,
+    SQLSetEnvAttr, SqlReturn,
 };
-use std::{ptr::null_mut, thread::panicking};
+use std::ptr::null_mut;
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -33,16 +36,7 @@ unsafe impl AsHandle for Environment {
 impl Drop for Environment {
     fn drop(&mut self) {
         unsafe {
-            match SQLFreeHandle(HandleType::Env, self.handle as Handle) {
-                SqlReturn::SUCCESS => (),
-                other => {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the
-                    // original error.
-                    if !panicking() {
-                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
-            }
+            drop_handle(self.handle as Handle, HandleType::Env);
         }
     }
 }

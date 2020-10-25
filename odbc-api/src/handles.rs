@@ -26,3 +26,21 @@ pub use {
     error::Error,
     statement::Statement,
 };
+
+use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
+use std::thread::panicking;
+
+/// Helper function freeing a handle and panicking on errors. Yet if the drop is triggered during
+/// another panic, the function will simply ignore errors from failed drops.
+unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
+    match SQLFreeHandle(handle_type, handle) {
+        SqlReturn::SUCCESS => (),
+        other => {
+            // Avoid panicking, if we already have a panic. We don't want to mask the
+            // original error.
+            if !panicking() {
+                panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
+            }
+        }
+    }
+}

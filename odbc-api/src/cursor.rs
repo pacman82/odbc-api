@@ -217,7 +217,7 @@ impl<'o> Cursor<'o> {
 /// sets with each call to fetch.
 pub unsafe trait RowSetBuffer {
     /// Binds the buffer either column or row wise to the cursor.
-    /// 
+    ///
     /// # Safety
     ///
     /// It's the implementations responsibility to ensure that all bound buffers are valid as

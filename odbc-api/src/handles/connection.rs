@@ -1,12 +1,13 @@
 use super::{
-    as_handle::AsHandle, buffer::buf_ptr, error::Error, error::IntoResult, statement::Statement,
+    as_handle::AsHandle, buffer::buf_ptr, drop_handle, error::Error, error::IntoResult,
+    statement::Statement,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
     HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
-    SQLFreeHandle, SQLSetConnectAttrW, SqlReturn,
+    SQLSetConnectAttrW,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
+use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
 
 /// The connection handle references storage of all information about the connection to the data
@@ -29,16 +30,7 @@ unsafe impl<'c> AsHandle for Connection<'c> {
 impl<'c> Drop for Connection<'c> {
     fn drop(&mut self) {
         unsafe {
-            match SQLFreeHandle(HandleType::Dbc, self.handle as Handle) {
-                SqlReturn::SUCCESS => (),
-                other => {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the
-                    // original error.
-                    if !panicking() {
-                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
-            }
+            drop_handle(self.handle as Handle, HandleType::Dbc);
         }
     }
 }
@@ -155,7 +147,8 @@ impl<'c> Connection<'c> {
     /// Roll back a transaction in manual-commit mode.
     pub fn rollback(&mut self) -> Result<(), Error> {
         unsafe {
-            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback).into_result(self)
+            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback)
+                .into_result(self)
         }
     }
 }

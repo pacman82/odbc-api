@@ -3,17 +3,17 @@ use super::{
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
+    drop_handle,
     error::{Error, IntoResult},
     Description,
 };
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, Pointer,
     SQLBindCol, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLExecDirectW, SQLExecute,
-    SQLFetch, SQLFreeHandle, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLPrepareW,
-    SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen,
-    USmallInt, WChar,
+    SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW,
+    SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger, ULen, USmallInt, WChar,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut, thread::panicking};
+use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -35,16 +35,7 @@ unsafe impl<'c> AsHandle for Statement<'c> {
 impl<'s> Drop for Statement<'s> {
     fn drop(&mut self) {
         unsafe {
-            match SQLFreeHandle(HandleType::Stmt, self.handle as Handle) {
-                SqlReturn::SUCCESS => (),
-                other => {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the
-                    // original error.
-                    if !panicking() {
-                        panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
-                    }
-                }
-            }
+            drop_handle(self.handle as Handle, HandleType::Stmt);
         }
     }
 }
