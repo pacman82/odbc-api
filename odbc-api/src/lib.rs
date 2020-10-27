@@ -3,6 +3,7 @@
 //! ODBC (Open Database Connectivity) is a Database standard. This library aims in helping you write
 //! Applications which utilize ODBC to query databases.
 
+mod parameters;
 mod connection;
 mod cursor;
 mod environment;
@@ -11,6 +12,7 @@ pub mod buffers;
 pub mod handles;
 
 pub use self::{
+    parameters::Parameters,
     connection::Connection,
     cursor::{Cursor, RowSetBuffer, RowSetCursor},
     environment::Environment,

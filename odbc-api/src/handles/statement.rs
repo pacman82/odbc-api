@@ -440,4 +440,10 @@ impl<'s> Statement<'s> {
         .into_result(self)?;
         Ok(out)
     }
+
+    /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
+    /// given StatementHandle.
+    pub fn reset_parameters(&mut self) -> Result<(), Error> {
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::ResetParams).into_result(self) }
+    }
 }

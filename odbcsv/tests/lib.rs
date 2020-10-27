@@ -19,3 +19,22 @@ fn query_mssql() {
         .success()
         .stdout(csv);
 }
+
+#[test]
+fn placeholders() {
+    let csv = "title\n\
+        2001: A Space Odyssey\n\
+    ";
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
+            "SELECT title from Movies where year = ?",
+            "1968"
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
