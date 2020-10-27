@@ -1,4 +1,4 @@
-pub use crate::{handles, Cursor, Error};
+pub use crate::{handles, Cursor, Error, Parameters};
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
@@ -28,14 +28,32 @@ impl<'c> Connection<'c> {
     /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
     /// one-time execution.
     ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
+    /// * `params`: `?` may be used as a placeholder in the statement text. A type implementing
+    ///   `Parameters` is used to bind these parameters before executing the statement. You can use
+    ///   `()` to represent no parameters.
+    ///
     /// # Return
     ///
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct_utf16(&mut self, query: &U16Str) -> Result<Option<Cursor>, Error> {
+    pub fn exec_direct_utf16(
+        &mut self,
+        query: &U16Str,
+        params: impl Parameters,
+    ) -> Result<Option<Cursor>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
+
+        unsafe {
+            params.bind_to_statement(&mut stmt)?;
+        }
+
+
         if stmt.exec_direct(query)? {
+            stmt.reset_parameters()?;
             Ok(Some(Cursor::new(stmt)))
         } else {
             // ODBC Driver returned NoData.
@@ -46,13 +64,20 @@ impl<'c> Connection<'c> {
     /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
     /// one-time execution.
     ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
+    /// * `params`: `?` may be used as a placeholder in the statement text. A type implementing
+    ///   `Parameters` is used to bind these parameters before executing the statement. You can use
+    ///   `()` to represent no parameters.
+    ///
     /// # Return
     ///
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct(&mut self, query: &str) -> Result<Option<Cursor>, Error> {
+    pub fn exec_direct(&mut self, query: &str, params: impl Parameters) -> Result<Option<Cursor>, Error> {
         let query = U16String::from_str(query);
-        self.exec_direct_utf16(&query)
+        self.exec_direct_utf16(&query, params)
     }
 }

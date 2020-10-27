@@ -45,7 +45,7 @@ fn mssql_describe_columns() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
-    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     assert_eq!(cursor.num_result_cols().unwrap(), 2);
     let mut cd = ColumnDescription::default();
@@ -83,7 +83,7 @@ fn mssql_text_buffer() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
-    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let batch_size = 2;
     let mut buffer = buffers::TextRowSet::new(batch_size, &cursor).unwrap();
@@ -108,7 +108,7 @@ fn mssql_column_attributes() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
-    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let mut buf = Vec::new();
 
@@ -129,7 +129,7 @@ fn mssql_prices() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
-    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let mut cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     // Test names
     let mut buf = Vec::new();
@@ -182,7 +182,7 @@ fn mssql_bind_char() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
-    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let mut cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let mut buf = TextColumn::new(1, 5);
     unsafe {
@@ -256,7 +256,7 @@ fn mssql_bind_varchar() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
-    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let mut cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let mut buf = TextColumn::new(1, 100);
     unsafe {
@@ -282,7 +282,7 @@ fn mssql_bind_numeric_to_float() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
-    let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let mut cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let mut buf = OptF32Column::new(1);
     unsafe {
@@ -304,7 +304,7 @@ fn mssql_all_types() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
-    let cursor = conn.exec_direct(sql).unwrap().unwrap();
+    let cursor = conn.exec_direct(sql, ()).unwrap().unwrap();
 
     let mut cd = ColumnDescription::default();
     // Assert types

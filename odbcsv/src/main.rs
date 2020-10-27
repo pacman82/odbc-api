@@ -34,6 +34,8 @@ struct Cli {
     /// Query executed against the ODBC data source.
     #[structopt()]
     query: String,
+    /// You can pass replace placeholder question marks ('?') in the query text with parameters.
+    parameters: Vec<String>,
 }
 
 fn main() -> Result<(), Error> {
@@ -62,7 +64,7 @@ fn main() -> Result<(), Error> {
 
     let mut connection = environment.connect_with_connection_string(&opt.connection_string)?;
 
-    match connection.exec_direct(&opt.query)? {
+    match connection.exec_direct(&opt.query, ())? {
         Some(cursor) => {
             let num_cols = cursor.num_result_cols()?;
             // Some ODBC drivers do not report the required size to hold the column name. Starting
@@ -72,6 +74,8 @@ fn main() -> Result<(), Error> {
             let mut headline = Vec::new();
             let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
 
+            // Loop over the number of reported columns in the result set and fetch the Column name
+            // for each one, if available.
             for index in 1..(num_cols as USmallInt + 1) {
                 cursor.col_name(index, &mut buf_wchar)?;
                 let name =
