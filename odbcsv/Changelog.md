@@ -1,9 +1,8 @@
 # Changelog
 
-## Next version
+## 0.1.8 (next)
 
-* Unsafe methods for preparing queries and binding parameters added to statement handle.
-* `BindColParameters` renamed to `BindColArgs`.
+* Default bulk size increased to 5000 rows.
 
 ## 0.1.7
 

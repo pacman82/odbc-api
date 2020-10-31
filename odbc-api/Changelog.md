@@ -1,11 +1,16 @@
 # Changelog
 
+## 0.8.0 (next)
+
+* Basic support for binding parameters.
+* `BindColParameters` renamed to `BindColArgs`.
+
 ## 0.7.0
 
 * `Environment::connect` now takes `&str` instead of `&U16Str`.
 * Adds `Environment::connect_utf16`.
 
-## 0.6.2 (next)
+## 0.6.2
 
 * Logs all diagnostics in case driver returns multiple errors.
 

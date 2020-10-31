@@ -17,6 +17,7 @@ mod statement;
 
 pub use {
     as_handle::AsHandle,
+    buffer::buf_ptr,
     column_description::{ColumnDescription, Nullable},
     connection::Connection,
     data_type::DataType,
