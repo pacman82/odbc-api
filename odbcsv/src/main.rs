@@ -1,6 +1,6 @@
 use anyhow::Error;
 use log::info;
-use odbc_api::{buffers::TextRowSet, Environment};
+use odbc_api::{buffers::TextRowSet, Cursor, Environment};
 use std::{
     char::decode_utf16,
     fs::File,
