@@ -5,7 +5,7 @@ use odbc_sys::{Len, SqlDataType, ULen};
 use std::thread::panicking;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
-pub trait Cursor : Sized{
+pub trait Cursor: Sized {
     /// Fetch a column description using the column index.
     ///
     /// # Parameters
@@ -92,12 +92,9 @@ pub trait Cursor : Sized{
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error>;
 
     /// Binds this cursor to a buffer holding a row set.
-    fn bind_row_set_buffer<'b, B>(
-        self,
-        row_set_buffer: &'b mut B,
-    ) -> Result<RowSetCursor<'b, Self, B>, Error>
-        where
-            B: RowSetBuffer;
+    fn bind_row_set_buffer<B>(self, row_set_buffer: &mut B) -> Result<RowSetCursor<Self, B>, Error>
+    where
+        B: RowSetBuffer;
 
     /// SqlDataType
     ///
@@ -215,12 +212,12 @@ impl<'o> Cursor for CursorImpl<'o> {
         self.statement.is_unsigned_column(column_number)
     }
 
-    fn bind_row_set_buffer<'b, B>(
+    fn bind_row_set_buffer<B>(
         mut self,
-        row_set_buffer: &'b mut B,
-    ) -> Result<RowSetCursor<'b, Self, B>, Error>
-        where
-            B: RowSetBuffer,
+        row_set_buffer: &mut B,
+    ) -> Result<RowSetCursor<Self, B>, Error>
+    where
+        B: RowSetBuffer,
     {
         unsafe {
             row_set_buffer.bind_to_cursor(&mut self)?;
@@ -292,8 +289,10 @@ impl<'b, C, B> RowSetCursor<'b, C, B> {
     }
 }
 
-impl<'b, C, B> RowSetCursor<'b, C, B> where C : Cursor{
-
+impl<'b, C, B> RowSetCursor<'b, C, B>
+where
+    C: Cursor,
+{
     /// Fills the bound buffer with the next row set.
     ///
     /// # Return

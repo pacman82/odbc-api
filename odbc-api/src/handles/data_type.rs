@@ -77,6 +77,8 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// This constructor is useful to create an instance of the enumeration using values returned by
+    /// ODBC Api calls like `SQLDescribeCol`, rather than just initializing a variant directly.
     pub fn new(data_type: SqlDataType, column_size: ULen, decimal_digits: i16) -> Self {
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
@@ -114,6 +116,71 @@ impl DataType {
                 column_size,
                 decimal_digits,
             },
+        }
+    }
+
+    /// The associated `data_type` discriminator for this variant.
+    pub fn data_type(&self) -> SqlDataType {
+        match self {
+            DataType::Unknown => SqlDataType::UNKNOWN_TYPE,
+            DataType::Char { .. } => SqlDataType::CHAR,
+            DataType::Numeric { .. } => SqlDataType::NUMERIC,
+            DataType::Decimal { .. } => SqlDataType::DECIMAL,
+            DataType::Integer => SqlDataType::INTEGER,
+            DataType::SmallInt => SqlDataType::SMALLINT,
+            DataType::Float => SqlDataType::FLOAT,
+            DataType::Real => SqlDataType::REAL,
+            DataType::Double => SqlDataType::DOUBLE,
+            DataType::Varchar { .. } => SqlDataType::VARCHAR,
+            DataType::Date => SqlDataType::DATE,
+            DataType::Time { .. } => SqlDataType::TIME,
+            DataType::Timestamp { .. } => SqlDataType::TIMESTAMP,
+            DataType::Bigint => SqlDataType::EXT_BIG_INT,
+            DataType::Tinyint => SqlDataType::EXT_TINY_INT,
+            DataType::Bit => SqlDataType::EXT_BIT,
+            DataType::Other { data_type, .. } => *data_type,
+        }
+    }
+
+    /// Return the column size, as it is required to bind the data type as a parameter.
+    pub fn column_size(&self) -> ULen {
+        match self {
+            DataType::Unknown
+            | DataType::Integer
+            | DataType::SmallInt
+            | DataType::Float
+            | DataType::Real
+            | DataType::Double
+            | DataType::Date
+            | DataType::Time { .. }
+            | DataType::Timestamp { .. }
+            | DataType::Bigint
+            | DataType::Tinyint
+            | DataType::Bit => 0,
+            DataType::Char { length } | DataType::Varchar { length } => *length,
+            DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
+            DataType::Other { column_size, .. } => *column_size,
+        }
+    }
+
+    /// Return the number of decimal digits as required to bind the data type as a parameter.
+    pub fn decimal_digits(&self) -> i16 {
+        match self {
+            DataType::Unknown
+            | DataType::Char { .. }
+            | DataType::Integer
+            | DataType::SmallInt
+            | DataType::Float
+            | DataType::Real
+            | DataType::Double
+            | DataType::Varchar { .. }
+            | DataType::Date
+            | DataType::Bigint
+            | DataType::Tinyint
+            | DataType::Bit => 0,
+            DataType::Numeric { scale, .. } | DataType::Decimal { scale, .. } => *scale,
+            DataType::Time { precision } | DataType::Timestamp { precision } => *precision,
+            DataType::Other { decimal_digits, .. } => *decimal_digits,
         }
     }
 }
