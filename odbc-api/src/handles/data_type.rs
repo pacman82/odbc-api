@@ -1,4 +1,4 @@
-use odbc_sys::{SmallInt, SqlDataType, ULen};
+use odbc_sys::{SqlDataType, ULen};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Enumeration over valid SQL Data Types supported by ODBC
@@ -16,7 +16,7 @@ pub enum DataType {
         /// Total number of digits.
         precision: ULen,
         /// Number of decimal digits.
-        scale: SmallInt,
+        scale: i16,
     },
     /// `Decimal(p,s)`. Signed, exact, numeric value with a precision of at least p and scale s. The
     /// maximum precision is driver-defined. (1 <= p <= 15; s <= p)
@@ -24,7 +24,7 @@ pub enum DataType {
         /// Total number of digits.
         precision: ULen,
         /// Number of decimal digits.
-        scale: SmallInt,
+        scale: i16,
     },
     /// `Integer`. 32 Bit Integer
     Integer,
@@ -51,10 +51,10 @@ pub enum DataType {
     /// `Time`. Hour, minute, and second fields, with valid values for hours of 00 to 23, valid
     /// values for minutes of 00 to 59, and valid values for seconds of 00 to 61. Precision p
     /// indicates the seconds precision.
-    Time { precision: SmallInt },
+    Time { precision: i16 },
     /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as defined
     /// for the Date and Time variants.
-    Timestamp { precision: SmallInt },
+    Timestamp { precision: i16 },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
     /// (signed: -2[63] <= n <= 2[63] - 1, unsigned: 0 <= n <= 2[64] - 1). Has no corresponding type
     /// in SQL-92.
@@ -72,12 +72,12 @@ pub enum DataType {
         data_type: SqlDataType,
         /// Size of column element
         column_size: ULen,
-        decimal_digits: SmallInt,
+        decimal_digits: i16,
     },
 }
 
 impl DataType {
-    pub fn new(data_type: SqlDataType, column_size: ULen, decimal_digits: SmallInt) -> Self {
+    pub fn new(data_type: SqlDataType, column_size: ULen, decimal_digits: i16) -> Self {
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::CHAR => DataType::Char {

@@ -1,12 +1,12 @@
 use super::{ColumnBuffer, TextColumn};
 use crate::{Cursor, Error, RowSetBuffer};
-use odbc_sys::{UInteger, ULen, USmallInt};
+use odbc_sys::ULen;
 use std::str::Utf8Error;
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
 pub struct TextRowSet {
-    batch_size: UInteger,
+    batch_size: u32,
     num_rows_fetched: ULen,
     buffers: Vec<TextColumn>,
 }
@@ -14,11 +14,11 @@ pub struct TextRowSet {
 impl TextRowSet {
     /// Use `cursor` to query the display size for each column of the row set and allocates the
     /// buffers accordingly.
-    pub fn new(batch_size: UInteger, cursor: &Cursor) -> Result<TextRowSet, Error> {
+    pub fn new(batch_size: u32, cursor: &Cursor) -> Result<TextRowSet, Error> {
         let num_cols = cursor.num_result_cols()?;
         let buffers = (1..(num_cols + 1))
             .map(|col_index| {
-                let max_str_len = cursor.col_display_size(col_index as USmallInt)? as usize;
+                let max_str_len = cursor.col_display_size(col_index as u16)? as usize;
                 Ok(TextColumn::new(batch_size as usize, max_str_len))
             })
             .collect::<Result<_, Error>>()?;

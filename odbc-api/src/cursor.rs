@@ -1,7 +1,7 @@
 use crate::{
     buffers::BindColArgs, handles::Description, handles::Statement, ColumnDescription, Error,
 };
-use odbc_sys::{Len, SmallInt, SqlDataType, UInteger, ULen, USmallInt, WChar};
+use odbc_sys::{Len, SqlDataType, ULen};
 use std::thread::panicking;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
@@ -37,7 +37,7 @@ impl<'o> Cursor<'o> {
     /// error.
     pub fn describe_col(
         &self,
-        column_number: USmallInt,
+        column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> Result<(), Error> {
         self.statement
@@ -46,7 +46,7 @@ impl<'o> Cursor<'o> {
     }
 
     /// Number of columns in result set.
-    pub fn num_result_cols(&self) -> Result<SmallInt, Error> {
+    pub fn num_result_cols(&self) -> Result<i16, Error> {
         self.statement.num_result_cols()
     }
 
@@ -66,7 +66,7 @@ impl<'o> Cursor<'o> {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    pub unsafe fn set_row_array_size(&mut self, size: UInteger) -> Result<(), Error> {
+    pub unsafe fn set_row_array_size(&mut self, size: u32) -> Result<(), Error> {
         self.statement.set_row_array_size(size)
     }
 
@@ -117,7 +117,7 @@ impl<'o> Cursor<'o> {
     /// longer bound.
     pub unsafe fn bind_col(
         &mut self,
-        column_number: USmallInt,
+        column_number: u16,
         bind_params: BindColArgs,
     ) -> Result<(), Error> {
         let BindColArgs {
@@ -139,7 +139,7 @@ impl<'o> Cursor<'o> {
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn is_unsigned_column(&self, column_number: USmallInt) -> Result<bool, Error> {
+    pub fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
         self.statement.is_unsigned_column(column_number)
     }
 
@@ -160,7 +160,7 @@ impl<'o> Cursor<'o> {
     /// SqlDataType
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+    pub fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
         self.statement.col_type(column_number)
     }
 
@@ -168,7 +168,7 @@ impl<'o> Cursor<'o> {
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_concise_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+    pub fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
         self.statement.col_type(column_number)
     }
 
@@ -176,14 +176,14 @@ impl<'o> Cursor<'o> {
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_octet_length(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
         self.statement.col_octet_length(column_number)
     }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_display_size(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
         self.statement.col_display_size(column_number)
     }
 
@@ -192,19 +192,19 @@ impl<'o> Cursor<'o> {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    pub fn col_precision(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
         self.statement.col_precision(column_number)
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    pub fn col_scale(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
         self.statement.col_scale(column_number)
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    pub fn col_name(&self, column_number: USmallInt, buf: &mut Vec<WChar>) -> Result<(), Error> {
+    pub fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
         self.statement.col_name(column_number, buf)
     }
 

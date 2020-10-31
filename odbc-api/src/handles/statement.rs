@@ -11,8 +11,7 @@ use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
     SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols,
-    SQLPrepareW, SQLSetStmtAttrW, SmallInt, SqlDataType, SqlReturn, StatementAttribute, UInteger,
-    ULen, USmallInt, WChar,
+    SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
@@ -111,13 +110,13 @@ impl<'s> Statement<'s> {
     /// error.
     pub fn describe_col(
         &self,
-        column_number: USmallInt,
+        column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> Result<(), Error> {
         let name = &mut column_description.name;
         // Use maximum available capacity.
         name.resize(name.capacity(), 0);
-        let mut name_length: SmallInt = 0;
+        let mut name_length: i16 = 0;
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut column_size = 0;
         let mut decimal_digits = 0;
@@ -157,8 +156,8 @@ impl<'s> Statement<'s> {
     }
 
     /// Number of columns in result set.
-    pub fn num_result_cols(&self) -> Result<SmallInt, Error> {
-        let mut out: SmallInt = 0;
+    pub fn num_result_cols(&self) -> Result<i16, Error> {
+        let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self)?;
         Ok(out)
     }
@@ -169,7 +168,7 @@ impl<'s> Statement<'s> {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    pub unsafe fn set_row_array_size(&mut self, size: UInteger) -> Result<(), Error> {
+    pub unsafe fn set_row_array_size(&mut self, size: u32) -> Result<(), Error> {
         assert!(size > 0);
         SQLSetStmtAttrW(
             self.handle,
@@ -255,7 +254,7 @@ impl<'s> Statement<'s> {
     /// longer bound.
     pub unsafe fn bind_col(
         &mut self,
-        column_number: USmallInt,
+        column_number: u16,
         target_type: CDataType,
         target_value: Pointer,
         target_length: Len,
@@ -287,7 +286,7 @@ impl<'s> Statement<'s> {
         value_type: CDataType,
         parameter_type: SqlDataType,
         column_size: u64,
-        decimal_digits: SmallInt,
+        decimal_digits: i16,
         parameter_value_ptr: Pointer,
         buffer_length: Len,
         str_len_or_ind_ptr: *mut Len,
@@ -311,7 +310,7 @@ impl<'s> Statement<'s> {
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn is_unsigned_column(&self, column_number: USmallInt) -> Result<bool, Error> {
+    pub fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
         let out = unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number)? };
         match out {
             0 => Ok(false),
@@ -323,7 +322,7 @@ impl<'s> Statement<'s> {
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+    pub fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
         let out = unsafe { self.numeric_col_attribute(Desc::Type, column_number)? };
         Ok(SqlDataType(out.try_into().unwrap()))
     }
@@ -332,7 +331,7 @@ impl<'s> Statement<'s> {
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_concise_type(&self, column_number: USmallInt) -> Result<SqlDataType, Error> {
+    pub fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
         let out = unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number)? };
         Ok(SqlDataType(out.try_into().unwrap()))
     }
@@ -341,14 +340,14 @@ impl<'s> Statement<'s> {
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_octet_length(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
         unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
     }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    pub fn col_display_size(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
         unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
     }
 
@@ -357,21 +356,21 @@ impl<'s> Statement<'s> {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    pub fn col_precision(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
         unsafe { self.numeric_col_attribute(Desc::Precision, column_number) }
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    pub fn col_scale(&self, column_number: USmallInt) -> Result<Len, Error> {
+    pub fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
         unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    pub fn col_name(&self, column_number: USmallInt, buf: &mut Vec<WChar>) -> Result<(), Error> {
+    pub fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
         // String length in bytes, not characters. Terminating zero is excluded.
-        let mut string_length_in_bytes: SmallInt = 0;
+        let mut string_length_in_bytes: i16 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
         unsafe {
@@ -381,7 +380,7 @@ impl<'s> Statement<'s> {
                 Desc::Name,
                 mut_buf_ptr(buf) as Pointer,
                 (buf.len() * 2).try_into().unwrap(),
-                &mut string_length_in_bytes as *mut SmallInt,
+                &mut string_length_in_bytes as *mut i16,
                 null_mut(),
             )
             .into_result(self)?;
@@ -393,7 +392,7 @@ impl<'s> Statement<'s> {
                     Desc::Name,
                     mut_buf_ptr(buf) as Pointer,
                     (buf.len() * 2).try_into().unwrap(),
-                    &mut string_length_in_bytes as *mut SmallInt,
+                    &mut string_length_in_bytes as *mut i16,
                     null_mut(),
                 )
                 .into_result(self)?;
@@ -425,7 +424,7 @@ impl<'s> Statement<'s> {
     unsafe fn numeric_col_attribute(
         &self,
         attribute: Desc,
-        column_number: USmallInt,
+        column_number: u16,
     ) -> Result<Len, Error> {
         let mut out: Len = 0;
         SQLColAttributeW(

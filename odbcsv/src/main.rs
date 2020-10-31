@@ -1,10 +1,6 @@
 use anyhow::Error;
 use log::info;
-use odbc_api::{
-    buffers::TextRowSet,
-    sys::{UInteger, USmallInt},
-    Environment,
-};
+use odbc_api::{buffers::TextRowSet, Environment};
 use std::{
     char::decode_utf16,
     fs::File,
@@ -23,7 +19,7 @@ struct Cli {
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
     #[structopt(long, default_value = "5000")]
-    batch_size: UInteger,
+    batch_size: u32,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
     #[structopt(long, short = "-o")]
@@ -76,7 +72,7 @@ fn main() -> Result<(), Error> {
 
             // Loop over the number of reported columns in the result set and fetch the Column name
             // for each one, if available.
-            for index in 1..(num_cols as USmallInt + 1) {
+            for index in 1..(num_cols as u16 + 1) {
                 cursor.col_name(index, &mut buf_wchar)?;
                 let name =
                     decode_utf16(buf_wchar.iter().copied()).collect::<Result<String, _>>()?;
