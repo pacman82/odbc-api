@@ -1,4 +1,7 @@
-pub use crate::{handles, CursorImpl, Error, Parameters};
+pub use crate::{
+    handles::{self, Statement},
+    CursorImpl, Error, Parameters,
+};
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
@@ -44,7 +47,7 @@ impl<'c> Connection<'c> {
         &mut self,
         query: &U16Str,
         params: impl Parameters,
-    ) -> Result<Option<CursorImpl>, Error> {
+    ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
         unsafe {
@@ -79,7 +82,7 @@ impl<'c> Connection<'c> {
         &mut self,
         query: &str,
         params: impl Parameters,
-    ) -> Result<Option<CursorImpl>, Error> {
+    ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)
     }

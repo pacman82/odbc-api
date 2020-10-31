@@ -2,7 +2,7 @@ use crate::{
     buffers::BindColArgs, handles::Description, handles::Statement, ColumnDescription, Error,
 };
 use odbc_sys::{Len, SqlDataType, ULen};
-use std::thread::panicking;
+use std::{borrow::BorrowMut, marker::PhantomData, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: Sized {
@@ -24,7 +24,7 @@ pub trait Cursor: Sized {
     /// Number of columns in result set.
     fn num_result_cols(&self) -> Result<i16, Error>;
 
-    /// Returns the next rowset in the result set.
+    /// Returns the next set of rows in the result set.
     ///
     /// If any columns are bound, it returns the data in those columns. If the application has
     /// specified a pointer to a row status array or a buffer in which to return the number of rows
@@ -137,13 +137,21 @@ pub trait Cursor: Sized {
 }
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
-pub struct CursorImpl<'open_connection> {
-    statement: Statement<'open_connection>,
+pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
+    statement: Stmt,
+    // If we would not implement the drop handler, we could do without the Phantom member and an
+    // overall simpler declaration (without any lifetimes), since we could instead simply specialize
+    // each implementation. Since drop handlers can not specialized, though we need to deal with
+    // this.
+    connection: PhantomData<Statement<'open_connection>>,
 }
 
-impl<'o> Drop for CursorImpl<'o> {
+impl<'o, S> Drop for CursorImpl<'o, S>
+where
+    S: BorrowMut<Statement<'o>>,
+{
     fn drop(&mut self) {
-        if let Err(e) = self.statement.close_cursor() {
+        if let Err(e) = self.statement.borrow_mut().close_cursor() {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
@@ -153,39 +161,43 @@ impl<'o> Drop for CursorImpl<'o> {
     }
 }
 
-impl<'o> Cursor for CursorImpl<'o> {
+impl<'o, S> Cursor for CursorImpl<'o, S>
+where
+    S: BorrowMut<Statement<'o>>,
+{
     fn describe_col(
         &self,
         column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> Result<(), Error> {
         self.statement
+            .borrow()
             .describe_col(column_number, column_description)?;
         Ok(())
     }
 
     fn num_result_cols(&self) -> Result<i16, Error> {
-        self.statement.num_result_cols()
+        self.statement.borrow().num_result_cols()
     }
 
     fn fetch(&mut self) -> Result<bool, Error> {
-        self.statement.fetch()
+        self.statement.borrow_mut().fetch()
     }
 
     unsafe fn set_row_array_size(&mut self, size: u32) -> Result<(), Error> {
-        self.statement.set_row_array_size(size)
+        self.statement.borrow_mut().set_row_array_size(size)
     }
 
     unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut ULen) -> Result<(), Error> {
-        self.statement.set_num_rows_fetched(num_rows)
+        self.statement.borrow_mut().set_num_rows_fetched(num_rows)
     }
 
     unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error> {
-        self.statement.set_row_bind_type(row_size)
+        self.statement.borrow_mut().set_row_bind_type(row_size)
     }
 
     fn unbind_cols(&mut self) -> Result<(), Error> {
-        self.statement.unbind_cols()
+        self.statement.borrow_mut().unbind_cols()
     }
 
     unsafe fn bind_col(
@@ -199,7 +211,7 @@ impl<'o> Cursor for CursorImpl<'o> {
             target_length,
             indicator,
         } = bind_params;
-        self.statement.bind_col(
+        self.statement.borrow_mut().bind_col(
             column_number,
             target_type,
             target_value,
@@ -209,7 +221,7 @@ impl<'o> Cursor for CursorImpl<'o> {
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
-        self.statement.is_unsigned_column(column_number)
+        self.statement.borrow().is_unsigned_column(column_number)
     }
 
     fn bind_row_set_buffer<B>(
@@ -226,41 +238,47 @@ impl<'o> Cursor for CursorImpl<'o> {
     }
 
     fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        self.statement.col_type(column_number)
+        self.statement.borrow().col_type(column_number)
     }
 
     fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        self.statement.col_type(column_number)
+        self.statement.borrow().col_type(column_number)
     }
 
     fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
-        self.statement.col_octet_length(column_number)
+        self.statement.borrow().col_octet_length(column_number)
     }
 
     fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
-        self.statement.col_display_size(column_number)
+        self.statement.borrow().col_display_size(column_number)
     }
 
     fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
-        self.statement.col_precision(column_number)
+        self.statement.borrow().col_precision(column_number)
     }
 
     fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
-        self.statement.col_scale(column_number)
+        self.statement.borrow().col_scale(column_number)
     }
 
     fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.statement.col_name(column_number, buf)
+        self.statement.borrow().col_name(column_number, buf)
     }
 
     fn application_row_descriptor(&self) -> Result<Description, Error> {
-        self.statement.application_row_descriptor()
+        self.statement.borrow().application_row_descriptor()
     }
 }
 
-impl<'o> CursorImpl<'o> {
-    pub(crate) fn new(statement: Statement<'o>) -> Self {
-        Self { statement }
+impl<'o, S> CursorImpl<'o, S>
+where
+    S: BorrowMut<Statement<'o>>,
+{
+    pub(crate) fn new(statement: S) -> Self {
+        Self {
+            statement,
+            connection: PhantomData,
+        }
     }
 }
 
@@ -273,7 +291,7 @@ pub unsafe trait RowSetBuffer {
     ///
     /// It's the implementations responsibility to ensure that all bound buffers are valid as
     /// specified and live long enough.
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut CursorImpl) -> Result<(), Error>;
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>;
 }
 
 /// A row set cursor iterates in blocks over row sets, filling them in buffers, instead of iterating
