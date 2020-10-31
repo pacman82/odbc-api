@@ -1,5 +1,5 @@
 use super::{ColumnBuffer, TextColumn};
-use crate::{Cursor, Error, RowSetBuffer};
+use crate::{Cursor, CursorImpl, Error, RowSetBuffer};
 use odbc_sys::ULen;
 use std::str::Utf8Error;
 
@@ -14,7 +14,7 @@ pub struct TextRowSet {
 impl TextRowSet {
     /// Use `cursor` to query the display size for each column of the row set and allocates the
     /// buffers accordingly.
-    pub fn new(batch_size: u32, cursor: &Cursor) -> Result<TextRowSet, Error> {
+    pub fn new(batch_size: u32, cursor: &CursorImpl) -> Result<TextRowSet, Error> {
         let num_cols = cursor.num_result_cols()?;
         let buffers = (1..(num_cols + 1))
             .map(|col_index| {
@@ -54,7 +54,7 @@ impl TextRowSet {
 }
 
 unsafe impl RowSetBuffer for TextRowSet {
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut Cursor) -> Result<(), Error> {
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut CursorImpl) -> Result<(), Error> {
         cursor.set_row_bind_type(0)?;
         cursor.set_row_array_size(self.batch_size)?;
         cursor.set_num_rows_fetched(&mut self.num_rows_fetched)?;

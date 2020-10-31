@@ -4,7 +4,7 @@ use odbc_api::{
     buffers::{self, FixedSizedCType, TextRowSet},
     handles::Statement,
     sys::{ParamType, Pointer, SqlDataType},
-    ColumnDescription, DataType, Environment, Error, Nullable, Parameters, U16String,
+    ColumnDescription, Cursor, DataType, Environment, Error, Nullable, Parameters, U16String,
 };
 use std::ptr::null_mut;
 use std::{convert::TryInto, sync::Mutex};

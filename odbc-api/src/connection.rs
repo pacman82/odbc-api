@@ -1,4 +1,4 @@
-pub use crate::{handles, Cursor, Error, Parameters};
+pub use crate::{handles, CursorImpl, Error, Parameters};
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
@@ -44,7 +44,7 @@ impl<'c> Connection<'c> {
         &mut self,
         query: &U16Str,
         params: impl Parameters,
-    ) -> Result<Option<Cursor>, Error> {
+    ) -> Result<Option<CursorImpl>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
         unsafe {
@@ -53,7 +53,7 @@ impl<'c> Connection<'c> {
 
         if stmt.exec_direct(query)? {
             stmt.reset_parameters()?;
-            Ok(Some(Cursor::new(stmt)))
+            Ok(Some(CursorImpl::new(stmt)))
         } else {
             // ODBC Driver returned NoData.
             Ok(None)
@@ -79,7 +79,7 @@ impl<'c> Connection<'c> {
         &mut self,
         query: &str,
         params: impl Parameters,
-    ) -> Result<Option<Cursor>, Error> {
+    ) -> Result<Option<CursorImpl>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)
     }

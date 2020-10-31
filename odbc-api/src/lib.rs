@@ -13,7 +13,7 @@ pub mod handles;
 
 pub use self::{
     connection::Connection,
-    cursor::{Cursor, RowSetBuffer, RowSetCursor},
+    cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
     parameters::Parameters,
