@@ -1,10 +1,12 @@
 use buffers::{ColumnBuffer, OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers,
-    sys::{Integer, SqlDataType},
-    ColumnDescription, DataType, Environment, Nullable, U16String,
+    buffers::{self, FixedSizedCType, TextRowSet},
+    handles::Statement,
+    sys::{Integer, ParamType, Pointer, SqlDataType},
+    ColumnDescription, DataType, Environment, Error, Nullable, Parameters, U16String,
 };
+use std::ptr::null_mut;
 use std::{convert::TryInto, sync::Mutex};
 
 const MSSQL: &str =
@@ -201,54 +203,6 @@ fn mssql_bind_char() {
     }
 }
 
-// #[test]
-// fn mssql_bind_numeric() {
-
-//     // See:
-//     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
-//     // https://stackoverflow.com/questions/9177795/how-to-convert-sql-numeric-struct-to-double-and-string
-
-//     let _ = init().lock();
-//     let env = unsafe { Environment::new().unwrap() };
-
-//     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
-//     let sql = "SELECT my_numeric FROM AllTheTypes;";
-//     let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
-
-//     let mut buf: Vec<Numeric> = vec![Numeric::default(); 1];
-
-//     let mut ard = cursor.application_row_descriptor().unwrap();
-//     unsafe {
-//         ard.set_field_type(1, SqlDataType::NUMERIC).unwrap();
-//         ard.set_field_scale(1, 2).unwrap();
-//         ard.set_field_precision(1, 3).unwrap();
-//     }
-
-//     let bind_args = BindColParameters {
-//         indicator: null_mut(),
-//         target_length: size_of::<Numeric>() as i64,
-//         target_type: CDataType::Numeric, // CDataType:ArdType
-//         target_value: buf.as_mut_ptr() as Pointer,
-//     };
-
-//     unsafe {
-//         cursor.set_row_array_size(1).unwrap();
-//         cursor.bind_col(1, bind_args).unwrap();
-//     }
-
-//     cursor.fetch().unwrap();
-
-//     assert_eq!(
-//         Numeric {
-//             precision: 0,
-//             scale: 0,
-//             sign: 0,
-//             val: [0; 16]
-//         },
-//         buf[0]
-//     );
-// }
-
 #[test]
 fn mssql_bind_varchar() {
     let _lock = init().lock();
@@ -325,3 +279,88 @@ fn mssql_all_types() {
     cursor.describe_col(4, &mut cd).unwrap();
     assert_eq!(DataType::Real, cd.data_type);
 }
+
+#[test]
+fn mssql_bind_integer_parameter() {
+    struct YearParam(i32);
+
+    unsafe impl Parameters for YearParam {
+        unsafe fn bind_input(&self, stmt: &mut Statement) -> Result<(), Error> {
+            stmt.bind_parameter(
+                1,
+                ParamType::Input,
+                i32::C_DATA_TYPE,
+                SqlDataType::INTEGER,
+                0,
+                0,
+                &self.0 as *const i32 as *mut i32 as Pointer,
+                0,
+                null_mut(),
+            )
+            .unwrap();
+            Ok(())
+        }
+    }
+
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where year=?;";
+    let cursor = conn.exec_direct(sql, YearParam(1968)).unwrap().unwrap();
+    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+
+    let batch = cursor.fetch().unwrap().unwrap();
+    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+
+    assert_eq!("2001: A Space Odyssey", title);
+}
+
+// #[test]
+// fn mssql_bind_numeric() {
+
+//     // See:
+//     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
+//     // https://stackoverflow.com/questions/9177795/how-to-convert-sql-numeric-struct-to-double-and-string
+
+//     let _ = init().lock();
+//     let env = unsafe { Environment::new().unwrap() };
+
+//     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+//     let sql = "SELECT my_numeric FROM AllTheTypes;";
+//     let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
+
+//     let mut buf: Vec<Numeric> = vec![Numeric::default(); 1];
+
+//     let mut ard = cursor.application_row_descriptor().unwrap();
+//     unsafe {
+//         ard.set_field_type(1, SqlDataType::NUMERIC).unwrap();
+//         ard.set_field_scale(1, 2).unwrap();
+//         ard.set_field_precision(1, 3).unwrap();
+//     }
+
+//     let bind_args = BindColParameters {
+//         indicator: null_mut(),
+//         target_length: size_of::<Numeric>() as i64,
+//         target_type: CDataType::Numeric, // CDataType:ArdType
+//         target_value: buf.as_mut_ptr() as Pointer,
+//     };
+
+//     unsafe {
+//         cursor.set_row_array_size(1).unwrap();
+//         cursor.bind_col(1, bind_args).unwrap();
+//     }
+
+//     cursor.fetch().unwrap();
+
+//     assert_eq!(
+//         Numeric {
+//             precision: 0,
+//             scale: 0,
+//             sign: 0,
+//             val: [0; 16]
+//         },
+//         buf[0]
+//     );
+// }

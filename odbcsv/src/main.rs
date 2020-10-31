@@ -22,7 +22,7 @@ struct Cli {
     verbose: usize,
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[structopt(long, default_value = "2000")]
+    #[structopt(long, default_value = "5000")]
     batch_size: UInteger,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.

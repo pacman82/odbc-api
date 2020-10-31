@@ -48,9 +48,8 @@ impl<'c> Connection<'c> {
         let mut stmt = self.connection.allocate_statement()?;
 
         unsafe {
-            params.bind_to_statement(&mut stmt)?;
+            params.bind_input(&mut stmt)?;
         }
-
 
         if stmt.exec_direct(query)? {
             stmt.reset_parameters()?;
@@ -76,7 +75,11 @@ impl<'c> Connection<'c> {
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct(&mut self, query: &str, params: impl Parameters) -> Result<Option<Cursor>, Error> {
+    pub fn exec_direct(
+        &mut self,
+        query: &str,
+        params: impl Parameters,
+    ) -> Result<Option<Cursor>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)
     }
