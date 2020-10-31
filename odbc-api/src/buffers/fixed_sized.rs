@@ -1,10 +1,7 @@
 use std::ptr::null_mut;
 
 use super::{BindColArgs, ColumnBuffer};
-use odbc_sys::{
-    CDataType, Char, Date, Integer, Len, Numeric, Pointer, SChar, SmallInt, Time, Timestamp,
-    UInteger, USmallInt, NULL_DATA,
-};
+use odbc_sys::{CDataType, Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
@@ -136,27 +133,27 @@ unsafe impl FixedSizedCType for Numeric {
     const C_DATA_TYPE: CDataType = CDataType::Numeric;
 }
 
-unsafe impl FixedSizedCType for SmallInt {
+unsafe impl FixedSizedCType for i16 {
     const C_DATA_TYPE: CDataType = CDataType::SShort;
 }
 
-unsafe impl FixedSizedCType for USmallInt {
+unsafe impl FixedSizedCType for u16 {
     const C_DATA_TYPE: CDataType = CDataType::UShort;
 }
 
-unsafe impl FixedSizedCType for Integer {
+unsafe impl FixedSizedCType for i32 {
     const C_DATA_TYPE: CDataType = CDataType::SLong;
 }
 
-unsafe impl FixedSizedCType for UInteger {
+unsafe impl FixedSizedCType for u32 {
     const C_DATA_TYPE: CDataType = CDataType::ULong;
 }
 
-unsafe impl FixedSizedCType for SChar {
+unsafe impl FixedSizedCType for i8 {
     const C_DATA_TYPE: CDataType = CDataType::STinyInt;
 }
 
-unsafe impl FixedSizedCType for Char {
+unsafe impl FixedSizedCType for u8 {
     const C_DATA_TYPE: CDataType = CDataType::UTinyInty;
 }
 

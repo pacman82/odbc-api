@@ -1,5 +1,4 @@
 use super::data_type::DataType;
-use odbc_sys::WChar;
 use std::char::{decode_utf16, DecodeUtf16Error};
 
 /// Indication of whether a column is nullable or not.
@@ -20,7 +19,7 @@ impl Default for Nullable {
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct ColumnDescription {
     /// Column name. May be empty if unavailable.
-    pub name: Vec<WChar>,
+    pub name: Vec<u16>,
     /// Type of the column
     pub data_type: DataType,
     /// Indicates whether the column is nullable or not.

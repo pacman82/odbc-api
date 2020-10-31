@@ -1,7 +1,4 @@
-use odbc_sys::{
-    Desc, HDesc, HStmt, Handle, HandleType, Integer, Pointer, SQLSetDescFieldW, SmallInt,
-    SqlDataType,
-};
+use odbc_sys::{Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescFieldW, SqlDataType};
 use std::marker::PhantomData;
 
 use crate::Error;
@@ -35,11 +32,7 @@ impl<'d> Description<'d> {
         }
     }
 
-    pub fn set_field_precision(
-        &mut self,
-        column_number: SmallInt,
-        precision: Integer,
-    ) -> Result<(), Error> {
+    pub fn set_field_precision(&mut self, column_number: i16, precision: i32) -> Result<(), Error> {
         unsafe {
             SQLSetDescFieldW(
                 self.handle,
@@ -52,11 +45,7 @@ impl<'d> Description<'d> {
         }
     }
 
-    pub fn set_field_scale(
-        &mut self,
-        column_number: SmallInt,
-        scale: Integer,
-    ) -> Result<(), Error> {
+    pub fn set_field_scale(&mut self, column_number: i16, scale: i32) -> Result<(), Error> {
         unsafe {
             SQLSetDescFieldW(self.handle, column_number, Desc::Scale, scale as Pointer, 0)
                 .into_result(self)
@@ -69,7 +58,7 @@ impl<'d> Description<'d> {
     /// buffer sizes and such.
     pub unsafe fn set_field_type(
         &mut self,
-        column_number: SmallInt,
+        column_number: i16,
         data_type: SqlDataType,
     ) -> Result<(), Error> {
         SQLSetDescFieldW(
@@ -88,7 +77,7 @@ impl<'d> Description<'d> {
     /// determine buffer sizes and such.
     pub unsafe fn set_field_concise_type(
         &mut self,
-        column_number: SmallInt,
+        column_number: i16,
         data_type: SqlDataType,
     ) -> Result<(), Error> {
         SQLSetDescFieldW(

@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, FixedSizedCType, TextRowSet},
     handles::Statement,
-    sys::{Integer, ParamType, Pointer, SqlDataType},
+    sys::{ParamType, Pointer, SqlDataType},
     ColumnDescription, DataType, Environment, Error, Nullable, Parameters, U16String,
 };
 use std::ptr::null_mut;
@@ -152,7 +152,7 @@ fn mssql_prices() {
     // Test binding id int buffer
     let batch_size = 10;
     assert_eq!(SqlDataType::INTEGER, cursor.col_concise_type(1).unwrap());
-    let mut id_buffer: Vec<Integer> = vec![0; batch_size];
+    let mut id_buffer: Vec<i32> = vec![0; batch_size];
     unsafe {
         cursor
             .set_row_array_size(batch_size.try_into().unwrap())

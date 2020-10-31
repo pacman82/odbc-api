@@ -2,12 +2,12 @@ use super::{
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
 };
-use odbc_sys::{Integer, SQLGetDiagRecW, SmallInt, SqlReturn, WChar, SQLSTATE_SIZEW};
+use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZEW};
 use std::{convert::TryInto, fmt};
 use widestring::{U16CStr, U16Str};
 
 /// A buffer large enough to hold an `SOLState` for diagnostics and a terminating zero.
-pub type State = [WChar; SQLSTATE_SIZEW + 1];
+pub type State = [u16; SQLSTATE_SIZEW + 1];
 
 /// Result of `diagnostics`.
 #[derive(Debug, Clone, Copy)]
@@ -18,7 +18,7 @@ pub struct DiagResult {
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/sqlstates
     pub state: State,
     /// Native error code specific to the data source.
-    pub native_error: Integer,
+    pub native_error: i32,
 }
 
 /// Call this function to retrieve diagnostic information for the last method call.
@@ -49,8 +49,8 @@ pub struct DiagResult {
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
 pub fn diagnostics(
     handle: &dyn AsHandle,
-    rec_number: SmallInt,
-    message_text: &mut Vec<WChar>,
+    rec_number: i16,
+    message_text: &mut Vec<u16>,
 ) -> Option<DiagResult> {
     assert!(rec_number > 0);
 
@@ -126,10 +126,10 @@ pub struct Record {
     // All elements but the last one, may not be null. The last one must be null.
     pub state: State,
     // Error code returned by Driver manager or driver
-    pub native_error: Integer,
+    pub native_error: i32,
     /// Buffer containing the error message. The buffer already has the correct size, and there is no
     /// terminating zero at the end.
-    pub message: Vec<WChar>,
+    pub message: Vec<u16>,
 }
 
 impl Record {
@@ -138,7 +138,7 @@ impl Record {
     /// # Return
     ///
     /// `true` if a record has been found, `false` if not.
-    pub fn fill_from(&mut self, handle: &dyn AsHandle, record_number: SmallInt) -> bool {
+    pub fn fill_from(&mut self, handle: &dyn AsHandle, record_number: i16) -> bool {
         match diagnostics(handle, record_number, &mut self.message) {
             Some(result) => {
                 self.state = result.state;
