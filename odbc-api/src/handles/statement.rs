@@ -55,21 +55,26 @@ impl<'s> Statement<'s> {
     /// if any parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
     /// statement for one-time execution.
     ///
+    /// # Safety
+    ///
+    /// While `self` as always guaranteed to be a valid allocated handle, this function may
+    /// dereference bound parameters. It is the callers responsibility to ensure these are still
+    /// valid. One strategy is to reset potentially invalid parameters right before the call using
+    /// `reset_parameters`.
+    ///
     /// # Return
     ///
     /// Returns `true` if a cursor is created. If `false` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows. If a cursor is created. `close_cursor` should be called after it is no longer used.
-    pub fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error> {
-        unsafe {
-            match SQLExecDirectW(
-                self.handle,
-                buf_ptr(statement_text.as_slice()),
-                statement_text.len().try_into().unwrap(),
-            ) {
-                SqlReturn::NO_DATA => Ok(false),
-                other => other.into_result(self).map(|()| true),
-            }
+    pub unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error> {
+        match SQLExecDirectW(
+            self.handle,
+            buf_ptr(statement_text.as_slice()),
+            statement_text.len().try_into().unwrap(),
+        ) {
+            SqlReturn::NO_DATA => Ok(false),
+            other => other.into_result(self).map(|()| true),
         }
     }
 
@@ -90,6 +95,13 @@ impl<'s> Statement<'s> {
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
     /// results from a call to `execute`, the application can call SQLExecute again with new
     /// parameter values.
+    ///
+    /// # Safety
+    ///
+    /// While `self` as always guaranteed to be a valid allocated handle, this function may
+    /// dereference bound parameters. It is the callers responsibility to ensure these are still
+    /// valid. One strategy is to reset potentially invalid parameters right before the call using
+    /// `reset_parameters`.
     pub fn execute(&mut self) -> Result<(), Error> {
         unsafe { SQLExecute(self.handle) }.into_result(self)
     }
