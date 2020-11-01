@@ -10,6 +10,9 @@ use widestring::{U16Str, U16String};
 /// * The current environment-level diagnostics
 /// * The handles of connections currently allocated on the environment
 /// * The current stetting of each environment attribute
+///
+/// Creating the environment is the first applications do, then interacting with an ODBC driver
+/// manager. There must only be one environment in the entire process.
 pub struct Environment {
     environment: handles::Environment,
 }
