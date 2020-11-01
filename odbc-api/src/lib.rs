@@ -17,7 +17,7 @@ pub use self::{
     cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
-    parameters::Parameters,
+    parameters::{Parameters, VarCharParam, WithDataType},
     prepared::Prepared,
 };
 // Reexports

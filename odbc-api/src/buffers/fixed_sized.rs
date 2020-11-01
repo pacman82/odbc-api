@@ -1,7 +1,6 @@
-use std::ptr::null_mut;
-
 use super::{BindColArgs, ColumnBuffer};
 use odbc_sys::{CDataType, Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
+use std::ptr::null_mut;
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
@@ -15,11 +14,11 @@ pub type OptU8Column = OptFixedSizedColumn<u8>;
 pub type OptI8Column = OptFixedSizedColumn<i8>;
 pub type OptBitColumn = OptFixedSizedColumn<Bit>;
 
-/// Newtype wrapping u8 and binding as SQL_BIT.
+/// New type wrapping u8 and binding as SQL_BIT.
 ///
 /// If rust would guarantee the representation of `bool` to be an `u8`, `bool` would be the obvious
 /// choice instead. Alas it is not and someday on some platform bool might be something else than a
-/// `u8` so let's use this newtype instead.
+/// `u8` so let's use this new type instead.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Bit(pub u8);
 

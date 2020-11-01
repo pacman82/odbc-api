@@ -3,6 +3,7 @@
 ## 0.1.8 (next)
 
 * Default bulk size increased to 5000 rows.
+* Support for positional parameters in SQL query
 
 ## 0.1.7
 

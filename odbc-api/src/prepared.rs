@@ -24,7 +24,7 @@ impl<'o> Prepared<'o> {
             // `exec_direct`.
             self.statement.reset_parameters()?;
             // Bind new parameters passed by caller.
-            params.bind_input(&mut self.statement)?;
+            params.bind_input_parameters(&mut self.statement)?;
             self.statement.execute()?;
         }
         Ok(CursorImpl::new(&mut self.statement))

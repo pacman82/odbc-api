@@ -1,12 +1,12 @@
 use buffers::{ColumnBuffer, OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers::{self, FixedSizedCType, TextRowSet},
-    handles::Statement,
-    sys::{ParamType, Pointer, SqlDataType},
-    ColumnDescription, Cursor, DataType, Environment, Error, Nullable, Parameters, U16String,
+    buffers::{self, TextRowSet},
+    sys::SqlDataType,
+    ColumnDescription, Cursor, DataType, Environment, Nullable, U16String, VarCharParam,
+    WithDataType,
 };
-use std::{convert::TryInto, ptr::null_mut, sync::Mutex};
+use std::{convert::TryInto, sync::Mutex};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -281,30 +281,21 @@ fn mssql_all_types() {
 
 #[test]
 fn mssql_bind_integer_parameter() {
-    struct YearParam(i32);
-
-    unsafe impl Parameters for YearParam {
-        unsafe fn bind_input(&self, stmt: &mut Statement) -> Result<(), Error> {
-            stmt.bind_parameter(
-                1,
-                ParamType::Input,
-                i32::C_DATA_TYPE,
-                DataType::Integer,
-                &self.0 as *const i32 as *mut i32 as Pointer,
-                0,
-                null_mut(),
-            )
-            .unwrap();
-            Ok(())
-        }
-    }
-
     let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.exec_direct(sql, YearParam(1968)).unwrap().unwrap();
+    let cursor = conn
+        .exec_direct(
+            sql,
+            WithDataType {
+                value: 1968,
+                data_type: DataType::Integer,
+            },
+        )
+        .unwrap()
+        .unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
     let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
 
@@ -316,24 +307,6 @@ fn mssql_bind_integer_parameter() {
 
 #[test]
 fn mssql_prepared_statement() {
-    struct YearParam(i32);
-
-    unsafe impl Parameters for YearParam {
-        unsafe fn bind_input(&self, stmt: &mut Statement) -> Result<(), Error> {
-            stmt.bind_parameter(
-                1,
-                ParamType::Input,
-                i32::C_DATA_TYPE,
-                DataType::Integer,
-                &self.0 as *const i32 as *mut i32 as Pointer,
-                0,
-                null_mut(),
-            )
-            .unwrap();
-            Ok(())
-        }
-    }
-
     let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
@@ -344,7 +317,12 @@ fn mssql_prepared_statement() {
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared.execute(YearParam(1968)).unwrap();
+        let cursor = prepared
+            .execute(WithDataType {
+                value: 1968,
+                data_type: DataType::Integer,
+            })
+            .unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -353,13 +331,38 @@ fn mssql_prepared_statement() {
     }
 
     {
-        let cursor = prepared.execute(YearParam(1993)).unwrap();
+        let cursor = prepared
+            .execute(WithDataType {
+                value: 1993,
+                data_type: DataType::Integer,
+            })
+            .unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
         let title = batch.at_as_str(0, 0).unwrap().unwrap();
         assert_eq!("Jurassic Park", title);
     }
+}
+
+#[test]
+fn mssql_bind_integer_parameter_as_string() {
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where year=?;";
+    let cursor = conn
+        .exec_direct(sql, VarCharParam::new("1968".as_bytes()))
+        .unwrap()
+        .unwrap();
+    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+
+    let batch = cursor.fetch().unwrap().unwrap();
+    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+
+    assert_eq!("2001: A Space Odyssey", title);
 }
 
 // #[test]

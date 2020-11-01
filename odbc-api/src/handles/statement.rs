@@ -287,6 +287,13 @@ impl<'s> Statement<'s> {
     ///
     /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
     ///
+    /// # Parameters
+    ///
+    /// ...
+    /// * `buffer_length`: Used to calculate the position of individual parameters then binding
+    ///   buffers or to truncate binary and character data in case of output.
+    /// ...
+    ///
     /// # Safety
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.

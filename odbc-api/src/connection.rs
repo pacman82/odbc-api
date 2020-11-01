@@ -55,7 +55,7 @@ impl<'c> Connection<'c> {
             // `exec_direct`.
             stmt.reset_parameters()?;
             // Bind new parameters passed by caller.
-            params.bind_input(&mut stmt)?;
+            params.bind_input_parameters(&mut stmt)?;
             stmt.exec_direct(query)?
         };
 

@@ -1,6 +1,6 @@
 use anyhow::Error;
 use log::info;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment};
+use odbc_api::{buffers::TextRowSet, Cursor, Environment, VarCharParam};
 use std::{
     char::decode_utf16,
     fs::File,
@@ -27,10 +27,12 @@ struct Cli {
     /// The connection string used to connect to the ODBC datasource.
     #[structopt()]
     connection_string: String,
-    /// Query executed against the ODBC data source.
+    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// placeholders for positional parameters.
     #[structopt()]
     query: String,
-    /// You can pass replace placeholder question marks ('?') in the query text with parameters.
+    /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
+    /// the end of the command line.
     parameters: Vec<String>,
 }
 
@@ -60,7 +62,13 @@ fn main() -> Result<(), Error> {
 
     let mut connection = environment.connect_with_connection_string(&opt.connection_string)?;
 
-    match connection.exec_direct(&opt.query, ())? {
+    let params: Vec<_> = opt
+        .parameters
+        .iter()
+        .map(|param| VarCharParam::new(param.as_bytes()))
+        .collect();
+
+    match connection.exec_direct(&opt.query, params.as_slice())? {
         Some(cursor) => {
             let num_cols = cursor.num_result_cols()?;
             // Some ODBC drivers do not report the required size to hold the column name. Starting
