@@ -6,8 +6,7 @@ use odbc_api::{
     sys::{ParamType, Pointer, SqlDataType},
     ColumnDescription, Cursor, DataType, Environment, Error, Nullable, Parameters, U16String,
 };
-use std::ptr::null_mut;
-use std::{convert::TryInto, sync::Mutex};
+use std::{convert::TryInto, ptr::null_mut, sync::Mutex};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -313,6 +312,54 @@ fn mssql_bind_integer_parameter() {
     let title = batch.at_as_str(0, 0).unwrap().unwrap();
 
     assert_eq!("2001: A Space Odyssey", title);
+}
+
+#[test]
+fn mssql_prepared_statement() {
+    struct YearParam(i32);
+
+    unsafe impl Parameters for YearParam {
+        unsafe fn bind_input(&self, stmt: &mut Statement) -> Result<(), Error> {
+            stmt.bind_parameter(
+                1,
+                ParamType::Input,
+                i32::C_DATA_TYPE,
+                DataType::Integer,
+                &self.0 as *const i32 as *mut i32 as Pointer,
+                0,
+                null_mut(),
+            )
+            .unwrap();
+            Ok(())
+        }
+    }
+
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    // Prepare the statement once
+    let conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where year=?;";
+    let mut prepared = conn.prepare(sql).unwrap();
+
+    // Execute it two times with different parameters
+    {
+        let cursor = prepared.execute(YearParam(1968)).unwrap();
+        let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+        let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+        let batch = cursor.fetch().unwrap().unwrap();
+        let title = batch.at_as_str(0, 0).unwrap().unwrap();
+        assert_eq!("2001: A Space Odyssey", title);
+    }
+
+    {
+        let cursor = prepared.execute(YearParam(1993)).unwrap();
+        let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+        let mut cursor = cursor.bind_row_set_buffer(&mut buffer).unwrap();
+        let batch = cursor.fetch().unwrap().unwrap();
+        let title = batch.at_as_str(0, 0).unwrap().unwrap();
+        assert_eq!("Jurassic Park", title);
+    }
 }
 
 // #[test]

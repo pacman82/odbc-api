@@ -7,6 +7,7 @@ mod connection;
 mod cursor;
 mod environment;
 mod parameters;
+mod prepared;
 
 pub mod buffers;
 pub mod handles;
@@ -17,6 +18,7 @@ pub use self::{
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
     parameters::Parameters,
+    prepared::Prepared,
 };
 // Reexports
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this crate.

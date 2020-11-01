@@ -1,6 +1,6 @@
-pub use crate::{
+use crate::{
     handles::{self, Statement},
-    CursorImpl, Error, Parameters,
+    CursorImpl, Error, Parameters, Prepared,
 };
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
@@ -50,12 +50,16 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
-        unsafe {
-            params.bind_input(&mut stmt)?;
-        }
-
-        if stmt.exec_direct(query)? {
+        let has_result = unsafe {
+            // Reset parameters so we do not dereference stale once by mistake if we call
+            // `exec_direct`.
             stmt.reset_parameters()?;
+            // Bind new parameters passed by caller.
+            params.bind_input(&mut stmt)?;
+            stmt.exec_direct(query)?
+        };
+
+        if has_result {
             Ok(Some(CursorImpl::new(stmt)))
         } else {
             // ODBC Driver returned NoData.
@@ -85,5 +89,30 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)
+    }
+
+    /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
+    ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
+    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
+    ///   execution.
+    pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared, Error> {
+        let mut stmt = self.connection.allocate_statement()?;
+        stmt.prepare(query)?;
+        Ok(Prepared::new(stmt))
+    }
+
+    /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
+    ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
+    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
+    ///   execution.
+    pub fn prepare(&self, query: &str) -> Result<Prepared, Error> {
+        let query = U16String::from_str(query);
+        self.prepare_utf16(&query)
     }
 }

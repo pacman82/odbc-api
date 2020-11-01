@@ -3,6 +3,8 @@
 ## 0.8.0 (next)
 
 * Basic support for binding parameters.
+* Basic support for prepared queries.
+* Due to the new possibility of binding parameters `Statement::exec_direct` and `Statement::execute` must now be considered unsafe. 
 * `BindColParameters` renamed to `BindColArgs`.
 
 ## 0.7.0
