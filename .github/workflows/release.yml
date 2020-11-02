@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release_win64:
+    name: Build and release Windows 64Bit
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: build
+          target: x86_64-pc-windows-msvc
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/odbcsv.exe
+          asset_name: odbcsv-win64
+          tag: ${{ github.ref }}
+  
+  release_win32:
+    name: Build and release Windows 32Bit
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: i686-pc-windows-msvc
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/odbcsv.exe
+          asset_name: odbcsv-win32
+          tag: ${{ github.ref }}
+
+  release_os-x:
+    name: Build and release OS-X
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Insall latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Github Upload
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/odbcsv
+          asset_name: odbcsv-osx
+          tag: ${{ github.ref }}
