@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.0 (next)
+## 0.8.1 (next)
+
+## 0.8.0
 
 * Basic support for binding parameters.
 * Basic support for prepared queries.
