@@ -7,7 +7,7 @@ use std::{
     io::{stdout, Write},
     path::PathBuf,
 };
-use structopt::StructOpt;
+use structopt::{clap::ArgGroup, StructOpt};
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt, Debug)]
@@ -22,11 +22,23 @@ struct Cli {
     batch_size: u32,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
-    #[structopt(long, short = "-o")]
+    #[structopt(long, short = "o")]
     output: Option<PathBuf>,
-    /// The connection string used to connect to the ODBC datasource.
-    #[structopt()]
-    connection_string: String,
+    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
+    /// the ODBC dsn.
+    #[structopt(long, short = "c")]
+    connection_string: Option<String>,
+    /// ODBC Data Source Name. Either this or the connection string must be specified to identify
+    /// the datasource. Data source name (dsn) and connection string, may not be specified both.
+    #[structopt(long, conflicts_with = "connection-string")]
+    dsn: Option<String>,
+    /// User used to access the datasource specified in dsn.
+    #[structopt(long, short = "u")]
+    user: Option<String>,
+    /// Password used to log into the datasource. Only used if dsn is specified, instead of a
+    /// connection string.
+    #[structopt(long, short = "p")]
+    password: Option<String>,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
     #[structopt()]
@@ -37,6 +49,12 @@ struct Cli {
 }
 
 fn main() -> Result<(), Error> {
+    // Verify that either `dsn` or `connection-string` is specified.
+    Cli::clap().group(
+        ArgGroup::with_name("source")
+            .required(true)
+            .args(&["dsn", "connection-string"]),
+    );
     // Parse arguments from command line interface
     let opt = Cli::from_args();
     // If an output file has been specified write to it, otherwise use stdout instead.
@@ -60,7 +78,18 @@ fn main() -> Result<(), Error> {
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
     let environment = unsafe { Environment::new() }?;
 
-    let mut connection = environment.connect_with_connection_string(&opt.connection_string)?;
+    let mut connection = if let Some(dsn) = opt.dsn {
+        environment.connect(
+            &dsn,
+            opt.user.as_deref().unwrap_or(""),
+            opt.password.as_deref().unwrap_or(""),
+        )?
+    } else {
+        environment.connect_with_connection_string(
+            &opt.connection_string
+                .expect("Connection string must be specified, if dsn is not."),
+        )?
+    };
 
     let params: Vec<_> = opt
         .parameters

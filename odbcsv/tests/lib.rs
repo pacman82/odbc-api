@@ -12,6 +12,7 @@ fn query_mssql() {
         .unwrap()
         .args(&[
             "-vvvv",
+            "--connection-string",
             "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
             "SELECT title, year from Movies",
         ])
@@ -30,6 +31,7 @@ fn placeholders() {
         .unwrap()
         .args(&[
             "-vvvv",
+            "--connection-string",
             "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;",
             "SELECT title from Movies where year > ? and year < ? ",
             "1960",

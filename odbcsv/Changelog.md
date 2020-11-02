@@ -1,9 +1,12 @@
 # Changelog
 
-## 0.1.8 (next)
+## 0.2.1 (next)
+
+## 0.2.0
 
 * Default bulk size increased to 5000 rows.
 * Support for positional parameters in SQL query
+* Support for opening connections with Data Source Name (`dsn`) instead of connection string.
 
 ## 0.1.7
 
