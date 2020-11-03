@@ -1,7 +1,10 @@
 //! # ODBC
 //!
-//! ODBC (Open Database Connectivity) is a Database standard. This library aims in helping you write
-//! Applications which utilize ODBC to query databases.
+//! This library aims in helping you write applications which utilize ODBC (Open Database
+//! Connectivity) standard to query databases. See the [guide] for more information and code
+//! examples.
+//!
+//! [guide]: ../odbc_api/guide/index.html
 
 mod connection;
 mod cursor;
@@ -11,6 +14,7 @@ mod prepared;
 
 pub mod buffers;
 pub mod handles;
+pub mod guide;
 
 pub use self::{
     connection::Connection,
