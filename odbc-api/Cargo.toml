@@ -30,10 +30,10 @@ readme = "../Readme.md"
 
 [dependencies]
 odbc-sys = "0.14.0"
-thiserror = "1.0.20"
+thiserror = "1.0.21"
 log = "0.4.11"
-widestring = "0.4.2"
+widestring = "0.4.3"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
-env_logger = "0.7.1"
+env_logger = "0.8.1"

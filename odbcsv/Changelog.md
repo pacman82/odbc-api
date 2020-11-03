@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.2.1 (next)
+## 0.2.1
+
+* Binary GitHub Releases
 
 ## 0.2.0
 

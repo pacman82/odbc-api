@@ -41,7 +41,6 @@ struct Cli {
     password: Option<String>,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
-    #[structopt()]
     query: String,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.

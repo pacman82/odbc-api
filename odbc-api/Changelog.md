@@ -2,6 +2,7 @@
 
 ## 0.8.1 (next)
 
+
 ## 0.8.0
 
 * Basic support for binding parameters.
