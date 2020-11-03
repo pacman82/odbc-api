@@ -94,6 +94,28 @@ impl Environment {
     /// the system information.
     ///
     /// To find out your connection string try: <https://www.connectionstrings.com/>
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
+    /// // making this call safe.
+    /// let env = unsafe {
+    ///     Environment::new()?
+    /// };
+    ///
+    /// let connection_string = "
+    ///     Driver={ODBC Driver 17 for SQL Server};\
+    ///     Server=localhost;\
+    ///     UID=SA;\
+    ///     PWD=<YourStrong@Passw0rd>;\
+    /// ";
+    ///
+    /// let mut conn = env.connect_with_connection_string(connection_string)?;
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
     pub fn connect_with_connection_string(
         &self,
         connection_string: &str,
