@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+* Fix release of 64 bit Windows binary
+
 ## 0.2.1
 
 * Binary GitHub Releases
