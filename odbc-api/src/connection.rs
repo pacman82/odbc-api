@@ -1,6 +1,7 @@
 use crate::{
     handles::{self, Statement},
-    CursorImpl, Error, Parameters, Prepared,
+    parameters::Parameters,
+    CursorImpl, Error, IntoParameters, Prepared,
 };
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
@@ -46,9 +47,11 @@ impl<'c> Connection<'c> {
     pub fn exec_direct_utf16(
         &mut self,
         query: &U16Str,
-        params: impl Parameters,
+        params: impl IntoParameters,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
+
+        let params = params.into_parameters();
 
         let has_result = unsafe {
             // Reset parameters so we do not dereference stale once by mistake if we call
@@ -85,7 +88,7 @@ impl<'c> Connection<'c> {
     pub fn exec_direct(
         &mut self,
         query: &str,
-        params: impl Parameters,
+        params: impl IntoParameters,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)

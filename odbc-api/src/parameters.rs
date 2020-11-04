@@ -2,6 +2,31 @@ use crate::{buffers::FixedSizedCType, handles::Statement, DataType, Error};
 use odbc_sys::{CDataType, Len, ParamType, Pointer};
 use std::{convert::TryInto, ptr::null_mut};
 
+mod tuple;
+
+/// An instance can be consumed and to create a parameter which can be bound to a statement during
+/// execution.
+///
+/// Due to spefic layout requirements and the necessity to provide pointers to length and indicator
+/// values, as opposed to taking the actual values it is often necessary starting from idiomatic
+/// Rust types, to convert, enrich and marshal them into values which can be bound to ODBC. This
+/// also provides a safe extension point for all kinds of parameters, as only the implementation of
+/// `Parameters` is unsafe.
+pub trait IntoParameters {
+    type Parameters: Parameters;
+
+    /// Convert into parameters for statement execution.
+    fn into_parameters(self) -> Self::Parameters;
+}
+
+impl<T: Parameters> IntoParameters for T where{
+    type Parameters = T;
+
+    fn into_parameters(self) -> Self::Parameters {
+        self
+    }
+}
+
 /// SQL Parameters used to execute a query.
 ///
 /// ODBC allows to place question marks (`?`) in the statement text as placeholders. For each such
@@ -13,6 +38,12 @@ pub unsafe trait Parameters {
     /// least for the Duration of `self`. The most straight forward way of achieving this is of
     /// course, to bind members.
     unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error>;
+}
+
+unsafe impl<A: SingleParameter> Parameters for A {
+    unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error> {
+        self.bind_single_input_parameter(stmt, 1)
+    }
 }
 
 /// Can be bound to a single `Placeholder` in an SQL statement.
@@ -36,34 +67,6 @@ pub unsafe trait SingleParameter {
         stmt: &mut Statement,
         parameter_number: u16,
     ) -> Result<(), Error>;
-}
-
-/// The unit type is used to signal no parameters.
-unsafe impl Parameters for () {
-    unsafe fn bind_input_parameters(&self, _stmt: &mut Statement) -> Result<(), Error> {
-        Ok(())
-    }
-}
-
-unsafe impl<T> Parameters for T
-where
-    T: SingleParameter,
-{
-    unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error> {
-        self.bind_single_input_parameter(stmt, 1)
-    }
-}
-
-unsafe impl<A, B> Parameters for (A, B)
-where
-    A: SingleParameter,
-    B: SingleParameter,
-{
-    unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error> {
-        self.0.bind_single_input_parameter(stmt, 1)?;
-        self.1.bind_single_input_parameter(stmt, 2)?;
-        Ok(())
-    }
 }
 
 unsafe impl<T> Parameters for &[T]

@@ -1,4 +1,4 @@
-use crate::{handles::Statement, CursorImpl, Error, Parameters};
+use crate::{handles::Statement, parameters::Parameters, CursorImpl, Error, IntoParameters};
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
 /// once.
@@ -13,12 +13,14 @@ impl<'o> Prepared<'o> {
 
     /// Execute the prepared statement.
     ///
-    /// * `Parameters` is used to bind these parameters before executing the statement. You can use
-    ///   `()` to represent no parameters.
+    /// * `params`: Used to bind these parameters before executing the statement. You can use `()`
+    ///   to represent no parameters.
     pub fn execute(
         &mut self,
-        params: impl Parameters,
+        params: impl IntoParameters,
     ) -> Result<CursorImpl<'o, &mut Statement<'o>>, Error> {
+        let params = params.into_parameters();
+
         unsafe {
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.

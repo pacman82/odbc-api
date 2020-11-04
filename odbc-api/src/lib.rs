@@ -13,15 +13,15 @@ mod parameters;
 mod prepared;
 
 pub mod buffers;
-pub mod handles;
 pub mod guide;
+pub mod handles;
 
 pub use self::{
     connection::Connection,
     cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
-    parameters::{Parameters, VarCharParam, WithDataType},
+    parameters::{IntoParameters, VarCharParam, WithDataType},
     prepared::Prepared,
 };
 // Reexports
