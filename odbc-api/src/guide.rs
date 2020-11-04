@@ -89,3 +89,24 @@
 //! it. Most common strategy is to google one that works for with your data source. The connection
 //! borrows the environment, so you will get a compiler error, if your environment goes out of scope
 //! before the connection does.
+//!
+//! ## Connect using a Data Source Name (DSN)
+//!
+//! The data source name serves as a key into a map of preconfigured configuration options. This
+//! makes invoking them from an application very easy.
+//!
+//! ```no_run
+//! use odbc_api::Environment;
+//!
+//! // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
+//! // making this call safe.
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! How to configure such data sources is not the scope of this guide, and depends on the driver
+//! manager in question.

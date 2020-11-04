@@ -48,6 +48,21 @@ impl Environment {
     /// * `user` - User identifier.
     /// * `pwd` - Authentication string (typically the password).
     ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
+    /// // making this call safe.
+    /// let env = unsafe {
+    ///     Environment::new()?
+    /// };
+    ///
+    /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
+    ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(
