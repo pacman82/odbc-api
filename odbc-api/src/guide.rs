@@ -48,13 +48,13 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! Oh dear! Aren't we of to a bad start. First example of how to use this API and already a piece
-//! unsafe code. Well we are talking with a C API those contract explicitly demands that there may
-//! be only one ODBC Environment in the entire process. The only way to know that this is call is
-//! safe is in application code. If you write a library you MUST NOT wrap the creation of an ODBC
-//! environment in a safe function call. If another libray would do the same and an application
-//! were to use both of these, it might create two environments in safe code and thus causing
-//! undefined behaviour, which is clearly a violation of Rusts safety guarantees.
+//! Oh dear! Aren't we of to a bad start. First step in using this API and already a piece of unsafe
+//! code. Well we are talking with a C API those contract explicitly demands that there may be only
+//! one ODBC Environment in the entire process. The only way to know that this is call is safe is
+//! in application code. If you write a library you MUST NOT wrap the creation of an ODBC
+//! environment in a safe function call. If another libray would do the same and an application were
+//! to use both of these, it might create two environments in safe code and thus causing undefined
+//! behaviour, which is clearly a violation of Rusts safety guarantees.
 //!
 //! Apart from that. This is it. Our ODBC Environment is ready for action.
 //!
@@ -110,3 +110,36 @@
 //!
 //! How to configure such data sources is not the scope of this guide, and depends on the driver
 //! manager in question.
+//!
+//! ## Lifetime considerations for Connections
+//!
+//! An ODBC connection MUST NOT outlive the ODBC environment. This is modeled as the connection
+//! borrowing the environment. It is a shared borrow, to allow for more than one connection per
+//! environment. This way the compiler will catch programming errors early. The most popular among
+//! them seems to be returning a `Connection` from a function which also creates the environment.
+//!
+//! # Executing a statement
+//!
+//! With our ODBC connection all set up and ready to go, we can execute an SQL query:
+//!
+//! ```no_run
+//! # use odbc_api::Environment;
+//!
+//! # let env = unsafe {
+//! #    Environment::new()?
+//! # };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
+//!     // Use cursor to process query results.  
+//! }
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! The first parameter of `execute` is the SQL statement text. The second parameter is used to pass
+//! arguments of the SQL Statements itself (more on that later). Ours has none, so we use `()` to
+//! not bind any arguments to the statement.
+//! Note that not every statement returns a `Cursor`. `INSERT` statements usually do not, but even
+//! `SELECT` queries which would return zero rows can depending on the driver return an empty cursor
+//! or no cursor at all. If a cursor exists, it must be consumed or closed. The `drop` handler of
+//! Cursor will close it, so it is all taken care of.

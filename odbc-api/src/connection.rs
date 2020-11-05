@@ -85,7 +85,25 @@ impl<'c> Connection<'c> {
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
-    pub fn exec_direct(
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
+    /// // making this call safe.
+    /// let env = unsafe {
+    ///     Environment::new()?
+    /// };
+    ///
+    /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+    /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
+    ///     // Use cursor to process query results.  
+    /// }
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
+    pub fn execute(
         &mut self,
         query: &str,
         params: impl IntoParameters,

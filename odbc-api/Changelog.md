@@ -1,13 +1,15 @@
 # Changelog
 
-## 0.8.1 (next)
+## 0.9.0 (next)
 
+* `Cursor::bind_row_set_buffer` is now `Cursor::bind_buffer`.
+* `Connection::exec_direct` is now `Connection::execute`.
 
 ## 0.8.0
 
 * Basic support for binding parameters.
 * Basic support for prepared queries.
-* Due to the new possibility of binding parameters `Statement::exec_direct` and `Statement::execute` must now be considered unsafe. 
+* Due to the new possibility of binding parameters `Statement::exec_direct` and `Statement::execute` must now be considered unsafe.
 * `BindColParameters` renamed to `BindColArgs`.
 
 ## 0.7.0

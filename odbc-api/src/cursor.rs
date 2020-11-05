@@ -92,7 +92,7 @@ pub trait Cursor: Sized {
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error>;
 
     /// Binds this cursor to a buffer holding a row set.
-    fn bind_row_set_buffer<B>(self, row_set_buffer: &mut B) -> Result<RowSetCursor<Self, B>, Error>
+    fn bind_buffer<B>(self, row_set_buffer: &mut B) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer;
 
@@ -224,7 +224,7 @@ where
         self.statement.borrow().is_unsigned_column(column_number)
     }
 
-    fn bind_row_set_buffer<B>(
+    fn bind_buffer<B>(
         mut self,
         row_set_buffer: &mut B,
     ) -> Result<RowSetCursor<Self, B>, Error>

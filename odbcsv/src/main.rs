@@ -96,7 +96,7 @@ fn main() -> Result<(), Error> {
         .map(|param| VarCharParam::new(param.as_bytes()))
         .collect();
 
-    match connection.exec_direct(&opt.query, params.as_slice())? {
+    match connection.execute(&opt.query, params.as_slice())? {
         Some(cursor) => {
             let num_cols = cursor.num_result_cols()?;
             // Some ODBC drivers do not report the required size to hold the column name. Starting
@@ -115,7 +115,7 @@ fn main() -> Result<(), Error> {
                 headline.push(name);
             }
 
-            let mut row_set_cursor = cursor.bind_row_set_buffer(&mut buffers)?;
+            let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
             writer.write_record(headline)?;
 
