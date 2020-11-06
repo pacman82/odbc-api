@@ -1,12 +1,11 @@
 use crate::{buffers::FixedSizedCType, handles::Statement, DataType, Error};
 use odbc_sys::{CDataType, Len, ParamType, Pointer};
 use std::{convert::TryInto, ptr::null_mut};
-
-mod default_data_type;
+use self::single_parameter::SingleParameter;
 mod into_parameters;
+mod single_parameter;
 mod tuple;
 
-use crate::parameters::default_data_type::DefaultDataType;
 pub use into_parameters::IntoParameters;
 
 /// SQL Parameters used to execute a query.
@@ -26,29 +25,6 @@ unsafe impl<T: SingleParameter> Parameters for T {
     unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error> {
         self.bind_single_input_parameter(stmt, 1)
     }
-}
-
-/// Can be bound to a single `Placeholder` in an SQL statement.
-///
-/// Users usually won't utilize this trait directly, but implementations of `Parameters` are likely
-/// to bind one or more instances of SingleParameter to a statement.
-pub unsafe trait SingleParameter {
-    /// # Parameters
-    ///
-    /// * `stmt`: Statement handle the parameter should be bound to.
-    /// * `parameter_number`: 1 based index of the parameter. The index refers to the position of
-    ///   the `?` placeholder in the SQL statement text.
-    ///
-    /// # Safety
-    ///
-    /// Implementers should take care that the values bound by this method to the statement live at
-    /// least for the Duration of `self`. The most straight forward way of achieving this is of
-    /// course, to bind members.
-    unsafe fn bind_single_input_parameter(
-        &self,
-        stmt: &mut Statement,
-        parameter_number: u16,
-    ) -> Result<(), Error>;
 }
 
 unsafe impl<T> Parameters for &[T]
@@ -85,27 +61,6 @@ where
             T::C_DATA_TYPE,
             DataType::Integer,
             &self.value as *const T as *mut T as Pointer,
-            0,
-            null_mut(),
-        )
-    }
-}
-
-unsafe impl<T> SingleParameter for T
-where
-    T: FixedSizedCType + DefaultDataType,
-{
-    unsafe fn bind_single_input_parameter(
-        &self,
-        stmt: &mut Statement<'_>,
-        parameter_number: u16,
-    ) -> Result<(), Error> {
-        stmt.bind_parameter(
-            parameter_number,
-            ParamType::Input,
-            T::C_DATA_TYPE,
-            T::DEFAULT_DATA_TYPE,
-            self as *const T as *mut T as Pointer,
             0,
             null_mut(),
         )
