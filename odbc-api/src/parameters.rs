@@ -2,30 +2,12 @@ use crate::{buffers::FixedSizedCType, handles::Statement, DataType, Error};
 use odbc_sys::{CDataType, Len, ParamType, Pointer};
 use std::{convert::TryInto, ptr::null_mut};
 
+mod default_data_type;
+mod into_parameters;
 mod tuple;
 
-/// An instance can be consumed and to create a parameter which can be bound to a statement during
-/// execution.
-///
-/// Due to spefic layout requirements and the necessity to provide pointers to length and indicator
-/// values, as opposed to taking the actual values it is often necessary starting from idiomatic
-/// Rust types, to convert, enrich and marshal them into values which can be bound to ODBC. This
-/// also provides a safe extension point for all kinds of parameters, as only the implementation of
-/// `Parameters` is unsafe.
-pub trait IntoParameters {
-    type Parameters: Parameters;
-
-    /// Convert into parameters for statement execution.
-    fn into_parameters(self) -> Self::Parameters;
-}
-
-impl<T: Parameters> IntoParameters for T where{
-    type Parameters = T;
-
-    fn into_parameters(self) -> Self::Parameters {
-        self
-    }
-}
+use crate::parameters::default_data_type::DefaultDataType;
+pub use into_parameters::IntoParameters;
 
 /// SQL Parameters used to execute a query.
 ///
@@ -40,7 +22,7 @@ pub unsafe trait Parameters {
     unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error>;
 }
 
-unsafe impl<A: SingleParameter> Parameters for A {
+unsafe impl<T: SingleParameter> Parameters for T {
     unsafe fn bind_input_parameters(&self, stmt: &mut Statement) -> Result<(), Error> {
         self.bind_single_input_parameter(stmt, 1)
     }
@@ -81,6 +63,8 @@ where
     }
 }
 
+/// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
+/// be bound as a parameter to an SQL Statement.
 pub struct WithDataType<T> {
     pub value: T,
     pub data_type: DataType,
@@ -104,8 +88,27 @@ where
             0,
             null_mut(),
         )
-        .unwrap();
-        Ok(())
+    }
+}
+
+unsafe impl<T> SingleParameter for T
+where
+    T: FixedSizedCType + DefaultDataType,
+{
+    unsafe fn bind_single_input_parameter(
+        &self,
+        stmt: &mut Statement<'_>,
+        parameter_number: u16,
+    ) -> Result<(), Error> {
+        stmt.bind_parameter(
+            parameter_number,
+            ParamType::Input,
+            T::C_DATA_TYPE,
+            T::DEFAULT_DATA_TYPE,
+            self as *const T as *mut T as Pointer,
+            0,
+            null_mut(),
+        )
     }
 }
 
@@ -113,7 +116,7 @@ where
 ///
 /// While a byte array can provide us with a pointer to the start of the array and the length of the
 /// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
-/// strings which are not zero terminated we need to store the length in a seperate value.
+/// strings which are not zero terminated we need to store the length in a separate value.
 pub struct VarCharParam<'a> {
     value: &'a [u8],
     /// Will be set to value.len() by constructor.

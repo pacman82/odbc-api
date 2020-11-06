@@ -224,10 +224,7 @@ where
         self.statement.borrow().is_unsigned_column(column_number)
     }
 
-    fn bind_buffer<B>(
-        mut self,
-        mut row_set_buffer: B,
-    ) -> Result<RowSetCursor<Self, B>, Error>
+    fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer,
     {
@@ -302,7 +299,7 @@ pub unsafe trait RowSetBuffer {
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>{
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         (*self).bind_to_cursor(cursor)
     }
 }

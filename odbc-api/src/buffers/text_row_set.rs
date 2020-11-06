@@ -8,7 +8,6 @@ use std::str::Utf8Error;
 pub struct TextRowSet {
     // Current implementation is straight forward. We could consider allocating one block of memory
     // in allocation instead.
-
     batch_size: u32,
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not

@@ -4,7 +4,6 @@ use odbc_api::{
     buffers::{self, TextRowSet},
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Environment, Nullable, U16String, VarCharParam,
-    WithDataType,
 };
 use std::{convert::TryInto, sync::Mutex};
 
@@ -286,16 +285,7 @@ fn mssql_bind_integer_parameter() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn
-        .execute(
-            sql,
-            WithDataType {
-                value: 1968,
-                data_type: DataType::Integer,
-            },
-        )
-        .unwrap()
-        .unwrap();
+    let cursor = conn.execute(sql, 1968).unwrap().unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -317,12 +307,7 @@ fn mssql_prepared_statement() {
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared
-            .execute(WithDataType {
-                value: 1968,
-                data_type: DataType::Integer,
-            })
-            .unwrap();
+        let cursor = prepared.execute(1968).unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -331,12 +316,7 @@ fn mssql_prepared_statement() {
     }
 
     {
-        let cursor = prepared
-            .execute(WithDataType {
-                value: 1993,
-                data_type: DataType::Integer,
-            })
-            .unwrap();
+        let cursor = prepared.execute(1993).unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();

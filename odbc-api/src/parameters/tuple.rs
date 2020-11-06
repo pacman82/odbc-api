@@ -1,7 +1,7 @@
 //! Implement `Parameters` trait for tuples consisting of elements implementing `SingleParameter` trait.
 
-use crate::{Error, handles::Statement};
-use super::{SingleParameter, Parameters};
+use super::{Parameters, SingleParameter};
+use crate::{handles::Statement, Error};
 
 macro_rules! impl_bind_input_parameters {
     ($offset:expr, $stmt:ident) => (
@@ -31,14 +31,14 @@ macro_rules! impl_parameters_for_tuple{
 }
 
 // The unit type is used to signal no parameters.
-impl_parameters_for_tuple!{ }
-impl_parameters_for_tuple!{ A }
-impl_parameters_for_tuple!{ A B }
-impl_parameters_for_tuple!{ A B C }
-impl_parameters_for_tuple!{ A B C D }
-impl_parameters_for_tuple!{ A B C D E }
-impl_parameters_for_tuple!{ A B C D E F }
-impl_parameters_for_tuple!{ A B C D E F G }
-impl_parameters_for_tuple!{ A B C D E F G H }
-impl_parameters_for_tuple!{ A B C D E F G H I }
-impl_parameters_for_tuple!{ A B C D E F G H I J }
+impl_parameters_for_tuple! {}
+impl_parameters_for_tuple! { A }
+impl_parameters_for_tuple! { A B }
+impl_parameters_for_tuple! { A B C }
+impl_parameters_for_tuple! { A B C D }
+impl_parameters_for_tuple! { A B C D E }
+impl_parameters_for_tuple! { A B C D E F }
+impl_parameters_for_tuple! { A B C D E F G }
+impl_parameters_for_tuple! { A B C D E F G H }
+impl_parameters_for_tuple! { A B C D E F G H I }
+impl_parameters_for_tuple! { A B C D E F G H I J }

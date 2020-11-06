@@ -131,7 +131,7 @@
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
-//!     // Use cursor to process query results.  
+//!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
 //! ```

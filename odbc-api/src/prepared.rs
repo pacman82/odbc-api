@@ -1,4 +1,4 @@
-use crate::{handles::Statement, parameters::Parameters, CursorImpl, Error, IntoParameters};
+use crate::{handles::Statement, CursorImpl, Error, IntoParameters, Parameters};
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
 /// once.
