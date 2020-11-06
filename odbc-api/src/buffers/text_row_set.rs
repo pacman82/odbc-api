@@ -6,8 +6,14 @@ use std::str::Utf8Error;
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
 pub struct TextRowSet {
+    // Current implementation is straight forward. We could consider allocating one block of memory
+    // in allocation instead.
+
     batch_size: u32,
-    num_rows_fetched: ULen,
+    /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
+    /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
+    /// invalidated, even if the `TextRowSet` instance is moved in memory.
+    num_rows_fetched: Box<ULen>,
     buffers: Vec<TextColumn>,
 }
 
@@ -24,14 +30,14 @@ impl TextRowSet {
             .collect::<Result<_, Error>>()?;
         Ok(TextRowSet {
             batch_size,
-            num_rows_fetched: 0,
+            num_rows_fetched: Box::new(0),
             buffers,
         })
     }
 
     /// Access the element at the specified position in the row set.
     pub fn at(&self, col_index: usize, row_index: usize) -> Option<&[u8]> {
-        assert!(row_index < self.num_rows_fetched as usize);
+        assert!(row_index < *self.num_rows_fetched as usize);
         unsafe { self.buffers[col_index].value_at(row_index) }
     }
 
@@ -49,7 +55,7 @@ impl TextRowSet {
 
     /// Return the number of rows in the row set.
     pub fn num_rows(&self) -> usize {
-        self.num_rows_fetched as usize
+        *self.num_rows_fetched as usize
     }
 }
 

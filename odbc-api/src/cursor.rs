@@ -92,7 +92,7 @@ pub trait Cursor: Sized {
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error>;
 
     /// Binds this cursor to a buffer holding a row set.
-    fn bind_buffer<B>(self, row_set_buffer: &mut B) -> Result<RowSetCursor<Self, B>, Error>
+    fn bind_buffer<B>(self, row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer;
 
@@ -226,7 +226,7 @@ where
 
     fn bind_buffer<B>(
         mut self,
-        row_set_buffer: &mut B,
+        mut row_set_buffer: B,
     ) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer,
@@ -284,6 +284,13 @@ where
 
 /// A Row set buffer binds row, or column wise buffers to a cursor in order to fill them with row
 /// sets with each call to fetch.
+///
+/// # Safety
+///
+/// Implementers of this trait must ensure that every pointer bound in `bind_to_cursor` stays valid
+/// even if an instance is moved in memory. Bound members should therefore be likely references
+/// themselves. To bind stack allocated buffers it is recommended to implement this trait on the
+/// reference type instead.
 pub unsafe trait RowSetBuffer {
     /// Binds the buffer either column or row wise to the cursor.
     ///
@@ -294,20 +301,26 @@ pub unsafe trait RowSetBuffer {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>;
 }
 
+unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>{
+        (*self).bind_to_cursor(cursor)
+    }
+}
+
 /// A row set cursor iterates in blocks over row sets, filling them in buffers, instead of iterating
 /// the result set row by row. This is usually much faster.
-pub struct RowSetCursor<'b, C, B> {
-    buffer: &'b mut B,
+pub struct RowSetCursor<C, B> {
+    buffer: B,
     cursor: C,
 }
 
-impl<'b, C, B> RowSetCursor<'b, C, B> {
-    fn new(buffer: &'b mut B, cursor: C) -> Self {
+impl<C, B> RowSetCursor<C, B> {
+    fn new(buffer: B, cursor: C) -> Self {
         Self { buffer, cursor }
     }
 }
 
-impl<'b, C, B> RowSetCursor<'b, C, B>
+impl<C, B> RowSetCursor<C, B>
 where
     C: Cursor,
 {
@@ -319,7 +332,7 @@ where
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
         if self.cursor.fetch()? {
-            Ok(Some(self.buffer))
+            Ok(Some(&self.buffer))
         } else {
             Ok(None)
         }
