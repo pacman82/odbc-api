@@ -9,19 +9,23 @@
 mod connection;
 mod cursor;
 mod environment;
-mod parameters;
+mod into_parameter;
+mod parameter_collection;
 mod prepared;
 
 pub mod buffers;
 pub mod guide;
 pub mod handles;
+pub mod parameter;
 
 pub use self::{
     connection::Connection,
     cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
-    parameters::{IntoParameters, Parameters, VarCharParam, WithDataType},
+    parameter::Parameter,
+    into_parameter::IntoParameter,
+    parameter_collection::ParameterCollection,
     prepared::Prepared,
 };
 // Reexports

@@ -1,4 +1,4 @@
-use crate::Parameters;
+use crate::{parameter::{Parameter, VarCharParam}};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -8,17 +8,24 @@ use crate::Parameters;
 /// Rust types, to convert, enrich and marshal them into values which can be bound to ODBC. This
 /// also provides a safe extension point for all kinds of parameters, as only the implementation of
 /// `Parameters` is unsafe.
-pub trait IntoParameters {
-    type Parameters: Parameters;
+pub trait IntoParameter {
+    type Parameter: Parameter;
 
-    /// Convert into parameters for statement execution.
-    fn into_parameters(self) -> Self::Parameters;
+    fn into_parameter(self) -> Self::Parameter;
 }
 
-impl<T: Parameters> IntoParameters for T {
-    type Parameters = T;
+impl<T> IntoParameter for T where T: Parameter {
+    type Parameter = Self;
 
-    fn into_parameters(self) -> Self::Parameters {
+    fn into_parameter(self) -> Self::Parameter {
         self
+    }
+}
+
+impl<'a> IntoParameter for &'a str {
+    type Parameter = VarCharParam<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarCharParam::new(self.as_bytes())
     }
 }

@@ -1,9 +1,9 @@
 use crate::{
     handles::{self, Statement},
-    parameters::Parameters,
-    CursorImpl, Error, IntoParameters, Prepared,
+    parameter_collection::ParameterCollection,
+    CursorImpl, Error, Prepared,
 };
-use std::thread::panicking;
+use std::{thread::panicking};
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
@@ -29,15 +29,15 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
-    /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
-    /// one-time execution.
+    /// Executes a statement. This is the fastest way to submit an SQL statement for one-time
+    /// execution.
     ///
     /// # Parameters
     ///
-    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
-    /// * `params`: `?` may be used as a placeholder in the statement text. A type implementing
-    ///   `Parameters` is used to bind these parameters before executing the statement. You can use
-    ///   `()` to represent no parameters.
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". A
+    ///   question mark (`?`) may be used to indicate positional parameters in the statement text.
+    /// * `params`: Used to bind the placeholders in the statement text to argument values You can
+    ///   use `()` to represent no parameters.
     ///
     /// # Return
     ///
@@ -47,18 +47,16 @@ impl<'c> Connection<'c> {
     pub fn exec_direct_utf16(
         &mut self,
         query: &U16Str,
-        params: impl IntoParameters,
+        params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
-
-        let params = params.into_parameters();
 
         let has_result = unsafe {
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.
             stmt.reset_parameters()?;
             // Bind new parameters passed by caller.
-            params.bind_input_parameters(&mut stmt)?;
+            params.bind_parameters_to(&mut stmt)?;
             stmt.exec_direct(query)?
         };
 
@@ -76,9 +74,8 @@ impl<'c> Connection<'c> {
     /// # Parameters
     ///
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
-    /// * `params`: `?` may be used as a placeholder in the statement text. A type implementing
-    ///   `Parameters` is used to bind these parameters before executing the statement. You can use
-    ///   `()` to represent no parameters.
+    /// * `params`: `?` may be used as a placeholder in the statement text. You can use `()` to
+    ///   represent no parameters.
     ///
     /// # Return
     ///
@@ -106,7 +103,7 @@ impl<'c> Connection<'c> {
     pub fn execute(
         &mut self,
         query: &str,
-        params: impl IntoParameters,
+        params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)

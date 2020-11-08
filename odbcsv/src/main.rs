@@ -1,6 +1,6 @@
 use anyhow::Error;
 use log::info;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment, VarCharParam};
+use odbc_api::{buffers::TextRowSet, IntoParameter, Cursor, Environment};
 use std::{
     char::decode_utf16,
     fs::File,
@@ -93,7 +93,7 @@ fn main() -> Result<(), Error> {
     let params: Vec<_> = opt
         .parameters
         .iter()
-        .map(|param| VarCharParam::new(param.as_bytes()))
+        .map(|param| param.into_parameter())
         .collect();
 
     match connection.execute(&opt.query, params.as_slice())? {
