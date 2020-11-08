@@ -16,6 +16,28 @@ Supports writing ODBC Application in Rust. Prior work in this area has been done
 
 So why `odbc-api`? This is a somewhat less ambitious and more opinionated rewrite of `odbc-safe`. I never achieved a somewhat feature complete state with `odbc-safe`. This is in part due to the fact that I had significantly less time for Open Source, but also due to the fact that ODBCs way of borrowing and sharing buffers is very much at odds with Rusts type system, introducing significant complexity in an unopinionated general purpose wrapper. Also, there are a lot of possible sate transitions. So for many use cases I found myself going back to the bare `odbc-sys`. On the other hand many reoccurring high level scenarios could have quite nice safe abstractions, if you are a bit opinionated about the design.
 
+## Local test setup
+
+Running local tests currently requires:
+
+* docker and docker compose.
+* [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
+
+With docker and the SQL Driver installed run
+
+```shell
+docker-compose up
+```
+
+in order to start the database. After the database is setup and ready to go run
+
+```
+cargo test
+```
+
+to run all tests in the workspace, which should now succeed.
+
+
 ## Design decisions
 
 Here are some of the tradeoffs I made in this library to make my life (and hopefully that of the users a bit easier).

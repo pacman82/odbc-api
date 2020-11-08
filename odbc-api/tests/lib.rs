@@ -2,8 +2,9 @@ use buffers::{ColumnBuffer, OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
+    parameter::VarCharParam,
     sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, Environment, Nullable, U16String, VarCharParam,
+    ColumnDescription, Cursor, DataType, Environment, Nullable, U16String,
 };
 use std::{convert::TryInto, sync::Mutex};
 
@@ -326,7 +327,7 @@ fn mssql_prepared_statement() {
 }
 
 #[test]
-fn mssql_bind_integer_parameter_as_string() {
+fn mssql_integer_parameter_as_string() {
     let _lock = init().lock();
     let env = unsafe { Environment::new().unwrap() };
 
@@ -334,6 +335,27 @@ fn mssql_bind_integer_parameter_as_string() {
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
         .execute(sql, VarCharParam::new("1968".as_bytes()))
+        .unwrap()
+        .unwrap();
+    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+
+    let batch = cursor.fetch().unwrap().unwrap();
+    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+
+    assert_eq!("2001: A Space Odyssey", title);
+}
+
+
+#[test]
+fn mssql_two_paramters_in_tuple() {
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
+    let cursor = conn
+        .execute(sql, (1960, 1970))
         .unwrap()
         .unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();

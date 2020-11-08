@@ -4,6 +4,7 @@
 
 * `Cursor::bind_row_set_buffer` is now `Cursor::bind_buffer`.
 * `Connection::exec_direct` is now `Connection::execute`.
+* Tuple support for passing input parameters.
 
 ## 0.8.0
 
