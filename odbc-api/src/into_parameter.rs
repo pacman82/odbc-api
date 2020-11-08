@@ -1,4 +1,4 @@
-use crate::{parameter::{Parameter, VarCharParam}};
+use crate::parameter::{Parameter, VarCharParam};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -14,7 +14,10 @@ pub trait IntoParameter {
     fn into_parameter(self) -> Self::Parameter;
 }
 
-impl<T> IntoParameter for T where T: Parameter {
+impl<T> IntoParameter for T
+where
+    T: Parameter,
+{
     type Parameter = Self;
 
     fn into_parameter(self) -> Self::Parameter {

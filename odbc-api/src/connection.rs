@@ -3,7 +3,7 @@ use crate::{
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Prepared,
 };
-use std::{thread::panicking};
+use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {

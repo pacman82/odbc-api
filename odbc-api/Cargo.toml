@@ -30,7 +30,7 @@ readme = "../Readme.md"
 
 [dependencies]
 odbc-sys = "0.14.0"
-thiserror = "1.0.21"
+thiserror = "1.0.22"
 log = "0.4.11"
 widestring = "0.4.3"
 

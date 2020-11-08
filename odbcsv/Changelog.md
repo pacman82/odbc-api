@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+* Updated dependencies
+
 ## 0.2.2
 
 * Fix release of 64 bit Windows binary

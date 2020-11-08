@@ -23,8 +23,8 @@ pub use self::{
     cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
     environment::Environment,
     handles::{ColumnDescription, DataType, Error, Nullable},
-    parameter::Parameter,
     into_parameter::IntoParameter,
+    parameter::Parameter,
     parameter_collection::ParameterCollection,
     prepared::Prepared,
 };

@@ -346,7 +346,6 @@ fn mssql_integer_parameter_as_string() {
     assert_eq!("2001: A Space Odyssey", title);
 }
 
-
 #[test]
 fn mssql_two_paramters_in_tuple() {
     let _lock = init().lock();
@@ -354,10 +353,7 @@ fn mssql_two_paramters_in_tuple() {
 
     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
-    let cursor = conn
-        .execute(sql, (1960, 1970))
-        .unwrap()
-        .unwrap();
+    let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 

@@ -1,0 +1,21 @@
+# This workflows will upload a Crates using cargo when a release is created
+name: Upload Cargo Crates
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Publish to cargo
+      env:
+        CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      run: |
+        cd odbc-api && cargo publish --token "${CARGO_TOKEN}"
+        cd -
+        cd odbcsv && cargo publish --token "${CARGO_TOKEN}"
