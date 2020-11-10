@@ -12,6 +12,14 @@ Use `--help` to see all options.
 
 ## Installation
 
+Several installation options are available.
+
+### Download prebuild binaries
+
+You can download the latest binaries here from the `odbc-api` GitHub release: <https://github.com/pacman82/odbc-api/releases/latest>.
+
+### Install using cargo
+
 ```shell
 cargo install odbcsv
 ```
