@@ -23,6 +23,11 @@ pub struct Environment {
     handle: HEnv,
 }
 
+/// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
+unsafe impl Send for Environment {}
+/// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
+unsafe impl Sync for Environment {}
+
 unsafe impl AsHandle for Environment {
     fn as_handle(&self) -> Handle {
         self.handle as Handle

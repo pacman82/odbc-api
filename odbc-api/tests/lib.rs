@@ -6,45 +6,30 @@ use odbc_api::{
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Environment, Nullable, U16String,
 };
-use std::{convert::TryInto, sync::Mutex};
+use std::convert::TryInto;
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
-// Therefore synchronize test execution.
 lazy_static! {
-    static ref SERIALIZE: Mutex<()> = Mutex::new(());
-}
-
-fn init() -> &'static Mutex<()> {
-    // Set environment to something like:
-    // RUST_LOG=odbc-api=info cargo test
-    let _ = env_logger::builder().is_test(true).try_init();
-    &SERIALIZE
+    static ref ENV : Environment = unsafe { Environment::new().unwrap() };
 }
 
 #[test]
 fn bogus_connection_string() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-    let conn = env.connect_with_connection_string("foobar");
+    let conn = ENV.connect_with_connection_string("foobar");
     assert!(matches!(conn, Err(_)));
 }
 
 #[test]
 fn connect_to_movies_db() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-    let _conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let _conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 }
 
 #[test]
 fn mssql_describe_columns() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -79,10 +64,7 @@ fn mssql_describe_columns() {
 
 #[test]
 fn mssql_text_buffer() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -104,10 +86,7 @@ fn mssql_text_buffer() {
 
 #[test]
 fn mssql_column_attributes() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -125,10 +104,7 @@ fn mssql_column_attributes() {
 
 #[test]
 fn mssql_prices() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -178,10 +154,7 @@ fn mssql_prices() {
 
 #[test]
 fn mssql_bind_char() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -204,10 +177,7 @@ fn mssql_bind_char() {
 
 #[test]
 fn mssql_bind_varchar() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -230,10 +200,7 @@ fn mssql_bind_varchar() {
 
 #[test]
 fn mssql_bind_numeric_to_float() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -252,10 +219,7 @@ fn mssql_bind_numeric_to_float() {
 
 #[test]
 fn mssql_all_types() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -281,10 +245,7 @@ fn mssql_all_types() {
 
 #[test]
 fn mssql_bind_integer_parameter() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, 1968).unwrap().unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
@@ -298,11 +259,8 @@ fn mssql_bind_integer_parameter() {
 
 #[test]
 fn mssql_prepared_statement() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
     // Prepare the statement once
-    let conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let mut prepared = conn.prepare(sql).unwrap();
 
@@ -328,10 +286,7 @@ fn mssql_prepared_statement() {
 
 #[test]
 fn mssql_integer_parameter_as_string() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
         .execute(sql, VarCharParam::new("1968".as_bytes()))
@@ -348,10 +303,7 @@ fn mssql_integer_parameter_as_string() {
 
 #[test]
 fn mssql_two_paramters_in_tuple() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
@@ -365,10 +317,7 @@ fn mssql_two_paramters_in_tuple() {
 
 #[test]
 fn mssql_column_names_iterator() {
-    let _lock = init().lock();
-    let env = unsafe { Environment::new().unwrap() };
-
-    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
@@ -386,9 +335,6 @@ fn mssql_column_names_iterator() {
 //     // See:
 //     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
 //     // https://stackoverflow.com/questions/9177795/how-to-convert-sql-numeric-struct-to-double-and-string
-
-//     let _ = init().lock();
-//     let env = unsafe { Environment::new().unwrap() };
 
 //     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
 //     let sql = "SELECT my_numeric FROM AllTheTypes;";
