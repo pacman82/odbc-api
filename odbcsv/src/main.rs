@@ -2,7 +2,6 @@ use anyhow::Error;
 use log::info;
 use odbc_api::{buffers::TextRowSet, Cursor, Environment, IntoParameter};
 use std::{
-    char::decode_utf16,
     fs::File,
     io::{stdout, Write},
     path::PathBuf,
@@ -90,35 +89,24 @@ fn main() -> Result<(), Error> {
         )?
     };
 
+    // Convert the input strings into parameters suitable to for use with ODBC.
     let params: Vec<_> = opt
         .parameters
         .iter()
         .map(|param| param.into_parameter())
         .collect();
 
+    // Execute the query as a one off, and pass the parameters.
     match connection.execute(&opt.query, params.as_slice())? {
         Some(cursor) => {
-            let num_cols = cursor.num_result_cols()?;
-            // Some ODBC drivers do not report the required size to hold the column name. Starting
-            // with a reasonable sized buffers, allows us to fetch reasonable sized column alias
-            // even from those.
-            let mut buf_wchar = Vec::with_capacity(128);
-            let mut headline = Vec::new();
-            let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
-
-            // Loop over the number of reported columns in the result set and fetch the Column name
-            // for each one, if available.
-            for index in 1..(num_cols as u16 + 1) {
-                cursor.col_name(index, &mut buf_wchar)?;
-                let name =
-                    decode_utf16(buf_wchar.iter().copied()).collect::<Result<String, _>>()?;
-                headline.push(name);
-            }
-
-            let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
-
+            // Write column names.
+            let headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
             writer.write_record(headline)?;
 
+            let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
+            let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
+
+            // Use this number to count the batches. Only used for logging.
             let mut num_batch = 0;
             while let Some(buffer) = row_set_cursor.fetch()? {
                 num_batch += 1;

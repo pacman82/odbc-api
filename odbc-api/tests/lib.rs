@@ -363,6 +363,23 @@ fn mssql_two_paramters_in_tuple() {
     assert_eq!("2001: A Space Odyssey", title);
 }
 
+#[test]
+fn mssql_column_names_iterator() {
+    let _lock = init().lock();
+    let env = unsafe { Environment::new().unwrap() };
+
+    let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title, year FROM Movies;";
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let names: Vec<_> = cursor
+        .column_names()
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+
+    assert_eq!(&["title", "year"], names.as_slice());
+}
+
 // #[test]
 // fn mssql_bind_numeric() {
 

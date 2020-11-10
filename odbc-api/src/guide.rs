@@ -19,6 +19,65 @@
 //! This however is not a guide on how to configure and setup ODBC. This is a guide on how to use
 //! the Rust bindings for applications which want to utilize ODBC data sources.
 //!
+//! # Quickstart
+//!
+//! ```no_run
+//! use anyhow::Error;
+//! use odbc_api::{buffers::TextRowSet, Cursor, Environment, IntoParameter};
+//! use std::{
+//!     io::{stdout, Write},
+//!     path::PathBuf,
+//! };
+//!
+//! /// Maximum number of rows fetched with one row set. Fetching batches of rows is usually much
+//! /// faster than fetching individual rows.
+//! const BATCH_SIZE: u32 = 100000;
+//!
+//! fn main() -> Result<(), Error> {
+//!     // Write csv to standard out
+//!     let out = stdout();
+//!     let mut writer = csv::Writer::from_writer(out);
+//!
+//!     // We know this is going to be the only ODBC environment in the entire process, so this is
+//!     // safe.
+//!     let environment = unsafe { Environment::new() }?;
+//!
+//!     // Connect using a DSN. Alternativly we could have used a connection string
+//!     let mut connection = environment.connect(
+//!         "DataSourceName",
+//!         "Username",
+//!         "Password",
+//!     )?;
+//!
+//!     // Execute a one of query without any parameters.
+//!     match connection.execute("SELECT * FROM TableName", ())? {
+//!         Some(cursor) => {
+//!             // Write the column names to stdout
+//!             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
+//!             writer.write_record(headline)?;
+//! 
+//!             let mut buffers = TextRowSet::new(BATCH_SIZE, &cursor)?;
+//!             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
+//!
+//!             while let Some(batch) = row_set_cursor.fetch()? {
+//!                 for row_index in 0..batch.num_rows() {
+//!                     let record = (0..batch.num_cols())
+//!                         .map(|col_index| batch.at(col_index, row_index).unwrap_or(&[]));
+//!                     writer.write_record(record)?;
+//!                 }
+//!             }
+//!         }
+//!         None => {
+//!             eprintln!(
+//!                 "Query came back empty. No output has been created."
+//!             );
+//!         }
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! # 32 Bit and 64 Bit considerations.
 //!
 //! To consider wether you want to work with 32 Bit or 64 Bit data sources is especially important

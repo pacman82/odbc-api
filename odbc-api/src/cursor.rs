@@ -2,7 +2,13 @@ use crate::{
     buffers::BindColArgs, handles::Description, handles::Statement, ColumnDescription, Error,
 };
 use odbc_sys::{Len, SqlDataType, ULen};
-use std::{borrow::BorrowMut, marker::PhantomData, thread::panicking};
+use std::convert::TryInto;
+use std::{
+    borrow::BorrowMut,
+    char::{decode_utf16, REPLACEMENT_CHARACTER},
+    marker::PhantomData,
+    thread::panicking,
+};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: Sized {
@@ -133,8 +139,69 @@ pub trait Cursor: Sized {
     /// returned. If there is no column name or a column alias, an empty string is returned.
     fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error>;
 
+    /// Use this if you want to iterate over all column names and allocate a `String` for each one.
+    ///
+    /// This is a wrapper around `col_name` introduced for convenience.
+    fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
+        ColumnNamesIt::new(self)
+    }
+
     fn application_row_descriptor(&self) -> Result<Description, Error>;
 }
+
+/// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See
+/// `Cursor::column_names`.
+pub struct ColumnNamesIt<'c, C> {
+    cursor: &'c C,
+    buffer: Vec<u16>,
+    column: u16,
+    num_cols: u16,
+}
+
+impl<'c, C: Cursor> ColumnNamesIt<'c, C> {
+    fn new(cursor: &'c C) -> Result<Self, Error> {
+        Ok(Self {
+            cursor,
+            // Some ODBC drivers do not report the required size to hold the column name. Starting
+            // with a reasonable sized buffers, allows us to fetch reasonable sized column alias
+            // even from those.
+            buffer: Vec::with_capacity(128),
+            num_cols: cursor.num_result_cols()?.try_into().unwrap(),
+            column: 1,
+        })
+    }
+}
+
+impl<C> Iterator for ColumnNamesIt<'_, C>
+where
+    C: Cursor,
+{
+    type Item = Result<String, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.column <= self.num_cols {
+            let result = self
+                .cursor
+                .col_name(self.column, &mut self.buffer)
+                .map(|()| {
+                    decode_utf16(self.buffer.iter().copied())
+                        .map(|decoding_result| decoding_result.unwrap_or(REPLACEMENT_CHARACTER))
+                        .collect()
+                });
+            self.column += 1;
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let num_cols = self.num_cols as usize;
+        (num_cols, Some(num_cols))
+    }
+}
+
+impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
