@@ -9,7 +9,7 @@ documentation = "https://docs.rs/odbc-api/"
 
 # A short blurb about the package. This is not rendered in any format when
 # uploaded to crates.io (aka this is not markdown).
-description = "Write low level, ODBC Applications in Rust."
+description = "Write ODBC Applications in (mostly) safe Rust."
 
 # This is a list of up to five keywords that describe this crate. Keywords
 # are searchable on crates.io, and you may choose any words that would
