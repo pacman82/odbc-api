@@ -1,3 +1,5 @@
+//! Implementation and types required to bind arguments to ODBC parameters.
+
 use crate::{
     buffers::{Bit, FixedSizedCType},
     handles::Statement,

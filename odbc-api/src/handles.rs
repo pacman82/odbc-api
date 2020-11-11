@@ -1,5 +1,7 @@
-//! Provides basic abstraction over valid (i.e. allocated ODBC handles). Two decisions are already
-//! baked into this module:
+//! Provides basic abstraction over valid (i.e. allocated ODBC handles).
+//! 
+//! Two decisions are already baked into this module:
+//!
 //! * Treat warnings by logging them with `log`.
 //! * Use the Unicode (wide) variants of the ODBC API.
 
@@ -17,7 +19,6 @@ mod statement;
 
 pub use {
     as_handle::AsHandle,
-    buffer::buf_ptr,
     column_description::{ColumnDescription, Nullable},
     connection::Connection,
     data_type::DataType,
