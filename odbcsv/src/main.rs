@@ -100,7 +100,7 @@ fn main() -> Result<(), Error> {
     match connection.execute(&opt.query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
-            let headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
+            let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
             writer.write_record(headline)?;
 
             let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;

@@ -64,9 +64,8 @@ impl<'s> Statement<'s> {
     ///
     /// # Return
     ///
-    /// Returns `true` if a cursor is created. If `false` is returned no cursor has been created (
-    /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
-    /// rows. If a cursor is created. `close_cursor` should be called after it is no longer used.
+    /// If an update, insert, or delete statement did not affect any rows at the data source `false`
+    /// is returned.
     pub unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error> {
         match SQLExecDirectW(
             self.handle,
@@ -102,8 +101,16 @@ impl<'s> Statement<'s> {
     /// dereference bound parameters. It is the callers responsibility to ensure these are still
     /// valid. One strategy is to reset potentially invalid parameters right before the call using
     /// `reset_parameters`.
-    pub fn execute(&mut self) -> Result<(), Error> {
-        unsafe { SQLExecute(self.handle) }.into_result(self)
+    ///
+    /// # Return
+    ///
+    /// If an update, insert, or delete statement did not affect any rows at the data source `false`
+    /// is returned.
+    pub unsafe fn execute(&mut self) -> Result<bool, Error> {
+        match SQLExecute(self.handle) {
+            SqlReturn::NO_DATA => Ok(false),
+            other => other.into_result(self).map(|()| true),
+        }
     }
 
     /// Close an open cursor.
@@ -168,6 +175,8 @@ impl<'s> Statement<'s> {
     }
 
     /// Number of columns in result set.
+    ///
+    /// Can alse be usend to check, wether or not a result set has been created at all.
     pub fn num_result_cols(&self) -> Result<i16, Error> {
         let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self)?;

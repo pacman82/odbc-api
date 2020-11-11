@@ -2,9 +2,8 @@ use buffers::{ColumnBuffer, OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
-    parameter::VarCharParam,
     sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, Environment, Nullable, U16String,
+    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable, U16String,
 };
 use std::convert::TryInto;
 
@@ -13,7 +12,7 @@ const MSSQL: &str =
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
-    static ref ENV : Environment = unsafe { Environment::new().unwrap() };
+    static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
 #[test]
@@ -141,9 +140,8 @@ fn mssql_prices() {
         cursor.fetch().unwrap();
 
         assert_eq!([1, 2, 3], id_buffer[0..num_rows_fetched as usize]);
+        cursor.fetch().unwrap();
     }
-
-    cursor.fetch().unwrap();
 
     // Test types
 
@@ -162,11 +160,8 @@ fn mssql_bind_char() {
     unsafe {
         cursor.set_row_array_size(1).unwrap();
         cursor.bind_col(1, buf.bind_arguments()).unwrap();
-    }
+        cursor.fetch().unwrap();
 
-    cursor.fetch().unwrap();
-
-    unsafe {
         assert_eq!(
             Some("abcde"),
             buf.value_at(0)
@@ -185,11 +180,8 @@ fn mssql_bind_varchar() {
     unsafe {
         cursor.set_row_array_size(1).unwrap();
         cursor.bind_col(1, buf.bind_arguments()).unwrap();
-    }
+        cursor.fetch().unwrap();
 
-    cursor.fetch().unwrap();
-
-    unsafe {
         assert_eq!(
             Some("Hello, World!"),
             buf.value_at(0)
@@ -208,9 +200,8 @@ fn mssql_bind_numeric_to_float() {
     unsafe {
         cursor.set_row_array_size(1).unwrap();
         cursor.bind_col(1, buf.bind_arguments()).unwrap();
+        cursor.fetch().unwrap();
     }
-
-    cursor.fetch().unwrap();
 
     unsafe {
         assert_eq!(Some(&1.23), buf.value_at(0));
@@ -266,7 +257,7 @@ fn mssql_prepared_statement() {
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared.execute(1968).unwrap();
+        let cursor = prepared.execute(1968).unwrap().unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -275,7 +266,7 @@ fn mssql_prepared_statement() {
     }
 
     {
-        let cursor = prepared.execute(1993).unwrap();
+        let cursor = prepared.execute(1993).unwrap().unwrap();
         let mut buffer = TextRowSet::new(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -288,10 +279,7 @@ fn mssql_prepared_statement() {
 fn mssql_integer_parameter_as_string() {
     let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn
-        .execute(sql, VarCharParam::new("1968".as_bytes()))
-        .unwrap()
-        .unwrap();
+    let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
     let mut buffer = TextRowSet::new(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -327,6 +315,23 @@ fn mssql_column_names_iterator() {
         .unwrap();
 
     assert_eq!(&["title", "year"], names.as_slice());
+}
+
+#[test]
+fn mssql_bulk_insert() {
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // Assert empty table
+    conn.execute("DROP TABLE IF EXISTS BulkInsert", ()).unwrap();
+    conn.execute(
+        r#"CREATE TABLE BulkInsert (
+        Id int IDENTITY(1,1),
+        Country varchar(50)
+    );"#,
+        (),
+    )
+    .unwrap();
+
+    // TODO: test bulk insert here.
 }
 
 // #[test]

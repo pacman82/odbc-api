@@ -51,7 +51,7 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
-        let has_result = unsafe {
+        unsafe {
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.
             stmt.reset_parameters()?;
@@ -60,11 +60,12 @@ impl<'c> Connection<'c> {
             stmt.exec_direct(query)?
         };
 
-        if has_result {
-            Ok(Some(CursorImpl::new(stmt)))
-        } else {
+        // Check if a result set has been created.
+        if stmt.num_result_cols()? == 0 {
             // ODBC Driver returned NoData.
             Ok(None)
+        } else {
+            Ok(Some(CursorImpl::new(stmt)))
         }
     }
 

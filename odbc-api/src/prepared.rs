@@ -18,15 +18,20 @@ impl<'o> Prepared<'o> {
     pub fn execute(
         &mut self,
         params: impl ParameterCollection,
-    ) -> Result<CursorImpl<'o, &mut Statement<'o>>, Error> {
+    ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
+        // Reset parameters so we do not dereference stale once by mistake if we call
+        // `exec_direct`.
+        self.statement.reset_parameters()?;
         unsafe {
-            // Reset parameters so we do not dereference stale once by mistake if we call
-            // `exec_direct`.
-            self.statement.reset_parameters()?;
             // Bind new parameters passed by caller.
             params.bind_parameters_to(&mut self.statement)?;
-            self.statement.execute()?;
+            self.statement.execute()?
+        };
+        // Check if a result set has been created.
+        if self.statement.num_result_cols()? == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(CursorImpl::new(&mut self.statement)))
         }
-        Ok(CursorImpl::new(&mut self.statement))
     }
 }

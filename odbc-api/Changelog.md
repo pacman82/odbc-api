@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.9.0 (next)
+## 0.9.1
+
+* `Environment` is now `Send` and `Sync`.
+* Fix: Executing statements not generating results now does no longer create cursors.
+* Fix: `Prepared::execute` now returns `Result<Option<CursorImpl<_>>, Error>` instead of `Result<CursorImpl<_>, Error>`.
+* Fix: `Cursor::execute` is now `unsafe`.
+* Fix: `Cursor::fetch` is now `unsafe`.
+
+## 0.9.0
 
 * `Cursor::bind_row_set_buffer` is now `Cursor::bind_buffer`.
 * `Connection::exec_direct` is now `Connection::execute`.

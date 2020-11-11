@@ -58,7 +58,7 @@
 //!             // Write the column names to stdout
 //!             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
 //!             writer.write_record(headline)?;
-//! 
+//!
 //!             // Use schema in cursor to initialize a text buffer large enough to hold the largest
 //!             // possible strings for each column.
 //!             let mut buffers = TextRowSet::new(BATCH_SIZE, &cursor)?;

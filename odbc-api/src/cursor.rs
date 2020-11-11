@@ -36,7 +36,11 @@ pub trait Cursor: Sized {
     /// specified a pointer to a row status array or a buffer in which to return the number of rows
     /// fetched, `fetch` also returns this information. Calls to `fetch` can be mixed with calls to
     /// `fetch_scroll`.
-    fn fetch(&mut self) -> Result<bool, Error>;
+    ///
+    /// # Safety
+    ///
+    /// Fetch dereferences bound buffers and is therefore unsafe.
+    unsafe fn fetch(&mut self) -> Result<bool, Error>;
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
     ///
@@ -247,7 +251,7 @@ where
         self.statement.borrow().num_result_cols()
     }
 
-    fn fetch(&mut self) -> Result<bool, Error> {
+    unsafe fn fetch(&mut self) -> Result<bool, Error> {
         self.statement.borrow_mut().fetch()
     }
 
@@ -395,7 +399,8 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
-        if self.cursor.fetch()? {
+        let has_data = unsafe { self.cursor.fetch()? };
+        if has_data {
             Ok(Some(&self.buffer))
         } else {
             Ok(None)
