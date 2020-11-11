@@ -324,9 +324,9 @@ fn mssql_bulk_insert() {
     conn.execute("DROP TABLE IF EXISTS BulkInsert", ()).unwrap();
     conn.execute(
         r#"CREATE TABLE BulkInsert (
-        Id int IDENTITY(1,1),
-        Country varchar(50)
-    );"#,
+            Id int IDENTITY(1,1),
+            Country varchar(50)
+        );"#,
         (),
     )
     .unwrap();

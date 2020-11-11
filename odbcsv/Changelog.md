@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+* Command line interface now takes a subcommand.
+
 ## 0.2.5
 
 * Runtime is now statically linked for windows executables.

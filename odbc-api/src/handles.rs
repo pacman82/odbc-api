@@ -1,5 +1,5 @@
 //! Provides basic abstraction over valid (i.e. allocated ODBC handles).
-//! 
+//!
 //! Two decisions are already baked into this module:
 //!
 //! * Treat warnings by logging them with `log`.

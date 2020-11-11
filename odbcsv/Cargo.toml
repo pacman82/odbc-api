@@ -38,4 +38,5 @@ log = "0.4.11"
 
 [dev-dependencies]
 assert_cmd = "1.0.1"
+lazy_static = "1.4.0"
 

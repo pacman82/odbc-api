@@ -1,28 +1,42 @@
 use anyhow::Error;
 use log::info;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment, IntoParameter};
+use odbc_api::{
+    buffers::TextRowSet, parameter::VarCharParam, Connection, Cursor, Environment, IntoParameter,
+};
 use std::{
     fs::File,
-    io::{stdout, Write},
+    io::{stdin, stdout, Read, Write},
     path::PathBuf,
 };
 use structopt::{clap::ArgGroup, StructOpt};
 
 /// Query an ODBC data source and output the result as CSV.
-#[derive(StructOpt, Debug)]
-#[structopt()]
+#[derive(StructOpt)]
 struct Cli {
     /// Verbose mode (-v, -vv, -vvv, etc)
     #[structopt(short = "v", long, parse(from_occurrences))]
     verbose: usize,
-    /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
-    /// but require more memory during execution.
-    #[structopt(long, default_value = "5000")]
-    batch_size: u32,
-    /// Path to the output csv file the returned values are going to be written to. If omitted the
-    /// csv is going to be printed to standard out.
-    #[structopt(long, short = "o")]
-    output: Option<PathBuf>,
+    #[structopt(subcommand)]
+    command: Command,
+}
+
+#[derive(StructOpt)]
+enum Command {
+    /// Query a data source and write the result as csv.
+    Query {
+        #[structopt(flatten)]
+        query_opt: QueryOpt,
+    },
+    /// Read the content of a csv and insert it into a table.
+    Insert {
+        #[structopt(flatten)]
+        insert_opt: InsertOpt,
+    },
+}
+
+/// Command line argumnents used to establish a connection with the ODBC data source
+#[derive(StructOpt)]
+struct ConnectOpts {
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
     #[structopt(long, short = "c")]
@@ -32,18 +46,48 @@ struct Cli {
     #[structopt(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn.
-    #[structopt(long, short = "u")]
+    #[structopt(long, short = "u", env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string.
-    #[structopt(long, short = "p")]
+    #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
+}
+
+#[derive(StructOpt)]
+struct QueryOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+    /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
+    /// but require more memory during execution.
+    #[structopt(long, default_value = "5000")]
+    batch_size: u32,
+    /// Path to the output csv file the returned values are going to be written to. If omitted the
+    /// csv is going to be printed to standard out.
+    #[structopt(long, short = "o")]
+    output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
     query: String,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
     parameters: Vec<String>,
+}
+
+#[derive(StructOpt)]
+struct InsertOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+    // /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
+    // /// but require more memory during execution.
+    // #[structopt(long, default_value = "5000")]
+    // batch_size: u32,
+    /// Path to the input csv file which is used to fill the database table with values. If ommitted
+    /// stdin is used.
+    #[structopt(long, short = "o")]
+    input: Option<PathBuf>,
+    /// Name of the table to insert the values into. No precautions against SQL injection are taken.
+    table: String,
 }
 
 fn main() -> Result<(), Error> {
@@ -55,14 +99,6 @@ fn main() -> Result<(), Error> {
     );
     // Parse arguments from command line interface
     let opt = Cli::from_args();
-    // If an output file has been specified write to it, otherwise use stdout instead.
-    let out = stdout();
-    let out: Box<dyn Write> = if let Some(path) = opt.output {
-        Box::new(File::create(path)?)
-    } else {
-        Box::new(out.lock())
-    };
-    let mut writer = csv::Writer::from_writer(out);
 
     // Initialize logging.
     stderrlog::new()
@@ -76,34 +112,74 @@ fn main() -> Result<(), Error> {
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
     let environment = unsafe { Environment::new() }?;
 
-    let mut connection = if let Some(dsn) = opt.dsn {
+    match opt.command {
+        Command::Query { query_opt } => {
+            query(&environment, &query_opt)?;
+        }
+        Command::Insert { insert_opt } => {
+            insert(&environment, &insert_opt)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Open a database connection using the options provided on the command line.
+fn open_connection<'e>(
+    environment: &'e Environment,
+    opt: &ConnectOpts,
+) -> Result<Connection<'e>, odbc_api::Error> {
+    if let Some(dsn) = opt.dsn.as_deref() {
         environment.connect(
-            &dsn,
+            dsn,
             opt.user.as_deref().unwrap_or(""),
             opt.password.as_deref().unwrap_or(""),
-        )?
+        )
     } else {
         environment.connect_with_connection_string(
-            &opt.connection_string
+            opt.connection_string
+                .as_deref()
                 .expect("Connection string must be specified, if dsn is not."),
-        )?
+        )
+    }
+}
+
+/// Execute a query and writes the result to csv.
+fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
+    let QueryOpt {
+        connect_opts,
+        output,
+        parameters,
+        query,
+        batch_size,
+    } = opt;
+
+    // If an output file has been specified write to it, otherwise use stdout instead.
+    let hold_stdout; // Prolongs scope of `stdout()` so we can lock() it.
+    let out: Box<dyn Write> = if let Some(path) = output {
+        Box::new(File::create(path)?)
+    } else {
+        hold_stdout = stdout();
+        Box::new(hold_stdout.lock())
     };
+    let mut writer = csv::Writer::from_writer(out);
+
+    let mut connection = open_connection(&environment, connect_opts)?;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
-    let params: Vec<_> = opt
-        .parameters
+    let params: Vec<_> = parameters
         .iter()
         .map(|param| param.into_parameter())
         .collect();
 
     // Execute the query as a one off, and pass the parameters.
-    match connection.execute(&opt.query, params.as_slice())? {
+    match connection.execute(&query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
             let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
             writer.write_record(headline)?;
 
-            let mut buffers = TextRowSet::new(opt.batch_size, &cursor)?;
+            let mut buffers = TextRowSet::new(*batch_size, &cursor)?;
             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
             // Use this number to count the batches. Only used for logging.
@@ -123,11 +199,53 @@ fn main() -> Result<(), Error> {
             }
         }
         None => {
-            eprintln!(
-                "Query came back empty (not even a schema has been returned). No output has been created."
-            );
+            eprintln!("Query came back empty (not even a schema has been returned). No output has been created.");
         }
-    }
+    };
+    Ok(())
+}
 
+/// Read the content of a csv and insert it into a table.
+fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error> {
+    let InsertOpt {
+        input,
+        connect_opts,
+        table,
+        ..
+    } = insert_opt;
+
+    // If an input file has been specified, read from it. Use stdin otherwise.
+    let hold_stdin; // Prolongs scope of `stdin()` so we can lock() it.
+    let input: Box<dyn Read> = if let Some(path) = input {
+        Box::new(File::open(path)?)
+    } else {
+        hold_stdin = stdin();
+        Box::new(hold_stdin.lock())
+    };
+    let mut reader = csv::Reader::from_reader(input);
+    let connection = open_connection(&environment, connect_opts)?;
+
+    // Generate statment text from table name and headline
+    let headline = reader.byte_headers()?;
+    let column_names: Vec<&str> = headline
+        .iter()
+        .map(|bytes| std::str::from_utf8(bytes))
+        .collect::<Result<_, _>>()?;
+    let columns = column_names.join(", ");
+    let values = column_names
+        .iter()
+        .map(|_| "?")
+        .collect::<Vec<_>>()
+        .join(", ");
+    let statement_text = format!("INSERT INTO {} ({}) VALUES ({});", table, columns, values);
+    info!("Insert statement Text: {}", statement_text);
+
+    let mut statement = connection.prepare(&statement_text)?;
+
+    for try_record in reader.into_byte_records() {
+        let record = try_record?;
+        let params = record.iter().map(VarCharParam::new).collect::<Vec<_>>();
+        statement.execute(params.as_slice()).unwrap();
+    }
     Ok(())
 }
