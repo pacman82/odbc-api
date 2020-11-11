@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5
+
+* Runtime is now statically linked for windows executables.
+
 ## 0.2.4
 
 * Updated dependencies

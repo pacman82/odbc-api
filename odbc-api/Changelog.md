@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.9.2 (next)
+
 ## 0.9.1
 
 * `Environment` is now `Send` and `Sync`.
