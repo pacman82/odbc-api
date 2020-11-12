@@ -2,6 +2,8 @@
 
 ## 0.9.2 (next)
 
+* `handle::Statement::bind_parameter` changes into `handle::Statement::bind_input_parameter`, in order take a `* const`.
+
 ## 0.9.1
 
 * `Environment` is now `Send` and `Sync`.

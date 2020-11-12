@@ -5,8 +5,8 @@ use crate::{
     handles::Statement,
     DataType, Error,
 };
-use odbc_sys::{CDataType, Date, Len, ParamType, Pointer};
-use std::{convert::TryInto, mem::size_of, ptr::null_mut};
+use odbc_sys::{CDataType, Date, Len, Pointer};
+use std::{convert::TryInto, ffi::c_void, mem::size_of, ptr::null_mut};
 
 /// Can be bound to a single `Placeholder` in an SQL statement.
 ///
@@ -43,12 +43,11 @@ macro_rules! impl_single_parameter_for_fixed_sized {
                 stmt: &mut Statement,
                 parameter_number: u16,
             ) -> Result<(), Error> {
-                stmt.bind_parameter(
+                stmt.bind_input_parameter(
                     parameter_number,
-                    ParamType::Input,
                     $t::C_DATA_TYPE,
                     $data_type,
-                    self as *const $t as *mut $t as Pointer,
+                    self as *const $t as *const c_void,
                     size_of::<$t>() as Len,
                     null_mut(),
                 )
@@ -95,15 +94,15 @@ unsafe impl Parameter for VarCharParam<'_> {
         stmt: &mut Statement<'_>,
         parameter_number: u16,
     ) -> Result<(), Error> {
-        stmt.bind_parameter(
+        stmt.bind_input_parameter(
             parameter_number,
-            ParamType::Input,
             CDataType::Char,
             DataType::Varchar {
                 length: self.bytes.len().try_into().unwrap(),
             },
             self.bytes.as_ptr() as Pointer,
-            self.length, // Since we only bind a single input parameter this value should be ignored.
+            self.length, /* Since we only bind a single input parameter this value should be
+                          * ignored. */
             &self.length as *const Len as *mut Len,
         )
     }
@@ -125,12 +124,11 @@ where
         stmt: &mut Statement<'_>,
         parameter_number: u16,
     ) -> Result<(), Error> {
-        stmt.bind_parameter(
+        stmt.bind_input_parameter(
             parameter_number,
-            ParamType::Input,
             T::C_DATA_TYPE,
             DataType::Integer,
-            &self.value as *const T as *mut T as Pointer,
+            &self.value as *const T as *const c_void,
             0,
             null_mut(),
         )

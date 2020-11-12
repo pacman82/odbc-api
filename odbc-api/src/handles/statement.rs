@@ -13,7 +13,7 @@ use odbc_sys::{
     SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols,
     SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
+use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -307,27 +307,26 @@ impl<'s> Statement<'s> {
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.
     /// * Calling this function may influence other statements that share the APD.
-    pub unsafe fn bind_parameter(
+    pub unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        input_output_type: ParamType,
         value_type: CDataType,
         parameter_type: DataType,
-        parameter_value_ptr: Pointer,
+        parameter_value_ptr: *const c_void,
         buffer_length: Len,
-        str_len_or_ind_ptr: *mut Len,
+        str_len_or_ind_ptr: *const Len,
     ) -> Result<(), Error> {
         SQLBindParameter(
             self.handle,
             parameter_number,
-            input_output_type,
+            ParamType::Input,
             value_type,
             parameter_type.data_type(),
             parameter_type.column_size(),
             parameter_type.decimal_digits(),
-            parameter_value_ptr,
+            parameter_value_ptr as *mut c_void,
             buffer_length,
-            str_len_or_ind_ptr,
+            str_len_or_ind_ptr as *mut Len,
         )
         .into_result(self)
     }
