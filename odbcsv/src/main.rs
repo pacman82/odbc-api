@@ -37,8 +37,8 @@ enum Command {
 /// Command line argumnents used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
-    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
-    /// the ODBC dsn.
+    /// The connection string used to connect to the ODBC data source. Alternatively you may
+    /// specify the ODBC dsn.
     #[structopt(long, short = "c")]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
@@ -78,15 +78,16 @@ struct QueryOpt {
 struct InsertOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
-    // /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
-    // /// but require more memory during execution.
+    // /// Number of rows inserted into the database on block. Larger numbers may reduce io
+    // overhead, /// but require more memory during execution.
     // #[structopt(long, default_value = "5000")]
     // batch_size: u32,
-    /// Path to the input csv file which is used to fill the database table with values. If ommitted
-    /// stdin is used.
+    /// Path to the input csv file which is used to fill the database table with values. If
+    /// ommitted stdin is used.
     #[structopt(long, short = "o")]
     input: Option<PathBuf>,
-    /// Name of the table to insert the values into. No precautions against SQL injection are taken.
+    /// Name of the table to insert the values into. No precautions against SQL injection are
+    /// taken.
     table: String,
 }
 

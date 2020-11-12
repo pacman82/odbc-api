@@ -17,9 +17,9 @@ pub use self::{
 
 /// Arguments used to describe the buffer then binding this column to a cursor.
 pub struct BindColArgs {
-    /// The identifier of the C data type of the `value` buffer. When it is retrieving data from the
-    /// data source with `fetch`, the driver converts the data to this type. When it sends data to
-    /// the source, the driver converts the data from this type.
+    /// The identifier of the C data type of the `value` buffer. When it is retrieving data from
+    /// the data source with `fetch`, the driver converts the data to this type. When it sends
+    /// data to the source, the driver converts the data from this type.
     pub target_type: CDataType,
     /// Pointer to the data buffer to bind to the column.Start address of the value buffer.
     pub target_value: Pointer,

@@ -118,8 +118,8 @@
 //! ```
 //!
 //! Oh dear! Aren't we of to a bad start. First step in using this API and already a piece of unsafe
-//! code. Well we are talking with a C API those contract explicitly demands that there may be only
-//! one ODBC Environment in the entire process. The only way to know that this call is safe is in
+//! code. Well we are talking with a C API those contract explicitly demands that there MUST be at
+//! most one ODBC Environment in the entire process. This requirement can only be verified in
 //! application code. If you write a library you MUST NOT wrap the creation of an ODBC environment
 //! in a safe function call. If another libray would do the same and an application were to use
 //! both of these, it might create two environments in safe code and thus causing undefined

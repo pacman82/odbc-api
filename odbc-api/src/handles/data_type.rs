@@ -18,8 +18,8 @@ pub enum DataType {
         /// Number of decimal digits.
         scale: i16,
     },
-    /// `Decimal(p,s)`. Signed, exact, numeric value with a precision of at least p and scale s. The
-    /// maximum precision is driver-defined. (1 <= p <= 15; s <= p)
+    /// `Decimal(p,s)`. Signed, exact, numeric value with a precision of at least p and scale s.
+    /// The maximum precision is driver-defined. (1 <= p <= 15; s <= p)
     Decimal {
         /// Total number of digits.
         precision: ULen,
@@ -52,12 +52,12 @@ pub enum DataType {
     /// values for minutes of 00 to 59, and valid values for seconds of 00 to 61. Precision p
     /// indicates the seconds precision.
     Time { precision: i16 },
-    /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as defined
-    /// for the Date and Time variants.
+    /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as
+    /// defined for the Date and Time variants.
     Timestamp { precision: i16 },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
-    /// (signed: -2[63] <= n <= 2[63] - 1, unsigned: 0 <= n <= 2[64] - 1). Has no corresponding type
-    /// in SQL-92.
+    /// (signed: -2[63] <= n <= 2[63] - 1, unsigned: 0 <= n <= 2[64] - 1). Has no corresponding
+    /// type in SQL-92.
     Bigint,
     /// `TINYINT`. Exact numeric value with precision 3 and scale 0 (signed: -128 <= n <= 127,
     /// unsigned: 0 <= n <= 255)

@@ -127,8 +127,8 @@ pub struct Record {
     pub state: State,
     // Error code returned by Driver manager or driver
     pub native_error: i32,
-    /// Buffer containing the error message. The buffer already has the correct size, and there is no
-    /// terminating zero at the end.
+    /// Buffer containing the error message. The buffer already has the correct size, and there is
+    /// no terminating zero at the end.
     pub message: Vec<u16>,
 }
 

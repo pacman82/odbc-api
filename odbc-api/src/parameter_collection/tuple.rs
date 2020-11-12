@@ -1,4 +1,5 @@
-//! Implement `Parameters` trait for tuples consisting of elements implementing `SingleParameter` trait.
+//! Implement `Parameters` trait for tuples consisting of elements implementing `SingleParameter`
+//! trait.
 
 use super::{Parameter, ParameterCollection};
 use crate::{handles::Statement, Error};

@@ -212,9 +212,9 @@ impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
     statement: Stmt,
     // If we would not implement the drop handler, we could do without the Phantom member and an
-    // overall simpler declaration (without any lifetimes), since we could instead simply specialize
-    // each implementation. Since drop handlers can not specialized, though we need to deal with
-    // this.
+    // overall simpler declaration (without any lifetimes), since we could instead simply
+    // specialize each implementation. Since drop handlers can not specialized, though we need
+    // to deal with this.
     connection: PhantomData<Statement<'open_connection>>,
 }
 
