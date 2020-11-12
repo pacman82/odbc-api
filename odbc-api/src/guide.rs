@@ -2,19 +2,18 @@
 //!
 //! # About ODBC
 //!
-//! ODBC is an open standard which allows you to connect to various data sources without your
-//! application having to explicitly be written for them or for it to be explicitly linked to their
-//! drivers during build time. Mostly these data sources are databases, but ODBC drivers are also
-//! available for various file types like Excel or CSV.
+//! ODBC is an open standard which allows you to connect to various data sources. Mostly these data
+//! sources are databases, but ODBC drivers are also available for various file types like Excel or
+//! CSV.
 //!
-//! While your application does not does not link against a driver it will talk to an ODBC driver
+//! Your application does not does not link against a driver, but will link against an ODBC driver
 //! manager which must be installed on the system you intend to run the application. On modern
-//! Windows Platforms ODBC is always preinstalled, on OS-X or Linux distributions a driver manager
-//! like unix-odbc must be installed.
+//! Windows Platforms ODBC is always installed, on OS-X or Linux distributions a driver manager like
+//! [unixODBC](http://www.unixodbc.org/) must be installed by whomever manages the system.
 //!
-//! To actually connect to a data source a driver must be installed for the ODBC driver manager to
-//! manage. On windows you can type 'ODBC Data Sources' into the search box to start a little GUI
-//! which shows you the various drivers and preconfigured data sources on your system.
+//! To connect to a data source a driver for the specific data source in question must be installed.
+//! On windows you can type 'ODBC Data Sources' into the search box to start a little GUI which
+//! shows you the various drivers and preconfigured data sources on your system.
 //!
 //! This however is not a guide on how to configure and setup ODBC. This is a guide on how to use
 //! the Rust bindings for applications which want to utilize ODBC data sources.
@@ -26,7 +25,7 @@
 //! //! `anyhow` and `csv` crate.
 //!
 //! use anyhow::Error;
-//! use odbc_api::{buffers::TextRowSet, Cursor, Environment, IntoParameter};
+//! use odbc_api::{buffers::TextRowSet, Cursor, Environment};
 //! use std::{
 //!     io::{stdout, Write},
 //!     path::PathBuf,
@@ -104,7 +103,12 @@
 //!
 //! No code changes are required, so you can also just build both if you want to.
 //!
-//! # Setting up the ODBC Environment
+//! # Connect to a data source
+//!
+//! ## Setting up the ODBC Environment
+//!
+//! To connect with a data source we need a connection. To create a connection we need an ODBC
+//! environment.
 //!
 //! ```no_run
 //! use odbc_api::Environment;
@@ -123,16 +127,17 @@
 //! application code. If you write a library you MUST NOT wrap the creation of an ODBC environment
 //! in a safe function call. If another libray would do the same and an application were to use
 //! both of these, it might create two environments in safe code and thus causing undefined
-//! behaviour, which is clearly a violation of Rusts safety guarantees.
+//! behaviour, which is clearly a violation of Rusts safety guarantees. On the other hand in
+//! application code it is pretty easy to get right. You call it, and you call it only once.
 //!
 //! Apart from that. This is it. Our ODBC Environment is ready for action.
 //!
-//! # Connect to a data source
-//!
-//! These bindings currently support two ways of connecting to an ODBC data source. Let us start
-//! with the most flexible one.
+//! These bindings currently support two ways of creating a connections:
 //!
 //! ## Connect using a connection string
+//!
+//! Connection strings do not require that the data source is preconfigured by the driver manager
+//! this makes them very flexible.
 //!
 //! ```no_run
 //! use odbc_api::Environment;
@@ -161,8 +166,10 @@
 //!
 //! ## Connect using a Data Source Name (DSN)
 //!
-//! The data source name serves as a key into a map of preconfigured configuration options. This
-//! makes invoking them from an application very easy.
+//! Should a data source be known by the driver manager we can access it using its name and
+//! credentials. This is more convinient for the user or application developer, but requires a
+//! configuration of the ODBC driver manager. Think of it as shifting work from users to
+//! administrators.
 //!
 //! ```no_run
 //! use odbc_api::Environment;
@@ -192,11 +199,11 @@
 //! With our ODBC connection all set up and ready to go, we can execute an SQL query:
 //!
 //! ```no_run
-//! # use odbc_api::Environment;
+//! use odbc_api::Environment;
 //!
-//! # let env = unsafe {
-//! #    Environment::new()?
-//! # };
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {

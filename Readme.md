@@ -9,7 +9,7 @@ ODBC (Open Database Connectivity) bindings for Rust.
 //! and `csv` crate.
 
 use anyhow::Error;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment, IntoParameter};
+use odbc_api::{buffers::TextRowSet, Cursor, Environment};
 use std::{
     io::{stdout, Write},
     path::PathBuf,
@@ -123,6 +123,10 @@ So why `odbc-api`? This is a somewhat less ambitious and more opinionated rewrit
 ## Design decisions
 
 Here are some of the tradeoffs I made in this library to make my life (and hopefully that of the users a bit easier).
+
+### Commiting to one version of the ODBC Api
+
+The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however uses ODBC version `3.8` fixed.
 
 ### Use of the Wide ODBC methods returning UTF-16
 
