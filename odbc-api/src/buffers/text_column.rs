@@ -143,7 +143,7 @@ impl TextColumn {
         parameter_number: u16,
         stmt: &mut Statement,
     ) -> Result<(), Error> {
-        stmt.bind_input_parameter(
+        stmt.bind_input_parameter_array(
             parameter_number,
             CDataType::Char,
             DataType::Varchar {
