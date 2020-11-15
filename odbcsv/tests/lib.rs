@@ -1,4 +1,4 @@
-use assert_cmd::Command;
+use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::Environment;
 
@@ -8,6 +8,52 @@ const MSSQL: &str =
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+}
+
+/// Test helper using two commands to roundtrip csv to and from a data source.
+///
+/// # Parameters
+///
+/// * `csv`: csv used in the roundtrip. Table schema is currently hardcoded.
+/// * `table_name`: Each test must use its unique table name, to avoid race conditions with other
+///   tests.
+fn roundtrip(csv: &'static str, table_name: &str) -> Assert {
+    // Setup table for test. We use the table name only in this test.
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+        .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
+    // Insert csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&["-vvvv", "insert", "--connection-string", MSSQL, table_name])
+        .write_stdin(csv)
+        .assert()
+        .success();
+
+    // Query csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            &format!(
+                "SELECT country, population FROM {} ORDER BY population;",
+                table_name
+            ),
+        ])
+        .assert()
+        .stdout(csv)
 }
 
 #[test]
@@ -62,87 +108,14 @@ fn insert() {
         USA,329000000\n\
     ";
 
-    // Setup table for test. We use the table name only in this test.
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("DROP TABLE IF EXISTS odbcsv_insert;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE odbcsv_insert (country VARCHAR(255), population BIGINT);",
-        (),
-    )
-    .unwrap();
-
-    // Insert csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "insert",
-            "--connection-string",
-            MSSQL,
-            "odbcsv_insert",
-        ])
-        .write_stdin(csv)
-        .assert()
-        .success();
-
-    // Query csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            "SELECT country, population FROM odbcsv_insert ORDER BY population;",
-        ])
-        .assert()
-        .stdout(csv)
-        .success();
+    roundtrip(csv, "odbcsvinsert").success();
 }
-
 
 #[test]
 fn insert_empty_document() {
     let csv = "country,population\n";
 
-    // Setup table for test. We use the table name only in this test.
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_empty_document;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE odbcsv_insert_empty_document (country VARCHAR(255), population BIGINT);",
-        (),
-    )
-    .unwrap();
-
-    // Insert csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "insert",
-            "--connection-string",
-            MSSQL,
-            "odbcsv_insert_empty_document",
-        ])
-        .write_stdin(csv)
-        .assert()
-        .success();
-
-    // Query csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            "SELECT country, population FROM odbcsv_insert_empty_document ORDER BY population;",
-        ])
-        .assert()
-        .stdout(csv)
-        .success();
+    roundtrip(csv, "odbcsv_empty_document").success();
 }
 
 #[test]
@@ -153,45 +126,7 @@ fn insert_batch_size_one() {
         USA,329000000\n\
     ";
 
-    // Setup table for test. We use the table name only in this test.
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_batch_size_one;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE odbcsv_insert_batch_size_one (country VARCHAR(255), population BIGINT);",
-        (),
-    )
-    .unwrap();
-
-    // Insert csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "insert",
-            "--connection-string",
-            MSSQL,
-            "--batch-size",
-            "1",
-            "odbcsv_insert_batch_size_one",
-        ])
-        .write_stdin(csv)
-        .assert()
-        .success();
-
-    // Query csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            "SELECT country, population FROM odbcsv_insert_batch_size_one ORDER BY population;",
-        ])
-        .assert()
-        .stdout(csv)
-        .success();
+    roundtrip(csv, "odbcsv_insert_batch_size_one").success();
 }
 
 #[test]
@@ -202,41 +137,5 @@ fn insert_with_nulls() {
         USA,329000000\n\
     ";
 
-    // Setup table for test. We use the table name only in this test.
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_with_nulls;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE odbcsv_insert_with_nulls (country VARCHAR(255), population BIGINT);",
-        (),
-    )
-    .unwrap();
-
-    // Insert csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "insert",
-            "--connection-string",
-            MSSQL,
-            "odbcsv_insert_with_nulls",
-        ])
-        .write_stdin(csv)
-        .assert()
-        .success();
-
-    // Query csv
-    Command::cargo_bin("odbcsv")
-        .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            "SELECT country, population FROM odbcsv_insert_with_nulls ORDER BY population;",
-        ])
-        .assert()
-        .stdout(csv)
-        .success();
+    roundtrip(csv, "odbcsv_insert_with_nulls").success();
 }
