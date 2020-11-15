@@ -1,8 +1,6 @@
-use anyhow::Error;
+use anyhow::{bail, Error};
 use log::info;
-use odbc_api::{
-    buffers::TextRowSet, parameter::VarCharParam, Connection, Cursor, Environment, IntoParameter,
-};
+use odbc_api::{buffers::TextRowSet, Connection, Cursor, Environment, IntoParameter};
 use std::{
     fs::File,
     io::{stdin, stdout, Read, Write},
@@ -34,7 +32,7 @@ enum Command {
     },
 }
 
-/// Command line argumnents used to establish a connection with the ODBC data source
+/// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
     /// The connection string used to connect to the ODBC data source. Alternatively you may
@@ -78,12 +76,12 @@ struct QueryOpt {
 struct InsertOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
-    // /// Number of rows inserted into the database on block. Larger numbers may reduce io
-    // overhead, /// but require more memory during execution.
-    // #[structopt(long, default_value = "5000")]
-    // batch_size: u32,
+    /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
+    /// but require more memory during execution.
+    #[structopt(long, default_value = "5000")]
+    batch_size: u32,
     /// Path to the input csv file which is used to fill the database table with values. If
-    /// ommitted stdin is used.
+    /// omitted stdin is used.
     #[structopt(long, short = "o")]
     input: Option<PathBuf>,
     /// Name of the table to insert the values into. No precautions against SQL injection are
@@ -118,6 +116,9 @@ fn main() -> Result<(), Error> {
             query(&environment, &query_opt)?;
         }
         Command::Insert { insert_opt } => {
+            if insert_opt.batch_size == 0 {
+                bail!("batch size, must be at least 1");
+            }
             insert(&environment, &insert_opt)?;
         }
     }
@@ -180,7 +181,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
             writer.write_record(headline)?;
 
-            let mut buffers = TextRowSet::new(*batch_size, &cursor)?;
+            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor)?;
             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
             // Use this number to count the batches. Only used for logging.
@@ -212,7 +213,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         input,
         connect_opts,
         table,
-        ..
+        batch_size,
     } = insert_opt;
 
     // If an input file has been specified, read from it. Use stdin otherwise.
@@ -226,7 +227,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     let mut reader = csv::Reader::from_reader(input);
     let connection = open_connection(&environment, connect_opts)?;
 
-    // Generate statment text from table name and headline
+    // Generate statement text from table name and headline
     let headline = reader.byte_headers()?;
     let column_names: Vec<&str> = headline
         .iter()
@@ -243,10 +244,42 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
 
     let mut statement = connection.prepare(&statement_text)?;
 
+    // Log column types.
+    // Could get required buffer sizes from parameter description.
+    let _parameter_descriptions: Vec<_> = (1..=headline.len())
+        .map(|parameter_number| {
+            statement
+                .describe_param(parameter_number as u16)
+                .map(|desc| {
+                    info!("Column {} identified as: {:?}", parameter_number, desc);
+                    desc
+                })
+        })
+        .collect::<Result<_, _>>()?;
+
+    // Allocate buffer
+    let mut buffer = TextRowSet::new(*batch_size, (0..headline.len()).map(|_| 0));
+
     for try_record in reader.into_byte_records() {
+        if buffer.num_rows() == *batch_size as usize {
+            // Batch is full. We need to send it to the data base and clear it, before we insert
+            // more rows into it.
+            statement.execute(&buffer)?;
+            buffer.clear();
+        }
+
         let record = try_record?;
-        let params = record.iter().map(VarCharParam::new).collect::<Vec<_>>();
-        statement.execute(params.as_slice()).unwrap();
+        buffer.append(
+            record
+                .iter()
+                .map(|field| if field.is_empty() { None } else { Some(field) }),
+        );
     }
+
+    if buffer.num_rows() != 0 {
+        // Send the remainder of the buffer to the database.
+        statement.execute(&buffer)?;
+    }
+
     Ok(())
 }

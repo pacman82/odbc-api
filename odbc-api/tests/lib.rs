@@ -68,7 +68,7 @@ fn mssql_text_buffer() {
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     let batch_size = 2;
-    let mut buffer = buffers::TextRowSet::new(batch_size, &cursor).unwrap();
+    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
     let mut row_set = row_set_cursor.fetch().unwrap().unwrap();
     assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Interstellar");
@@ -239,7 +239,7 @@ fn mssql_bind_integer_parameter() {
     let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, 1968).unwrap().unwrap();
-    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -258,7 +258,7 @@ fn mssql_prepared_statement() {
     // Execute it two times with different parameters
     {
         let cursor = prepared.execute(1968).unwrap().unwrap();
-        let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+        let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
         let title = batch.at_as_str(0, 0).unwrap().unwrap();
@@ -267,7 +267,7 @@ fn mssql_prepared_statement() {
 
     {
         let cursor = prepared.execute(1993).unwrap().unwrap();
-        let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+        let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
         let title = batch.at_as_str(0, 0).unwrap().unwrap();
@@ -280,7 +280,7 @@ fn mssql_integer_parameter_as_string() {
     let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
-    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -294,7 +294,7 @@ fn mssql_two_paramters_in_tuple() {
     let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
-    let mut buffer = TextRowSet::new(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -331,7 +331,15 @@ fn mssql_bulk_insert() {
     )
     .unwrap();
 
-    // TODO: test bulk insert here.
+    let mut prepared = conn
+        .prepare("INSERT INTO BulkInsert (Country) Values (?)")
+        .unwrap();
+    let mut params = TextRowSet::new(5, [50].iter().copied());
+    params.append(["England"].iter().map(|s| Some(s.as_bytes())));
+    params.append(["France"].iter().map(|s| Some(s.as_bytes())));
+    params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
+
+    prepared.execute(&params).unwrap();
 }
 
 // #[test]

@@ -1,4 +1,7 @@
-use crate::{handles::Statement, CursorImpl, Error, ParameterCollection};
+use crate::{
+    handles::{ParameterDescription, Statement},
+    CursorImpl, Error, ParameterCollection,
+};
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
 /// once.
@@ -33,5 +36,15 @@ impl<'o> Prepared<'o> {
         } else {
             Ok(Some(CursorImpl::new(&mut self.statement)))
         }
+    }
+
+    /// Describes parameter marker associated with a prepared SQL statement.
+    ///
+    /// # Paramters
+    ///
+    /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
+    ///   order, starting at 1.
+    pub fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error> {
+        self.statement.describe_param(parameter_number)
     }
 }

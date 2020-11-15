@@ -73,22 +73,22 @@ impl_single_parameter_for_fixed_sized!(i64, DataType::Bigint);
 /// While a byte array can provide us with a pointer to the start of the array and the length of the
 /// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
 /// strings which are not zero terminated we need to store the length in a separate value.
-pub struct VarCharParam<'a> {
+pub struct VarChar<'a> {
     bytes: &'a [u8],
     /// Will be set to value.len() by constructor.
     length: Len,
 }
 
-impl<'a> VarCharParam<'a> {
+impl<'a> VarChar<'a> {
     pub fn new(value: &'a [u8]) -> Self {
-        VarCharParam {
+        VarChar {
             bytes: value,
             length: value.len().try_into().unwrap(),
         }
     }
 }
 
-unsafe impl Parameter for VarCharParam<'_> {
+unsafe impl Parameter for VarChar<'_> {
     unsafe fn bind_parameter_to(
         &self,
         stmt: &mut Statement<'_>,
