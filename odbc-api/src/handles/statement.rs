@@ -1,5 +1,6 @@
 use super::{
     as_handle::AsHandle,
+    bind::Input,
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
@@ -307,6 +308,43 @@ impl<'s> Statement<'s> {
         .into_result(self)
     }
 
+    /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement.
+    ///
+    /// This function calls the same C API function as `bind_input_parameter_array` but has weaker
+    /// requirements, as a buffer length argument is not required to calculate the positions of the
+    /// elements in the arrays. I.e. A `CStr` could be bound with this function. It is of variable
+    /// length, but since it is only one, it is enough to know there it starts and that it ends with
+    /// zero.
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    pub unsafe fn bind_input_parameter(
+        &mut self,
+        parameter_number: u16,
+        parameter: &impl Input,
+    ) -> Result<(), Error> {
+        let parameter_type = parameter.data_type();
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            ParamType::Input,
+            parameter.cdata_type(),
+            parameter_type.data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.value_ptr() as *mut c_void,
+            0,
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut Len,
+        )
+        .into_result(self)
+    }
+
     /// Binds a buffer to a parameter marker in an SQL statement.
     ///
     /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
@@ -322,7 +360,7 @@ impl<'s> Statement<'s> {
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.
     /// * Calling this function may influence other statements that share the APD.
-    pub unsafe fn bind_input_parameter(
+    pub unsafe fn bind_input_parameter_array(
         &mut self,
         parameter_number: u16,
         value_type: CDataType,

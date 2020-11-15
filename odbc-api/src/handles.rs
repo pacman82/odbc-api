@@ -6,6 +6,7 @@
 //! * Use the Unicode (wide) variants of the ODBC API.
 
 mod as_handle;
+mod bind;
 mod buffer;
 mod column_description;
 mod connection;
@@ -19,6 +20,7 @@ mod statement;
 
 pub use {
     as_handle::AsHandle,
+    bind::{CData, Input, VarChar},
     column_description::{ColumnDescription, Nullable},
     connection::Connection,
     data_type::DataType,

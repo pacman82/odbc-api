@@ -18,12 +18,12 @@ impl<'o> Prepared<'o> {
     ///
     /// * `params`: Used to bind these parameters before executing the statement. You can use `()`
     ///   to represent no parameters. In regards to binding arrays of parameters: Should `params`
-    ///   specify a paramset size of empty, nothing is executed, and `Ok(None)` is returned. 
+    ///   specify a paramset size of empty, nothing is executed, and `Ok(None)` is returned.
     pub fn execute(
         &mut self,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
-        let paramset_size = params.paramset_size();
+        let paramset_size = params.parameter_set_size();
         if paramset_size == 0 {
             Ok(None)
         } else {

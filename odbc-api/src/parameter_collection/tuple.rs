@@ -1,7 +1,7 @@
 //! Implement `Parameters` trait for tuples consisting of elements implementing `SingleParameter`
 //! trait.
 
-use super::{Parameter, ParameterCollection};
+use super::{Input, ParameterCollection};
 use crate::{handles::Statement, Error};
 
 macro_rules! impl_bind_input_parameters {
@@ -10,7 +10,7 @@ macro_rules! impl_bind_input_parameters {
     );
     ($offset:expr, $stmt:ident $head:ident $($tail:ident)*) => (
         {
-            $head.bind_parameter_to($stmt, $offset+1)?;
+            $stmt.bind_input_parameter($offset+1, $head)?;
             impl_bind_input_parameters!($offset+1, $stmt $($tail)*)
         }
     );
@@ -21,9 +21,9 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         #[allow(non_snake_case)]
-        unsafe impl<$($t:Parameter,)*> ParameterCollection for ($($t,)*)
+        unsafe impl<$($t:Input,)*> ParameterCollection for ($($t,)*)
         {
-            fn paramset_size(&self) -> u32 {
+            fn parameter_set_size(&self) -> u32 {
                 1
             }
 

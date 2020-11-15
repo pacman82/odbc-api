@@ -51,7 +51,7 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
-        let paramset_size = params.paramset_size();
+        let paramset_size = params.parameter_set_size();
 
         if paramset_size == 0 {
             Ok(None)

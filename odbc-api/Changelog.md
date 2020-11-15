@@ -6,6 +6,9 @@
 * `handle::Statement::bind_parameter` changes into `handle::Statement::bind_input_parameter`, in order take a `* const`.
 * `VarCharParam` renamed into `VarChar`.
 * `TextRowSet::new` renamed into `TextRowSet::for_cursor`.
+* trait `ParameterCollection` has a new method `parameter_set_size`.
+* `Parameter` trait is now `Input`.
+* `IntoParameter` trait is now `IntoInput`.
 
 ## 0.9.1
 
