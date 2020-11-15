@@ -15,7 +15,10 @@ pub unsafe trait ParameterCollection {
     unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error>;
 }
 
-unsafe impl<T> ParameterCollection for T where T: Parameter {
+unsafe impl<T> ParameterCollection for T
+where
+    T: Parameter,
+{
     unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error> {
         self.bind_parameter_to(stmt, 1)?;
         stmt.set_paramset_size(1)?;
