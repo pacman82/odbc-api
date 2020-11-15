@@ -51,21 +51,26 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
-        unsafe {
+        let paramset_size = params.paramset_size();
+
+        if paramset_size == 0 {
+            Ok(None)
+        } else {
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.
             stmt.reset_parameters()?;
-            // Bind new parameters passed by caller.
-            params.bind_parameters_to(&mut stmt)?;
-            stmt.exec_direct(query)?
-        };
-
-        // Check if a result set has been created.
-        if stmt.num_result_cols()? == 0 {
-            // ODBC Driver returned NoData.
-            Ok(None)
-        } else {
-            Ok(Some(CursorImpl::new(stmt)))
+            unsafe {
+                stmt.set_paramset_size(paramset_size)?;
+                // Bind new parameters passed by caller.
+                params.bind_parameters_to(&mut stmt)?;
+                stmt.exec_direct(query)?
+            };
+            // Check if a result set has been created.
+            if stmt.num_result_cols()? == 0 {
+                Ok(None)
+            } else {
+                Ok(Some(CursorImpl::new(stmt)))
+            }
         }
     }
 

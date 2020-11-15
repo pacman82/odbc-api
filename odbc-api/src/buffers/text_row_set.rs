@@ -112,13 +112,17 @@ unsafe impl RowSetBuffer for TextRowSet {
 }
 
 unsafe impl ParameterCollection for &TextRowSet {
+
+    fn paramset_size(&self) -> u32 {
+        *self.num_rows as u32
+    }
+
     unsafe fn bind_parameters_to(&self, stmt: &mut crate::handles::Statement) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
             column.bind_as_parameter(parameter_number, stmt)?;
             parameter_number += 1;
         }
-        stmt.set_paramset_size((*self.num_rows).try_into().unwrap())?;
         Ok(())
     }
 }
