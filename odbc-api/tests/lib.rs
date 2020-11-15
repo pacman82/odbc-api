@@ -15,6 +15,34 @@ lazy_static! {
     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
+fn table_contents_as_text(query: &str) -> Vec<Vec<Option<String>>> {
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let cursor = conn.execute(query, ()).unwrap().unwrap();
+
+    let mut text_columns: Vec<_> = (0..cursor.num_result_cols().unwrap())
+        .map(|_| Vec::new())
+        .collect();
+
+    let batch_size = 2;
+    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
+
+    while let Some(row_set) = row_set_cursor.fetch().unwrap() {
+        for col_index in 0..row_set.num_cols() {
+            for row_index in 0..row_set.num_rows() {
+                text_columns[col_index].push(
+                    row_set
+                        .at_as_str(col_index, row_index)
+                        .unwrap()
+                        .map(ToOwned::to_owned),
+                );
+            }
+        }
+    }
+
+    text_columns
+}
+
 #[test]
 fn bogus_connection_string() {
     let conn = ENV.connect_with_connection_string("foobar");
@@ -63,24 +91,18 @@ fn mssql_describe_columns() {
 
 #[test]
 fn mssql_text_buffer() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT title, year FROM Movies ORDER BY year;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
-
-    let batch_size = 2;
-    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor).unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
-    let mut row_set = row_set_cursor.fetch().unwrap().unwrap();
-    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Interstellar");
-    assert!(row_set.at_as_str(1, 0).unwrap().is_none());
+    let result = table_contents_as_text("SELECT title, year FROM Movies ORDER BY year;");
     assert_eq!(
-        row_set.at_as_str(0, 1).unwrap().unwrap(),
-        "2001: A Space Odyssey"
+        vec![
+            vec![
+                Some("Interstellar".to_owned()),
+                Some("2001: A Space Odyssey".to_owned()),
+                Some("Jurassic Park".to_owned())
+            ],
+            vec![None, Some("1968".to_owned()), Some("1993".to_owned())]
+        ],
+        result
     );
-    assert_eq!(row_set.at_as_str(1, 1).unwrap().unwrap(), "1968");
-    row_set = row_set_cursor.fetch().unwrap().unwrap();
-    assert_eq!(row_set.at_as_str(0, 0).unwrap().unwrap(), "Jurassic Park");
-    assert_eq!(row_set.at_as_str(1, 0).unwrap().unwrap(), "1993");
 }
 
 #[test]
@@ -331,6 +353,7 @@ fn mssql_bulk_insert() {
     )
     .unwrap();
 
+    // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
         .prepare("INSERT INTO BulkInsert (Country) Values (?)")
         .unwrap();
@@ -340,6 +363,20 @@ fn mssql_bulk_insert() {
     params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
 
     prepared.execute(&params).unwrap();
+
+    // Assert that the table contains the rows that have just been inserted.
+
+    let result = table_contents_as_text("SELECT country FROM BulkInsert ORDER BY id;");
+    assert_eq!(
+        vec![
+            vec![
+                Some("England".to_owned()),
+                Some("France".to_owned()),
+                Some("Germany".to_owned())
+            ],
+        ],
+        result
+    );
 }
 
 // #[test]
