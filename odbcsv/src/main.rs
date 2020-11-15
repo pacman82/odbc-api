@@ -276,10 +276,9 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         );
     }
 
-    if buffer.num_rows() != 0 {
-        // Send the remainder of the buffer to the database.
-        statement.execute(&buffer)?;
-    }
+    // Insert the remainder of the buffer to the database. If buffer is empty nothing will be
+    // executed.
+    statement.execute(&buffer)?;
 
     Ok(())
 }

@@ -6,7 +6,7 @@ use crate::{handles::Statement, Error};
 
 macro_rules! impl_bind_input_parameters {
     ($offset:expr, $stmt:ident) => (
-        $stmt.set_paramset_size(1)
+        Ok(())
     );
     ($offset:expr, $stmt:ident $head:ident $($tail:ident)*) => (
         {
@@ -23,6 +23,10 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(non_snake_case)]
         unsafe impl<$($t:Parameter,)*> ParameterCollection for ($($t,)*)
         {
+            fn paramset_size(&self) -> u32 {
+                1
+            }
+
             unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error> {
                 let ($($t,)*) = self;
                 impl_bind_input_parameters!(0, stmt $($t)*)
