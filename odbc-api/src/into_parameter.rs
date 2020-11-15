@@ -1,4 +1,4 @@
-use crate::parameter::{Parameter, VarCharParam};
+use crate::parameter::{Parameter, VarChar};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -26,9 +26,9 @@ where
 }
 
 impl<'a> IntoParameter for &'a str {
-    type Parameter = VarCharParam<'a>;
+    type Parameter = VarChar<'a>;
 
     fn into_parameter(self) -> Self::Parameter {
-        VarCharParam::new(self.as_bytes())
+        VarChar::new(self.as_bytes())
     }
 }

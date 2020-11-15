@@ -15,6 +15,17 @@ impl Default for Nullable {
     }
 }
 
+impl Nullable {
+    pub fn new(nullable: odbc_sys::Nullable) -> Self {
+        match nullable {
+            odbc_sys::Nullable::UNKNOWN => Nullable::Unknown,
+            odbc_sys::Nullable::NO_NULLS => Nullable::NoNulls,
+            odbc_sys::Nullable::NULLABLE => Nullable::Nullable,
+            other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
+        }
+    }
+}
+
 /// Describes the type and attributes of a column.
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct ColumnDescription {

@@ -1,8 +1,11 @@
 # Changelog
 
-## 0.9.2 (next)
+## 0.10.0 (next)
 
+* Adds method `Perpared::describe_param()`.
 * `handle::Statement::bind_parameter` changes into `handle::Statement::bind_input_parameter`, in order take a `* const`.
+* `VarCharParam` renamed into `VarChar`.
+* `TextRowSet::new` renamed into `TextRowSet::for_cursor`.
 
 ## 0.9.1
 

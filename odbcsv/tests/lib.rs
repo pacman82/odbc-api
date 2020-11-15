@@ -100,3 +100,143 @@ fn insert() {
         .stdout(csv)
         .success();
 }
+
+
+#[test]
+fn insert_empty_document() {
+    let csv = "country,population\n";
+
+    // Setup table for test. We use the table name only in this test.
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_empty_document;", ())
+        .unwrap();
+    conn.execute(
+        "CREATE TABLE odbcsv_insert_empty_document (country VARCHAR(255), population BIGINT);",
+        (),
+    )
+    .unwrap();
+
+    // Insert csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "odbcsv_insert_empty_document",
+        ])
+        .write_stdin(csv)
+        .assert()
+        .success();
+
+    // Query csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "SELECT country, population FROM odbcsv_insert_empty_document ORDER BY population;",
+        ])
+        .assert()
+        .stdout(csv)
+        .success();
+}
+
+#[test]
+fn insert_batch_size_one() {
+    let csv = "country,population\n\
+        Norway,5380000\n\
+        Germany,83500000\n\
+        USA,329000000\n\
+    ";
+
+    // Setup table for test. We use the table name only in this test.
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_batch_size_one;", ())
+        .unwrap();
+    conn.execute(
+        "CREATE TABLE odbcsv_insert_batch_size_one (country VARCHAR(255), population BIGINT);",
+        (),
+    )
+    .unwrap();
+
+    // Insert csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "--batch-size",
+            "1",
+            "odbcsv_insert_batch_size_one",
+        ])
+        .write_stdin(csv)
+        .assert()
+        .success();
+
+    // Query csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "SELECT country, population FROM odbcsv_insert_batch_size_one ORDER BY population;",
+        ])
+        .assert()
+        .stdout(csv)
+        .success();
+}
+
+#[test]
+fn insert_with_nulls() {
+    let csv = "country,population\n\
+        Norway,\n\
+        ,83500000\n\
+        USA,329000000\n\
+    ";
+
+    // Setup table for test. We use the table name only in this test.
+    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute("DROP TABLE IF EXISTS odbcsv_insert_with_nulls;", ())
+        .unwrap();
+    conn.execute(
+        "CREATE TABLE odbcsv_insert_with_nulls (country VARCHAR(255), population BIGINT);",
+        (),
+    )
+    .unwrap();
+
+    // Insert csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "odbcsv_insert_with_nulls",
+        ])
+        .write_stdin(csv)
+        .assert()
+        .success();
+
+    // Query csv
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            MSSQL,
+            "SELECT country, population FROM odbcsv_insert_with_nulls ORDER BY population;",
+        ])
+        .assert()
+        .stdout(csv)
+        .success();
+}

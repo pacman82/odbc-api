@@ -6,7 +6,7 @@ use crate::{handles::Statement, Error};
 
 macro_rules! impl_bind_input_parameters {
     ($offset:expr, $stmt:ident) => (
-        Ok(())
+        $stmt.set_paramset_size(1)
     );
     ($offset:expr, $stmt:ident $head:ident $($tail:ident)*) => (
         {

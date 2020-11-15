@@ -10,8 +10,9 @@ use super::{
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
-    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr, SQLNumResultCols,
-    SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr,
+    SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute,
+    ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
@@ -51,8 +52,8 @@ impl<'s> Statement<'s> {
         }
     }
 
-    /// Executes a prepareable statement, using the current values of the parameter marker variables
-    /// if any parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
+    /// Executes a statement, using the current values of the parameter marker variables if any
+    /// parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
     /// statement for one-time execution.
     ///
     /// # Safety
@@ -156,12 +157,7 @@ impl<'s> Statement<'s> {
             .into_result(self)?;
         }
 
-        column_description.nullable = match nullable {
-            odbc_sys::Nullable::UNKNOWN => Nullable::Unknown,
-            odbc_sys::Nullable::NO_NULLS => Nullable::NoNulls,
-            odbc_sys::Nullable::NULLABLE => Nullable::Nullable,
-            other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
-        };
+        column_description.nullable = Nullable::new(nullable);
 
         if name_length + 1 > clamp_small_int(name.len()) {
             // Buffer is to small to hold name, retry with larger buffer
@@ -176,7 +172,7 @@ impl<'s> Statement<'s> {
 
     /// Number of columns in result set.
     ///
-    /// Can alse be usend to check, wether or not a result set has been created at all.
+    /// Can also be used to check, whether or not a result set has been created at all.
     pub fn num_result_cols(&self) -> Result<i16, Error> {
         let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self)?;
@@ -194,6 +190,25 @@ impl<'s> Statement<'s> {
         SQLSetStmtAttrW(
             self.handle,
             StatementAttribute::RowArraySize,
+            size as Pointer,
+            0,
+        )
+        .into_result(self)
+    }
+
+    /// Specifies the number of values for each parameter. If it is greater than 1, the data and
+    /// indicator buffers of the statement point to arrays. The cardinality of each array is equal
+    /// to the value of this field.
+    ///
+    /// # Safety
+    ///
+    /// The bound buffers must at least hold the number of elements specified in this call then the
+    /// statement is executed.
+    pub unsafe fn set_paramset_size(&mut self, size: u32) -> Result<(), Error> {
+        assert!(size > 0);
+        SQLSetStmtAttrW(
+            self.handle,
+            StatementAttribute::ParamsetSize,
             size as Pointer,
             0,
         )
@@ -234,7 +249,7 @@ impl<'s> Statement<'s> {
         .into_result(self)
     }
 
-    /// Returns the next rowset in the result set.
+    /// Returns the next row set in the result set.
     ///
     /// It can be called only while a result set exists: I.e., after a call that creates a result
     /// set and before the cursor over that result set is closed. If any columns are bound, it
@@ -470,4 +485,40 @@ impl<'s> Statement<'s> {
     pub fn reset_parameters(&mut self) -> Result<(), Error> {
         unsafe { SQLFreeStmt(self.handle, FreeStmtOption::ResetParams).into_result(self) }
     }
+
+    /// Describes parameter marker associated with a prepared SQL statement.
+    ///
+    /// # Paramters
+    ///
+    /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
+    ///   order, starting at 1.
+    pub fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error> {
+        let mut data_type = SqlDataType::UNKNOWN_TYPE;
+        let mut parameter_size = 0;
+        let mut decimal_digits = 0;
+        let mut nullable = odbc_sys::Nullable::UNKNOWN;
+        unsafe {
+            SQLDescribeParam(
+                self.handle,
+                parameter_number,
+                &mut data_type,
+                &mut parameter_size,
+                &mut decimal_digits,
+                &mut nullable,
+            )
+        }
+        .into_result(self)?;
+
+        Ok(ParameterDescription {
+            data_type: DataType::new(data_type, parameter_size, decimal_digits),
+            nullable: Nullable::new(nullable),
+        })
+    }
+}
+
+/// Description of a parameter associated with a parameter marker in a prepared statement.
+#[derive(Debug)]
+pub struct ParameterDescription {
+    pub nullable: Nullable,
+    pub data_type: DataType,
 }
