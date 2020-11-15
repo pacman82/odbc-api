@@ -29,10 +29,9 @@ pub unsafe trait Input: CData {
 /// A type which can be used to receive Data from ODBC.
 ///
 /// Users usually won't utilize this trait directly.
-pub unsafe trait Output: CData {
-    /// Maximum length of the type. This is required for ODBC to not write into invalid memory then
-    /// writing output. It is also required to index values in bound buffers, if more than one
-    /// parameter is bound.
+pub unsafe trait InputArray: Input {
+    /// Maximum length of the type. It is required to index values in bound buffers, if more than
+    /// one parameter is bound.
     fn buffer_length(&self) -> Len;
 }
 

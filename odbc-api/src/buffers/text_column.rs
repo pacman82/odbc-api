@@ -1,9 +1,12 @@
-use crate::{handles::Statement, DataType, Error};
+use crate::{
+    handles::{CData, Input, InputArray},
+    DataType,
+};
 
 use super::{BindColArgs, ColumnBuffer};
 use log::debug;
 use odbc_sys::{CDataType, Len, Pointer, NULL_DATA};
-use std::{cmp::min, convert::TryInto};
+use std::{cmp::min, convert::TryInto, ffi::c_void};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -128,30 +131,32 @@ impl TextColumn {
             self.indicators[index] = NULL_DATA;
         }
     }
+}
 
-    /// Bind this column as a parameter to a parameter index.
-    ///
-    /// # Safety
-    ///
-    /// For this call to be safe
-    /// * the buffer must still be alive then it is dereferenced by ODBC without being reallocated
-    /// in between.
-    /// * the number of parameters must be explicitly set on the statement handle to ensure this
-    /// buffer is not dereferenced beyond its valid values.
-    pub unsafe fn bind_as_parameter(
-        &self,
-        parameter_number: u16,
-        stmt: &mut Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_input_parameter_array(
-            parameter_number,
-            CDataType::Char,
-            DataType::Varchar {
-                length: self.max_str_len.try_into().unwrap(),
-            },
-            self.values.as_ptr() as Pointer,
-            (self.max_str_len + 1).try_into().unwrap(),
-            self.indicators.as_ptr(),
-        )
+unsafe impl CData for TextColumn {
+    fn cdata_type(&self) -> CDataType {
+        CDataType::Char
+    }
+
+    fn indicator_ptr(&self) -> *const i64 {
+        self.indicators.as_ptr()
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.values.as_ptr() as *const c_void
+    }
+}
+
+unsafe impl Input for TextColumn {
+    fn data_type(&self) -> DataType {
+        DataType::Varchar {
+            length: self.max_str_len.try_into().unwrap(),
+        }
+    }
+}
+
+unsafe impl InputArray for TextColumn {
+    fn buffer_length(&self) -> Len {
+        (self.max_str_len + 1).try_into().unwrap()
     }
 }
