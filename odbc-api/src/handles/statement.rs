@@ -8,6 +8,7 @@ use super::{
     error::{Error, IntoResult},
     Description,
 };
+use crate::handles::InputArray;
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
@@ -347,14 +348,13 @@ impl<'s> Statement<'s> {
 
     /// Binds a buffer to a parameter marker in an SQL statement.
     ///
+    /// This function calls the same C API function as `bind_input_parameter_array` but has stronger
+    /// requirements, as a buffer length argument is required to calculate the positions of the
+    /// elements in the arrays. I.e. A `CStr` could not be bound with this function. It is of
+    /// variable length and even though we know how long an individual element is, without a
+    /// maximum length we cannot know how to access the n-th element of a buffer.
+    ///
     /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
-    ///
-    /// # Parameters
-    ///
-    /// ...
-    /// * `buffer_length`: Used to calculate the position of individual parameters then binding
-    ///   buffers or to truncate binary and character data in case of output.
-    /// ...
     ///
     /// # Safety
     ///
@@ -363,23 +363,23 @@ impl<'s> Statement<'s> {
     pub unsafe fn bind_input_parameter_array(
         &mut self,
         parameter_number: u16,
-        value_type: CDataType,
-        parameter_type: DataType,
-        parameter_value_ptr: *const c_void,
-        buffer_length: Len,
-        str_len_or_ind_ptr: *const Len,
+        parameter: &impl InputArray,
     ) -> Result<(), Error> {
+        let parameter_type = parameter.data_type();
+
         SQLBindParameter(
             self.handle,
             parameter_number,
             ParamType::Input,
-            value_type,
+            parameter.cdata_type(),
             parameter_type.data_type(),
             parameter_type.column_size(),
             parameter_type.decimal_digits(),
-            parameter_value_ptr as *mut c_void,
-            buffer_length,
-            str_len_or_ind_ptr as *mut Len,
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.value_ptr() as *mut c_void,
+            parameter.buffer_length(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut Len,
         )
         .into_result(self)
     }
