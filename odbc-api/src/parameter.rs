@@ -2,11 +2,14 @@ use std::{convert::TryInto, ffi::c_void};
 
 use odbc_sys::{CDataType, Len};
 
-use crate::{DataType, handles::{CData, Input}};
+use crate::{
+    handles::{CData, Input},
+    DataType,
+};
 
 /// Extend the input trait with the guarantee, that the bound parameter buffer contains at least one
 /// element.
-pub unsafe trait Parameter : Input {}
+pub unsafe trait Parameter: Input {}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.
@@ -38,6 +41,10 @@ where
 {
     fn data_type(&self) -> DataType {
         self.data_type
+    }
+
+    fn buffer_length(&self) -> Len {
+        self.value.buffer_length()
     }
 }
 
@@ -82,6 +89,10 @@ unsafe impl Input for VarChar<'_> {
         DataType::Varchar {
             length: self.bytes.len().try_into().unwrap(),
         }
+    }
+
+    fn buffer_length(&self) -> Len {
+        0
     }
 }
 

@@ -1,6 +1,9 @@
-use crate::{Parameter, handles::{CData, DataType, Input}};
-use odbc_sys::{Len, CDataType, Date, Timestamp, Time, Numeric};
-use std::{ptr::null, ffi::c_void};
+use crate::{
+    handles::{CData, DataType, Input},
+    Parameter,
+};
+use odbc_sys::{CDataType, Date, Len, Numeric, Time, Timestamp};
+use std::{ffi::c_void, ptr::null};
 
 /// New type wrapping u8 and binding as SQL_BIT.
 ///
@@ -86,7 +89,6 @@ unsafe impl FixedSizedCType for u64 {
     const C_DATA_TYPE: CDataType = CDataType::UBigInt;
 }
 
-
 // While the C-Type is independent of the Data (SQL) Type in the source, there are often DataTypes
 // which are a natural match for the C-Type in question. These can be used to spare the user to
 // specify that an i32 is supposed to be bound as an SQL Integer.
@@ -111,6 +113,10 @@ macro_rules! impl_input_fixed_sized {
         unsafe impl Input for $t {
             fn data_type(&self) -> DataType {
                 $data_type
+            }
+
+            fn buffer_length(&self) -> Len {
+                0
             }
         }
 

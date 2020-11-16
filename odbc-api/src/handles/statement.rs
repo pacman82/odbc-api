@@ -8,7 +8,6 @@ use super::{
     error::{Error, IntoResult},
     Description,
 };
-use crate::handles::InputArray;
 use odbc_sys::{
     CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
@@ -311,12 +310,6 @@ impl<'s> Statement<'s> {
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement.
     ///
-    /// This function calls the same C API function as `bind_input_parameter_array` but has weaker
-    /// requirements, as a buffer length argument is not required to calculate the positions of the
-    /// elements in the arrays. I.e. A `CStr` could be bound with this function. It is of variable
-    /// length, but since it is only one, it is enough to know there it starts and that it ends with
-    /// zero.
-    ///
     /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
     ///
     /// # Safety
@@ -329,44 +322,6 @@ impl<'s> Statement<'s> {
         parameter: &impl Input,
     ) -> Result<(), Error> {
         let parameter_type = parameter.data_type();
-        SQLBindParameter(
-            self.handle,
-            parameter_number,
-            ParamType::Input,
-            parameter.cdata_type(),
-            parameter_type.data_type(),
-            parameter_type.column_size(),
-            parameter_type.decimal_digits(),
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.value_ptr() as *mut c_void,
-            0,
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut Len,
-        )
-        .into_result(self)
-    }
-
-    /// Binds a buffer to a parameter marker in an SQL statement.
-    ///
-    /// This function calls the same C API function as `bind_input_parameter_array` but has stronger
-    /// requirements, as a buffer length argument is required to calculate the positions of the
-    /// elements in the arrays. I.e. A `CStr` could not be bound with this function. It is of
-    /// variable length and even though we know how long an individual element is, without a
-    /// maximum length we cannot know how to access the n-th element of a buffer.
-    ///
-    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
-    ///
-    /// # Safety
-    ///
-    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
-    /// * Calling this function may influence other statements that share the APD.
-    pub unsafe fn bind_input_parameter_array(
-        &mut self,
-        parameter_number: u16,
-        parameter: &impl InputArray,
-    ) -> Result<(), Error> {
-        let parameter_type = parameter.data_type();
-
         SQLBindParameter(
             self.handle,
             parameter_number,

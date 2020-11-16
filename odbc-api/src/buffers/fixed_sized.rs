@@ -1,5 +1,5 @@
-use crate::fixed_sized::{Bit, FixedSizedCType};
 use super::{BindColArgs, ColumnBuffer};
+use crate::fixed_sized::{Bit, FixedSizedCType};
 use odbc_sys::{Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
 use std::ptr::null_mut;
 

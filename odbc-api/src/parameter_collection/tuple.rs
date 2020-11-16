@@ -2,7 +2,7 @@
 //! trait.
 
 use super::ParameterCollection;
-use crate::{Parameter, handles::Statement, Error};
+use crate::{handles::Statement, Error, Parameter};
 
 macro_rules! impl_bind_input_parameters {
     ($offset:expr, $stmt:ident) => (

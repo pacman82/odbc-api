@@ -2,7 +2,7 @@
 
 use crate::DataType;
 use odbc_sys::{CDataType, Len};
-use std::{ffi::c_void};
+use std::ffi::c_void;
 
 /// A type which has a layout suitable to be bound to ODBC.
 pub unsafe trait CData {
@@ -20,15 +20,11 @@ pub unsafe trait CData {
 ///
 /// Users usually won't utilize this trait directly.
 pub unsafe trait Input: CData {
+    /// Maximum length of the type. It is required to index values in bound buffers, if more than
+    /// one parameter is bound. Can be set to zero for types not bound as parameter arrays, i.e.
+    /// `CStr`.
+    fn buffer_length(&self) -> Len;
+
+    /// The SQL data as which the parameter is bound to ODBC.
     fn data_type(&self) -> DataType;
 }
-
-/// A type which can be used to receive Data from ODBC.
-///
-/// Users usually won't utilize this trait directly.
-pub unsafe trait InputArray: Input {
-    /// Maximum length of the type. It is required to index values in bound buffers, if more than
-    /// one parameter is bound.
-    fn buffer_length(&self) -> Len;
-}
-

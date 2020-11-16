@@ -1,5 +1,5 @@
 use crate::{
-    handles::{CData, Input, InputArray},
+    handles::{CData, Input},
     DataType,
 };
 
@@ -153,9 +153,7 @@ unsafe impl Input for TextColumn {
             length: self.max_str_len.try_into().unwrap(),
         }
     }
-}
 
-unsafe impl InputArray for TextColumn {
     fn buffer_length(&self) -> Len {
         (self.max_str_len + 1).try_into().unwrap()
     }

@@ -9,10 +9,10 @@
 mod connection;
 mod cursor;
 mod environment;
+mod fixed_sized;
 mod into_parameter;
 mod parameter_collection;
 mod prepared;
-mod fixed_sized;
 
 pub mod buffers;
 pub mod guide;

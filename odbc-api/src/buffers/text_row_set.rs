@@ -119,7 +119,7 @@ unsafe impl ParameterCollection for &TextRowSet {
     unsafe fn bind_parameters_to(&self, stmt: &mut crate::handles::Statement) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
-            stmt.bind_input_parameter_array(parameter_number, column)?;
+            stmt.bind_input_parameter(parameter_number, column)?;
             parameter_number += 1;
         }
         Ok(())

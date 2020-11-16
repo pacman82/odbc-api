@@ -169,7 +169,10 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     let mut connection = open_connection(&environment, connect_opts)?;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
-    let params: Vec<_> = parameters.iter().map(|param| param.into_parameter()).collect();
+    let params: Vec<_> = parameters
+        .iter()
+        .map(|param| param.into_parameter())
+        .collect();
 
     // Execute the query as a one off, and pass the parameters.
     match connection.execute(&query, params.as_slice())? {
