@@ -1,4 +1,4 @@
-use odbc_sys::{SqlDataType, ULen};
+use odbc_sys::SqlDataType;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Enumeration over valid SQL Data Types supported by ODBC
@@ -8,13 +8,13 @@ pub enum DataType {
     /// `Char(n)`. Character string of fixed length.
     Char {
         /// Column size in characters (excluding terminating zero).
-        length: ULen,
+        length: usize,
     },
     /// `Numeric(p,s). Signed, exact, numeric value with a precision p and scale s (1 <= p <= 15; s
     /// <= p)
     Numeric {
         /// Total number of digits.
-        precision: ULen,
+        precision: usize,
         /// Number of decimal digits.
         scale: i16,
     },
@@ -22,7 +22,7 @@ pub enum DataType {
     /// The maximum precision is driver-defined. (1 <= p <= 15; s <= p)
     Decimal {
         /// Total number of digits.
-        precision: ULen,
+        precision: usize,
         /// Number of decimal digits.
         scale: i16,
     },
@@ -44,7 +44,7 @@ pub enum DataType {
     /// `Varchar(n)`. Variable length character string.
     Varchar {
         /// Maximum length of the character string (excluding terminating zero).
-        length: ULen,
+        length: usize,
     },
     /// `Date`. Year, month, and day fields, conforming to the rules of the Gregorian calendar.
     Date,
@@ -71,7 +71,7 @@ pub enum DataType {
         /// Type of the column
         data_type: SqlDataType,
         /// Size of column element
-        column_size: ULen,
+        column_size: usize,
         decimal_digits: i16,
     },
 }
@@ -79,7 +79,7 @@ pub enum DataType {
 impl DataType {
     /// This constructor is useful to create an instance of the enumeration using values returned by
     /// ODBC Api calls like `SQLDescribeCol`, rather than just initializing a variant directly.
-    pub fn new(data_type: SqlDataType, column_size: ULen, decimal_digits: i16) -> Self {
+    pub fn new(data_type: SqlDataType, column_size: usize, decimal_digits: i16) -> Self {
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::CHAR => DataType::Char {
@@ -143,7 +143,7 @@ impl DataType {
     }
 
     /// Return the column size, as it is required to bind the data type as a parameter.
-    pub fn column_size(&self) -> ULen {
+    pub fn column_size(&self) -> usize {
         match self {
             DataType::Unknown
             | DataType::Integer

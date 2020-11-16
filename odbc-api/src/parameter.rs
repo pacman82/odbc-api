@@ -1,6 +1,6 @@
 use std::{convert::TryInto, ffi::c_void};
 
-use odbc_sys::{CDataType, Len};
+use odbc_sys::CDataType;
 
 use crate::{
     handles::{CData, Input},
@@ -26,7 +26,7 @@ where
         self.value.cdata_type()
     }
 
-    fn indicator_ptr(&self) -> *const Len {
+    fn indicator_ptr(&self) -> *const isize {
         self.value.indicator_ptr()
     }
 
@@ -34,7 +34,7 @@ where
         self.value.value_ptr()
     }
 
-    fn buffer_length(&self) -> Len {
+    fn buffer_length(&self) -> isize {
         self.value.buffer_length()
     }
 }
@@ -58,7 +58,7 @@ unsafe impl<T> Parameter for WithDataType<T> where T: Parameter {}
 pub struct VarChar<'a> {
     bytes: &'a [u8],
     /// Will be set to value.len() by constructor.
-    length: Len,
+    length: isize,
 }
 
 impl<'a> VarChar<'a> {
@@ -75,7 +75,7 @@ unsafe impl CData for VarChar<'_> {
         CDataType::Char
     }
 
-    fn indicator_ptr(&self) -> *const Len {
+    fn indicator_ptr(&self) -> *const isize {
         &self.length
     }
 
@@ -83,7 +83,7 @@ unsafe impl CData for VarChar<'_> {
         self.bytes.as_ptr() as *const c_void
     }
 
-    fn buffer_length(&self) -> Len {
+    fn buffer_length(&self) -> isize {
         0
     }
 }
@@ -91,7 +91,7 @@ unsafe impl CData for VarChar<'_> {
 unsafe impl Input for VarChar<'_> {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
-            length: self.bytes.len().try_into().unwrap(),
+            length: self.bytes.len(),
         }
     }
 }

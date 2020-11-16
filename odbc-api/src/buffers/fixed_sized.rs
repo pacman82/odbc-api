@@ -1,6 +1,14 @@
-use crate::{fixed_sized::{Bit, FixedSizedCType}, handles::{CData, CDataMut}};
-use odbc_sys::{Date, Len, Numeric, Time, Timestamp, NULL_DATA};
-use std::{ffi::c_void, ptr::{null, null_mut}, mem::size_of};
+use crate::{
+    fixed_sized::{Bit, FixedSizedCType},
+    handles::{CData, CDataMut},
+};
+use odbc_sys::{Date, Numeric, Time, Timestamp, NULL_DATA};
+use std::{
+    convert::TryInto,
+    ffi::c_void,
+    mem::size_of,
+    ptr::{null, null_mut},
+};
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
@@ -17,7 +25,7 @@ pub type OptBitColumn = OptFixedSizedColumn<Bit>;
 /// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
 pub struct OptFixedSizedColumn<T> {
     values: Vec<T>,
-    indicators: Vec<Len>,
+    indicators: Vec<isize>,
 }
 
 impl<T> OptFixedSizedColumn<T>
@@ -51,7 +59,7 @@ where
         &self.values
     }
 
-    pub fn indicators(&self) -> &[Len] {
+    pub fn indicators(&self) -> &[isize] {
         &self.indicators
     }
 }
@@ -64,22 +72,25 @@ where
         T::C_DATA_TYPE
     }
 
-    fn indicator_ptr(&self) -> *const Len {
-        self.indicators.as_ptr() as *const Len
+    fn indicator_ptr(&self) -> *const isize {
+        self.indicators.as_ptr() as *const isize
     }
 
     fn value_ptr(&self) -> *const c_void {
         self.values.as_ptr() as *const c_void
     }
 
-    fn buffer_length(&self) -> Len {
-        size_of::<T>() as Len
+    fn buffer_length(&self) -> isize {
+        size_of::<T>().try_into().unwrap()
     }
 }
 
-unsafe impl<T> CDataMut for OptFixedSizedColumn<T> where T: FixedSizedCType {
-    fn mut_indicator_ptr(&mut self) -> *mut Len {
-        self.indicators.as_mut_ptr() as *mut Len
+unsafe impl<T> CDataMut for OptFixedSizedColumn<T>
+where
+    T: FixedSizedCType,
+{
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
+        self.indicators.as_mut_ptr() as *mut isize
     }
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
@@ -87,12 +98,15 @@ unsafe impl<T> CDataMut for OptFixedSizedColumn<T> where T: FixedSizedCType {
     }
 }
 
-unsafe impl<T> CData for Vec<T> where T: FixedSizedCType{
+unsafe impl<T> CData for Vec<T>
+where
+    T: FixedSizedCType,
+{
     fn cdata_type(&self) -> odbc_sys::CDataType {
         T::C_DATA_TYPE
     }
 
-    fn indicator_ptr(&self) -> *const Len {
+    fn indicator_ptr(&self) -> *const isize {
         null()
     }
 
@@ -100,13 +114,16 @@ unsafe impl<T> CData for Vec<T> where T: FixedSizedCType{
         self.as_ptr() as *const c_void
     }
 
-    fn buffer_length(&self) -> Len {
-        size_of::<T>() as Len
+    fn buffer_length(&self) -> isize {
+        size_of::<T>().try_into().unwrap()
     }
 }
 
-unsafe impl<T> CDataMut for Vec<T> where T: FixedSizedCType {
-    fn mut_indicator_ptr(&mut self) -> *mut Len {
+unsafe impl<T> CDataMut for Vec<T>
+where
+    T: FixedSizedCType,
+{
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
         null_mut()
     }
 

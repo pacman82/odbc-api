@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    bind::{Input, CDataMut},
+    bind::{CDataMut, Input},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
@@ -9,8 +9,8 @@ use super::{
     Description,
 };
 use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
-    Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
+    Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType, Pointer,
+    SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
     SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr,
     SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute,
     ULen,

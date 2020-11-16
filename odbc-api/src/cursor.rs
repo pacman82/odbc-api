@@ -1,15 +1,16 @@
 use crate::{
-    handles::{CDataMut, Description, Statement}, ColumnDescription, Error,
+    handles::{CDataMut, Description, Statement},
+    ColumnDescription, Error,
 };
 
-use odbc_sys::{Len, SqlDataType, ULen};
+use odbc_sys::SqlDataType;
 
 use std::{
     borrow::BorrowMut,
     char::{decode_utf16, REPLACEMENT_CHARACTER},
+    convert::TryInto,
     marker::PhantomData,
     thread::panicking,
-    convert::TryInto
 };
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
@@ -57,7 +58,7 @@ pub trait Cursor: Sized {
     /// # Safety
     ///
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut ULen) -> Result<(), Error>;
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> Result<(), Error>;
 
     /// Sets the binding type to columnar binding for batch cursors.
     ///
@@ -123,23 +124,23 @@ pub trait Cursor: Sized {
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_octet_length(&self, column_number: u16) -> Result<isize, Error>;
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_display_size(&self, column_number: u16) -> Result<isize, Error>;
 
     /// Precision of the column.
     ///
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    fn col_precision(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_precision(&self, column_number: u16) -> Result<isize, Error>;
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    fn col_scale(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_scale(&self, column_number: u16) -> Result<isize, Error>;
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
@@ -262,7 +263,7 @@ where
         self.statement.borrow_mut().set_row_array_size(size)
     }
 
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut ULen) -> Result<(), Error> {
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> Result<(), Error> {
         self.statement.borrow_mut().set_num_rows_fetched(num_rows)
     }
 
@@ -279,10 +280,7 @@ where
         column_number: u16,
         target: &mut impl CDataMut,
     ) -> Result<(), Error> {
-        self.statement.borrow_mut().bind_col(
-            column_number,
-            target
-        )
+        self.statement.borrow_mut().bind_col(column_number, target)
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
@@ -307,19 +305,19 @@ where
         self.statement.borrow().col_type(column_number)
     }
 
-    fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
+    fn col_octet_length(&self, column_number: u16) -> Result<isize, Error> {
         self.statement.borrow().col_octet_length(column_number)
     }
 
-    fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
+    fn col_display_size(&self, column_number: u16) -> Result<isize, Error> {
         self.statement.borrow().col_display_size(column_number)
     }
 
-    fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
+    fn col_precision(&self, column_number: u16) -> Result<isize, Error> {
         self.statement.borrow().col_precision(column_number)
     }
 
-    fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
+    fn col_scale(&self, column_number: u16) -> Result<isize, Error> {
         self.statement.borrow().col_scale(column_number)
     }
 

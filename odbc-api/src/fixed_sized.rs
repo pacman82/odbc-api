@@ -2,7 +2,7 @@ use crate::{
     handles::{CData, DataType, Input},
     Parameter,
 };
-use odbc_sys::{CDataType, Date, Len, Numeric, Time, Timestamp};
+use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{ffi::c_void, ptr::null};
 
 /// New type wrapping u8 and binding as SQL_BIT.
@@ -100,7 +100,7 @@ macro_rules! impl_input_fixed_sized {
                 $t::C_DATA_TYPE
             }
 
-            fn indicator_ptr(&self) -> *const Len {
+            fn indicator_ptr(&self) -> *const isize {
                 // Fixed sized types do not require a length indicator.
                 null()
             }
@@ -109,7 +109,7 @@ macro_rules! impl_input_fixed_sized {
                 self as *const $t as *const c_void
             }
 
-            fn buffer_length(&self) -> Len {
+            fn buffer_length(&self) -> isize {
                 0
             }
         }
