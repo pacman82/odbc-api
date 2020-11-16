@@ -1,5 +1,6 @@
+use crate::fixed_sized::{Bit, FixedSizedCType};
 use super::{BindColArgs, ColumnBuffer};
-use odbc_sys::{CDataType, Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
+use odbc_sys::{Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
 use std::ptr::null_mut;
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
@@ -13,24 +14,6 @@ pub type OptNumericColumn = OptFixedSizedColumn<Numeric>;
 pub type OptU8Column = OptFixedSizedColumn<u8>;
 pub type OptI8Column = OptFixedSizedColumn<i8>;
 pub type OptBitColumn = OptFixedSizedColumn<Bit>;
-
-/// New type wrapping u8 and binding as SQL_BIT.
-///
-/// If rust would guarantee the representation of `bool` to be an `u8`, `bool` would be the obvious
-/// choice instead. Alas it is not and someday on some platform bool might be something else than a
-/// `u8` so let's use this new type instead.
-#[derive(Clone, Copy, Default, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Bit(pub u8);
-
-impl Bit {
-    pub fn as_bool(self) -> bool {
-        match self.0 {
-            0 => false,
-            1 => true,
-            _ => panic!("Invalid boolean representation in Bit."),
-        }
-    }
-}
 
 /// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
 pub struct OptFixedSizedColumn<T> {
@@ -100,70 +83,4 @@ where
             indicator: null_mut(),
         }
     }
-}
-
-/// Trait implemented to fixed C size types.
-pub unsafe trait FixedSizedCType: Default + Clone + Copy {
-    /// ODBC C Data type used to bind instances to a statement.
-    const C_DATA_TYPE: CDataType;
-}
-
-unsafe impl FixedSizedCType for f64 {
-    const C_DATA_TYPE: CDataType = CDataType::Double;
-}
-
-unsafe impl FixedSizedCType for f32 {
-    const C_DATA_TYPE: CDataType = CDataType::Float;
-}
-
-unsafe impl FixedSizedCType for Date {
-    const C_DATA_TYPE: CDataType = CDataType::TypeDate;
-}
-
-unsafe impl FixedSizedCType for Timestamp {
-    const C_DATA_TYPE: CDataType = CDataType::TypeTimestamp;
-}
-
-unsafe impl FixedSizedCType for Time {
-    const C_DATA_TYPE: CDataType = CDataType::TypeTime;
-}
-
-unsafe impl FixedSizedCType for Numeric {
-    const C_DATA_TYPE: CDataType = CDataType::Numeric;
-}
-
-unsafe impl FixedSizedCType for i16 {
-    const C_DATA_TYPE: CDataType = CDataType::SShort;
-}
-
-unsafe impl FixedSizedCType for u16 {
-    const C_DATA_TYPE: CDataType = CDataType::UShort;
-}
-
-unsafe impl FixedSizedCType for i32 {
-    const C_DATA_TYPE: CDataType = CDataType::SLong;
-}
-
-unsafe impl FixedSizedCType for u32 {
-    const C_DATA_TYPE: CDataType = CDataType::ULong;
-}
-
-unsafe impl FixedSizedCType for i8 {
-    const C_DATA_TYPE: CDataType = CDataType::STinyInt;
-}
-
-unsafe impl FixedSizedCType for u8 {
-    const C_DATA_TYPE: CDataType = CDataType::UTinyInty;
-}
-
-unsafe impl FixedSizedCType for Bit {
-    const C_DATA_TYPE: CDataType = CDataType::Bit;
-}
-
-unsafe impl FixedSizedCType for i64 {
-    const C_DATA_TYPE: CDataType = CDataType::SBigInt;
-}
-
-unsafe impl FixedSizedCType for u64 {
-    const C_DATA_TYPE: CDataType = CDataType::UBigInt;
 }

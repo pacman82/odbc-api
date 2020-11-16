@@ -1,4 +1,4 @@
-use crate::handles::{Input, VarChar};
+use crate::{parameter::VarChar, Parameter};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -8,27 +8,27 @@ use crate::handles::{Input, VarChar};
 /// idiomatic Rust types, to convert, enrich and marshal them into values which can be bound to
 /// ODBC. This also provides a safe extension point for all kinds of parameters, as only the
 /// implementation of `Parameters` is unsafe.
-pub trait IntoInput {
-    type Input: Input;
+pub trait IntoParameter {
+    type Parameter: Parameter;
 
-    fn into_input(self) -> Self::Input;
+    fn into_parameter(self) -> Self::Parameter;
 }
 
-impl<T> IntoInput for T
+impl<T> IntoParameter for T
 where
-    T: Input,
+    T: Parameter,
 {
-    type Input = Self;
+    type Parameter = Self;
 
-    fn into_input(self) -> Self::Input {
+    fn into_parameter(self) -> Self::Parameter {
         self
     }
 }
 
-impl<'a> IntoInput for &'a str {
-    type Input = VarChar<'a>;
+impl<'a> IntoParameter for &'a str {
+    type Parameter = VarChar<'a>;
 
-    fn into_input(self) -> Self::Input {
+    fn into_parameter(self) -> Self::Parameter {
         VarChar::new(self.as_bytes())
     }
 }

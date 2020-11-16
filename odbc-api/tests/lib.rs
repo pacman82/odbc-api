@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
     sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, Environment, IntoInput, Nullable, U16String,
+    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable, U16String,
 };
 use std::convert::TryInto;
 
@@ -301,7 +301,7 @@ fn mssql_prepared_statement() {
 fn mssql_integer_parameter_as_string() {
     let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, "1968".into_input()).unwrap().unwrap();
+    let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 

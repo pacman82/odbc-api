@@ -1,4 +1,4 @@
-use crate::{handles::Statement, Error, Input};
+use crate::{handles::Statement, Error, Parameter};
 
 mod tuple;
 
@@ -21,7 +21,7 @@ pub unsafe trait ParameterCollection {
 
 unsafe impl<T> ParameterCollection for T
 where
-    T: Input,
+    T: Parameter,
 {
     fn parameter_set_size(&self) -> u32 {
         1
@@ -34,7 +34,7 @@ where
 
 unsafe impl<T> ParameterCollection for &[T]
 where
-    T: Input,
+    T: Parameter,
 {
     fn parameter_set_size(&self) -> u32 {
         1

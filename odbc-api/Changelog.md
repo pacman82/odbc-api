@@ -7,7 +7,7 @@
 * `VarCharParam` renamed into `VarChar`.
 * `TextRowSet::new` renamed into `TextRowSet::for_cursor`.
 * trait `ParameterCollection` has a new method `parameter_set_size`.
-* `Parameter` trait is now `Input`.
+* `Parameter` trait is now inherting from `Input`.
 * `IntoParameter` trait is now `IntoInput`.
 
 ## 0.9.1
