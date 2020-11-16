@@ -108,15 +108,15 @@ macro_rules! impl_input_fixed_sized {
             fn value_ptr(&self) -> *const c_void {
                 self as *const $t as *const c_void
             }
+
+            fn buffer_length(&self) -> Len {
+                0
+            }
         }
 
         unsafe impl Input for $t {
             fn data_type(&self) -> DataType {
                 $data_type
-            }
-
-            fn buffer_length(&self) -> Len {
-                0
             }
         }
 

@@ -145,6 +145,10 @@ unsafe impl CData for TextColumn {
     fn value_ptr(&self) -> *const c_void {
         self.values.as_ptr() as *const c_void
     }
+
+    fn buffer_length(&self) -> Len {
+        (self.max_str_len + 1).try_into().unwrap()
+    }
 }
 
 unsafe impl Input for TextColumn {
@@ -152,9 +156,5 @@ unsafe impl Input for TextColumn {
         DataType::Varchar {
             length: self.max_str_len.try_into().unwrap(),
         }
-    }
-
-    fn buffer_length(&self) -> Len {
-        (self.max_str_len + 1).try_into().unwrap()
     }
 }

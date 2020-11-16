@@ -33,6 +33,10 @@ where
     fn value_ptr(&self) -> *const c_void {
         self.value.value_ptr()
     }
+
+    fn buffer_length(&self) -> Len {
+        self.value.buffer_length()
+    }
 }
 
 unsafe impl<T> Input for WithDataType<T>
@@ -41,10 +45,6 @@ where
 {
     fn data_type(&self) -> DataType {
         self.data_type
-    }
-
-    fn buffer_length(&self) -> Len {
-        self.value.buffer_length()
     }
 }
 
@@ -82,6 +82,10 @@ unsafe impl CData for VarChar<'_> {
     fn value_ptr(&self) -> *const c_void {
         self.bytes.as_ptr() as *const c_void
     }
+
+    fn buffer_length(&self) -> Len {
+        0
+    }
 }
 
 unsafe impl Input for VarChar<'_> {
@@ -89,10 +93,6 @@ unsafe impl Input for VarChar<'_> {
         DataType::Varchar {
             length: self.bytes.len().try_into().unwrap(),
         }
-    }
-
-    fn buffer_length(&self) -> Len {
-        0
     }
 }
 
