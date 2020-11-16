@@ -1,13 +1,15 @@
 use crate::{
-    buffers::BindColArgs, handles::Description, handles::Statement, ColumnDescription, Error,
+    handles::{CDataMut, Description, Statement}, ColumnDescription, Error,
 };
+
 use odbc_sys::{Len, SqlDataType, ULen};
-use std::convert::TryInto;
+
 use std::{
     borrow::BorrowMut,
     char::{decode_utf16, REPLACEMENT_CHARACTER},
     marker::PhantomData,
     thread::panicking,
+    convert::TryInto
 };
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
@@ -92,7 +94,7 @@ pub trait Cursor: Sized {
     unsafe fn bind_col(
         &mut self,
         column_number: u16,
-        bind_params: BindColArgs,
+        target: &mut impl CDataMut,
     ) -> Result<(), Error>;
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
@@ -275,20 +277,11 @@ where
     unsafe fn bind_col(
         &mut self,
         column_number: u16,
-        bind_params: BindColArgs,
+        target: &mut impl CDataMut,
     ) -> Result<(), Error> {
-        let BindColArgs {
-            target_type,
-            target_value,
-            target_length,
-            indicator,
-        } = bind_params;
         self.statement.borrow_mut().bind_col(
             column_number,
-            target_type,
-            target_value,
-            target_length,
-            indicator,
+            target
         )
     }
 
@@ -336,6 +329,10 @@ where
 
     fn application_row_descriptor(&self) -> Result<Description, Error> {
         self.statement.borrow().application_row_descriptor()
+    }
+
+    fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
+        ColumnNamesIt::new(self)
     }
 }
 

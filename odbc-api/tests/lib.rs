@@ -1,4 +1,4 @@
-use buffers::{ColumnBuffer, OptF32Column, TextColumn};
+use buffers::{OptF32Column, TextColumn};
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
@@ -155,7 +155,7 @@ fn mssql_prices() {
             .unwrap();
 
         // Bind id integer column
-        cursor.bind_col(1, id_buffer.bind_arguments()).unwrap();
+        cursor.bind_col(1, &mut id_buffer).unwrap();
         let mut num_rows_fetched = 0;
         cursor.set_num_rows_fetched(&mut num_rows_fetched).unwrap();
 
@@ -181,7 +181,7 @@ fn mssql_bind_char() {
     let mut buf = TextColumn::new(1, 5);
     unsafe {
         cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+        cursor.bind_col(1, &mut buf).unwrap();
         cursor.fetch().unwrap();
 
         assert_eq!(
@@ -201,7 +201,7 @@ fn mssql_bind_varchar() {
     let mut buf = TextColumn::new(1, 100);
     unsafe {
         cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+        cursor.bind_col(1, &mut buf).unwrap();
         cursor.fetch().unwrap();
 
         assert_eq!(
@@ -221,7 +221,7 @@ fn mssql_bind_numeric_to_float() {
     let mut buf = OptF32Column::new(1);
     unsafe {
         cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, buf.bind_arguments()).unwrap();
+        cursor.bind_col(1, &mut buf).unwrap();
         cursor.fetch().unwrap();
     }
 

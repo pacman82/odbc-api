@@ -24,6 +24,16 @@ pub unsafe trait CData {
     fn buffer_length(&self) -> Len;
 }
 
+/// A type which can be bound mutably to ODBC.
+pub unsafe trait CDataMut : CData {
+    
+    /// Indicates the length of variable sized types. May be zero for fixed sized types.
+    fn mut_indicator_ptr(&mut self) -> *mut Len;
+
+    /// Pointer to a value corresponding to the one described by `cdata_type`.
+    fn mut_value_ptr(&mut self) -> *mut c_void;
+}
+
 /// Can be bound to a single placeholder in an SQL statement.
 ///
 /// Users usually won't utilize this trait directly.
