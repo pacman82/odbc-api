@@ -12,4 +12,3 @@ pub use self::{
     text_column::TextColumn,
     text_row_set::TextRowSet,
 };
-

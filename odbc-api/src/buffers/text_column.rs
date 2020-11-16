@@ -1,7 +1,10 @@
-use crate::{DataType, handles::{CData, CDataMut, Input}};
+use crate::{
+    handles::{CData, CDataMut, Input},
+    DataType,
+};
 
 use log::debug;
-use odbc_sys::{CDataType, Len, NULL_DATA};
+use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
@@ -17,7 +20,7 @@ pub struct TextColumn {
     /// Elements in this buffer are either `NULL_DATA` or hold the length of the element in value
     /// with the same index. Please note that this value may be larger than `max_str_len` if the
     /// text has been truncated.
-    indicators: Vec<Len>,
+    indicators: Vec<isize>,
 }
 
 impl TextColumn {
@@ -123,7 +126,7 @@ unsafe impl CData for TextColumn {
         CDataType::Char
     }
 
-    fn indicator_ptr(&self) -> *const i64 {
+    fn indicator_ptr(&self) -> *const isize {
         self.indicators.as_ptr()
     }
 
@@ -131,7 +134,7 @@ unsafe impl CData for TextColumn {
         self.values.as_ptr() as *const c_void
     }
 
-    fn buffer_length(&self) -> Len {
+    fn buffer_length(&self) -> isize {
         (self.max_str_len + 1).try_into().unwrap()
     }
 }
@@ -139,13 +142,13 @@ unsafe impl CData for TextColumn {
 unsafe impl Input for TextColumn {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
-            length: self.max_str_len.try_into().unwrap(),
+            length: self.max_str_len,
         }
     }
 }
 
 unsafe impl CDataMut for TextColumn {
-    fn mut_indicator_ptr(&mut self) -> *mut Len {
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.indicators.as_mut_ptr()
     }
 

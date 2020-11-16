@@ -25,8 +25,7 @@ pub unsafe trait CData {
 }
 
 /// A type which can be bound mutably to ODBC.
-pub unsafe trait CDataMut : CData {
-    
+pub unsafe trait CDataMut: CData {
     /// Indicates the length of variable sized types. May be zero for fixed sized types.
     fn mut_indicator_ptr(&mut self) -> *mut Len;
 
@@ -38,7 +37,6 @@ pub unsafe trait CDataMut : CData {
 ///
 /// Users usually won't utilize this trait directly.
 pub unsafe trait Input: CData {
-
     /// The SQL data as which the parameter is bound to ODBC.
     fn data_type(&self) -> DataType;
 }

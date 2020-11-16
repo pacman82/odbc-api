@@ -1,7 +1,6 @@
 use super::TextColumn;
 use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
-use odbc_sys::ULen;
-use std::{convert::TryInto, str::Utf8Error};
+use std::str::Utf8Error;
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
@@ -12,7 +11,7 @@ pub struct TextRowSet {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
     /// invalidated, even if the `TextRowSet` instance is moved in memory.
-    num_rows: Box<ULen>,
+    num_rows: Box<usize>,
     buffers: Vec<TextColumn>,
 }
 
@@ -77,11 +76,11 @@ impl TextRowSet {
     /// This method panics if it is tried to insert elements beyond batch size. It will also panic
     /// if row does not contain at least one item for each internal column buffer.
     pub fn append<'a>(&mut self, mut row: impl Iterator<Item = Option<&'a [u8]>>) {
-        if self.batch_size as ULen == *self.num_rows {
+        if self.batch_size == *self.num_rows as u32 {
             panic!("Trying to insert elements into TextRowSet beyond batch size.")
         }
 
-        let index = (*self.num_rows).try_into().unwrap();
+        let index = *self.num_rows;
         for column in &mut self.buffers {
             let text = row.next().expect(
                 "row passed to TextRowSet::append must contain one element for each column.",
