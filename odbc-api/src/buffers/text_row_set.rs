@@ -1,4 +1,4 @@
-use super::{ColumnBuffer, TextColumn};
+use super::TextColumn;
 use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
 use odbc_sys::ULen;
 use std::{convert::TryInto, str::Utf8Error};
@@ -105,7 +105,7 @@ unsafe impl RowSetBuffer for TextRowSet {
         cursor.set_num_rows_fetched(&mut self.num_rows)?;
         for (index, column_buffer) in self.buffers.iter_mut().enumerate() {
             let column_number = (index + 1) as u16;
-            cursor.bind_col(column_number, column_buffer.bind_arguments())?;
+            cursor.bind_col(column_number, column_buffer)?;
         }
         Ok(())
     }

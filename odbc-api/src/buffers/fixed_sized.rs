@@ -1,7 +1,6 @@
-use super::{BindColArgs, ColumnBuffer};
-use crate::fixed_sized::{Bit, FixedSizedCType};
-use odbc_sys::{Date, Len, Numeric, Pointer, Time, Timestamp, NULL_DATA};
-use std::ptr::null_mut;
+use crate::{fixed_sized::{Bit, FixedSizedCType}, handles::{CData, CDataMut}};
+use odbc_sys::{Date, Len, Numeric, Time, Timestamp, NULL_DATA};
+use std::{ffi::c_void, ptr::{null, null_mut}, mem::size_of};
 
 pub type OptF64Column = OptFixedSizedColumn<f64>;
 pub type OptF32Column = OptFixedSizedColumn<f32>;
@@ -57,30 +56,61 @@ where
     }
 }
 
-unsafe impl<T> ColumnBuffer for OptFixedSizedColumn<T>
+unsafe impl<T> CData for OptFixedSizedColumn<T>
 where
     T: FixedSizedCType,
 {
-    fn bind_arguments(&mut self) -> BindColArgs {
-        BindColArgs {
-            target_type: T::C_DATA_TYPE,
-            target_value: self.values.as_mut_ptr() as Pointer,
-            target_length: 0,
-            indicator: self.indicators.as_mut_ptr(),
-        }
+    fn cdata_type(&self) -> odbc_sys::CDataType {
+        T::C_DATA_TYPE
+    }
+
+    fn indicator_ptr(&self) -> *const Len {
+        self.indicators.as_ptr() as *const Len
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.values.as_ptr() as *const c_void
+    }
+
+    fn buffer_length(&self) -> Len {
+        size_of::<T>() as Len
     }
 }
 
-unsafe impl<T> ColumnBuffer for Vec<T>
-where
-    T: FixedSizedCType,
-{
-    fn bind_arguments(&mut self) -> BindColArgs {
-        BindColArgs {
-            target_type: T::C_DATA_TYPE,
-            target_value: self.as_mut_ptr() as Pointer,
-            target_length: 0,
-            indicator: null_mut(),
-        }
+unsafe impl<T> CDataMut for OptFixedSizedColumn<T> where T: FixedSizedCType {
+    fn mut_indicator_ptr(&mut self) -> *mut Len {
+        self.indicators.as_mut_ptr() as *mut Len
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl<T> CData for Vec<T> where T: FixedSizedCType{
+    fn cdata_type(&self) -> odbc_sys::CDataType {
+        T::C_DATA_TYPE
+    }
+
+    fn indicator_ptr(&self) -> *const Len {
+        null()
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.as_ptr() as *const c_void
+    }
+
+    fn buffer_length(&self) -> Len {
+        size_of::<T>() as Len
+    }
+}
+
+unsafe impl<T> CDataMut for Vec<T> where T: FixedSizedCType {
+    fn mut_indicator_ptr(&mut self) -> *mut Len {
+        null_mut()
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.as_mut_ptr() as *mut c_void
     }
 }

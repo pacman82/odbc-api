@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    bind::Input,
+    bind::{Input, CDataMut},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullable},
     data_type::DataType,
@@ -9,7 +9,7 @@ use super::{
     Description,
 };
 use odbc_sys::{
-    CDataType, Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
+    Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
     SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr,
     SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute,
@@ -292,18 +292,15 @@ impl<'s> Statement<'s> {
     pub unsafe fn bind_col(
         &mut self,
         column_number: u16,
-        target_type: CDataType,
-        target_value: Pointer,
-        target_length: Len,
-        indicator: *mut Len,
+        target: &mut impl CDataMut,
     ) -> Result<(), Error> {
         SQLBindCol(
             self.handle,
             column_number,
-            target_type,
-            target_value,
-            target_length,
-            indicator,
+            target.cdata_type(),
+            target.mut_value_ptr(),
+            target.buffer_length(),
+            target.mut_indicator_ptr(),
         )
         .into_result(self)
     }
