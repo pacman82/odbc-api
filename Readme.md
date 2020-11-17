@@ -2,6 +2,10 @@
 
 ODBC (Open Database Connectivity) bindings for Rust.
 
+[![Docs](https://docs.rs/odbc-api/badge.svg)](https://docs.rs/odbc-api/)
+[![MIT licensed](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/pacman82/odbc-api/blob/master/LICENSE)
+[![Published](http://meritbadge.herokuapp.com/odbc-api)](https://crates.io/crates/odbc-api)
+
 ## Usage
 
 Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for code examples and a tour of the features.
