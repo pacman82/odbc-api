@@ -44,7 +44,7 @@
 //!     // safe.
 //!     let environment = unsafe { Environment::new() }?;
 //!
-//!     // Connect using a DSN. Alternativly we could have used a connection string
+//!     // Connect using a DSN. Alternatively we could have used a connection string
 //!     let mut connection = environment.connect(
 //!         "DataSourceName",
 //!         "Username",
@@ -219,3 +219,145 @@
 //! `SELECT` queries which would return zero rows can depending on the driver return an empty cursor
 //! or no cursor at all. If a cursor exists, it must be consumed or closed. The `drop` handler of
 //! Cursor will close it, so it is all taken care of.
+//!
+//! ## Passing parameters to a statement
+//!
+//! ODBC allows you to bind parameters to positional placeholders. In the simples case it looks like
+//! this:
+//!
+//! ```no_run
+//! use odbc_api::Environment;
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let year = 1980;
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+//!     // Use cursor to process query results.
+//! }
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! ### Annotating a Parameter with an SQL DataType
+//!
+//! In the last example we used a bit of domain knowledge about the query and provided it with an
+//! `i32`. All types implementing the `Parameter` trait can be used. Each `Parameter` type comes
+//! with a default SQL Type as which it is bound. In the last example this spared us from specifing
+//! that we bind `year` as an SQL `INTEGER` (because `INTEGER` is default for `i32`). If we want to,
+//! we can specify the SQL type independent from the Rust type we are binding, by wrapping it in
+//! `WithDataType`.
+//!
+//! ```no_run
+//! use odbc_api::{Environment, parameter::WithDataType, DataType};
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let year = WithDataType{
+//!    value: 1980,
+//!    data_type: DataType::Varchar {length: 4}
+//! };
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+//!     // Use cursor to process query results.
+//! }
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! In that case it is likely that the driver manager converts our anotated year into a string which
+//! is most likely being converted back into an integer by the driver. All this converting can be 
+//! confusing, but it is helpful if we do not know what types the parameters actually have (i.e. the
+//! query could have been entered by the user on the command line.). There is also an option to
+//! query the parameter types beforhand, but my advice is not trust the information blindly if you
+//! cannot test this with your driver beforehand.
+//!
+//! ### Passing a fixed number of parameters
+//!
+//! To pass multiple but a fixed number of parameters to a query you can use tuples.
+//!
+//! ```no_run
+//! use odbc_api::Environment;
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let too_old = 1980;
+//! let too_young = 2000;
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE ? < year < ?;", (too_old, too_young))? {
+//!     // Use cursor to congratulate only persons in the right age group...
+//! }
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! ### Passing an abitrary number of parameters
+//!
+//! Not always do we know the number of required parameters at compile time. This might be the case
+//! if the query itself is generated from user input. Luckily slices of parameters are supported, too.
+//!
+//! ```no_run
+//! use odbc_api::Environment;
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let params = [1980, 2000];
+//! if let Some(cursor) = conn.execute(
+//!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
+//!     &params[..])?
+//! {
+//!     // Use cursor to process query results.
+//! }
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! ### Passing the type you absolutly think should work as a parameter, but does not
+//!
+//! Sadly not every type can be safely bound as something the ODBC C-API understands. Most
+//! prominent maybe are Rust string slices (`&str`), as they just refuse to have terminating zero
+//! at their end.
+//!
+//! ```no_run
+//! use odbc_api::Environment;
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! // conn.execute("SELECT year FROM Birthdays WHERE name=?;", "Bernd")?; // <- compiler error.
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! Alas, not all is lost. We can still make use of the `IntoParameter` trait to convert it into
+//! something that works.
+//!
+//! ```no_run
+//! use odbc_api::{Environment, IntoParameter};
+//!
+//! let env = unsafe {
+//!     Environment::new()?
+//! };
+//!
+//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! if let Some(cursor) = conn.execute(
+//!     "SELECT year FROM Birthdays WHERE name=?;",
+//!     "Bernd".into_parameter())?
+//! {
+//!     // Use cursor to process query results.
+//! };
+//! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! There you go. Conversion in this case is not too expensive either, just a stack allocated
+//! integer. Wait, the type you wanted to use, but that I have conviniently not chosen in this
+//! example still does not work? Well, in that case dear reader, please open an issue or a pull
+//! request. `IntoParameter` can also be implemented in safe code as you only have to produce a type
+//! which implements `Parameter` and not require any unsafe binding code with pointers. So it is a
+//! good extension point for supporting your crates custom types.

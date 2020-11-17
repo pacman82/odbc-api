@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.0 (next)
+## 0.10.0
 
 * Adds method `Perpared::describe_param()`.
 * `handle::Statement::bind_parameter` changes into `handle::Statement::bind_input_parameter`, in order take a `* const`.
@@ -9,7 +9,7 @@
 * trait `ParameterCollection` has a new method `parameter_set_size`.
 * `Parameter` trait is now inherting from `Input`.
 * `ColumnBuffer` trait is replaced by `CDataMut`.
-
+* Extended guide with section about parameter binding.
 ## 0.9.1
 
 * `Environment` is now `Send` and `Sync`.
