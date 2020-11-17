@@ -12,10 +12,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Publish to cargo
+    - name: Publish odbc-api to cargo
       env:
         CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       run: |
         cd odbc-api && cargo publish --token "${CARGO_TOKEN}"
-        cd -
+    - name: Publish odbcsv to cargo
+      env:
+        CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      run: |
         cd odbcsv && cargo publish --token "${CARGO_TOKEN}"
