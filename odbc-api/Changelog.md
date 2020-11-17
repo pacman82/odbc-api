@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.1
+## 0.10.1 (next)
 
 * `Connection::execute` takes now `&self` instead of `&mut self`.
 

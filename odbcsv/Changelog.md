@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 (next)
+
+* Fix: Commandline argument shorthand for `--input` is now `-i` instead of `o`.
+
 ## 0.3.0
 
 * Command line interface now takes a subcommand.
