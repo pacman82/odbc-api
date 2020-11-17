@@ -1,7 +1,7 @@
 //! Implementation and types required to bind arguments to ODBC parameters.
 
 use crate::DataType;
-use odbc_sys::{CDataType, Len};
+use odbc_sys::CDataType;
 use std::ffi::c_void;
 
 /// Provides description of C type layout and pointers to it. Used to bind and buffers to ODBC
@@ -13,7 +13,7 @@ pub unsafe trait CData {
     fn cdata_type(&self) -> CDataType;
 
     /// Indicates the length of variable sized types. May be zero for fixed sized types.
-    fn indicator_ptr(&self) -> *const Len;
+    fn indicator_ptr(&self) -> *const isize;
 
     /// Pointer to a value corresponding to the one described by `cdata_type`.
     fn value_ptr(&self) -> *const c_void;
@@ -21,13 +21,13 @@ pub unsafe trait CData {
     /// Maximum length of the type. It is required to index values in bound buffers, if more than
     /// one parameter is bound. Can be set to zero for types not bound as parameter arrays, i.e.
     /// `CStr`.
-    fn buffer_length(&self) -> Len;
+    fn buffer_length(&self) -> isize;
 }
 
 /// A type which can be bound mutably to ODBC.
 pub unsafe trait CDataMut: CData {
     /// Indicates the length of variable sized types. May be zero for fixed sized types.
-    fn mut_indicator_ptr(&mut self) -> *mut Len;
+    fn mut_indicator_ptr(&mut self) -> *mut isize;
 
     /// Pointer to a value corresponding to the one described by `cdata_type`.
     fn mut_value_ptr(&mut self) -> *mut c_void;
