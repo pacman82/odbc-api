@@ -1,11 +1,13 @@
 # ODBCSV
 
-Query an ODBC data source and output the result as CSV.
+Query an ODBC data source and output the result as CSV or to insert from CSV into an ODBC data source.
 
 ## Usage
 
+### Querying an Microsoft SQL Database and storing the result in file
+
 ```shell
-odbcsv --output query.csv --connection-string "Driver={SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" "SELECT title, year from Movies"
+odbcsv query --output query.csv --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" "SELECT title, year from Movies"
 ```
 
 Use `--help` to see all options.
