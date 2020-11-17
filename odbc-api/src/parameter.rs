@@ -1,3 +1,5 @@
+//! Module containing implementations of the `Parameter` trait.
+
 use std::{convert::TryInto, ffi::c_void};
 
 use odbc_sys::CDataType;
@@ -13,6 +15,27 @@ pub unsafe trait Parameter: Input {}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.
+///
+/// # Example
+///
+/// ```no_run
+/// use odbc_api::{Environment, parameter::WithDataType, DataType};
+///
+/// let env = unsafe {
+///     Environment::new()?
+/// };
+///
+/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// // Bind year as VARCHAR(4) rather than integer.
+/// let year = WithDataType{
+///    value: 1980,
+///    data_type: DataType::Varchar {length: 4}
+/// };
+/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+///     // Use cursor to process query results.
+/// }
+/// # Ok::<(), odbc_api::Error>(())
+/// ```
 pub struct WithDataType<T> {
     pub value: T,
     pub data_type: DataType,
@@ -55,6 +78,27 @@ unsafe impl<T> Parameter for WithDataType<T> where T: Parameter {}
 /// While a byte array can provide us with a pointer to the start of the array and the length of the
 /// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
 /// strings which are not zero terminated we need to store the length in a separate value.
+///
+/// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&str`.
+///
+/// # Example
+///
+/// ```no_run
+/// use odbc_api::{Environment, IntoParameter};
+///
+/// let env = unsafe {
+///     Environment::new()?
+/// };
+///
+/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// if let Some(cursor) = conn.execute(
+///     "SELECT year FROM Birthdays WHERE name=?;",
+///     "Bernd".into_parameter())?
+/// {
+///     // Use cursor to process query results.
+/// };
+/// # Ok::<(), odbc_api::Error>(())
+/// ```
 pub struct VarChar<'a> {
     bytes: &'a [u8],
     /// Will be set to value.len() by constructor.

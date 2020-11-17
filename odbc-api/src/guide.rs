@@ -355,9 +355,9 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! There you go. Conversion in this case is not too expensive either, just a stack allocated
-//! integer. Wait, the type you wanted to use, but that I have conviniently not chosen in this
-//! example still does not work? Well, in that case dear reader, please open an issue or a pull
-//! request. `IntoParameter` can also be implemented in safe code as you only have to produce a type
-//! which implements `Parameter` and not require any unsafe binding code with pointers. So it is a
-//! good extension point for supporting your crates custom types.
+//! Conversion for `&str` is not too expensive either. just a stack allocated integer. Wait, the
+//! type you wanted to use, but that I have conviniently not chosen in this example still does not
+//! work? Well, in that case, dear reader, please open an issue or a pull request. `IntoParameter`
+//! can also be implemented in safe code as you only have to produce a type which implements
+//! `Parameter` and not require any unsafe binding code with pointers. So it is a good extension
+//! point for supporting your crates custom types.
