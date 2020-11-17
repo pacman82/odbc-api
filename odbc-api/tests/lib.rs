@@ -16,7 +16,7 @@ lazy_static! {
 }
 
 fn table_contents_as_text(query: &str) -> Vec<Vec<Option<String>>> {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let cursor = conn.execute(query, ()).unwrap().unwrap();
 
     let mut text_columns: Vec<_> = (0..cursor.num_result_cols().unwrap())
@@ -56,7 +56,7 @@ fn connect_to_movies_db() {
 
 #[test]
 fn mssql_describe_columns() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -107,7 +107,7 @@ fn mssql_text_buffer() {
 
 #[test]
 fn mssql_column_attributes() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -125,7 +125,7 @@ fn mssql_column_attributes() {
 
 #[test]
 fn mssql_prices() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -174,7 +174,7 @@ fn mssql_prices() {
 
 #[test]
 fn mssql_bind_char() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -194,7 +194,7 @@ fn mssql_bind_char() {
 
 #[test]
 fn mssql_bind_varchar() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -214,7 +214,7 @@ fn mssql_bind_varchar() {
 
 #[test]
 fn mssql_bind_numeric_to_float() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -232,7 +232,7 @@ fn mssql_bind_numeric_to_float() {
 
 #[test]
 fn mssql_all_types() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -258,7 +258,7 @@ fn mssql_all_types() {
 
 #[test]
 fn mssql_bind_integer_parameter() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, 1968).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
@@ -299,7 +299,7 @@ fn mssql_prepared_statement() {
 
 #[test]
 fn mssql_integer_parameter_as_string() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
@@ -313,7 +313,7 @@ fn mssql_integer_parameter_as_string() {
 
 #[test]
 fn mssql_two_paramters_in_tuple() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
@@ -327,7 +327,7 @@ fn mssql_two_paramters_in_tuple() {
 
 #[test]
 fn mssql_column_names_iterator() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
@@ -341,7 +341,7 @@ fn mssql_column_names_iterator() {
 
 #[test]
 fn mssql_bulk_insert() {
-    let mut conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // Assert empty table
     conn.execute("DROP TABLE IF EXISTS BulkInsert", ()).unwrap();
     conn.execute(

@@ -166,7 +166,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     };
     let mut writer = csv::Writer::from_writer(out);
 
-    let mut connection = open_connection(&environment, connect_opts)?;
+    let connection = open_connection(&environment, connect_opts)?;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
     let params: Vec<_> = parameters

@@ -45,7 +45,7 @@ impl<'c> Connection<'c> {
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows.
     pub fn exec_direct_utf16(
-        &mut self,
+        &self,
         query: &U16Str,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
@@ -107,7 +107,7 @@ impl<'c> Connection<'c> {
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
     pub fn execute(
-        &mut self,
+        &self,
         query: &str,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
