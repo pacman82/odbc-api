@@ -22,37 +22,6 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 - [ ] Support for async
 - [ ] Support for Multithreading
 
-## Local test setup
-
-Running local tests currently requires:
-
-* Docker and Docker compose.
-
-With docker and the SQL Driver installed run:
-
-```shell
-docker-compose up
-```
-
-This starts two containers called `odbc-api_dev` and `odbc-api_mssql`. You can use the `dev` container to build your code and execute tests in case you do not want to install the required ODBC drivers and/or Rust toolchain on your local machine.
-
-Otherwise you can install these requirements from here:
-
-* [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
-* <https://rustup.rs/>
-
-The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
-
-```
-cargo test
-```
-
-to run all tests in the workspace, which should now succeed.
-
-### Visual Studio Code
-
-Should you use Visual Studio Code with the Remote Developmont extension, it will pick up the `.devcontainer` configuration and everything should be setup for you.
-
 ## Motivation
 
 Supports writing ODBC Application in Rust. Prior work in this area has been done:
