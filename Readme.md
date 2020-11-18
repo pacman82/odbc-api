@@ -14,8 +14,10 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 
 - [x] Connect using either Data Source names (DSN) or connection strings
 - [x] Provide nice erros and log diagnostic output.
-- [x] Efficiently query data and retrieve the results in blocks rather than line row by row, making efficient use of how odbc manages and bind buffers. This is as far as I know the only ODBC rust wrapper which does this.
-- [x] Support for bulk inserts.
+- [x] Support for columnwise bulk inserts.
+- [x] Support for columnwise bulk queries.
+- [ ] Support for rowise bulk inserts.
+- [ ] Support for rowise bulk queries.
 - [ ] Provide general purpose implementations of buffers to bind, which can be used in safe code without caveats.
 - [x] Support prepared and 'one shot' queries.
 - [x] Pass parameters to queries

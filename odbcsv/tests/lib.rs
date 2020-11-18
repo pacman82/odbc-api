@@ -108,7 +108,7 @@ fn insert() {
         USA,329000000\n\
     ";
 
-    roundtrip(csv, "odbcsvinsert").success();
+    roundtrip(csv, "odbcsv_insert").success();
 }
 
 #[test]
