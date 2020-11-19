@@ -1,2 +1,8 @@
 /target
-Cargo.lock
+
+# Let's commit Cargo.lock sinc `odbcsv` is a binary.
+# Cargo.lock
+
+# Normally IDE stuff is put in global gitignore, but at the moment I don't know how to make this
+# work with the developmont container
+/.idea/
