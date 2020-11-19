@@ -268,7 +268,7 @@
 //! ```
 //!
 //! In that case it is likely that the driver manager converts our anotated year into a string which
-//! is most likely being converted back into an integer by the driver. All this converting can be 
+//! is most likely being converted back into an integer by the driver. All this converting can be
 //! confusing, but it is helpful if we do not know what types the parameters actually have (i.e. the
 //! query could have been entered by the user on the command line.). There is also an option to
 //! query the parameter types beforhand, but my advice is not trust the information blindly if you

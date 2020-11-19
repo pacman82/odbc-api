@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.10.1 (next)
+## 0.10.1
 
 * `Connection::execute` takes now `&self` instead of `&mut self`.
+* Support promoting `Connection` to `Send` or `Sync`.
 
 ## 0.10.0
 
@@ -14,6 +15,7 @@
 * `Parameter` trait is now inherting from `Input`.
 * `ColumnBuffer` trait is replaced by `CDataMut`.
 * Extended guide with section about parameter binding.
+
 ## 0.9.1
 
 * `Environment` is now `Send` and `Sync`.

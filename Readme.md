@@ -22,7 +22,7 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 - [x] Support prepared and 'one shot' queries.
 - [x] Pass parameters to queries
 - [ ] Support for async
-- [ ] Support for Multithreading
+- [x] Support for Multithreading
 
 ## Motivation
 

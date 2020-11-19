@@ -5,7 +5,7 @@ use odbc_api::{
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable, U16String,
 };
-use std::convert::TryInto;
+use std::{thread, convert::TryInto};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -375,6 +375,18 @@ fn mssql_bulk_insert() {
         ],],
         result
     );
+}
+
+#[test]
+fn send_connecion() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = unsafe {conn.promote_to_send() };
+
+    let handle = thread::spawn(move || {
+        conn.execute("SELECT title FROM Movies ORDER BY year",()).unwrap().unwrap();
+    });
+
+    handle.join().unwrap();
 }
 
 // #[test]

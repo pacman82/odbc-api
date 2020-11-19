@@ -139,4 +139,116 @@ impl<'c> Connection<'c> {
         let query = U16String::from_str(query);
         self.prepare_utf16(&query)
     }
+
+    /// Allows sending this connection to different threads. This Connection will still be only be
+    /// used by one thread at a time, but it must not always
+    /// be the same thread.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::thread;
+    /// use lazy_static::lazy_static;
+    /// use odbc_api::Environment;
+    /// lazy_static! {
+    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    /// }
+    /// const MSSQL: &str =
+    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     Server=localhost;\
+    ///     UID=SA;\
+    ///     PWD=<YourStrong@Passw0rd>;\
+    /// ";
+    /// 
+    /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
+    /// let conn = unsafe { conn.promote_to_send() };
+    /// let handle = thread::spawn(move || {
+    ///     if let Some(cursor) = conn.execute("SELECT title FROM Movies ORDER BY year",())? {
+    ///         // Use cursor to process results
+    ///     }
+    ///     Ok::<(), odbc_api::Error>(())
+    /// }); 
+    /// handle.join().unwrap()?;
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// According to the ODBC standard this should be safe. By calling this function you express your
+    /// trust in the implementation of the ODBC driver your application is using.
+    ///
+    /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
+    ///
+    /// This function may be removed in future versions of this crate and connections would be
+    /// `Send` and `Sync` out of the Box. This will require sufficient testing in which a wide
+    /// variety of database drivers prove to be thread safe. For now this API tries to error on the
+    /// side of caution, and leaves the amount of trust you want to put in the driver implementation
+    /// to the user. I have seen this go wrong in the past, but time certainly improved the
+    /// situation. At one point this will be cargo cult and Connection can be `Send` and `Sync` by
+    /// default (hopefully).
+    ///
+    /// Note to users of `unixodbc`: You may configure the threading level to make unixodbc
+    /// synchronize access to the driver (and therby making them thread safe if they are not
+    /// thread safe by themself. This may however hurt your performancy if the driver would actually
+    /// be able to perform operations in parallel.
+    ///
+    /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
+    pub unsafe fn promote_to_send(self) -> force_send_sync::Send<Self> {
+        force_send_sync::Send::new(self)
+    }
+
+    /// Allows sending and using this connection from multiple different threads.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::thread;
+    /// use lazy_static::lazy_static;
+    /// use odbc_api::Environment;
+    /// lazy_static! {
+    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    /// }
+    /// const MSSQL: &str =
+    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     Server=localhost;\
+    ///     UID=SA;\
+    ///     PWD=<YourStrong@Passw0rd>;\
+    /// ";
+    /// 
+    /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
+    /// let conn = unsafe { conn.promote_to_send_and_sync() };
+    /// let handle = thread::spawn(move || {
+    ///     if let Some(cursor) = conn.execute("SELECT title FROM Movies ORDER BY year",())? {
+    ///         // Use cursor to process results
+    ///     }
+    ///     Ok::<(), odbc_api::Error>(())
+    /// }); 
+    /// handle.join().unwrap()?;
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// According to the ODBC standard this should be safe. By calling this function you express your
+    /// trust in the implementation of the ODBC driver your application is using.
+    ///
+    /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
+    ///
+    /// This function may be removed in future versions of this crate and connections would be
+    /// `Send` and `Sync` out of the Box. This will require sufficient testing in which a wide
+    /// variety of database drivers prove to be thread safe. For now this API tries to error on the
+    /// side of caution, and leaves the amount of trust you want to put in the driver implementation
+    /// to the user. I have seen this go wrong in the past, but time certainly improved the
+    /// situation. At one point this will be cargo cult and Connection can be `Send` and `Sync` by
+    /// default (hopefully).
+    ///
+    /// Note to users of `unixodbc`: You may configure the threading level to make unixodbc
+    /// synchronize access to the driver (and therby making them thread safe if they are not
+    /// thread safe by themself. This may however hurt your performancy if the driver would actually
+    /// be able to perform operations in parallel.
+    ///
+    /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
+    pub unsafe fn promote_to_send_and_sync(self) -> force_send_sync::SendSync<Self> {
+        force_send_sync::SendSync::new(self)
+    }
 }

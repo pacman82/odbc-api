@@ -33,6 +33,7 @@ odbc-sys = "0.16.0"
 thiserror = "1.0.22"
 log = "0.4.11"
 widestring = "0.4.3"
+force-send-sync = "1.0.0"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
