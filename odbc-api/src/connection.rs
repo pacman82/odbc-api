@@ -141,8 +141,7 @@ impl<'c> Connection<'c> {
     }
 
     /// Allows sending this connection to different threads. This Connection will still be only be
-    /// used by one thread at a time, but it must not always
-    /// be the same thread.
+    /// used by one thread at a time, but it may be a different thread each time.
     ///
     /// # Example
     ///
