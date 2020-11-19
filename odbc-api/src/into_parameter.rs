@@ -32,3 +32,14 @@ impl<'a> IntoParameter for &'a str {
         VarChar::new(self.as_bytes())
     }
 }
+
+impl<'a> IntoParameter for Option<&'a str> {
+    type Parameter = VarChar<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarChar::null(),
+        }
+    }
+}

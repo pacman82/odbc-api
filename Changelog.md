@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+
+* Implement `IntoParameter` for `Option<&str>`.
+
 ## 0.10.1
 
 * `Connection::execute` takes now `&self` instead of `&mut self`.

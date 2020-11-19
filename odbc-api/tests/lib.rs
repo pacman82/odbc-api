@@ -3,9 +3,10 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
     sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, Environment, IntoParameter, Nullable, U16String,
+    ColumnDescription, Connection, Cursor, DataType, Environment, IntoParameter, Nullable,
+    U16String,
 };
-use std::{thread, convert::TryInto};
+use std::{convert::TryInto, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -15,32 +16,50 @@ lazy_static! {
     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
-fn table_contents_as_text(query: &str) -> Vec<Vec<Option<String>>> {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let cursor = conn.execute(query, ()).unwrap().unwrap();
+/// Creates the table and assuers it is empty
+fn setup_empty_table(
+    conn: &Connection,
+    table_name: &str,
+    column_name: &str,
+    column_type: &str,
+) -> Result<(), odbc_api::Error> {
+    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+    let create_table = format!(
+        "CREATE TABLE {} (id int IDENTITY(1,1), {} {});",
+        table_name, column_name, column_type
+    );
+    conn.execute(&drop_table, ())?;
+    conn.execute(&create_table, ())?;
+    Ok(())
+}
 
-    let mut text_columns: Vec<_> = (0..cursor.num_result_cols().unwrap())
-        .map(|_| Vec::new())
-        .collect();
-
-    let batch_size = 2;
+fn cursor_to_string(cursor: impl Cursor) -> String {
+    let batch_size = 20;
     let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
+    let mut text = String::new();
+
     while let Some(row_set) = row_set_cursor.fetch().unwrap() {
-        for col_index in 0..row_set.num_cols() {
-            for row_index in 0..row_set.num_rows() {
-                text_columns[col_index].push(
+        for row_index in 0..row_set.num_rows() {
+            if row_index != 0 {
+                text.push_str("\n");
+            }
+            for col_index in 0..row_set.num_cols() {
+                if col_index != 0 {
+                    text.push_str(",");
+                }
+                text.push_str(
                     row_set
                         .at_as_str(col_index, row_index)
                         .unwrap()
-                        .map(ToOwned::to_owned),
+                        .unwrap_or("NULL"),
                 );
             }
         }
     }
 
-    text_columns
+    text
 }
 
 #[test]
@@ -91,18 +110,12 @@ fn mssql_describe_columns() {
 
 #[test]
 fn mssql_text_buffer() {
-    let result = table_contents_as_text("SELECT title, year FROM Movies ORDER BY year;");
-    assert_eq!(
-        vec![
-            vec![
-                Some("Interstellar".to_owned()),
-                Some("2001: A Space Odyssey".to_owned()),
-                Some("Jurassic Park".to_owned())
-            ],
-            vec![None, Some("1968".to_owned()), Some("1993".to_owned())]
-        ],
-        result
-    );
+    let query = "SELECT title, year FROM Movies ORDER BY year;";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let cursor = conn.execute(query, ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
+    assert_eq!(expected, actual);
 }
 
 #[test]
@@ -342,16 +355,7 @@ fn mssql_column_names_iterator() {
 #[test]
 fn mssql_bulk_insert() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    // Assert empty table
-    conn.execute("DROP TABLE IF EXISTS BulkInsert", ()).unwrap();
-    conn.execute(
-        r#"CREATE TABLE BulkInsert (
-            Id int IDENTITY(1,1),
-            Country varchar(50)
-        );"#,
-        (),
-    )
-    .unwrap();
+    setup_empty_table(&conn, "BulkInsert", "Country", "VARCHAR(50)").unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
@@ -365,28 +369,44 @@ fn mssql_bulk_insert() {
     prepared.execute(&params).unwrap();
 
     // Assert that the table contains the rows that have just been inserted.
+    let expected = "England\nFrance\nGermany";
 
-    let result = table_contents_as_text("SELECT country FROM BulkInsert ORDER BY id;");
-    assert_eq!(
-        vec![vec![
-            Some("England".to_owned()),
-            Some("France".to_owned()),
-            Some("Germany".to_owned())
-        ],],
-        result
-    );
+    let cursor = conn
+        .execute("SELECT country FROM BulkInsert ORDER BY id;", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
 }
 
 #[test]
 fn send_connecion() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let conn = unsafe {conn.promote_to_send() };
+    let conn = unsafe { conn.promote_to_send() };
 
     let handle = thread::spawn(move || {
-        conn.execute("SELECT title FROM Movies ORDER BY year",()).unwrap().unwrap();
+        conn.execute("SELECT title FROM Movies ORDER BY year", ())
+            .unwrap()
+            .unwrap();
     });
 
     handle.join().unwrap();
+}
+
+#[test]
+fn mssql_parameter_option_str() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "ParameterOptionStr", "name", "VARCHAR(50)").unwrap();
+    let sql = "INSERT INTO ParameterOptionStr (name) VALUES (?);";
+    let mut prepared = conn.prepare(sql).unwrap();
+    prepared.execute(None::<&str>.into_parameter()).unwrap();
+    prepared.execute(Some("Bernd").into_parameter()).unwrap();
+    
+    let cursor = conn.execute("SELECT name FROM ParameterOptionStr ORDER BY id", ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "NULL\nBernd";
+    assert_eq!(expected, actual);
 }
 
 // #[test]

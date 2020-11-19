@@ -2,7 +2,7 @@
 
 use std::{convert::TryInto, ffi::c_void};
 
-use odbc_sys::CDataType;
+use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
     handles::{CData, Input},
@@ -106,10 +106,19 @@ pub struct VarChar<'a> {
 }
 
 impl<'a> VarChar<'a> {
+    /// Constructs a new VarChar containing the text in the specified buffer.
     pub fn new(value: &'a [u8]) -> Self {
         VarChar {
             bytes: value,
             length: value.len().try_into().unwrap(),
+        }
+    }
+
+    /// Constructs a new VarChar representing the NULL value.
+    pub fn null() -> Self {
+        VarChar {
+            bytes: &[],
+            length: NULL_DATA,
         }
     }
 }

@@ -153,7 +153,7 @@ pub trait Cursor: Sized {
         ColumnNamesIt::new(self)
     }
 
-    fn application_row_descriptor(&self) -> Result<Description, Error>;
+    fn application_row_descriptor(&self) -> Result<Description<'_>, Error>;
 }
 
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See
