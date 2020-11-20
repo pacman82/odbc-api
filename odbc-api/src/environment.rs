@@ -18,12 +18,12 @@ pub struct Environment {
 }
 
 impl Environment {
-    /// Allocates a new ODBC Environment and declares that the Application wants to use ODBC version
-    /// 3.8.
+    /// Entry point into this API. Allocates a new ODBC Environment and declares to the driver
+    /// manager that the Application wants to use ODBC version 3.8.
     ///
     /// # Safety
     ///
-    /// There may only be one Odbc environment in any process at any time. Take care using this
+    /// There may only be one ODBC environment in any process at any time. Take care using this
     /// function in unit tests, as these run in parallel by default in Rust. Also no library should
     /// probably wrap the creation of an odbc environment into a safe function call. This is because
     /// using two of these "safe" libraries at the same time in different parts of your program may

@@ -57,7 +57,8 @@ impl<'c> Connection<'c> {
     /// the program, or on another computer somewhere on a network.
     /// * `user` - User identifier.
     /// * `pwd` - Authentication string (typically the password).
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
+    ///
+    /// [1]: https://docs.microsoft.com//sql/odbc/reference/develop-app/connecting-with-sqlconnect
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(
         &mut self,

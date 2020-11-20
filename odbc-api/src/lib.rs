@@ -1,10 +1,8 @@
-//! # ODBC
+//! # About
 //!
-//! This library aims in helping you write applications which utilize ODBC (Open Database
-//! Connectivity) standard to query databases. See the [guide] for more information and code
+//! `odbc-api` enables you to write applications which utilize ODBC (Open Database Connectivity)
+//! standard to access databases. See the [`guide`] for more information and code
 //! examples.
-//!
-//! [guide]: ../odbc_api/guide/index.html
 
 mod connection;
 mod cursor;

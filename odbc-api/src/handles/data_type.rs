@@ -36,10 +36,10 @@ pub enum DataType {
     /// Depending on the implementation binary precision is either 24 (`f32`) or 53 (`f64`).
     Float,
     /// `Real`. Signed, approximate, numeric value with a binary precision 24 (zero or absolute
-    /// value 10[-38] to 10[38]).
+    /// value 10^-38] to 10^38).
     Real,
     /// `Double Precision`. Signed, approximate, numeric value with a binary precision 53 (zero or
-    /// absolute value 10[-308] to 10[308]).
+    /// absolute value 10^-308 to 10^308).
     Double,
     /// `Varchar(n)`. Variable length character string.
     Varchar {
@@ -56,7 +56,7 @@ pub enum DataType {
     /// defined for the Date and Time variants.
     Timestamp { precision: i16 },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
-    /// (signed: -2[63] <= n <= 2[63] - 1, unsigned: 0 <= n <= 2[64] - 1). Has no corresponding
+    /// (signed: -2^63 <= n <= 2^63 - 1, unsigned: 0 <= n <= 2^64 - 1). Has no corresponding
     /// type in SQL-92.
     Bigint,
     /// `TINYINT`. Exact numeric value with precision 3 and scale 0 (signed: -128 <= n <= 127,
