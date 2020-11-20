@@ -1,75 +1,20 @@
+mod common;
+
+use common::{cursor_to_string, setup_empty_table, ENV};
+
 use buffers::{OptF32Column, TextColumn};
-use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextRowSet},
     sys::SqlDataType,
-    ColumnDescription, Connection, Cursor, DataType, Environment, IntoParameter, Nullable,
-    U16String,
+    ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
 };
 use std::{convert::TryInto, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
-// Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
-lazy_static! {
-    static ref ENV: Environment = unsafe { Environment::new().unwrap() };
-}
-
-/// Creates the table and assuers it is empty
-fn setup_empty_table(
-    conn: &Connection,
-    table_name: &str,
-    column_name: &str,
-    column_type: &str,
-) -> Result<(), odbc_api::Error> {
-    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
-    let create_table = format!(
-        "CREATE TABLE {} (id int IDENTITY(1,1), {} {});",
-        table_name, column_name, column_type
-    );
-    conn.execute(&drop_table, ())?;
-    conn.execute(&create_table, ())?;
-    Ok(())
-}
-
-fn cursor_to_string(cursor: impl Cursor) -> String {
-    let batch_size = 20;
-    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor).unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
-
-    let mut text = String::new();
-
-    while let Some(row_set) = row_set_cursor.fetch().unwrap() {
-        for row_index in 0..row_set.num_rows() {
-            if row_index != 0 {
-                text.push_str("\n");
-            }
-            for col_index in 0..row_set.num_cols() {
-                if col_index != 0 {
-                    text.push_str(",");
-                }
-                text.push_str(
-                    row_set
-                        .at_as_str(col_index, row_index)
-                        .unwrap()
-                        .unwrap_or("NULL"),
-                );
-            }
-        }
-    }
-
-    text
-}
-
 #[test]
-fn bogus_connection_string() {
-    let conn = ENV.connect_with_connection_string("foobar");
-    assert!(matches!(conn, Err(_)));
-}
-
-#[test]
-fn connect_to_movies_db() {
+fn mssql_connect_to_movies_db() {
     let _conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 }
 
@@ -402,8 +347,11 @@ fn mssql_parameter_option_str() {
     let mut prepared = conn.prepare(sql).unwrap();
     prepared.execute(None::<&str>.into_parameter()).unwrap();
     prepared.execute(Some("Bernd").into_parameter()).unwrap();
-    
-    let cursor = conn.execute("SELECT name FROM ParameterOptionStr ORDER BY id", ()).unwrap().unwrap();
+
+    let cursor = conn
+        .execute("SELECT name FROM ParameterOptionStr ORDER BY id", ())
+        .unwrap()
+        .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "NULL\nBernd";
     assert_eq!(expected, actual);

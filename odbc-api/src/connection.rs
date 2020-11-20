@@ -158,7 +158,7 @@ impl<'c> Connection<'c> {
     ///     UID=SA;\
     ///     PWD=<YourStrong@Passw0rd>;\
     /// ";
-    /// 
+    ///
     /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
     /// let conn = unsafe { conn.promote_to_send() };
     /// let handle = thread::spawn(move || {
@@ -166,7 +166,7 @@ impl<'c> Connection<'c> {
     ///         // Use cursor to process results
     ///     }
     ///     Ok::<(), odbc_api::Error>(())
-    /// }); 
+    /// });
     /// handle.join().unwrap()?;
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
@@ -213,7 +213,7 @@ impl<'c> Connection<'c> {
     ///     UID=SA;\
     ///     PWD=<YourStrong@Passw0rd>;\
     /// ";
-    /// 
+    ///
     /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
     /// let conn = unsafe { conn.promote_to_send_and_sync() };
     /// let handle = thread::spawn(move || {
@@ -221,7 +221,7 @@ impl<'c> Connection<'c> {
     ///         // Use cursor to process results
     ///     }
     ///     Ok::<(), odbc_api::Error>(())
-    /// }); 
+    /// });
     /// handle.join().unwrap()?;
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
