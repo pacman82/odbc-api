@@ -1,0 +1,9 @@
+services:
+
+  mssql:
+    build: docker/mssql
+    ports:
+      - 1433:1433
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity

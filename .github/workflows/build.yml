@@ -1,10 +1,10 @@
-name: Build commit on windows
+name: Build and test
 
 on: [push]
 
 jobs:
-  build:
-    name: Build on 64Bit Windows
+  win64:
+    name: Build Win64
     runs-on: windows-latest
 
     steps:
@@ -21,3 +21,102 @@ jobs:
       - name: Build
         run: cargo build --release
 
+  win32:
+    name: Build Win32
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: i686-pc-windows-msvc
+          default: true
+          override: true
+      
+      - name: Build
+        run: cargo build --release
+
+  osx:
+    name: Build OS-X
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Insall latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build --release
+
+  linux:
+    name: Build & Test Linux
+    runs-on: ubuntu-20.04
+
+    # We currently use docker compose instead of these services. Leave the comment for reference in
+    # case of switch
+
+    # services:
+    #   sqlserver:
+    #     postgres:
+    #     image: postgres
+    #     ports:
+    #     - 5432:5432
+    #     env:
+    #       POSTGRES_USER: postgres
+    #       POSTGRES_PASSWORD: password
+    #       POSTGRES_DB: test
+    #     options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    #   sqlserver:
+    #     image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+    #     ports:
+    #     - 1433:1433
+    #     env:
+    #       ACCEPT_EULA: Y
+    #       SA_PASSWORD: Password12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install latest rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+      - name: Build
+        run: cargo build --release
+      - name: Start databases in test containers
+        run: docker-compose -f docker-compose.ci.yml up -d
+      - name: Check running containers
+        run: docker ps -a  
+      - name: Check logs
+        run: docker logs odbc-api_mssql_1
+      # We currently test neither against SQLite nor PostgreSQL, but the time will come leave these
+      # in for reference
+      # - name: Install SQLite Driver
+      #   run: |
+      #     sudo apt-get install -y libsqliteodbc
+      # - name: Install PostgreSQL Driver
+      #   run: |
+      #     sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
+      - name: Install SQL Server Driver
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+          apt-get update
+          ACCEPT_EULA=Y apt-get install -y msodbcsql17
+          ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
+        shell: sudo bash {0}
+      - name: Test
+        run: cargo test --release
