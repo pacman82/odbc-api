@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.3.1 (next)
+## 0.3.3 (next)
+
+## 0.3.2
+
+* Updated dependencies
+
+## 0.3.1
 
 * Fix: Commandline argument shorthand for `--input` is now `-i` instead of `o`.
 

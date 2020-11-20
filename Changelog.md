@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.10.3 (next)
+
 ## 0.10.2
 
 * Implement `IntoParameter` for `Option<&str>`.
