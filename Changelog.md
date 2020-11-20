@@ -2,6 +2,9 @@
 
 ## 0.10.3 (next)
 
+* Removed `Connection::promote_send_and_sync` because it is unclear that diagnostic messages would
+  always be pulled by the correct thread.
+
 ## 0.10.2
 
 * Implement `IntoParameter` for `Option<&str>`.
