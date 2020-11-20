@@ -17,6 +17,10 @@ jobs:
         CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       run: |
         cd odbc-api && cargo publish --token "${CARGO_TOKEN}"
+    - name: Sleep for 30 seconds
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '30s'
     - name: Publish odbcsv to cargo
       env:
         CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
