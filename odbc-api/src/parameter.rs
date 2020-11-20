@@ -28,14 +28,15 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
+//! All types implementing the `Parameter` trait can be used. 
+//!
 //! ## Annotating a parameter with an explicit SQL DataType
 //!
 //! In the last example we used a bit of domain knowledge about the query and provided it with an
-//! `i32`. All types implementing the `Parameter` trait can be used. Each `Parameter` type comes
-//! with a default SQL Type as which it is bound. In the last example this spared us from specifing
-//! that we bind `year` as an SQL `INTEGER` (because `INTEGER` is default for `i32`). If we want to,
-//! we can specify the SQL type independent from the Rust type we are binding, by wrapping it in
-//! `WithDataType`.
+//! `i32`. Each `Parameter` type comes with a default SQL Type as which it is bound. In the last
+//! example this spared us from specifing that we bind `year` as an SQL `INTEGER` (because `INTEGER`
+//! is default for `i32`). If we want to, we can specify the SQL type independent from the Rust type
+//! we are binding, by wrapping it in `WithDataType`.
 //!
 //! ```no_run
 //! use odbc_api::{Environment, parameter::WithDataType, DataType};

@@ -219,7 +219,8 @@
 //! your usecase.
 //!
 //! Note that the result of the operation is an `Option`. This reflects that not every statement
-//! returns a [`Cursor`]. `INSERT` statements usually do not, but even `SELECT` queries which would
-//! return zero rows can depending on the driver return either an empty cursor or no cursor at all.
-//! Should a cursor exists, it must be consumed or closed. The `drop` handler of Cursor will close
-//! it for us. If the `Option` is `None` there is nothing to close, so is all taken care of, nice.
+//! returns a [`Cursor`](crate::Cursor). `INSERT` statements usually do not, but even `SELECT`
+//! queries which would return zero rows can depending on the driver return either an empty cursor
+//! or no cursor at all. Should a cursor exists, it must be consumed or closed. The `drop` handler
+//! of Cursor will close it for us. If the `Option` is `None` there is nothing to close, so is all
+//! taken care of, nice.
