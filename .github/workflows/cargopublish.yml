@@ -17,6 +17,8 @@ jobs:
         CARGO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
       run: |
         cd odbc-api && cargo publish --token "${CARGO_TOKEN}"
+    # Wait for a bit after publishing odbc-api. Otherwise odbcsv won't pick up the newest version
+    # and fail.
     - name: Sleep for 30 seconds
       uses: jakejarvis/wait-action@master
       with:
