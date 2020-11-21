@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.10.3 (next)
+## 0.10.3
 
 * Removed `Connection::promote_send_and_sync` because it is unclear that diagnostic messages would
   always be pulled by the correct thread.
+* Adds `Environment::drivers` to list available ODBC drivers.
 
 ## 0.10.2
 

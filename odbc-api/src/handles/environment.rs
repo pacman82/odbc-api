@@ -4,10 +4,10 @@ use super::{
 };
 use log::debug;
 use odbc_sys::{
-    AttrOdbcVersion, EnvironmentAttribute, HDbc, HEnv, Handle, HandleType, SQLAllocHandle,
-    SQLSetEnvAttr, SqlReturn,
+    AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
+    SQLAllocHandle, SQLDriversW, SQLSetEnvAttr, SqlReturn,
 };
-use std::ptr::null_mut;
+use std::{convert::TryInto, ptr::null_mut};
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -108,5 +108,94 @@ impl Environment {
     /// Provides access to the raw ODBC environment handle.
     pub fn as_raw(&self) -> HEnv {
         self.handle
+    }
+
+    /// List drivers descriptions and driver attribute keywords.
+    ///
+    /// # Parameters
+    ///
+    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    ///   ([`FetchOrientation::First`]).
+    /// * `buffer_description`: In case `true` is returned this buffer is filled with the
+    ///   description of the driver.
+    /// * `buffer_attributes`: In case `true` is returned this buffer is filled with a list of
+    ///   key value attributes. E.g.: `"key1=value1\0key2=value2\0\0"`.
+    ///
+    /// See [SQLDrivers][1]
+    ///
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
+    pub fn drivers_buffer_fill(
+        &mut self,
+        direction: FetchOrientation,
+        buffer_description: &mut Vec<u16>,
+        buffer_attributes: &mut Vec<u16>,
+    ) -> Result<bool, Error> {
+
+        // Use full capacity
+        buffer_description.resize(buffer_description.capacity(), 0);
+        buffer_attributes.resize(buffer_attributes.capacity(), 0);
+
+        unsafe {
+            match SQLDriversW(
+                self.handle,
+                direction,
+                buffer_description.as_mut_ptr(),
+                buffer_description.len().try_into().unwrap(),
+                null_mut(),
+                buffer_attributes.as_mut_ptr(),
+                buffer_attributes.len().try_into().unwrap(),
+                null_mut(),
+            ) {
+                SqlReturn::NO_DATA => Ok(false),
+                other => {
+                    other.into_result(self)?;
+                    Ok(true)
+                }
+            }
+        }
+    }
+
+    /// Use together with [`drivers_buffer_fill`] to list drivers descriptions and driver attribute
+    /// keywords.
+    ///
+    /// # Parameters
+    ///
+    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    ///   ([`FetchOrientation::First`]).
+    ///
+    /// # Return
+    ///
+    /// Returns `(driver description length, attribute length)`. Length is in characters minus
+    /// terminating zero.
+    ///
+    /// See [SQLDrivers][1]
+    ///
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
+    pub fn drivers_buffer_len(
+        &mut self,
+        direction: FetchOrientation,
+    ) -> Result<Option<(i16, i16)>, Error> {
+        // Lengths in characters minus terminating zero
+        let mut length_description: i16 = 0;
+        let mut length_attributes: i16 = 0;
+        unsafe {
+            // Determine required buffer size
+            match SQLDriversW(
+                self.handle,
+                direction,
+                null_mut(),
+                0,
+                &mut length_description,
+                null_mut(),
+                0,
+                &mut length_attributes,
+            ) {
+                SqlReturn::NO_DATA => return Ok(None),
+                other => other.into_result(self)?,
+            }
+            Ok(Some((length_description, length_attributes)))
+        }
     }
 }

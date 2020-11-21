@@ -30,6 +30,8 @@ enum Command {
         #[structopt(flatten)]
         insert_opt: InsertOpt,
     },
+    /// List available drivers.
+    ListDrivers,
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
@@ -109,7 +111,7 @@ fn main() -> Result<(), Error> {
         .init()?;
 
     // We know this is going to be the only ODBC environment in the entire process, so this is safe.
-    let environment = unsafe { Environment::new() }?;
+    let mut environment = unsafe { Environment::new() }?;
 
     match opt.command {
         Command::Query { query_opt } => {
@@ -120,6 +122,11 @@ fn main() -> Result<(), Error> {
                 bail!("batch size, must be at least 1");
             }
             insert(&environment, &insert_opt)?;
+        }
+        Command::ListDrivers => {
+            for driver_info in environment.drivers()? {
+                println!("{:#?}", driver_info);
+            }
         }
     }
 
