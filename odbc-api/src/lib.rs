@@ -20,7 +20,7 @@ pub mod parameter;
 pub use self::{
     connection::Connection,
     cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor},
-    environment::Environment,
+    environment::{Environment, DriverInfo},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Error, Nullable},
     into_parameter::IntoParameter,
