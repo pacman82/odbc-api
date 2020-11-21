@@ -122,6 +122,8 @@ impl Environment {
     /// * `buffer_attributes`: In case `true` is returned this buffer is filled with a list of
     ///   key value attributes. E.g.: `"key1=value1\0key2=value2\0\0"`.
     ///
+    ///  Use [`Environment::drivers_buffer_len`] to determine buffer lengths.
+    ///
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
@@ -156,7 +158,7 @@ impl Environment {
         }
     }
 
-    /// Use together with [`drivers_buffer_fill`] to list drivers descriptions and driver attribute
+    /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and driver attribute
     /// keywords.
     ///
     /// # Parameters

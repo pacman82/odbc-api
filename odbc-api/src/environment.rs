@@ -170,7 +170,7 @@ impl Environment {
     ///     println!("{:#?}", driver_info); 
     /// }
     ///
-    /// # Ok::<Result<_, odbc_api::Error>>(())
+    /// # Ok::<_, odbc_api::Error>(())
     /// ```
     pub fn drivers(&mut self) -> Result<Vec<DriverInfo>, Error> {
         // Find required buffer size to avoid truncation.
