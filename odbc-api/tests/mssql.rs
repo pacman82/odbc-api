@@ -14,12 +14,12 @@ const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
 #[test]
-fn mssql_connect_to_movies_db() {
+fn connect_to_movies_db() {
     let _conn = ENV.connect_with_connection_string(MSSQL).unwrap();
 }
 
 #[test]
-fn mssql_describe_columns() {
+fn describe_columns() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -54,7 +54,7 @@ fn mssql_describe_columns() {
 }
 
 #[test]
-fn mssql_text_buffer() {
+fn text_buffer() {
     let query = "SELECT title, year FROM Movies ORDER BY year;";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let cursor = conn.execute(query, ()).unwrap().unwrap();
@@ -64,7 +64,7 @@ fn mssql_text_buffer() {
 }
 
 #[test]
-fn mssql_column_attributes() {
+fn column_attributes() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -82,7 +82,7 @@ fn mssql_column_attributes() {
 }
 
 #[test]
-fn mssql_prices() {
+fn prices() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -131,7 +131,7 @@ fn mssql_prices() {
 }
 
 #[test]
-fn mssql_bind_char() {
+fn bind_char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -151,7 +151,7 @@ fn mssql_bind_char() {
 }
 
 #[test]
-fn mssql_bind_varchar() {
+fn bind_varchar() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -171,7 +171,7 @@ fn mssql_bind_varchar() {
 }
 
 #[test]
-fn mssql_bind_numeric_to_float() {
+fn bind_numeric_to_float() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -189,7 +189,7 @@ fn mssql_bind_numeric_to_float() {
 }
 
 #[test]
-fn mssql_all_types() {
+fn all_types() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -215,7 +215,7 @@ fn mssql_all_types() {
 }
 
 #[test]
-fn mssql_bind_integer_parameter() {
+fn bind_integer_parameter() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, 1968).unwrap().unwrap();
@@ -229,7 +229,7 @@ fn mssql_bind_integer_parameter() {
 }
 
 #[test]
-fn mssql_prepared_statement() {
+fn prepared_statement() {
     // Prepare the statement once
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
@@ -256,7 +256,7 @@ fn mssql_prepared_statement() {
 }
 
 #[test]
-fn mssql_integer_parameter_as_string() {
+fn integer_parameter_as_string() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
@@ -270,7 +270,7 @@ fn mssql_integer_parameter_as_string() {
 }
 
 #[test]
-fn mssql_two_paramters_in_tuple() {
+fn two_paramters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
@@ -284,7 +284,7 @@ fn mssql_two_paramters_in_tuple() {
 }
 
 #[test]
-fn mssql_column_names_iterator() {
+fn column_names_iterator() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -298,7 +298,7 @@ fn mssql_column_names_iterator() {
 }
 
 #[test]
-fn mssql_bulk_insert() {
+fn bulk_insert() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, "BulkInsert", "Country", "VARCHAR(50)").unwrap();
 
@@ -340,7 +340,7 @@ fn send_connecion() {
 }
 
 #[test]
-fn mssql_parameter_option_str() {
+fn parameter_option_str() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, "ParameterOptionStr", "name", "VARCHAR(50)").unwrap();
     let sql = "INSERT INTO ParameterOptionStr (name) VALUES (?);";
@@ -358,7 +358,7 @@ fn mssql_parameter_option_str() {
 }
 
 // #[test]
-// fn mssql_bind_numeric() {
+// fn bind_numeric() {
 
 //     // See:
 //     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
