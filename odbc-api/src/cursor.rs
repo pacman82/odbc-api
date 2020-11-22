@@ -60,17 +60,6 @@ pub trait Cursor: Sized {
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
     unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> Result<(), Error>;
 
-    /// Sets the binding type to columnar binding for batch cursors.
-    ///
-    /// Any Positive number indicates a row wise binding with that row length. `0` indicates a
-    /// columnar binding.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to ensure that the bound buffers match the memory layout
-    /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error>;
-
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
     fn unbind_cols(&mut self) -> Result<(), Error>;
 
@@ -267,10 +256,6 @@ where
         self.statement.borrow_mut().set_num_rows_fetched(num_rows)
     }
 
-    unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error> {
-        self.statement.borrow_mut().set_row_bind_type(row_size)
-    }
-
     fn unbind_cols(&mut self) -> Result<(), Error> {
         self.statement.borrow_mut().unbind_cols()
     }
@@ -292,6 +277,9 @@ where
         B: RowSetBuffer,
     {
         unsafe {
+            self.statement
+                .borrow_mut()
+                .set_row_bind_type(row_set_buffer.bind_type())?;
             row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
@@ -356,6 +344,10 @@ where
 /// themselves. To bind stack allocated buffers it is recommended to implement this trait on the
 /// reference type instead.
 pub unsafe trait RowSetBuffer {
+    /// Declares the bind type of the Row set buffer. `0` Means a columnar binding is used. Any non
+    /// zero number is interpreted as the size of a single row in a row wise binding style.
+    fn bind_type(&self) -> u32;
+
     /// Binds the buffer either column or row wise to the cursor.
     ///
     /// # Safety
@@ -366,6 +358,10 @@ pub unsafe trait RowSetBuffer {
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
+    fn bind_type(&self) -> u32 {
+        (**self).bind_type()
+    }
+
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         (*self).bind_to_cursor(cursor)
     }

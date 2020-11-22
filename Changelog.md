@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0 (next)
+
+* Removed `Cursor::set_row_bind_type`.
+* `RowSetBuffer` trait now requires an implementation of `bind_type`.
+
 ## 0.10.3
 
 * Removed `Connection::promote_send_and_sync` because it is unclear that diagnostic messages would

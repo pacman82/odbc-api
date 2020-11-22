@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4 (next)
+
+* Updated dependencies
+
 ## 0.3.3
 
 * Add command `list-drivers`, to list drivers and attributes.

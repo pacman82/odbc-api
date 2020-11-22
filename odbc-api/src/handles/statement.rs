@@ -506,7 +506,8 @@ impl<'s> Statement<'s> {
     }
 }
 
-/// Description of a parameter associated with a parameter marker in a prepared statement.
+/// Description of a parameter associated with a parameter marker in a prepared statement. Returned
+/// by [`crate::Prepared::describe_param`].
 #[derive(Debug)]
 pub struct ParameterDescription {
     pub nullable: Nullable,
