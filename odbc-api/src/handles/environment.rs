@@ -133,7 +133,6 @@ impl Environment {
         buffer_description: &mut Vec<u16>,
         buffer_attributes: &mut Vec<u16>,
     ) -> Result<bool, Error> {
-
         // Use full capacity
         buffer_description.resize(buffer_description.capacity(), 0);
         buffer_attributes.resize(buffer_attributes.capacity(), 0);

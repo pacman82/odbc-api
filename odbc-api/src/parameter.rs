@@ -28,7 +28,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! All types implementing the `Parameter` trait can be used. 
+//! All types implementing the `Parameter` trait can be used.
 //!
 //! ## Annotating a parameter with an explicit SQL DataType
 //!
@@ -164,7 +164,6 @@
 //! work? Well, in that case please open an issue or a pull request. `IntoParameter` can usually be
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
-
 
 use std::{convert::TryInto, ffi::c_void};
 

@@ -1,5 +1,7 @@
 use lazy_static::lazy_static;
-use odbc_api::{buffers, Connection, Cursor, Environment};
+use odbc_api::{
+    buffers, buffers::TextColumn, handles::CDataMut, Connection, Cursor, Environment, RowSetBuffer,
+};
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
@@ -50,6 +52,69 @@ pub fn cursor_to_string(cursor: impl Cursor) -> String {
     }
 
     text
+}
+
+/// A generic implementation of RowSetBuffer for a single column
+pub struct SingleColumnRowSetBuffer<C> {
+    num_rows_fetched: Box<usize>,
+    batch_size: u32,
+    /// invariant column.len() == batch_size
+    column: C,
+}
+
+impl SingleColumnRowSetBuffer<TextColumn> {
+    pub fn with_text_column(batch_size: u32, max_str_len: usize) -> Self {
+        Self {
+            num_rows_fetched: Box::new(0),
+            batch_size,
+            column: TextColumn::new(batch_size as usize, max_str_len),
+        }
+    }
+
+    pub fn value_at(&self, index: usize) -> Option<&[u8]> {
+        if index >= *self.num_rows_fetched {
+            panic!("Out of bounds access. In SingleColumnRowSetBuffer")
+        }
+
+        // Safe due to out of bounds check above
+        unsafe { self.column.value_at(index) }
+    }
+}
+
+impl<T> SingleColumnRowSetBuffer<Vec<T>>
+where
+    T: Clone + Default,
+{
+    pub fn new(batch_size: u32) -> Self {
+        SingleColumnRowSetBuffer {
+            num_rows_fetched: Box::new(0),
+            batch_size,
+            column: vec![T::default(); batch_size as usize],
+        }
+    }
+
+    pub fn get(&self) -> &[T] {
+        &self.column[0..*self.num_rows_fetched]
+    }
+}
+
+unsafe impl<C> RowSetBuffer for SingleColumnRowSetBuffer<C>
+where
+    C: CDataMut,
+{
+    fn bind_type(&self) -> u32 {
+        0 // Columnar binding
+    }
+
+    fn row_array_size(&self) -> u32 {
+        self.batch_size
+    }
+
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
+        cursor.set_num_rows_fetched(self.num_rows_fetched.as_mut())?;
+        cursor.bind_col(1, &mut self.column)?;
+        Ok(())
+    }
 }
 
 #[test]

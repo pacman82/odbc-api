@@ -167,7 +167,7 @@ impl Environment {
     ///
     /// let mut env = unsafe { Environment::new () }?;
     /// for driver_info in env.drivers()? {
-    ///     println!("{:#?}", driver_info); 
+    ///     println!("{:#?}", driver_info);
     /// }
     ///
     /// # Ok::<_, odbc_api::Error>(())
@@ -212,7 +212,7 @@ impl Environment {
             let attributes = attributes.to_string().unwrap();
             let attributes = attributes_iter(&attributes).collect();
 
-            driver_infos.push(DriverInfo{ 
+            driver_infos.push(DriverInfo {
                 description,
                 attributes,
             });
@@ -255,7 +255,7 @@ mod test {
     fn parse_attributes() {
         let buffer = "APILevel=2\0ConnectFunctions=YYY\0CPTimeout=60\0DriverODBCVer=03.\
                       50\0FileUsage=0\0SQLLevel=1\0UsageCount=1\0\0";
-        let attributes : HashMap<_,_>= attributes_iter(buffer).collect();
+        let attributes: HashMap<_, _> = attributes_iter(buffer).collect();
         assert_eq!(attributes["APILevel"], "2");
         assert_eq!(attributes["ConnectFunctions"], "YYY");
         assert_eq!(attributes["CPTimeout"], "60");

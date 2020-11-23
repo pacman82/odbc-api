@@ -3,7 +3,9 @@
 ## 0.11.0 (next)
 
 * Removed `Cursor::set_row_bind_type`.
+* Removed `Cursor::set_row_array_size`.
 * `RowSetBuffer` trait now requires an implementation of `bind_type`.
+* `RowSetBuffer` trait now requires an implementation of `row_array_size`.
 
 ## 0.10.3
 

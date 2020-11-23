@@ -1,14 +1,12 @@
 mod common;
 
-use common::{cursor_to_string, setup_empty_table, ENV};
+use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use buffers::{OptF32Column, TextColumn};
 use odbc_api::{
-    buffers::{self, TextRowSet},
-    sys::SqlDataType,
-    ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
+    buffers::TextRowSet, sys::SqlDataType, ColumnDescription, Cursor, DataType, IntoParameter,
+    Nullable, U16String,
 };
-use std::{convert::TryInto, thread};
+use std::thread;
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -85,7 +83,7 @@ fn column_attributes() {
 fn prices() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
-    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     // Test names
     let mut buf = Vec::new();
@@ -103,89 +101,62 @@ fn prices() {
     assert_eq!("product", name(4));
     assert_eq!("price", name(5));
 
-    // Test binding id int buffer
-    let batch_size = 10;
-    assert_eq!(SqlDataType::INTEGER, cursor.col_concise_type(1).unwrap());
-    let mut id_buffer: Vec<i32> = vec![0; batch_size];
-    unsafe {
-        cursor
-            .set_row_array_size(batch_size.try_into().unwrap())
-            .unwrap();
-
-        // Bind id integer column
-        cursor.bind_col(1, &mut id_buffer).unwrap();
-        let mut num_rows_fetched = 0;
-        cursor.set_num_rows_fetched(&mut num_rows_fetched).unwrap();
-
-        cursor.fetch().unwrap();
-
-        assert_eq!([1, 2, 3], id_buffer[0..num_rows_fetched as usize]);
-        cursor.fetch().unwrap();
-    }
-
     // Test types
 
     assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(5).unwrap());
     assert_eq!(10, cursor.col_precision(5).unwrap());
     assert_eq!(2, cursor.col_scale(5).unwrap());
+
+    // Test binding id int buffer
+    let batch_size = 10;
+    assert_eq!(SqlDataType::INTEGER, cursor.col_concise_type(1).unwrap());
+    let id_buffer = SingleColumnRowSetBuffer::new(batch_size);
+    let mut row_set_cursor = cursor.bind_buffer(id_buffer).unwrap();
+    assert_eq!(&[1, 2, 3], row_set_cursor.fetch().unwrap().unwrap().get());
 }
 
 #[test]
 fn bind_char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
-    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 5);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
 
-    let mut buf = TextColumn::new(1, 5);
-    unsafe {
-        cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, &mut buf).unwrap();
-        cursor.fetch().unwrap();
-
-        assert_eq!(
-            Some("abcde"),
-            buf.value_at(0)
-                .map(|bytes| std::str::from_utf8(bytes).unwrap())
-        );
-    }
+    assert_eq!(
+        Some("abcde"),
+        buf.value_at(0)
+            .map(|bytes| std::str::from_utf8(bytes).unwrap())
+    );
 }
 
 #[test]
 fn bind_varchar() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
-    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    let mut buf = TextColumn::new(1, 100);
-    unsafe {
-        cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, &mut buf).unwrap();
-        cursor.fetch().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
 
-        assert_eq!(
-            Some("Hello, World!"),
-            buf.value_at(0)
-                .map(|bytes| std::str::from_utf8(bytes).unwrap())
-        );
-    }
+    assert_eq!(
+        Some("Hello, World!"),
+        buf.value_at(0)
+            .map(|bytes| std::str::from_utf8(bytes).unwrap())
+    );
 }
 
 #[test]
 fn bind_numeric_to_float() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
-    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let buf = SingleColumnRowSetBuffer::new(1);
+    let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
 
-    let mut buf = OptF32Column::new(1);
-    unsafe {
-        cursor.set_row_array_size(1).unwrap();
-        cursor.bind_col(1, &mut buf).unwrap();
-        cursor.fetch().unwrap();
-    }
-
-    unsafe {
-        assert_eq!(Some(&1.23), buf.value_at(0));
-    }
+    assert_eq!(&[1.23], row_set_cursor.fetch().unwrap().unwrap().get());
 }
 
 #[test]

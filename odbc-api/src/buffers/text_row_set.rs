@@ -98,12 +98,15 @@ impl TextRowSet {
 }
 
 unsafe impl RowSetBuffer for TextRowSet {
+    fn row_array_size(&self) -> u32 {
+        self.batch_size
+    }
+
     fn bind_type(&self) -> u32 {
         0 // Specify column wise binding.
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
-        cursor.set_row_array_size(self.batch_size)?;
         cursor.set_num_rows_fetched(&mut self.num_rows)?;
         for (index, column_buffer) in self.buffers.iter_mut().enumerate() {
             let column_number = (index + 1) as u16;
