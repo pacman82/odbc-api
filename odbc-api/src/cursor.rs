@@ -45,13 +45,6 @@ pub trait Cursor: Sized {
     /// Fetch dereferences bound buffers and is therefore unsafe.
     unsafe fn fetch(&mut self) -> Result<bool, Error>;
 
-    /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
-    ///
-    /// # Safety
-    ///
-    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> Result<(), Error>;
-
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
     fn unbind_cols(&mut self) -> Result<(), Error>;
 
@@ -240,10 +233,6 @@ where
         self.statement.borrow_mut().fetch()
     }
 
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> Result<(), Error> {
-        self.statement.borrow_mut().set_num_rows_fetched(num_rows)
-    }
-
     fn unbind_cols(&mut self) -> Result<(), Error> {
         self.statement.borrow_mut().unbind_cols()
     }
@@ -268,6 +257,7 @@ where
         unsafe {
             stmt.set_row_bind_type(row_set_buffer.bind_type())?;
             stmt.set_row_array_size(row_set_buffer.row_array_size())?;
+            stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())?;
             row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
@@ -339,6 +329,14 @@ pub unsafe trait RowSetBuffer {
     /// The batch size for bulk cursors, if retrieving many rows at once.
     fn row_array_size(&self) -> u32;
 
+    /// Mutable reference to the number of fetched rows.
+    ///
+    /// # Safety
+    ///
+    /// Implementations of this method must take care that the returned referenced stays valid, even
+    /// if `self` should be moved.
+    fn mut_num_fetch_rows(&mut self) -> &mut usize;
+
     /// Binds the buffer either column or row wise to the cursor.
     ///
     /// # Safety
@@ -351,6 +349,10 @@ pub unsafe trait RowSetBuffer {
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     fn row_array_size(&self) -> u32 {
         (**self).row_array_size()
+    }
+
+    fn mut_num_fetch_rows(&mut self) -> &mut usize {
+        (*self).mut_num_fetch_rows()
     }
 
     fn bind_type(&self) -> u32 {

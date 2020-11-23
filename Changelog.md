@@ -4,8 +4,10 @@
 
 * Removed `Cursor::set_row_bind_type`.
 * Removed `Cursor::set_row_array_size`.
+* Removed `Cursor::set_num_rows_fetched`.
 * `RowSetBuffer` trait now requires an implementation of `bind_type`.
 * `RowSetBuffer` trait now requires an implementation of `row_array_size`.
+* `RowSetBuffer` trait now requires an implementation of `mut_num_rows_fetched`.
 
 ## 0.10.3
 

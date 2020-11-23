@@ -106,12 +106,15 @@ where
         0 // Columnar binding
     }
 
+    fn mut_num_fetch_rows(&mut self) -> &mut usize {
+        self.num_rows_fetched.as_mut()
+    }
+
     fn row_array_size(&self) -> u32 {
         self.batch_size
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
-        cursor.set_num_rows_fetched(self.num_rows_fetched.as_mut())?;
         cursor.bind_col(1, &mut self.column)?;
         Ok(())
     }
