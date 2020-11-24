@@ -1,0 +1,2 @@
+ODBC Driver 17 for SQL Server
+	Description=Microsoft ODBC Driver 17 for SQL Server

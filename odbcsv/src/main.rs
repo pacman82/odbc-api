@@ -125,7 +125,10 @@ fn main() -> Result<(), Error> {
         }
         Command::ListDrivers => {
             for driver_info in environment.drivers()? {
-                println!("{:#?}", driver_info);
+                println!("{}", driver_info.description);
+                for (key, value) in &driver_info.attributes {
+                    println!("\t{}={}", key, value);
+                }
             }
         }
     }

@@ -1,3 +1,5 @@
+use std::{fs::File, io::Read};
+
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::Environment;
@@ -138,4 +140,27 @@ fn insert_with_nulls() {
     ";
 
     roundtrip(csv, "odbcsv_insert_with_nulls").success();
+}
+
+/// An "optional" for list-drivers command. It checks for the existence of a "list-drivers.txt". If
+/// so it compares the output of the `list-drivers` command with the file content. This setup is
+/// intended to provide a test for dev container or CI setups there the installed drivers are
+/// controlled by this repository, but gracefully skip, if we run natively on a developer machine
+/// with a different set of drivers installed.
+#[test]
+fn list_drivers() {
+    if let Ok(mut expectation) = File::open("tests/list-drivers.txt") {
+        let mut buf = String::new();
+        expectation.read_to_string(&mut buf).unwrap();
+
+        Command::cargo_bin("odbcsv")
+            .unwrap()
+            .args(&[
+                "-vvvv",
+                "list-drivers",
+            ])
+            .assert()
+            .success()
+            .stdout(buf);
+    }
 }
