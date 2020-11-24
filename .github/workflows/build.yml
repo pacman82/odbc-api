@@ -118,5 +118,7 @@ jobs:
           ACCEPT_EULA=Y apt-get install -y msodbcsql17
           ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
         shell: sudo bash {0}
+      - name: Copy test expectations
+        run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
       - name: Test
         run: cargo test --release
