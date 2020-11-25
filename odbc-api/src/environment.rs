@@ -220,6 +220,73 @@ impl Environment {
 
         Ok(driver_infos)
     }
+
+    /// User and system data sources
+    pub fn data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+        self.data_sources_impl(FetchOrientation::First)
+    }
+
+    /// Only system data sources
+    pub fn system_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+        self.data_sources_impl(FetchOrientation::FirstSystem)
+    }
+
+    /// Only user data sources
+    pub fn user_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+        self.data_sources_impl(FetchOrientation::FirstUser)
+    }
+
+   
+    fn data_sources_impl(
+        &mut self,
+        direction: FetchOrientation,
+    ) -> Result<Vec<DataSourceInfo>, Error> {
+        // Find required buffer size to avoid truncation.
+
+        // Start with first so we are independent of state
+        let (mut server_name_len, mut driver_len) = if let Some(v) = self
+            .environment
+            .data_source_buffer_len(direction)?
+        {
+            v
+        } else {
+            // No drivers present
+            return Ok(Vec::new());
+        };
+
+        // If there are let's loop over the rest
+        while let Some((cand_name_len, cand_decs_len)) = self
+            .environment
+            .drivers_buffer_len(FetchOrientation::Next)?
+        {
+            server_name_len = max(cand_name_len, server_name_len);
+            driver_len = max(cand_decs_len, driver_len);
+        }
+
+        // Allocate +1 character extra for terminating zero
+        let mut server_name_buf = vec![0; server_name_len as usize + 1];
+        let mut driver_buf = vec![0; driver_len as usize + 1];
+
+        let mut data_source_infos = Vec::new();
+        while self.environment.data_source_buffer_fill(
+            FetchOrientation::Next,
+            &mut server_name_buf,
+            &mut driver_buf,
+        )? {
+            let server_name = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
+            let driver = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
+
+            let server_name = server_name.to_string().unwrap();
+            let driver = driver.to_string().unwrap();
+
+            data_source_infos.push(DataSourceInfo {
+                server_name,
+                driver,
+            });
+        }
+
+        Ok(data_source_infos)
+    }
 }
 
 /// Struct holding information available on a driver. Can be obtained via [`Environment::drivers`].
@@ -229,6 +296,17 @@ pub struct DriverInfo {
     pub description: String,
     /// Attributes values of the driver by key
     pub attributes: HashMap<String, String>,
+}
+
+/// Holds name and description of a datasource
+///
+/// Can be obtained via [`Environment::data_sources`]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DataSourceInfo {
+    /// Name of the data source
+    pub server_name: String,
+    /// Description of the data source
+    pub driver: String,
 }
 
 /// Called by drivers to pares list of attributes

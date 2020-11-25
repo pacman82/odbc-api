@@ -32,6 +32,8 @@ enum Command {
     },
     /// List available drivers.
     ListDrivers,
+    /// List preconfigured datasources.
+    ListDataSources,
 }
 
 /// Command line arguments used to establish a connection with the ODBC data source
@@ -124,11 +126,31 @@ fn main() -> Result<(), Error> {
             insert(&environment, &insert_opt)?;
         }
         Command::ListDrivers => {
+            let mut first = true;
             for driver_info in environment.drivers()? {
+                // After first item, always place an additional newline in between.
+                if first {
+                    first = false;
+                } else {
+                    println!()
+                }
                 println!("{}", driver_info.description);
                 for (key, value) in &driver_info.attributes {
                     println!("\t{}={}", key, value);
                 }
+            }
+        }
+        Command::ListDataSources => {
+            let mut first = true;
+            for data_source_info in environment.data_sources()? {
+                // After first item, always place an additional newline in between.
+                if first {
+                    first = false;
+                } else {
+                    println!()
+                }
+                println!("Server name: {}", data_source_info.server_name);
+                println!("Driver: {}", data_source_info.driver);
             }
         }
     }
