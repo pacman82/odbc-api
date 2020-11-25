@@ -3,10 +3,7 @@ use super::{
     Error,
 };
 use log::debug;
-use odbc_sys::{
-    AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
-    SQLAllocHandle, SQLDriversW, SQLSetEnvAttr, SqlReturn,
-};
+use odbc_sys::{AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn};
 use std::{convert::TryInto, ptr::null_mut};
 
 /// An `Environment` is a global context, in which to access data.
@@ -168,7 +165,7 @@ impl Environment {
     ///
     /// # Return
     ///
-    /// Returns `(driver description length, attribute length)`. Length is in characters minus
+    /// `(driver description length, attribute length)`. Length is in characters minus terminating
     /// terminating zero.
     ///
     /// See [SQLDrivers][1]
@@ -197,6 +194,89 @@ impl Environment {
                 other => other.into_result(self)?,
             }
             Ok(Some((length_description, length_attributes)))
+        }
+    }
+
+    /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
+    /// driver attribute keywords.
+    ///
+    /// # Parameters
+    ///
+    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    ///   ([`FetchOrientation::First`], [`FetchOrientation::FirstSystem`],
+    ///   [`FetchOrientation::FirstUser`]).
+    ///
+    /// # Return
+    ///
+    /// `(server name length,  description length)`. Length is in characters minus terminating zero.
+    pub fn data_source_buffer_len(
+        &mut self,
+        direction: FetchOrientation,
+    ) -> Result<Option<(i16, i16)>, Error> {
+        // Lengths in characters minus terminating zero
+        let mut length_name: i16 = 0;
+        let mut length_description: i16 = 0;
+        unsafe {
+            // Determine required buffer size
+            match odbc_sys::SQLDataSourcesW(
+                self.handle,
+                direction,
+                null_mut(),
+                0,
+                &mut length_name,
+                null_mut(),
+                0,
+                &mut length_description,
+            ) {
+                SqlReturn::NO_DATA => return Ok(None),
+                other => other.into_result(self)?,
+            }
+            Ok(Some((length_name, length_description)))
+        }
+    }
+
+    /// List drivers descriptions and driver attribute keywords.
+    ///
+    /// # Parameters
+    ///
+    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    ///   ([`FetchOrientation::First`], [`FetchOrientation::FirstSystem`],
+    ///   [`FetchOrientation::FirstUser`]).
+    /// * `buffer_name`: In case `true` is returned this buffer is filled with the name of the
+    ///   datasource.
+    /// * `buffer_description`: In case `true` is returned this buffer is filled with a description
+    ///   of the datasource (i.e. Driver name).
+    ///
+    ///  Use [`Environment::data_source_buffer_len`] to determine buffer lengths.
+    pub fn data_source_buffer_fill(
+        &mut self,
+        direction: FetchOrientation,
+        buffer_name: &mut Vec<u16>,
+        buffer_description: &mut Vec<u16>,
+    ) -> Result<bool, Error> {
+        // Use full capacity
+        buffer_name.resize(buffer_name.capacity(), 0);
+        buffer_description.resize(buffer_description.capacity(), 0);
+
+        unsafe {
+            match SQLDataSourcesW(
+                self.handle,
+                direction,
+                buffer_name.as_mut_ptr(),
+                buffer_name.len().try_into().unwrap(),
+                null_mut(),
+                buffer_description.as_mut_ptr(),
+                buffer_description.len().try_into().unwrap(),
+                null_mut(),
+            ) {
+                SqlReturn::NO_DATA => Ok(false),
+                other => {
+                    other.into_result(self)?;
+                    Ok(true)
+                }
+            }
         }
     }
 }
