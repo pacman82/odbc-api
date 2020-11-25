@@ -21,7 +21,7 @@ impl<'o> Prepared<'o> {
     ///   specify a paramset size of empty, nothing is executed, and `Ok(None)` is returned.
     pub fn execute(
         &mut self,
-        params: impl ParameterCollection,
+        params:  &(impl ParameterCollection + ?Sized),
     ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
         let paramset_size = params.parameter_set_size();
         if paramset_size == 0 {

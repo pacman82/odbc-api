@@ -119,7 +119,7 @@ unsafe impl RowSetBuffer for TextRowSet {
     }
 }
 
-unsafe impl ParameterCollection for &TextRowSet {
+unsafe impl ParameterCollection for TextRowSet {
     fn parameter_set_size(&self) -> u32 {
         *self.num_rows as u32
     }
