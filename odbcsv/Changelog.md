@@ -3,6 +3,7 @@
 ## 0.3.4 (next)
 
 * Updated dependencies
+* Add command `list-data-sources`
 
 ## 0.3.3
 

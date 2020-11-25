@@ -30,9 +30,10 @@ enum Command {
         #[structopt(flatten)]
         insert_opt: InsertOpt,
     },
-    /// List available drivers.
+    /// List available drivers. Useful to find out which exact driver name to specify in the
+    /// connections string.
     ListDrivers,
-    /// List preconfigured datasources.
+    /// List preconfigured datasources. Useful to find data source name to connect to database.
     ListDataSources,
 }
 

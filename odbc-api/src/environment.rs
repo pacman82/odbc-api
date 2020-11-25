@@ -187,19 +187,19 @@ impl Environment {
         };
 
         // If there are let's loop over the rest
-        while let Some((cand_desc_len, cand_attr_len)) = self
+        while let Some((candidate_desc_len, candidate_attr_len)) = self
             .environment
             .drivers_buffer_len(FetchOrientation::Next)?
         {
-            desc_len = max(cand_desc_len, desc_len);
-            attr_len = max(cand_attr_len, attr_len);
+            desc_len = max(candidate_desc_len, desc_len);
+            attr_len = max(candidate_attr_len, attr_len);
         }
 
         // Allocate +1 character extra for terminating zero
         let mut desc_buf = vec![0; desc_len as usize + 1];
         let mut attr_buf = vec![0; attr_len as usize + 1];
 
-        let mut driver_infos = Vec::new();
+        let mut driver_info = Vec::new();
         while self.environment.drivers_buffer_fill(
             FetchOrientation::Next,
             &mut desc_buf,
@@ -212,26 +212,65 @@ impl Environment {
             let attributes = attributes.to_string().unwrap();
             let attributes = attributes_iter(&attributes).collect();
 
-            driver_infos.push(DriverInfo {
+            driver_info.push(DriverInfo {
                 description,
                 attributes,
             });
         }
 
-        Ok(driver_infos)
+        Ok(driver_info)
     }
 
     /// User and system data sources
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// let mut env = unsafe { Environment::new () }?;
+    /// for data_source in env.data_sources()? {
+    ///     println!("{:#?}", data_source);
+    /// }
+    ///
+    /// # Ok::<_, odbc_api::Error>(())
+    /// ```
     pub fn data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::First)
     }
 
     /// Only system data sources
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// let mut env = unsafe { Environment::new () }?;
+    /// for data_source in env.system_data_sources()? {
+    ///     println!("{:#?}", data_source);
+    /// }
+    ///
+    /// # Ok::<_, odbc_api::Error>(())
+    /// ```
     pub fn system_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::FirstSystem)
     }
 
     /// Only user data sources
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use odbc_api::Environment;
+    ///
+    /// let mut env = unsafe { Environment::new () }?;
+    /// for data_source in env.user_data_sources()? {
+    ///     println!("{:#?}", data_source);
+    /// }
+    ///
+    /// # Ok::<_, odbc_api::Error>(())
+    /// ```
     pub fn user_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::FirstUser)
     }
@@ -252,19 +291,19 @@ impl Environment {
             };
 
         // If there are let's loop over the rest
-        while let Some((cand_name_len, cand_decs_len)) = self
+        while let Some((candidate_name_len, candidate_decs_len)) = self
             .environment
             .drivers_buffer_len(FetchOrientation::Next)?
         {
-            server_name_len = max(cand_name_len, server_name_len);
-            driver_len = max(cand_decs_len, driver_len);
+            server_name_len = max(candidate_name_len, server_name_len);
+            driver_len = max(candidate_decs_len, driver_len);
         }
 
         // Allocate +1 character extra for terminating zero
         let mut server_name_buf = vec![0; server_name_len as usize + 1];
         let mut driver_buf = vec![0; driver_len as usize + 1];
 
-        let mut data_source_infos = Vec::new();
+        let mut data_source_info = Vec::new();
         let mut not_empty = self.environment.data_source_buffer_fill(
             direction,
             &mut server_name_buf,
@@ -277,7 +316,7 @@ impl Environment {
             let server_name = server_name.to_string().unwrap();
             let driver = driver.to_string().unwrap();
 
-            data_source_infos.push(DataSourceInfo {
+            data_source_info.push(DataSourceInfo {
                 server_name,
                 driver,
             });
@@ -288,7 +327,7 @@ impl Environment {
             )?;
         }
 
-        Ok(data_source_infos)
+        Ok(data_source_info)
     }
 }
 

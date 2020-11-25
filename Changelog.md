@@ -8,6 +8,9 @@
 * `RowSetBuffer` trait now requires an implementation of `bind_type`.
 * `RowSetBuffer` trait now requires an implementation of `row_array_size`.
 * `RowSetBuffer` trait now requires an implementation of `mut_num_rows_fetched`.
+* Add `Environment::data_sources`.
+* Add `Environment::user_data_sources`.
+* Add `Environment::system_data_sources`.
 
 ## 0.10.3
 

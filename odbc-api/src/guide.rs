@@ -164,6 +164,8 @@
 //! borrows the environment, so you will get a compiler error, if your environment goes out of scope
 //! before the connection does.
 //!
+//! > You can list the available drivers using [`crate::Environment::drivers`].
+//!
 //! ## Connect using a Data Source Name (DSN)
 //!
 //! Should a data source be known by the driver manager we can access it using its name and
@@ -186,6 +188,8 @@
 //!
 //! How to configure such data sources is not the scope of this guide, and depends on the driver
 //! manager in question.
+//!
+//! > You can list the available data sources using [`crate::Environment::data_sources`].
 //!
 //! ## Lifetime considerations for Connections
 //!
