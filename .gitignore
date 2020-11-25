@@ -6,3 +6,6 @@
 # Normally IDE stuff is put in global gitignore, but at the moment I don't know how to make this
 # work with the developmont container
 /.idea/
+
+# Machiene specific test expectation for list-drivers test
+/odbcsv/tests/list-drivers.txt
