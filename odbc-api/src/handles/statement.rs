@@ -305,7 +305,10 @@ impl<'s> Statement<'s> {
         .into_result(self)
     }
 
-    /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement.
+    /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
+    /// specialized version takes a constant reference to parameter, but is therfore limmited to
+    /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
+    /// input and output parameters.
     ///
     /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
     ///
@@ -323,6 +326,39 @@ impl<'s> Statement<'s> {
             self.handle,
             parameter_number,
             ParamType::Input,
+            parameter.cdata_type(),
+            parameter_type.data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.value_ptr() as *mut c_void,
+            parameter.buffer_length(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut Len,
+        )
+        .into_result(self)
+    }
+
+    /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
+    /// input parameters using constant references see [`Statement::bind_input_parameter`].
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    pub unsafe fn bind_parameter(
+        &mut self,
+        parameter_number: u16,
+        input_output_type: ParamType,
+        parameter: &mut (impl CDataMut + Input),
+    ) -> Result<(), Error> {
+        let parameter_type = parameter.data_type();
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            input_output_type,
             parameter.cdata_type(),
             parameter_type.data_type(),
             parameter_type.column_size(),
