@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.11.0 (next)
+## 0.11.0
 
 * Removed `Cursor::set_row_bind_type`.
 * Removed `Cursor::set_row_array_size`.
@@ -11,6 +11,7 @@
 * Add `Environment::data_sources`.
 * Add `Environment::user_data_sources`.
 * Add `Environment::system_data_sources`.
+* `TextRowSet` now returns `CStr` instead of `&[u8]`.
 
 ## 0.10.3
 

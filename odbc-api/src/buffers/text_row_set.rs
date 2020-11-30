@@ -1,9 +1,83 @@
 use super::TextColumn;
 use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
-use std::str::Utf8Error;
+use std::{ffi::CStr, str::Utf8Error};
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
+///
+/// # Example
+///
+/// ```no_run
+/// //! A program executing a query and printing the result as csv to standard out. Requires
+/// //! `anyhow` and `csv` crate.
+///
+/// use anyhow::Error;
+/// use odbc_api::{buffers::TextRowSet, Cursor, Environment};
+/// use std::{
+///     ffi::CStr,
+///     io::{stdout, Write},
+///     path::PathBuf,
+/// };
+///
+/// /// Maximum number of rows fetched with one row set. Fetching batches of rows is usually much
+/// /// faster than fetching individual rows.
+/// const BATCH_SIZE: u32 = 100000;
+///
+/// fn main() -> Result<(), Error> {
+///     // Write csv to standard out
+///     let out = stdout();
+///     let mut writer = csv::Writer::from_writer(out);
+///
+///     // We know this is going to be the only ODBC environment in the entire process, so this is
+///     // safe.
+///     let environment = unsafe { Environment::new() }?;
+///
+///     // Connect using a DSN. Alternatively we could have used a connection string
+///     let mut connection = environment.connect(
+///         "DataSourceName",
+///         "Username",
+///         "Password",
+///     )?;
+///
+///     // Execute a one of query without any parameters.
+///     match connection.execute("SELECT * FROM TableName", ())? {
+///         Some(cursor) => {
+///             // Write the column names to stdout
+///             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
+///             writer.write_record(headline)?;
+///
+///             // Use schema in cursor to initialize a text buffer large enough to hold the largest
+///             // possible strings for each column.
+///             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor)?;
+///             // Bind the buffer to the cursor. It is now being filled with every call to fetch.
+///             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
+///
+///             // Iterate over batches
+///             while let Some(batch) = row_set_cursor.fetch()? {
+///                 // Within a batch, iterate over every row
+///                 for row_index in 0..batch.num_rows() {
+///                     // Within a row iterate over every column
+///                     let record = (0..batch.num_cols()).map(|col_index| {
+///                         batch
+///                             .at(col_index, row_index)
+///                             .map(CStr::to_bytes)
+///                             .unwrap_or(&[])
+///                     });
+///                     // Writes row as csv
+///                     writer.write_record(record)?;
+///                 }
+///             }
+///         }
+///         None => {
+///             eprintln!(
+///                 "Query came back empty. No output has been created."
+///             );
+///         }
+///     }
+///
+///     Ok(())
+/// }
+/// ```
 pub struct TextRowSet {
     // Current implementation is straight forward. We could consider allocating one block of memory
     // in allocation instead.
@@ -47,7 +121,7 @@ impl TextRowSet {
     }
 
     /// Access the element at the specified position in the row set.
-    pub fn at(&self, col_index: usize, row_index: usize) -> Option<&[u8]> {
+    pub fn at(&self, col_index: usize, row_index: usize) -> Option<&CStr> {
         assert!(row_index < *self.num_rows as usize);
         unsafe { self.buffers[col_index].value_at(row_index) }
     }
@@ -55,7 +129,7 @@ impl TextRowSet {
     /// Access the element at the specified position in the row set.
     pub fn at_as_str(&self, col_index: usize, row_index: usize) -> Result<Option<&str>, Utf8Error> {
         self.at(col_index, row_index)
-            .map(std::str::from_utf8)
+            .map(CStr::to_str)
             .transpose()
     }
 

@@ -10,7 +10,7 @@ use std::{ffi::c_void, ptr::null};
 /// If rust would guarantee the representation of `bool` to be an `u8`, `bool` would be the obvious
 /// choice instead. Alas it is not and someday on some platform `bool` might be something else than
 /// a `u8` so let's use this new type instead.
-#[derive(Clone, Copy, Default, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Bit(pub u8);
 
 impl Bit {

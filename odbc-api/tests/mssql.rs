@@ -2,11 +2,8 @@ mod common;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{
-    buffers::TextRowSet, sys::SqlDataType, ColumnDescription, Cursor, DataType, IntoParameter,
-    Nullable, U16String,
-};
-use std::thread;
+use odbc_api::{buffers::AnyColumnView, ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String, buffers::BufferKind, buffers::{BufferDescription, ColumnarRowSet, TextRowSet}, sys::SqlDataType};
+use std::{ffi::CStr, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -127,7 +124,7 @@ fn bind_char() {
     assert_eq!(
         Some("abcde"),
         buf.value_at(0)
-            .map(|bytes| std::str::from_utf8(bytes).unwrap())
+            .map(|cstr| cstr.to_str().unwrap())
     );
 }
 
@@ -144,7 +141,7 @@ fn bind_varchar() {
     assert_eq!(
         Some("Hello, World!"),
         buf.value_at(0)
-            .map(|bytes| std::str::from_utf8(bytes).unwrap())
+            .map(|cstr| cstr.to_str().unwrap())
     );
 }
 
@@ -326,6 +323,50 @@ fn parameter_option_str() {
     let actual = cursor_to_string(cursor);
     let expected = "NULL\nBernd";
     assert_eq!(expected, actual);
+}
+
+#[test]
+fn use_columnar_buffer() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // Setup table
+    conn.execute("DROP TABLE IF EXISTS UseColumnarRowSet;", ())
+        .unwrap();
+    conn.execute(
+        "CREATE TABLE UseColumnarRowSet (id INTEGER IDENTITY(1,1), a INTEGER, b VARCHAR(20));",
+        (),
+    )
+    .unwrap();
+    conn.execute("INSERT INTO UseColumnarRowSet (a, b) VALUES (42, 'Hello, World!')", ())
+        .unwrap();
+
+    // Get cursor querying table
+    let cursor = conn
+        .execute("SELECT a,b FROM UseColumnarRowSet ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let buffer_description = [BufferDescription {
+        kind: BufferKind::I32,
+        nullable: true,
+    }, BufferDescription {
+        nullable: true,
+        kind: BufferKind::Text { max_str_len:  20 },
+    }];
+    let buffer = ColumnarRowSet::new(20, buffer_description.iter().copied());
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    // Assert existence of first batch
+    let batch = cursor.fetch().unwrap().unwrap();
+    match dbg!(batch.column(0)) {
+        AnyColumnView::NullableI32(mut col) => assert_eq!(Some(&42), col.next().unwrap()),
+        _ => panic!("Unexpected buffer type")
+    }
+    match dbg!(batch.column(1)) {
+        AnyColumnView::Text(mut col) => assert_eq!(Some(CStr::from_bytes_with_nul(b"Hello, World!\0").unwrap()), col.next().unwrap()),
+        _ => panic!("Unexpected buffer type")
+    }
+    
+    // Assert that there is no second batch.
+    assert!(cursor.fetch().unwrap().is_none());
 }
 
 // #[test]
