@@ -47,7 +47,7 @@ impl<'c> Connection<'c> {
     pub fn exec_direct_utf16(
         &self,
         query: &U16Str,
-        params: &(impl ParameterCollection + ?Sized),
+        params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
@@ -101,7 +101,7 @@ impl<'c> Connection<'c> {
     /// };
     ///
     /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
-    /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", &())? {
+    /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
     ///     // Use cursor to process query results.  
     /// }
     /// # Ok::<(), odbc_api::Error>(())
@@ -109,7 +109,7 @@ impl<'c> Connection<'c> {
     pub fn execute(
         &self,
         query: &str,
-        params: &(impl ParameterCollection + ?Sized),
+        params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
         self.exec_direct_utf16(&query, params)
@@ -162,7 +162,7 @@ impl<'c> Connection<'c> {
     /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
     /// let conn = unsafe { conn.promote_to_send() };
     /// let handle = thread::spawn(move || {
-    ///     if let Some(cursor) = conn.execute("SELECT title FROM Movies ORDER BY year", &())? {
+    ///     if let Some(cursor) = conn.execute("SELECT title FROM Movies ORDER BY year",())? {
     ///         // Use cursor to process results
     ///     }
     ///     Ok::<(), odbc_api::Error>(())

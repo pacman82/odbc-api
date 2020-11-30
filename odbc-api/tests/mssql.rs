@@ -20,7 +20,7 @@ fn connect_to_movies_db() {
 fn describe_columns() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies ORDER BY year;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     assert_eq!(cursor.num_result_cols().unwrap(), 2);
     let mut cd = ColumnDescription::default();
@@ -55,7 +55,7 @@ fn describe_columns() {
 fn text_buffer() {
     let query = "SELECT title, year FROM Movies ORDER BY year;";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let cursor = conn.execute(query, &()).unwrap().unwrap();
+    let cursor = conn.execute(query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
@@ -65,7 +65,7 @@ fn text_buffer() {
 fn column_attributes() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     let mut buf = Vec::new();
 
@@ -83,7 +83,7 @@ fn column_attributes() {
 fn prices() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     // Test names
     let mut buf = Vec::new();
@@ -119,7 +119,7 @@ fn prices() {
 fn bind_char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char FROM AllTheTypes;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 5);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
@@ -135,7 +135,7 @@ fn bind_char() {
 fn bind_varchar() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_varchar FROM AllTheTypes;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
@@ -152,7 +152,7 @@ fn bind_varchar() {
 fn bind_numeric_to_float() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_numeric FROM AllTheTypes;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let buf = SingleColumnRowSetBuffer::new(1);
     let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
 
@@ -163,7 +163,7 @@ fn bind_numeric_to_float() {
 fn all_types() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     let mut cd = ColumnDescription::default();
     // Assert types
@@ -189,7 +189,7 @@ fn all_types() {
 fn bind_integer_parameter() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &1968).unwrap().unwrap();
+    let cursor = conn.execute(sql, 1968).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -208,7 +208,7 @@ fn prepared_statement() {
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared.execute(&1968).unwrap().unwrap();
+        let cursor = prepared.execute(1968).unwrap().unwrap();
         let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -217,7 +217,7 @@ fn prepared_statement() {
     }
 
     {
-        let cursor = prepared.execute(&1993).unwrap().unwrap();
+        let cursor = prepared.execute(1993).unwrap().unwrap();
         let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -230,7 +230,7 @@ fn prepared_statement() {
 fn integer_parameter_as_string() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &"1968".into_parameter()).unwrap().unwrap();
+    let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -244,7 +244,7 @@ fn integer_parameter_as_string() {
 fn two_paramters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
-    let cursor = conn.execute(sql, &(1960, 1970)).unwrap().unwrap();
+    let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -258,7 +258,7 @@ fn two_paramters_in_tuple() {
 fn column_names_iterator() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title, year FROM Movies;";
-    let cursor = conn.execute(sql, &()).unwrap().unwrap();
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
         .column_names()
         .unwrap()
@@ -288,7 +288,7 @@ fn bulk_insert() {
     let expected = "England\nFrance\nGermany";
 
     let cursor = conn
-        .execute("SELECT country FROM BulkInsert ORDER BY id;", &())
+        .execute("SELECT country FROM BulkInsert ORDER BY id;", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -302,7 +302,7 @@ fn send_connecion() {
     let conn = unsafe { conn.promote_to_send() };
 
     let handle = thread::spawn(move || {
-        conn.execute("SELECT title FROM Movies ORDER BY year", &())
+        conn.execute("SELECT title FROM Movies ORDER BY year", ())
             .unwrap()
             .unwrap();
     });
@@ -316,11 +316,11 @@ fn parameter_option_str() {
     setup_empty_table(&conn, "ParameterOptionStr", "name", "VARCHAR(50)").unwrap();
     let sql = "INSERT INTO ParameterOptionStr (name) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
-    prepared.execute(&None::<&str>.into_parameter()).unwrap();
-    prepared.execute(&Some("Bernd").into_parameter()).unwrap();
+    prepared.execute(None::<&str>.into_parameter()).unwrap();
+    prepared.execute(Some("Bernd").into_parameter()).unwrap();
 
     let cursor = conn
-        .execute("SELECT name FROM ParameterOptionStr ORDER BY id", &())
+        .execute("SELECT name FROM ParameterOptionStr ORDER BY id", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);

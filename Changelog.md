@@ -11,8 +11,6 @@
 * Add `Environment::data_sources`.
 * Add `Environment::user_data_sources`.
 * Add `Environment::system_data_sources`.
-* `Connection::execute` and `Prepared::execute` now take a `ParameterCollection` by reference
-  instead of a value.
 
 ## 0.10.3
 

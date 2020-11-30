@@ -52,7 +52,7 @@
 //!     )?;
 //!
 //!     // Execute a one of query without any parameters.
-//!     match connection.execute("SELECT * FROM TableName", &())? {
+//!     match connection.execute("SELECT * FROM TableName", ())? {
 //!         Some(cursor) => {
 //!             // Write the column names to stdout
 //!             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
@@ -210,7 +210,7 @@
 //! };
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", &())? {
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())

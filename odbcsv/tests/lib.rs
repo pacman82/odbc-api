@@ -22,14 +22,14 @@ lazy_static! {
 fn roundtrip(csv: &'static str, table_name: &str) -> Assert {
     // Setup table for test. We use the table name only in this test.
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), &())
+    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
         .unwrap();
     conn.execute(
         &format!(
             "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
             table_name
         ),
-        &(),
+        (),
     )
     .unwrap();
 

@@ -20,7 +20,7 @@ mod tuple;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let year = 1980;
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
+/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
 ///     // Use cursor to process query results.
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -38,7 +38,7 @@ mod tuple;
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let too_old = 1980;
 /// let too_young = 2000;
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE ? < year < ?;", &(too_old, too_young))? {
+/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE ? < year < ?;", (too_old, too_young))? {
 ///     // Use cursor to congratulate only persons in the right age group...
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -89,7 +89,7 @@ where
     }
 }
 
-unsafe impl<T> ParameterCollection for [T]
+unsafe impl<T> ParameterCollection for &[T]
 where
     T: Parameter,
 {
