@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers, buffers::TextColumn, handles::CDataMut, Connection, Cursor, Environment, RowSetBuffer,
@@ -71,7 +73,7 @@ impl SingleColumnRowSetBuffer<TextColumn> {
         }
     }
 
-    pub fn value_at(&self, index: usize) -> Option<&[u8]> {
+    pub fn value_at(&self, index: usize) -> Option<&CStr> {
         if index >= *self.num_rows_fetched {
             panic!("Out of bounds access. In SingleColumnRowSetBuffer")
         }

@@ -5,7 +5,7 @@ use crate::{
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, convert::TryInto, ffi::c_void};
+use std::{cmp::min, convert::TryInto, ffi::c_void, ffi::CStr};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -13,6 +13,7 @@ use std::{cmp::min, convert::TryInto, ffi::c_void};
 /// manager should take care of the conversion. Since elements of this type have variable length an
 /// indicator buffer needs to be bound, whether the column is nullable or not, and therefore does
 /// not matter for this buffer.
+#[derive(Debug)]
 pub struct TextColumn {
     /// Maximum text length without terminating zero.
     max_str_len: usize,
@@ -25,8 +26,8 @@ pub struct TextColumn {
 
 impl TextColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
-    /// have a maximum length of `max_str_len`. This implies that max_str_len is increased by one in
-    /// order to make space for the null terminating zero at the end of strings.
+    /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
+    /// one in order to make space for the null terminating zero at the end of strings.
     pub fn new(batch_size: usize, max_str_len: usize) -> Self {
         TextColumn {
             max_str_len,
@@ -43,14 +44,17 @@ impl TextColumn {
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&CStr> {
         let str_len = self.indicators[row_index];
         if str_len == NULL_DATA {
             None
         } else {
             let offset = row_index * (self.max_str_len + 1);
             let length = min(self.max_str_len, str_len as usize);
-            Some(&self.values[offset..offset + length])
+            Some(
+                CStr::from_bytes_with_nul(&self.values[offset..offset + length + 1])
+                    .expect("ODBC driver indicated must indicate string length correctly."),
+            )
         }
     }
 
@@ -117,6 +121,45 @@ impl TextColumn {
             self.indicators[index] = text.len().try_into().unwrap();
         } else {
             self.indicators[index] = NULL_DATA;
+        }
+    }
+
+    /// Iterator over the first `num_rows` values of a text column.
+    ///
+    /// # Safety
+    ///
+    /// Num rows may not exceed the actualy amount of valid num_rows filled be the ODBC API. The
+    /// column buffer does not know how many elements were in the last row group, and therefore can
+    /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
+    /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
+    /// to the maximum number of elements in the buffer.
+    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt {
+        TextColumnIt {
+            pos: 0,
+            num_rows,
+            col: &self,
+        }
+    }
+}
+
+/// Iterator over a text column. See [`TextColumn::iter`]
+#[derive(Debug)]
+pub struct TextColumnIt<'c> {
+    pos: usize,
+    num_rows: usize,
+    col: &'c TextColumn,
+}
+
+impl<'c> Iterator for TextColumnIt<'c> {
+    type Item = Option<&'c CStr>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos == self.num_rows {
+            None
+        } else {
+            let ret = unsafe { Some(self.col.value_at(self.pos)) };
+            self.pos += 1;
+            ret
         }
     }
 }
