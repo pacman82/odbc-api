@@ -1,9 +1,11 @@
 # Changelog
 
-## 0.3.4 (next)
+## 0.3.5
+
+* Add command `list-data-sources`
+## 0.3.4
 
 * Updated dependencies
-* Add command `list-data-sources`
 
 ## 0.3.3
 
