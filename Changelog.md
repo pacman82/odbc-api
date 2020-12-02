@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.1
+
+* Fix: `BufferKind::from_data_type` now always uses the integer type which fits best, for Decimal and Numeric types with scale `0`.
+
 ## 0.11.0
 
 * Removed `Cursor::set_row_bind_type`.

@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.3.6 (next)
+
 ## 0.3.5
 
 * Add command `list-data-sources`

@@ -43,9 +43,9 @@ impl BufferKind {
             DataType::Unknown
             | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => return None,
             DataType::Numeric { precision, scale }
-            | DataType::Decimal { precision, scale } if scale == 0 && precision < 2 => BufferKind::I8,
+            | DataType::Decimal { precision, scale } if scale == 0 && precision < 3 => BufferKind::I8,
             DataType::Numeric { precision, scale }
-            | DataType::Decimal { precision, scale } if scale == 0 && precision < 9 => BufferKind::I32,
+            | DataType::Decimal { precision, scale } if scale == 0 && precision < 10 => BufferKind::I32,
             DataType::Numeric { precision, scale }
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 19 => BufferKind::I64,
             DataType::Varchar { length }
