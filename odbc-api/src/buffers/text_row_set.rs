@@ -128,9 +128,7 @@ impl TextRowSet {
 
     /// Access the element at the specified position in the row set.
     pub fn at_as_str(&self, col_index: usize, row_index: usize) -> Result<Option<&str>, Utf8Error> {
-        self.at(col_index, row_index)
-            .map(CStr::to_str)
-            .transpose()
+        self.at(col_index, row_index).map(CStr::to_str).transpose()
     }
 
     /// Return the number of columns in the row set.

@@ -155,10 +155,7 @@ fn list_drivers() {
 
         Command::cargo_bin("odbcsv")
             .unwrap()
-            .args(&[
-                "-vvvv",
-                "list-drivers",
-            ])
+            .args(&["-vvvv", "list-drivers"])
             .assert()
             .success()
             .stdout(buf);

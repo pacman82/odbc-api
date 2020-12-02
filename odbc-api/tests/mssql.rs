@@ -2,7 +2,11 @@ mod common;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{buffers::AnyColumnView, ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String, buffers::BufferKind, buffers::{BufferDescription, ColumnarRowSet, TextRowSet}, sys::SqlDataType};
+use odbc_api::{
+    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet},
+    sys::SqlDataType,
+    ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
+};
 use std::{ffi::CStr, thread};
 
 const MSSQL: &str =
@@ -123,8 +127,7 @@ fn bind_char() {
 
     assert_eq!(
         Some("abcde"),
-        buf.value_at(0)
-            .map(|cstr| cstr.to_str().unwrap())
+        buf.value_at(0).map(|cstr| cstr.to_str().unwrap())
     );
 }
 
@@ -140,8 +143,7 @@ fn bind_varchar() {
 
     assert_eq!(
         Some("Hello, World!"),
-        buf.value_at(0)
-            .map(|cstr| cstr.to_str().unwrap())
+        buf.value_at(0).map(|cstr| cstr.to_str().unwrap())
     );
 }
 
@@ -336,8 +338,11 @@ fn use_columnar_buffer() {
         (),
     )
     .unwrap();
-    conn.execute("INSERT INTO UseColumnarRowSet (a, b) VALUES (42, 'Hello, World!')", ())
-        .unwrap();
+    conn.execute(
+        "INSERT INTO UseColumnarRowSet (a, b) VALUES (42, 'Hello, World!')",
+        (),
+    )
+    .unwrap();
 
     // Get cursor querying table
     let cursor = conn
@@ -345,26 +350,32 @@ fn use_columnar_buffer() {
         .unwrap()
         .unwrap();
 
-    let buffer_description = [BufferDescription {
-        kind: BufferKind::I32,
-        nullable: true,
-    }, BufferDescription {
-        nullable: true,
-        kind: BufferKind::Text { max_str_len:  20 },
-    }];
+    let buffer_description = [
+        BufferDescription {
+            kind: BufferKind::I32,
+            nullable: true,
+        },
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::Text { max_str_len: 20 },
+        },
+    ];
     let buffer = ColumnarRowSet::new(20, buffer_description.iter().copied());
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     // Assert existence of first batch
     let batch = cursor.fetch().unwrap().unwrap();
     match dbg!(batch.column(0)) {
         AnyColumnView::NullableI32(mut col) => assert_eq!(Some(&42), col.next().unwrap()),
-        _ => panic!("Unexpected buffer type")
+        _ => panic!("Unexpected buffer type"),
     }
     match dbg!(batch.column(1)) {
-        AnyColumnView::Text(mut col) => assert_eq!(Some(CStr::from_bytes_with_nul(b"Hello, World!\0").unwrap()), col.next().unwrap()),
-        _ => panic!("Unexpected buffer type")
+        AnyColumnView::Text(mut col) => assert_eq!(
+            Some(CStr::from_bytes_with_nul(b"Hello, World!\0").unwrap()),
+            col.next().unwrap()
+        ),
+        _ => panic!("Unexpected buffer type"),
     }
-    
+
     // Assert that there is no second batch.
     assert!(cursor.fetch().unwrap().is_none());
 }

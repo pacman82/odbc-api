@@ -50,16 +50,16 @@ where
     /// `Cursor::set_num_result_rows_fetched`.
     pub unsafe fn iter(&self, num_rows: usize) -> OptIt<'_, T> {
         OptIt {
-            indicators: &self.indicators [0..num_rows],
+            indicators: &self.indicators[0..num_rows],
             values: &self.values[0..num_rows],
         }
-    } 
+    }
 }
 
 #[derive(Debug)]
 pub struct OptIt<'a, T> {
     indicators: &'a [isize],
-    values: &'a [T]
+    values: &'a [T],
 }
 
 impl<'a, T> Iterator for OptIt<'a, T> {

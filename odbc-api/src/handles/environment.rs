@@ -3,7 +3,10 @@ use super::{
     Error,
 };
 use log::debug;
-use odbc_sys::{AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn};
+use odbc_sys::{
+    AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
+    SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn,
+};
 use std::{convert::TryInto, ptr::null_mut};
 
 /// An `Environment` is a global context, in which to access data.
