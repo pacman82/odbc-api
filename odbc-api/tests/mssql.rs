@@ -7,7 +7,7 @@ use odbc_api::{
     sys::SqlDataType,
     ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
 };
-use std::{ffi::CStr, thread};
+use std::{ffi::CStr, iter, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -378,6 +378,53 @@ fn use_columnar_buffer() {
 
     // Assert that there is no second batch.
     assert!(cursor.fetch().unwrap().is_none());
+}
+
+/// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic
+/// messages.
+#[test]
+#[ignore = "Runs for a very long time"]
+fn many_diagnostic_messages() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // In order to generate a lot of diagnostic messages with one function call, we try a bulk
+    // insert for which each row generates a warning.
+    // Setup table
+    conn.execute("DROP TABLE IF EXISTS ManyDiagnosticMessages2;", ())
+        .unwrap();
+    conn.execute(
+        "CREATE TABLE ManyDiagnosticMessages2 (id INTEGER IDENTITY(1,1), a VARCHAR(2));",
+        (),
+    )
+    .unwrap();
+
+    // Incidentialy our batch size is too large to be hold in an `i16`.
+    let batch_size = 2 << 15;
+
+    // Fill each row in the buffer with two letters.
+    let mut buffer = TextRowSet::new(batch_size, iter::once(2));
+
+    for _ in 0..batch_size {
+        buffer.append([Some(&b"ab"[..])].iter().cloned());
+    }
+
+    conn.execute(
+        "INSERT INTO ManyDiagnosticMessages2 (a) VALUES (?)",
+        &buffer,
+    )
+    .unwrap();
+
+    buffer = TextRowSet::new(batch_size, iter::once(1));
+    let cursor = conn
+        .execute("SELECT a FROM ManyDiagnosticMessages2", ())
+        .unwrap()
+        .unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+
+    // This should cause the string to be truncated, since they are 2 letters wide, but there is
+    // space for one. This should cause at least one warning per row.
+    let _ = row_set_cursor.fetch();
+
+    // We do not have an explicit assertion, we are just happy if no integer addition overflows.
 }
 
 // #[test]

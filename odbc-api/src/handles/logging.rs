@@ -6,9 +6,16 @@ use log::warn;
 pub fn log_diagnostics(handle: &dyn AsHandle) {
     let mut rec_number = 1;
     let mut rec = Record::default();
+
     // Log results, while there are diagnostic records
     while rec.fill_from(handle, rec_number) {
         warn!("{}", rec);
+        // Prevent overflow. This is not that unlikely to happen, since some `execute` or `fetch`
+        // calls can cause diagnostic messages for each row
+        if rec_number == i16::MAX {
+            warn!("Too many diagnostic records were generated. Not all could be logged.");
+            break;
+        }
         rec_number += 1;
     }
 }

@@ -2,6 +2,7 @@
 
 ## 0.11.1
 
+* Fix: There has been an integer overflow causing a panic if an ODBC API call generated more than 2 ^ 15 warnings at once.
 * Fix: `BufferKind::from_data_type` now always uses the integer type which fits best, for Decimal and Numeric types with scale `0`.
 
 ## 0.11.0

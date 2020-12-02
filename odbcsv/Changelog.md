@@ -1,10 +1,13 @@
 # Changelog
 
-## 0.3.6 (next)
+## 0.3.6
+
+* Fix: There has been an integer overflow causing a panic if an ODBC API call generated more than 2 ^ 15 warnings at once.
 
 ## 0.3.5
 
 * Add command `list-data-sources`
+
 ## 0.3.4
 
 * Updated dependencies
