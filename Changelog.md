@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.2 (next)
+
+* `DataSourceInfo` is now public
+
 ## 0.11.1
 
 * Fix: There has been an integer overflow causing a panic if an ODBC API call generated more than 2 ^ 15 warnings at once.

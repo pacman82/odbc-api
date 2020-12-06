@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.3.7 (next)
+
 ## 0.3.6
 
 * Fix: There has been an integer overflow causing a panic if an ODBC API call generated more than 2 ^ 15 warnings at once.
