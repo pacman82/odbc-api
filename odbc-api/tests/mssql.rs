@@ -240,6 +240,38 @@ fn integer_parameter_as_string() {
 }
 
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
+fn char() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // VARCHAR(2) <- VARCHAR(1) would be enough to held the character, but we de not allocate
+    // enough memory on the client side to hold the entire string.
+    setup_empty_table(&conn, "Char", "a", "VARCHAR(2)").unwrap();
+
+    conn.execute("INSERT INTO CHAR (a) VALUES ('A'), ('Ü');", ()).unwrap();
+
+    let sql = "SELECT a FROM Char ORDER BY id;";
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let output = cursor_to_string(cursor);
+    assert_eq!("A\nÜ", output);
+}
+
+#[test]
+#[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
+fn wchar_as_char() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    // NVARCHAR(2) <- NVARCHAR(1) would be enough to held the character, but we de not allocate
+    // enough memory on the client side to hold the entire string.
+    setup_empty_table(&conn, "WCharAsChar", "a", "NVARCHAR(2)").unwrap();
+
+    conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ()).unwrap();
+
+    let sql = "SELECT a FROM WCharAsChar ORDER BY id;";
+    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let output = cursor_to_string(cursor);
+    assert_eq!("A\nÜ", output);
+}
+
+#[test]
 fn two_paramters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
@@ -389,13 +421,7 @@ fn many_diagnostic_messages() {
     // In order to generate a lot of diagnostic messages with one function call, we try a bulk
     // insert for which each row generates a warning.
     // Setup table
-    conn.execute("DROP TABLE IF EXISTS ManyDiagnosticMessages;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE ManyDiagnosticMessages (id INTEGER IDENTITY(1,1), a VARCHAR(2));",
-        (),
-    )
-    .unwrap();
+    setup_empty_table(&conn, "ManyDiagnosticMessages", "a", "VARCHAR(2)").unwrap();
 
     // Incidentialy our batch size is too large to be hold in an `i16`.
     let batch_size = 2 << 15;
