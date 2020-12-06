@@ -49,6 +49,7 @@ impl BufferKind {
             DataType::Numeric { precision, scale }
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 19 => BufferKind::I64,
             DataType::Varchar { length }
+            | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
             | DataType::Char { length } => BufferKind::Text { max_str_len : length },
             // Specialized buffers for Numeric and decimal are not yet supported.

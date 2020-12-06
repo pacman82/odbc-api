@@ -46,6 +46,12 @@ pub enum DataType {
         /// Maximum length of the character string (excluding terminating zero).
         length: usize,
     },
+    /// `NVARCHAR(n)`. Variable length character string. Indicates the use of wide character strings
+    /// and use of UCS2 encoding on the side of the database.
+    WVarchar {
+        /// Maximum length of the character string (excluding terminating zero).
+        length: usize,
+    },
     /// `Date`. Year, month, and day fields, conforming to the rules of the Gregorian calendar.
     Date,
     /// `Time`. Hour, minute, and second fields, with valid values for hours of 00 to 23, valid
@@ -111,6 +117,9 @@ impl DataType {
             SqlDataType::EXT_BIG_INT => DataType::Bigint,
             SqlDataType::EXT_TINY_INT => DataType::Tinyint,
             SqlDataType::EXT_BIT => DataType::Bit,
+            SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
+                length: column_size,
+            },
             other => DataType::Other {
                 data_type: other,
                 column_size,
@@ -138,6 +147,7 @@ impl DataType {
             DataType::Bigint => SqlDataType::EXT_BIG_INT,
             DataType::Tinyint => SqlDataType::EXT_TINY_INT,
             DataType::Bit => SqlDataType::EXT_BIT,
+            DataType::WVarchar { .. } => SqlDataType::EXT_W_VARCHAR,
             DataType::Other { data_type, .. } => *data_type,
         }
     }
@@ -157,7 +167,7 @@ impl DataType {
             | DataType::Bigint
             | DataType::Tinyint
             | DataType::Bit => 0,
-            DataType::Char { length } | DataType::Varchar { length } => *length,
+            DataType::Char { length } | DataType::Varchar { length } | DataType::WVarchar { length }=> *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
         }
@@ -174,6 +184,7 @@ impl DataType {
             | DataType::Real
             | DataType::Double
             | DataType::Varchar { .. }
+            | DataType::WVarchar { .. }
             | DataType::Date
             | DataType::Bigint
             | DataType::Tinyint
