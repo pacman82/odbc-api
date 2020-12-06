@@ -389,10 +389,10 @@ fn many_diagnostic_messages() {
     // In order to generate a lot of diagnostic messages with one function call, we try a bulk
     // insert for which each row generates a warning.
     // Setup table
-    conn.execute("DROP TABLE IF EXISTS ManyDiagnosticMessages2;", ())
+    conn.execute("DROP TABLE IF EXISTS ManyDiagnosticMessages;", ())
         .unwrap();
     conn.execute(
-        "CREATE TABLE ManyDiagnosticMessages2 (id INTEGER IDENTITY(1,1), a VARCHAR(2));",
+        "CREATE TABLE ManyDiagnosticMessages (id INTEGER IDENTITY(1,1), a VARCHAR(2));",
         (),
     )
     .unwrap();
@@ -408,14 +408,14 @@ fn many_diagnostic_messages() {
     }
 
     conn.execute(
-        "INSERT INTO ManyDiagnosticMessages2 (a) VALUES (?)",
+        "INSERT INTO ManyDiagnosticMessages (a) VALUES (?)",
         &buffer,
     )
     .unwrap();
 
     buffer = TextRowSet::new(batch_size, iter::once(1));
     let cursor = conn
-        .execute("SELECT a FROM ManyDiagnosticMessages2", ())
+        .execute("SELECT a FROM ManyDiagnosticMessages", ())
         .unwrap()
         .unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
