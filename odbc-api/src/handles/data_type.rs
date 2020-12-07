@@ -168,7 +168,9 @@ impl DataType {
             | DataType::Bigint
             | DataType::Tinyint
             | DataType::Bit => 0,
-            DataType::Char { length } | DataType::Varchar { length } | DataType::WVarchar { length }=> *length,
+            DataType::Char { length }
+            | DataType::Varchar { length }
+            | DataType::WVarchar { length } => *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
         }
@@ -202,7 +204,11 @@ impl DataType {
     pub fn display_size(&self) -> Option<usize> {
         match self {
             DataType::Unknown
-            | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => None,
+            | DataType::Other {
+                data_type: _,
+                column_size: _,
+                decimal_digits: _,
+            } => None,
             // The defined (for fixed types) or maximum (for variable types) number of characters
             // needed to display the data in character form.
             DataType::Varchar { length }
@@ -210,15 +216,20 @@ impl DataType {
             | DataType::Char { length } => Some(*length),
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
-            DataType::Numeric { precision, scale: _ }
-            | DataType::Decimal { precision, scale: _ } => Some(precision + 2),
+            DataType::Numeric {
+                precision,
+                scale: _,
+            }
+            | DataType::Decimal {
+                precision,
+                scale: _,
+            } => Some(precision + 2),
             // 11 if signed (a sign and 10 digits) or 10 if unsigned (10 digits).
             DataType::Integer => Some(11),
             // 6 if signed (a sign and 5 digits) or 5 if unsigned (5 digits).
             DataType::SmallInt => Some(6),
             // 24 (a sign, 15 digits, a decimal point, the letter E, a sign, and 3 digits).
-            DataType::Float |
-            DataType::Double => Some(24),
+            DataType::Float | DataType::Double => Some(24),
             // 14 (a sign, 7 digits, a decimal point, the letter E, a sign, and 2 digits).
             DataType::Real => Some(14),
             // 10 (a date in the format yyyy-mm-dd).
@@ -227,12 +238,20 @@ impl DataType {
             // or
             // 9 + s (a time in the format hh:mm:ss[.fff...], where s is the fractional seconds
             // precision).
-            DataType::Time { precision } => Some(if *precision == 0 {8} else { 9 + *precision as usize}),
+            DataType::Time { precision } => Some(if *precision == 0 {
+                8
+            } else {
+                9 + *precision as usize
+            }),
             // 19 (for a timestamp in the yyyy-mm-dd hh:mm:ss format)
             // or
             // 20 + s (for a timestamp in the yyyy-mm-dd hh:mm:ss[.fff...] format, where s is the
             // fractional seconds precision).
-            DataType::Timestamp { precision } => Some(if *precision == 0 {19} else { 20 + *precision as usize}),
+            DataType::Timestamp { precision } => Some(if *precision == 0 {
+                19
+            } else {
+                20 + *precision as usize
+            }),
             // 20 (a sign and 19 digits if signed or 20 digits if unsigned).
             DataType::Bigint => Some(20),
             // 4 if signed (a sign and 3 digits) or 3 if unsigned (3 digits).
@@ -249,7 +268,7 @@ impl DataType {
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::Char { length } => Some(length * 4),
-            other => other.display_size()
+            other => other.display_size(),
         }
     }
 }

@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::{collections::HashSet, ffi::c_void};
 
 use crate::{
     fixed_sized::Bit,
@@ -276,14 +276,19 @@ pub struct ColumnarRowSet {
     num_rows: Box<usize>,
     /// aka: batch size, row array size
     max_rows: u32,
-    columns: Vec<AnyColumnBuffer>,
+    /// Column index and bound buffer
+    columns: Vec<(u16, AnyColumnBuffer)>,
 }
 
 impl ColumnarRowSet {
     /// Allocates for each buffer description a buffer large enough to hold `max_rows`.
     pub fn new(max_rows: u32, description: impl Iterator<Item = BufferDescription>) -> Self {
+        let mut column_index = 0;
         let columns = description
-            .map(|desc| AnyColumnBuffer::new(max_rows, desc))
+            .map(move |desc| {
+                column_index += 1;
+                (column_index, AnyColumnBuffer::new(max_rows, desc))
+            })
             .collect();
         ColumnarRowSet {
             num_rows: Box::new(0),
@@ -292,9 +297,48 @@ impl ColumnarRowSet {
         }
     }
 
+    /// Allows you to pass the buffer descriptions together with a one based column index refering
+    /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
+    /// result set, by not binding them at all. There is no restriction on the order of column
+    /// indices passed, but the function will panic, if the indices are not unique.
+    pub fn with_column_indices(
+        max_rows: u32,
+        description: impl Iterator<Item = (u16, BufferDescription)>,
+    ) -> Self {
+        let columns: Vec<_> = description
+            .map(|(col_index, buffer_desc)| {
+                (col_index, AnyColumnBuffer::new(max_rows, buffer_desc))
+            })
+            .collect();
+
+        // Assert uniqueness of indices
+        let mut indices = HashSet::new();
+        if columns
+            .iter()
+            .any(move |&(col_index, _)| !indices.insert(col_index))
+        {
+            panic!("Column indices must be unique.")
+        }
+
+        ColumnarRowSet {
+            num_rows: Box::new(0),
+            max_rows,
+            columns,
+        }
+    }
+
     /// Use this method to gain access to the actual column data.
-    pub fn column(&self, column_index: usize) -> AnyColumnView<'_> {
-        unsafe { self.columns[column_index].view(*self.num_rows) }
+    ///
+    /// # Prameters
+    ///
+    /// * `buffer_index`: Please note that the buffer index is not indentical to the ODBC column
+    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   the output result set. This is important, because not every column needs to be bound. Some
+    ///   columns may simply be ignored. That being said, if every column of the output should is
+    ///   bound in the buffer, in the same order in which they are enumerated in the result set, the
+    ///   relationship betwenn column index and buffer index is `buffer_index = column_index - 1'.
+    pub fn column(&self, buffer_index: usize) -> AnyColumnView<'_> {
+        unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
     }
 
     /// Number of valid rows in the buffer.
@@ -317,11 +361,25 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl crate::Cursor) -> Result<(), Error> {
-        let mut col_number = 1;
-        for column in &mut self.columns {
-            cursor.bind_col(col_number, column)?;
-            col_number += 1;
+        for (col_number, column) in &mut self.columns {
+            cursor.bind_col(*col_number, column)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::{BufferDescription, BufferKind, ColumnarRowSet};
+
+    #[test]
+    #[should_panic(expected = "Column indices must be unique.")]
+    fn assert_unique_column_indices() {
+        let bd = BufferDescription {
+            nullable: false,
+            kind: BufferKind::I32,
+        };
+        ColumnarRowSet::with_column_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 }

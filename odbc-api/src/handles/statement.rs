@@ -467,7 +467,7 @@ impl<'s> Statement<'s> {
                     column_size,
                     decimal_digits,
                 }
-            },
+            }
         };
         Ok(dt)
     }

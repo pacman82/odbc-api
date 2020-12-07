@@ -103,7 +103,13 @@ fn prices() {
 
     // Test types
 
-    assert_eq!(DataType::Decimal { precision: 10, scale: 2}, cursor.col_data_type(5).unwrap());
+    assert_eq!(
+        DataType::Decimal {
+            precision: 10,
+            scale: 2
+        },
+        cursor.col_data_type(5).unwrap()
+    );
 
     // Test binding id int buffer
     let batch_size = 10;
@@ -242,9 +248,10 @@ fn char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // VARCHAR(2) <- VARCHAR(1) would be enough to held the character, but we de not allocate
     // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "Char", "a", "VARCHAR(1)").unwrap();
+    setup_empty_table(&conn, "Char", &["VARCHAR(1)"]).unwrap();
 
-    conn.execute("INSERT INTO CHAR (a) VALUES ('A'), ('Ü');", ()).unwrap();
+    conn.execute("INSERT INTO CHAR (a) VALUES ('A'), ('Ü');", ())
+        .unwrap();
 
     let sql = "SELECT a FROM Char ORDER BY id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -258,9 +265,10 @@ fn wchar_as_char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // NVARCHAR(2) <- NVARCHAR(1) would be enough to held the character, but we de not allocate
     // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "WCharAsChar", "a", "NVARCHAR(1)").unwrap();
+    setup_empty_table(&conn, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
 
-    conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ()).unwrap();
+    conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ())
+        .unwrap();
 
     let sql = "SELECT a FROM WCharAsChar ORDER BY id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
@@ -299,11 +307,11 @@ fn column_names_iterator() {
 #[test]
 fn bulk_insert() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "BulkInsert", "Country", "VARCHAR(50)").unwrap();
+    setup_empty_table(&conn, "BulkInsert", &["VARCHAR(50)"]).unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
-        .prepare("INSERT INTO BulkInsert (Country) Values (?)")
+        .prepare("INSERT INTO BulkInsert (a) Values (?)")
         .unwrap();
     let mut params = TextRowSet::new(5, [50].iter().copied());
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
@@ -316,7 +324,7 @@ fn bulk_insert() {
     let expected = "England\nFrance\nGermany";
 
     let cursor = conn
-        .execute("SELECT country FROM BulkInsert ORDER BY id;", ())
+        .execute("SELECT a FROM BulkInsert ORDER BY id;", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -341,14 +349,14 @@ fn send_connecion() {
 #[test]
 fn parameter_option_str() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "ParameterOptionStr", "name", "VARCHAR(50)").unwrap();
-    let sql = "INSERT INTO ParameterOptionStr (name) VALUES (?);";
+    setup_empty_table(&conn, "ParameterOptionStr", &["VARCHAR(50)"]).unwrap();
+    let sql = "INSERT INTO ParameterOptionStr (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
     prepared.execute(None::<&str>.into_parameter()).unwrap();
     prepared.execute(Some("Bernd").into_parameter()).unwrap();
 
     let cursor = conn
-        .execute("SELECT name FROM ParameterOptionStr ORDER BY id", ())
+        .execute("SELECT a FROM ParameterOptionStr ORDER BY id", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -359,14 +367,7 @@ fn parameter_option_str() {
 #[test]
 fn use_columnar_buffer() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    // Setup table
-    conn.execute("DROP TABLE IF EXISTS UseColumnarRowSet;", ())
-        .unwrap();
-    conn.execute(
-        "CREATE TABLE UseColumnarRowSet (id INTEGER IDENTITY(1,1), a INTEGER, b VARCHAR(20));",
-        (),
-    )
-    .unwrap();
+    setup_empty_table(&conn, "UseColumnarRowSet", &["INTEGER", "VARCHAR(20)"]).unwrap();
     conn.execute(
         "INSERT INTO UseColumnarRowSet (a, b) VALUES (42, 'Hello, World!')",
         (),
@@ -409,6 +410,33 @@ fn use_columnar_buffer() {
     assert!(cursor.fetch().unwrap().is_none());
 }
 
+/// In use cases there the user supplies the query it may be necessary to ignore one column then
+/// binding the buffers. This test constructs a result set with 3 columns and ignores the second
+#[test]
+fn ignore_output_column() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        "IgnoreOutputColumn",
+        &["INTEGER", "INTEGER", "INTEGER"],
+    )
+    .unwrap();
+    let cursor = conn
+        .execute("SELECT a, b, c FROM IgnoreOutputColumn", ())
+        .unwrap()
+        .unwrap();
+
+    let bd = BufferDescription {
+        kind: BufferKind::I32,
+        nullable: true,
+    };
+    let buffer = ColumnarRowSet::with_column_indices(20, [(1, bd), (3, bd)].iter().copied());
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+
+    // Assert that there is no batch.
+    assert!(cursor.fetch().unwrap().is_none());
+}
+
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
@@ -418,7 +446,7 @@ fn many_diagnostic_messages() {
     // In order to generate a lot of diagnostic messages with one function call, we try a bulk
     // insert for which each row generates a warning.
     // Setup table
-    setup_empty_table(&conn, "ManyDiagnosticMessages", "a", "VARCHAR(2)").unwrap();
+    setup_empty_table(&conn, "ManyDiagnosticMessages", &["VARCHAR(2)"]).unwrap();
 
     // Incidentialy our batch size is too large to be hold in an `i16`.
     let batch_size = 2 << 15;
@@ -430,11 +458,8 @@ fn many_diagnostic_messages() {
         buffer.append([Some(&b"ab"[..])].iter().cloned());
     }
 
-    conn.execute(
-        "INSERT INTO ManyDiagnosticMessages (a) VALUES (?)",
-        &buffer,
-    )
-    .unwrap();
+    conn.execute("INSERT INTO ManyDiagnosticMessages (a) VALUES (?)", &buffer)
+        .unwrap();
 
     buffer = TextRowSet::new(batch_size, iter::once(1));
     let cursor = conn

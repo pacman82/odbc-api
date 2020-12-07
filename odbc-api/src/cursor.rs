@@ -1,4 +1,7 @@
-use crate::{ColumnDescription, DataType, Error, handles::{CDataMut, Description, Statement}};
+use crate::{
+    handles::{CDataMut, Description, Statement},
+    ColumnDescription, DataType, Error,
+};
 
 use std::{
     borrow::BorrowMut,

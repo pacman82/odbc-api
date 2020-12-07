@@ -10,17 +10,25 @@ lazy_static! {
     pub static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
-/// Creates the table and assuers it is empty
+/// Creates the table and assures it is empty. Columns are named a,b,c, etc.
 pub fn setup_empty_table(
     conn: &Connection,
     table_name: &str,
-    column_name: &str,
-    column_type: &str,
+    column_types: &[&str],
 ) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+
+    let column_names = &["a", "b", "c", "d", "e"];
+    let cols = column_types
+        .iter()
+        .zip(column_names)
+        .map(|(ty, name)| format!("{} {}", name, ty))
+        .collect::<Vec<_>>()
+        .join(", ");
+
     let create_table = format!(
-        "CREATE TABLE {} (id int IDENTITY(1,1), {} {});",
-        table_name, column_name, column_type
+        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
+        table_name, cols
     );
     conn.execute(&drop_table, ())?;
     conn.execute(&create_table, ())?;

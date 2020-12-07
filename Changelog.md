@@ -2,6 +2,7 @@
 
 ## 0.12.0 (next)
 
+* Add `ColumnarRowSet::with_column_indices`, to enable binding only some columns of a cursor object.
 * Struct `DataSourceInfo` is now public
 * Associated function of `Cursor` `col_type` and `col_concise_type` have been removed in favor of `col_data_type`.
 * Add `DataType::utf8_len`.
