@@ -91,12 +91,18 @@ pub struct TextRowSet {
 
 impl TextRowSet {
     /// Use `cursor` to query the display size for each column of the row set and allocates the
-    /// buffers accordingly.
+    /// buffers accordingly. For character data the length in characters is multiplied by 4 in order
+    /// to have enough space for 4 byte utf-8 characters.
     pub fn for_cursor(batch_size: u32, cursor: &impl Cursor) -> Result<TextRowSet, Error> {
         let num_cols = cursor.num_result_cols()?;
         let buffers = (1..(num_cols + 1))
             .map(|col_index| {
-                let max_str_len = cursor.col_display_size(col_index as u16)? as usize;
+                let max_str_len =
+                    if let Some(encoded_len) = cursor.col_data_type(col_index as u16)?.utf8_len() {
+                        encoded_len
+                    } else {
+                        cursor.col_display_size(col_index as u16)? as usize
+                    };
                 Ok(TextColumn::new(batch_size as usize, max_str_len))
             })
             .collect::<Result<_, Error>>()?;

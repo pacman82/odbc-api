@@ -4,7 +4,6 @@ use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV}
 
 use odbc_api::{
     buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet},
-    sys::SqlDataType,
     ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
 };
 use std::{ffi::CStr, iter, thread};
@@ -104,13 +103,11 @@ fn prices() {
 
     // Test types
 
-    assert_eq!(SqlDataType::DECIMAL, cursor.col_concise_type(5).unwrap());
-    assert_eq!(10, cursor.col_precision(5).unwrap());
-    assert_eq!(2, cursor.col_scale(5).unwrap());
+    assert_eq!(DataType::Decimal { precision: 10, scale: 2}, cursor.col_data_type(5).unwrap());
 
     // Test binding id int buffer
     let batch_size = 10;
-    assert_eq!(SqlDataType::INTEGER, cursor.col_concise_type(1).unwrap());
+    assert_eq!(DataType::Integer, cursor.col_data_type(1).unwrap());
     let id_buffer = SingleColumnRowSetBuffer::new(batch_size);
     let mut row_set_cursor = cursor.bind_buffer(id_buffer).unwrap();
     assert_eq!(&[1, 2, 3], row_set_cursor.fetch().unwrap().unwrap().get());
@@ -245,7 +242,7 @@ fn char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // VARCHAR(2) <- VARCHAR(1) would be enough to held the character, but we de not allocate
     // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "Char", "a", "VARCHAR(2)").unwrap();
+    setup_empty_table(&conn, "Char", "a", "VARCHAR(1)").unwrap();
 
     conn.execute("INSERT INTO CHAR (a) VALUES ('A'), ('Ü');", ()).unwrap();
 
@@ -261,7 +258,7 @@ fn wchar_as_char() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     // NVARCHAR(2) <- NVARCHAR(1) would be enough to held the character, but we de not allocate
     // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "WCharAsChar", "a", "NVARCHAR(2)").unwrap();
+    setup_empty_table(&conn, "WCharAsChar", "a", "NVARCHAR(1)").unwrap();
 
     conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ()).unwrap();
 

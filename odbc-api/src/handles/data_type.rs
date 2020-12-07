@@ -91,6 +91,9 @@ impl DataType {
             SqlDataType::CHAR => DataType::Char {
                 length: column_size,
             },
+            SqlDataType::VARCHAR => DataType::Varchar {
+                length: column_size,
+            },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: column_size,
                 scale: decimal_digits,
@@ -104,9 +107,6 @@ impl DataType {
             SqlDataType::FLOAT => DataType::Float,
             SqlDataType::REAL => DataType::Real,
             SqlDataType::DOUBLE => DataType::Double,
-            SqlDataType::VARCHAR => DataType::Varchar {
-                length: column_size,
-            },
             SqlDataType::DATE => DataType::Date,
             SqlDataType::TIME => DataType::Time {
                 precision: decimal_digits,
@@ -152,7 +152,8 @@ impl DataType {
         }
     }
 
-    /// Return the column size, as it is required to bind the data type as a parameter.
+    /// Return the column size, as it is required to bind the data type as a parameter. This implies
+    // it can be zero for fixed sized types. See also [crates::Cursor::describe_col].
     pub fn column_size(&self) -> usize {
         match self {
             DataType::Unknown
@@ -192,6 +193,63 @@ impl DataType {
             DataType::Numeric { scale, .. } | DataType::Decimal { scale, .. } => *scale,
             DataType::Time { precision } | DataType::Timestamp { precision } => *precision,
             DataType::Other { decimal_digits, .. } => *decimal_digits,
+        }
+    }
+
+    /// The maximum number of characters needed to display data in character form.
+    ///
+    /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size>
+    pub fn display_size(&self) -> Option<usize> {
+        match self {
+            DataType::Unknown
+            | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => None,
+            // The defined (for fixed types) or maximum (for variable types) number of characters
+            // needed to display the data in character form.
+            DataType::Varchar { length }
+            | DataType::WVarchar { length }
+            | DataType::Char { length } => Some(*length),
+            // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
+            // For example, the display size of a column defined as NUMERIC(10,3) is 12.
+            DataType::Numeric { precision, scale: _ }
+            | DataType::Decimal { precision, scale: _ } => Some(precision + 2),
+            // 11 if signed (a sign and 10 digits) or 10 if unsigned (10 digits).
+            DataType::Integer => Some(11),
+            // 6 if signed (a sign and 5 digits) or 5 if unsigned (5 digits).
+            DataType::SmallInt => Some(6),
+            // 24 (a sign, 15 digits, a decimal point, the letter E, a sign, and 3 digits).
+            DataType::Float |
+            DataType::Double => Some(24),
+            // 14 (a sign, 7 digits, a decimal point, the letter E, a sign, and 2 digits).
+            DataType::Real => Some(14),
+            // 10 (a date in the format yyyy-mm-dd).
+            DataType::Date => Some(10),
+            // 8 (a time in the format hh:mm:ss)
+            // or
+            // 9 + s (a time in the format hh:mm:ss[.fff...], where s is the fractional seconds
+            // precision).
+            DataType::Time { precision } => Some(if *precision == 0 {8} else { 9 + *precision as usize}),
+            // 19 (for a timestamp in the yyyy-mm-dd hh:mm:ss format)
+            // or
+            // 20 + s (for a timestamp in the yyyy-mm-dd hh:mm:ss[.fff...] format, where s is the
+            // fractional seconds precision).
+            DataType::Timestamp { precision } => Some(if *precision == 0 {19} else { 20 + *precision as usize}),
+            // 20 (a sign and 19 digits if signed or 20 digits if unsigned).
+            DataType::Bigint => Some(20),
+            // 4 if signed (a sign and 3 digits) or 3 if unsigned (3 digits).
+            DataType::Tinyint => Some(4),
+            // 1 digit.
+            DataType::Bit => Some(1),
+        }
+    }
+
+    /// The (maximum) length of the utf-8 representation in bytes.
+    pub fn utf8_len(&self) -> Option<usize> {
+        match self {
+            // One character may need up to four bytes to be represented in utf-8.
+            DataType::Varchar { length }
+            | DataType::WVarchar { length }
+            | DataType::Char { length } => Some(length * 4),
+            other => other.display_size()
         }
     }
 }

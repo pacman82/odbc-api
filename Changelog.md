@@ -1,8 +1,11 @@
 # Changelog
 
-## 0.11.2 (next)
+## 0.12.0 (next)
 
-* `DataSourceInfo` is now public
+* Struct `DataSourceInfo` is now public
+* Associated function of `Cursor` `col_type` and `col_concise_type` have been removed in favor of `col_data_type`.
+* Add `DataType::utf8_len`.
+* Fix: `TextRowSet::for_cursor` now allocates 4 times larger buffers for character data, in order to have enough space for larger utf-8 characters.
 
 ## 0.11.1
 

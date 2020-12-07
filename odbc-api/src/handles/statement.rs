@@ -402,6 +402,76 @@ impl<'s> Statement<'s> {
         Ok(SqlDataType(out.try_into().unwrap()))
     }
 
+    /// Data type of the specified column.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    pub fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
+        let kind = self.col_concise_type(column_number)?;
+        let dt = match kind {
+            SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
+            SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::CHAR => DataType::Char {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::VARCHAR => DataType::Varchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::NUMERIC => DataType::Numeric {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                scale: self.col_scale(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::DECIMAL => DataType::Decimal {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                scale: self.col_scale(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::INTEGER => DataType::Integer,
+            SqlDataType::SMALLINT => DataType::SmallInt,
+            SqlDataType::FLOAT => DataType::Float,
+            SqlDataType::REAL => DataType::Real,
+            SqlDataType::DOUBLE => DataType::Double,
+            SqlDataType::DATE => DataType::Date,
+            SqlDataType::TIME => DataType::Time {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::TIMESTAMP => DataType::Timestamp {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_BIG_INT => DataType::Bigint,
+            SqlDataType::EXT_TINY_INT => DataType::Tinyint,
+            SqlDataType::EXT_BIT => DataType::Bit,
+            other => {
+                let mut column_size = 0;
+                let mut decimal_digits = 0;
+                let mut name_length = 0;
+                let mut data_type = SqlDataType::UNKNOWN_TYPE;
+                let mut nullable = odbc_sys::Nullable::UNKNOWN;
+
+                unsafe {
+                    SQLDescribeColW(
+                        self.handle,
+                        column_number,
+                        null_mut(),
+                        0,
+                        &mut name_length,
+                        &mut data_type,
+                        &mut column_size,
+                        &mut decimal_digits,
+                        &mut nullable,
+                    )
+                    .into_result(self)?;
+                }
+                DataType::Other {
+                    data_type: other,
+                    column_size,
+                    decimal_digits,
+                }
+            },
+        };
+        Ok(dt)
+    }
+
     /// Returns the size in bytes of the columns. For variable sized types the maximum size is
     /// returned, excluding a terminating zero.
     ///

@@ -1,9 +1,4 @@
-use crate::{
-    handles::{CDataMut, Description, Statement},
-    ColumnDescription, Error,
-};
-
-use odbc_sys::SqlDataType;
+use crate::{ColumnDescription, DataType, Error, handles::{CDataMut, Description, Statement}};
 
 use std::{
     borrow::BorrowMut,
@@ -83,16 +78,10 @@ pub trait Cursor: Sized {
     where
         B: RowSetBuffer;
 
-    /// SqlDataType
+    /// Data type of the specified column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error>;
-
-    /// The concise data type. For the datetime and interval data types, this field returns the
-    /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error>;
+    fn col_data_type(&self, column_number: u16) -> Result<DataType, Error>;
 
     /// Returns the size in bytes of the columns. For variable sized types the maximum size is
     /// returned, excluding a terminating zero.
@@ -263,12 +252,8 @@ where
         Ok(RowSetCursor::new(row_set_buffer, self))
     }
 
-    fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        self.statement.borrow().col_type(column_number)
-    }
-
-    fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        self.statement.borrow().col_type(column_number)
+    fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
+        self.statement.borrow().col_data_type(column_number)
     }
 
     fn col_octet_length(&self, column_number: u16) -> Result<isize, Error> {
