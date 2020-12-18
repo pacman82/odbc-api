@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.3.7 (next)
+## 0.3.8 (next)
+
+## 0.3.7
 
 * Fix: Allocated buffer sizes, now account for multi byte characters.
 

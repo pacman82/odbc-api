@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.12.0 (next)
+## 0.13.0
+
+* `Nullable` has been renamed to `Nullability`.
+
+## 0.12.0
 
 * Add `ColumnarRowSet::with_column_indices`, to enable binding only some columns of a cursor object.
 * Struct `DataSourceInfo` is now public

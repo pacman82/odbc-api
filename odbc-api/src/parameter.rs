@@ -22,7 +22,7 @@
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let year = 1980;
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
@@ -50,7 +50,7 @@
 //!    value: 1980,
 //!    data_type: DataType::Varchar {length: 4}
 //! };
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
@@ -152,7 +152,7 @@
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year FROM Birthdays WHERE name=?;",
-//!     "Bernd".into_parameter())?
+//!     &"Bernd".into_parameter())?
 //! {
 //!     // Use cursor to process query results.
 //! };
@@ -196,7 +196,7 @@ pub unsafe trait Parameter: Input {}
 ///    value: 1980,
 ///    data_type: DataType::Varchar {length: 4}
 /// };
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 ///     // Use cursor to process query results.
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -258,7 +258,7 @@ unsafe impl<T> Parameter for WithDataType<T> where T: Parameter {}
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year FROM Birthdays WHERE name=?;",
-///     "Bernd".into_parameter())?
+///     &"Bernd".into_parameter())?
 /// {
 ///     // Use cursor to process query results.
 /// };

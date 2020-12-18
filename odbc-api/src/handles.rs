@@ -21,7 +21,7 @@ mod statement;
 pub use {
     as_handle::AsHandle,
     bind::{CData, CDataMut, Input},
-    column_description::{ColumnDescription, Nullable},
+    column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
     description::Description,

@@ -2,7 +2,7 @@ use super::{
     as_handle::AsHandle,
     bind::{CDataMut, Input},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
-    column_description::{ColumnDescription, Nullable},
+    column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
     error::{Error, IntoResult},
@@ -158,7 +158,7 @@ impl<'s> Statement<'s> {
             .into_result(self)?;
         }
 
-        column_description.nullable = Nullable::new(nullable);
+        column_description.nullability = Nullability::new(nullable);
 
         if name_length + 1 > clamp_small_int(name.len()) {
             // Buffer is to small to hold name, retry with larger buffer
@@ -607,7 +607,7 @@ impl<'s> Statement<'s> {
 
         Ok(ParameterDescription {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
-            nullable: Nullable::new(nullable),
+            nullable: Nullability::new(nullable),
         })
     }
 }
@@ -616,6 +616,6 @@ impl<'s> Statement<'s> {
 /// by [`crate::Prepared::describe_param`].
 #[derive(Debug)]
 pub struct ParameterDescription {
-    pub nullable: Nullable,
+    pub nullable: Nullability,
     pub data_type: DataType,
 }

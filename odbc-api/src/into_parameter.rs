@@ -1,4 +1,4 @@
-use crate::{parameter::VarChar, Parameter};
+use crate::{Nullable, Parameter, fixed_sized::FixedSizedCType, parameter::VarChar};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -40,6 +40,17 @@ impl<'a> IntoParameter for Option<&'a str> {
         match self {
             Some(str) => str.into_parameter(),
             None => VarChar::null(),
+        }
+    }
+}
+
+impl<T> IntoParameter for Option<T> where T: FixedSizedCType + Parameter {
+    type Parameter = Nullable<T>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(value) => Nullable::new(value),
+            None => Nullable::null(),
         }
     }
 }

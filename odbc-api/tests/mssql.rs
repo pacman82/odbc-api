@@ -2,10 +2,7 @@ mod common;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet},
-    ColumnDescription, Cursor, DataType, IntoParameter, Nullable, U16String,
-};
+use odbc_api::{ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String, buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet}};
 use std::{ffi::CStr, iter, thread};
 
 const MSSQL: &str =
@@ -33,7 +30,7 @@ fn describe_columns() {
     let title_desc = ColumnDescription {
         name: name.into_vec(),
         data_type: DataType::Varchar { length: 255 },
-        nullable: Nullable::NoNulls,
+        nullability: Nullability::NoNulls,
     };
 
     assert_eq!(title_desc, cd);
@@ -45,7 +42,7 @@ fn describe_columns() {
     let year_desc = ColumnDescription {
         name: name.into_vec(),
         data_type: DataType::Integer,
-        nullable: Nullable::Nullable,
+        nullability: Nullability::Nullable,
     };
 
     assert_eq!(year_desc, cd);
@@ -191,7 +188,7 @@ fn all_types() {
 fn bind_integer_parameter() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, 1968).unwrap().unwrap();
+    let cursor = conn.execute(sql, &1968).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -210,7 +207,7 @@ fn prepared_statement() {
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared.execute(1968).unwrap().unwrap();
+        let cursor = prepared.execute(&1968).unwrap().unwrap();
         let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -219,7 +216,7 @@ fn prepared_statement() {
     }
 
     {
-        let cursor = prepared.execute(1993).unwrap().unwrap();
+        let cursor = prepared.execute(&1993).unwrap().unwrap();
         let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
         let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
@@ -232,7 +229,7 @@ fn prepared_statement() {
 fn integer_parameter_as_string() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, "1968".into_parameter()).unwrap().unwrap();
+    let cursor = conn.execute(sql, &"1968".into_parameter()).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -240,6 +237,31 @@ fn integer_parameter_as_string() {
     let title = batch.at_as_str(0, 0).unwrap().unwrap();
 
     assert_eq!("2001: A Space Odyssey", title);
+}
+
+#[test]
+fn parameter_option_integer_some() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where year=?;";
+    let cursor = conn.execute(sql, &Some(1968).into_parameter()).unwrap().unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+
+    let batch = cursor.fetch().unwrap().unwrap();
+    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+
+    assert_eq!("2001: A Space Odyssey", title);
+}
+
+#[test]
+fn parameter_option_integer_none() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where year=?;";
+    let cursor = conn.execute(sql, &None::<i32>.into_parameter()).unwrap().unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+
+    assert!(cursor.fetch().unwrap().is_none());
 }
 
 #[test]
@@ -352,8 +374,8 @@ fn parameter_option_str() {
     setup_empty_table(&conn, "ParameterOptionStr", &["VARCHAR(50)"]).unwrap();
     let sql = "INSERT INTO ParameterOptionStr (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
-    prepared.execute(None::<&str>.into_parameter()).unwrap();
-    prepared.execute(Some("Bernd").into_parameter()).unwrap();
+    prepared.execute(&None::<&str>.into_parameter()).unwrap();
+    prepared.execute(&Some("Bernd").into_parameter()).unwrap();
 
     let cursor = conn
         .execute("SELECT a FROM ParameterOptionStr ORDER BY id", ())
@@ -435,6 +457,37 @@ fn ignore_output_column() {
 
     // Assert that there is no batch.
     assert!(cursor.fetch().unwrap().is_none());
+}
+
+#[test]
+fn output_parameter() {
+
+    use odbc_api::{Error, ParameterCollection, sys::ParamType};
+
+    struct Out {
+        ret: Nullable<i32>,
+        param: Nullable<i32>,
+    }
+
+    unsafe impl ParameterCollection for &mut Out {
+        fn parameter_set_size(&self) -> u32 { 1 }
+        unsafe fn bind_parameters_to(self, stmt: &mut odbc_api::handles::Statement<'_>) -> Result<(), Error> {
+            stmt.bind_parameter(1, ParamType::Output, &mut self.ret)?;
+            stmt.bind_parameter(2, ParamType::Output, &mut self.param)?;
+            Ok(())
+        }
+    }
+
+    let mut out = Out {
+        ret: Nullable::null(), param: Nullable::null()
+    };
+
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute("{? = call TestParam(?)}", &mut out).unwrap();
+
+    // See magic numbers hardcoded in setup.sql
+    assert_eq!(Some(99), out.ret.into_opt());
+    assert_eq!(Some(88), out.param.into_opt());
 }
 
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic

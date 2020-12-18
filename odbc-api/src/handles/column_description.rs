@@ -3,24 +3,24 @@ use std::char::{decode_utf16, DecodeUtf16Error};
 
 /// Indication of whether a column is nullable or not.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Nullable {
+pub enum Nullability {
     Unknown,
     Nullable,
     NoNulls,
 }
 
-impl Default for Nullable {
+impl Default for Nullability {
     fn default() -> Self {
-        Nullable::Unknown
+        Nullability::Unknown
     }
 }
 
-impl Nullable {
+impl Nullability {
     pub fn new(nullable: odbc_sys::Nullable) -> Self {
         match nullable {
-            odbc_sys::Nullable::UNKNOWN => Nullable::Unknown,
-            odbc_sys::Nullable::NO_NULLS => Nullable::NoNulls,
-            odbc_sys::Nullable::NULLABLE => Nullable::Nullable,
+            odbc_sys::Nullable::UNKNOWN => Nullability::Unknown,
+            odbc_sys::Nullable::NO_NULLS => Nullability::NoNulls,
+            odbc_sys::Nullable::NULLABLE => Nullability::Nullable,
             other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
         }
     }
@@ -34,7 +34,7 @@ pub struct ColumnDescription {
     /// Type of the column
     pub data_type: DataType,
     /// Indicates whether the column is nullable or not.
-    pub nullable: Nullable,
+    pub nullability: Nullability,
 }
 
 impl ColumnDescription {
@@ -47,9 +47,9 @@ impl ColumnDescription {
     /// `true` if the column is `Nullable` or it is not know whether the column is nullable. `false`
     /// if and only if the column is `NoNulls`.
     pub fn could_be_nullable(&self) -> bool {
-        match self.nullable {
-            Nullable::Nullable | Nullable::Unknown => true,
-            Nullable::NoNulls => false,
+        match self.nullability {
+            Nullability::Nullable | Nullability::Unknown => true,
+            Nullability::NoNulls => false,
         }
     }
 }

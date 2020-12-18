@@ -312,7 +312,7 @@
 //!
 //! ```no_run
 //! use odbc_api::{
-//!     Connection, RowSetCursor, Error, Cursor, Nullable,
+//!     Connection, RowSetCursor, Error, Cursor, Nullability,
 //!     buffers::{ColumnarRowSet, BufferDescription, BufferKind}
 //! };
 //!
@@ -324,7 +324,7 @@
 //!     let buffer_description : Vec<_> = (0..cursor.num_result_cols()?).map(|index| {
 //!         cursor.describe_col(index as u16 + 1, &mut column_description)?;
 //!         Ok(BufferDescription {
-//!             nullable: matches!(column_description.nullable, Nullable::Unknown | Nullable::Nullable),
+//!             nullable: matches!(column_description.nullability, Nullability::Unknown | Nullability::Nullable),
 //!             // Use reasonable sized text, in case we do not know the buffer type.
 //!             kind: BufferKind::from_data_type(column_description.data_type)
 //!                 .unwrap_or(BufferKind::Text { max_str_len: 255 })

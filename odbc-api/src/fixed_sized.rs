@@ -1,7 +1,4 @@
-use crate::{
-    handles::{CData, DataType, Input},
-    Parameter,
-};
+use crate::{Parameter, handles::{CData, DataType, Input}};
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{ffi::c_void, ptr::null};
 
@@ -24,80 +21,17 @@ impl Bit {
 }
 
 /// Trait implemented to fixed C size types.
-pub unsafe trait FixedSizedCType: Default + Clone + Copy {
+pub unsafe trait FixedSizedCType: Default + Copy + CData {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;
 }
 
-unsafe impl FixedSizedCType for f64 {
-    const C_DATA_TYPE: CDataType = CDataType::Double;
-}
+macro_rules! impl_fixed_sized {
+    ($t:ident, $c_data_type:expr) => {
 
-unsafe impl FixedSizedCType for f32 {
-    const C_DATA_TYPE: CDataType = CDataType::Float;
-}
-
-unsafe impl FixedSizedCType for Date {
-    const C_DATA_TYPE: CDataType = CDataType::TypeDate;
-}
-
-unsafe impl FixedSizedCType for Timestamp {
-    const C_DATA_TYPE: CDataType = CDataType::TypeTimestamp;
-}
-
-unsafe impl FixedSizedCType for Time {
-    const C_DATA_TYPE: CDataType = CDataType::TypeTime;
-}
-
-unsafe impl FixedSizedCType for Numeric {
-    const C_DATA_TYPE: CDataType = CDataType::Numeric;
-}
-
-unsafe impl FixedSizedCType for i16 {
-    const C_DATA_TYPE: CDataType = CDataType::SShort;
-}
-
-unsafe impl FixedSizedCType for u16 {
-    const C_DATA_TYPE: CDataType = CDataType::UShort;
-}
-
-unsafe impl FixedSizedCType for i32 {
-    const C_DATA_TYPE: CDataType = CDataType::SLong;
-}
-
-unsafe impl FixedSizedCType for u32 {
-    const C_DATA_TYPE: CDataType = CDataType::ULong;
-}
-
-unsafe impl FixedSizedCType for i8 {
-    const C_DATA_TYPE: CDataType = CDataType::STinyInt;
-}
-
-unsafe impl FixedSizedCType for u8 {
-    const C_DATA_TYPE: CDataType = CDataType::UTinyInty;
-}
-
-unsafe impl FixedSizedCType for Bit {
-    const C_DATA_TYPE: CDataType = CDataType::Bit;
-}
-
-unsafe impl FixedSizedCType for i64 {
-    const C_DATA_TYPE: CDataType = CDataType::SBigInt;
-}
-
-unsafe impl FixedSizedCType for u64 {
-    const C_DATA_TYPE: CDataType = CDataType::UBigInt;
-}
-
-// While the C-Type is independent of the Data (SQL) Type in the source, there are often DataTypes
-// which are a natural match for the C-Type in question. These can be used to spare the user to
-// specify that an i32 is supposed to be bound as an SQL Integer.
-
-macro_rules! impl_input_fixed_sized {
-    ($t:ident, $data_type:expr) => {
         unsafe impl CData for $t {
             fn cdata_type(&self) -> CDataType {
-                $t::C_DATA_TYPE
+                $c_data_type
             }
 
             fn indicator_ptr(&self) -> *const isize {
@@ -113,6 +47,36 @@ macro_rules! impl_input_fixed_sized {
                 0
             }
         }
+
+        unsafe impl FixedSizedCType for $t {
+            const C_DATA_TYPE: CDataType = $c_data_type;
+        }
+
+    };
+}
+
+impl_fixed_sized!(f64, CDataType::Double);
+impl_fixed_sized!(f32, CDataType::Float);
+impl_fixed_sized!(Date, CDataType::TypeDate);
+impl_fixed_sized!(Timestamp, CDataType::TypeTimestamp);
+impl_fixed_sized!(Time, CDataType::TypeTime);
+impl_fixed_sized!(Numeric, CDataType::Numeric);
+impl_fixed_sized!(i16, CDataType::SShort);
+impl_fixed_sized!(u16, CDataType::UShort);
+impl_fixed_sized!(i32, CDataType::SLong);
+impl_fixed_sized!(u32, CDataType::ULong);
+impl_fixed_sized!(i8, CDataType::STinyInt);
+impl_fixed_sized!(u8, CDataType::UTinyInty);
+impl_fixed_sized!(Bit, CDataType::Bit);
+impl_fixed_sized!(i64, CDataType::SBigInt);
+impl_fixed_sized!(u64, CDataType::UBigInt);
+
+// While the C-Type is independent of the Data (SQL) Type in the source, there are often DataTypes
+// which are a natural match for the C-Type in question. These can be used to spare the user to
+// specify that an i32 is supposed to be bound as an SQL Integer.
+
+macro_rules! impl_input_fixed_sized {
+    ($t:ident, $data_type:expr) => {
 
         unsafe impl Input for $t {
             fn data_type(&self) -> DataType {

@@ -20,7 +20,7 @@ mod tuple;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let year = 1980;
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", year)? {
+/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 ///     // Use cursor to process query results.
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -64,8 +64,9 @@ mod tuple;
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
 pub unsafe trait ParameterCollection {
-    /// Number of parameters in the collection. This can be different from the maximum batch size
-    /// a buffer may be able to hold. Returning `0` will cause the the query not to be executed.
+    /// Number of values per parameter in the collection. This can be different from the maximum
+    /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
+    /// executed.
     fn parameter_set_size(&self) -> u32;
 
     /// # Safety
@@ -73,10 +74,10 @@ pub unsafe trait ParameterCollection {
     /// Implementers should take care that the values bound by this method to the statement live at
     /// least for the Duration of `self`. The most straight forward way of achieving this is of
     /// course, to bind members.
-    unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error>;
+    unsafe fn bind_parameters_to(self, stmt: &mut Statement) -> Result<(), Error>;
 }
 
-unsafe impl<T> ParameterCollection for T
+unsafe impl<T> ParameterCollection for &T
 where
     T: Parameter,
 {
@@ -84,7 +85,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut Statement) -> Result<(), Error> {
         stmt.bind_input_parameter(1, self)
     }
 }
@@ -97,7 +98,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(&self, stmt: &mut Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut Statement) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
             stmt.bind_input_parameter(index as u16 + 1, parameter)?;
         }
