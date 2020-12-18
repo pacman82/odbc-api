@@ -1,4 +1,7 @@
-use crate::{Parameter, handles::{CData, DataType, Input}};
+use crate::{
+    handles::{CData, DataType, Input},
+    Parameter,
+};
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{ffi::c_void, ptr::null};
 
@@ -28,7 +31,6 @@ pub unsafe trait FixedSizedCType: Default + Copy + CData {
 
 macro_rules! impl_fixed_sized {
     ($t:ident, $c_data_type:expr) => {
-
         unsafe impl CData for $t {
             fn cdata_type(&self) -> CDataType {
                 $c_data_type
@@ -51,7 +53,6 @@ macro_rules! impl_fixed_sized {
         unsafe impl FixedSizedCType for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;
         }
-
     };
 }
 
@@ -77,7 +78,6 @@ impl_fixed_sized!(u64, CDataType::UBigInt);
 
 macro_rules! impl_input_fixed_sized {
     ($t:ident, $data_type:expr) => {
-
         unsafe impl Input for $t {
             fn data_type(&self) -> DataType {
                 $data_type

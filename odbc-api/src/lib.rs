@@ -9,9 +9,9 @@ mod cursor;
 mod environment;
 mod fixed_sized;
 mod into_parameter;
+mod nullable;
 mod parameter_collection;
 mod prepared;
-mod nullable;
 
 pub mod buffers;
 pub mod guide;
@@ -25,10 +25,10 @@ pub use self::{
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Error, Nullability},
     into_parameter::IntoParameter,
+    nullable::Nullable,
     parameter::Parameter,
     parameter_collection::ParameterCollection,
     prepared::Prepared,
-    nullable::Nullable,
 };
 // Reexports
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this

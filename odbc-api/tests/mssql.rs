@@ -2,7 +2,10 @@ mod common;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String, buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet}};
+use odbc_api::{
+    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet},
+    ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
+};
 use std::{ffi::CStr, iter, thread};
 
 const MSSQL: &str =
@@ -229,7 +232,10 @@ fn prepared_statement() {
 fn integer_parameter_as_string() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &"1968".into_parameter()).unwrap().unwrap();
+    let cursor = conn
+        .execute(sql, &"1968".into_parameter())
+        .unwrap()
+        .unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -243,7 +249,10 @@ fn integer_parameter_as_string() {
 fn parameter_option_integer_some() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &Some(1968).into_parameter()).unwrap().unwrap();
+    let cursor = conn
+        .execute(sql, &Some(1968).into_parameter())
+        .unwrap()
+        .unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -257,7 +266,10 @@ fn parameter_option_integer_some() {
 fn parameter_option_integer_none() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &None::<i32>.into_parameter()).unwrap().unwrap();
+    let cursor = conn
+        .execute(sql, &None::<i32>.into_parameter())
+        .unwrap()
+        .unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -461,8 +473,7 @@ fn ignore_output_column() {
 
 #[test]
 fn output_parameter() {
-
-    use odbc_api::{Error, ParameterCollection, sys::ParamType};
+    use odbc_api::{sys::ParamType, Error, ParameterCollection};
 
     struct Out {
         ret: Nullable<i32>,
@@ -470,8 +481,13 @@ fn output_parameter() {
     }
 
     unsafe impl ParameterCollection for &mut Out {
-        fn parameter_set_size(&self) -> u32 { 1 }
-        unsafe fn bind_parameters_to(self, stmt: &mut odbc_api::handles::Statement<'_>) -> Result<(), Error> {
+        fn parameter_set_size(&self) -> u32 {
+            1
+        }
+        unsafe fn bind_parameters_to(
+            self,
+            stmt: &mut odbc_api::handles::Statement<'_>,
+        ) -> Result<(), Error> {
             stmt.bind_parameter(1, ParamType::Output, &mut self.ret)?;
             stmt.bind_parameter(2, ParamType::Output, &mut self.param)?;
             Ok(())
@@ -479,7 +495,8 @@ fn output_parameter() {
     }
 
     let mut out = Out {
-        ret: Nullable::null(), param: Nullable::null()
+        ret: Nullable::null(),
+        param: Nullable::null(),
     };
 
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
