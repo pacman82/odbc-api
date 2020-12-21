@@ -38,5 +38,5 @@ force-send-sync = "1.0.0"
 [dev-dependencies]
 lazy_static = "1.4.0"
 env_logger = "0.8.2"
-anyhow = "1.0.35"
+anyhow = "1.0.36"
 csv = "1.1.5"
