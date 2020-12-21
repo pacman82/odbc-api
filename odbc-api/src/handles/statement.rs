@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    bind::{CDataMut, Input},
+    bind::{CDataMut, HasDataType},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
@@ -319,7 +319,7 @@ impl<'s> Statement<'s> {
     pub unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &impl Input,
+        parameter: &impl HasDataType,
     ) -> Result<(), Error> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(
@@ -352,7 +352,7 @@ impl<'s> Statement<'s> {
         &mut self,
         parameter_number: u16,
         input_output_type: ParamType,
-        parameter: &mut (impl CDataMut + Input),
+        parameter: &mut (impl CDataMut + HasDataType),
     ) -> Result<(), Error> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(
@@ -363,10 +363,8 @@ impl<'s> Statement<'s> {
             parameter_type.data_type(),
             parameter_type.column_size(),
             parameter_type.decimal_digits(),
-            // We cast const to mut here, but we specify the input_output_type as input.
             parameter.value_ptr() as *mut c_void,
             parameter.buffer_length(),
-            // We cast const to mut here, but we specify the input_output_type as input.
             parameter.indicator_ptr() as *mut Len,
         )
         .into_result(self)

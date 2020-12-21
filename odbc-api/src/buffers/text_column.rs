@@ -1,5 +1,5 @@
 use crate::{
-    handles::{CData, CDataMut, Input},
+    handles::{CData, CDataMut, HasDataType},
     DataType,
 };
 
@@ -182,7 +182,7 @@ unsafe impl CData for TextColumn {
     }
 }
 
-unsafe impl Input for TextColumn {
+unsafe impl HasDataType for TextColumn {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.max_str_len,

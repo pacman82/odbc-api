@@ -20,7 +20,7 @@ mod statement;
 
 pub use {
     as_handle::AsHandle,
-    bind::{CData, CDataMut, Input},
+    bind::{CData, CDataMut, HasDataType},
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,

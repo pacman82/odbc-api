@@ -139,7 +139,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! Alas, not all is lost. We can still make use of the `IntoParameter` trait to convert it into
+//! Alas, not all is lost. We can still make use of the [`crate::IntoParameter`] trait to convert it into
 //! something that works.
 //!
 //! ```no_run
@@ -161,7 +161,7 @@
 //!
 //! Conversion for `&str` is not too expensive either. Just an integer more on the stack. Wait, the
 //! type you wanted to use, but that I have conviniently not chosen in this example still does not
-//! work? Well, in that case please open an issue or a pull request. `IntoParameter` can usually be
+//! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can usually be
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
 
@@ -170,13 +170,13 @@ use std::{convert::TryInto, ffi::c_void};
 use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
-    handles::{CData, Input},
+    handles::{CData, HasDataType},
     DataType,
 };
 
 /// Extend the input trait with the guarantee, that the bound parameter buffer contains at least one
 /// element.
-pub unsafe trait Parameter: Input {}
+pub unsafe trait Parameter: HasDataType {}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.
@@ -227,9 +227,9 @@ where
     }
 }
 
-unsafe impl<T> Input for WithDataType<T>
+unsafe impl<T> HasDataType for WithDataType<T>
 where
-    T: Input,
+    T: HasDataType,
 {
     fn data_type(&self) -> DataType {
         self.data_type
@@ -306,7 +306,7 @@ unsafe impl CData for VarChar<'_> {
     }
 }
 
-unsafe impl Input for VarChar<'_> {
+unsafe impl HasDataType for VarChar<'_> {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.bytes.len(),

@@ -1,5 +1,5 @@
 use crate::{
-    handles::{CData, DataType, Input},
+    handles::{CData, DataType, HasDataType},
     Parameter,
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
@@ -78,7 +78,7 @@ impl_fixed_sized!(u64, CDataType::UBigInt);
 
 macro_rules! impl_input_fixed_sized {
     ($t:ident, $data_type:expr) => {
-        unsafe impl Input for $t {
+        unsafe impl HasDataType for $t {
             fn data_type(&self) -> DataType {
                 $data_type
             }

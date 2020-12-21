@@ -4,7 +4,7 @@ use odbc_sys::NULL_DATA;
 
 use crate::{
     fixed_sized::FixedSizedCType,
-    handles::{CData, CDataMut, Input},
+    handles::{CData, CDataMut, HasDataType},
     Parameter,
 };
 
@@ -71,9 +71,9 @@ where
     }
 }
 
-unsafe impl<T> Input for Nullable<T>
+unsafe impl<T> HasDataType for Nullable<T>
 where
-    T: FixedSizedCType + Input,
+    T: FixedSizedCType + HasDataType,
 {
     fn data_type(&self) -> crate::DataType {
         self.value.data_type()

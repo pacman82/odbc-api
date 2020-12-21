@@ -2,6 +2,7 @@
 
 ## 0.13.0
 
+* `Input` has been renamed to `HasDataType`.
 * `Nullable` has been renamed to `Nullability`.
 
 ## 0.12.0
