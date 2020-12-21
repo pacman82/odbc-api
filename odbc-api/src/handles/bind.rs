@@ -36,7 +36,7 @@ pub unsafe trait CDataMut: CData {
 /// Can be bound to a single placeholder in an SQL statement.
 ///
 /// Users usually won't utilize this trait directly.
-pub unsafe trait Input: CData {
+pub unsafe trait HasDataType: CData {
     /// The SQL data as which the parameter is bound to ODBC.
     fn data_type(&self) -> DataType;
 }
