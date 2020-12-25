@@ -2,7 +2,7 @@
 //! trait.
 
 use super::ParameterCollection;
-use crate::{handles::Statement, Error, Parameter};
+use crate::{handles::Statement, Error, InputParameter};
 
 macro_rules! impl_bind_input_parameters {
     ($offset:expr, $stmt:ident) => (
@@ -21,7 +21,7 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         #[allow(non_snake_case)]
-        unsafe impl<$($t:Parameter,)*> ParameterCollection for ($($t,)*)
+        unsafe impl<$($t:InputParameter,)*> ParameterCollection for ($($t,)*)
         {
             fn parameter_set_size(&self) -> u32 {
                 1
