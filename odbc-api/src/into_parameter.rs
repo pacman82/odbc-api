@@ -1,4 +1,4 @@
-use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, Nullable, Parameter};
+use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, Nullable, InputParameter};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -9,14 +9,14 @@ use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, Nullable, Paramete
 /// ODBC. This also provides a safe extension point for all kinds of parameters, as only the
 /// implementation of `Parameters` is unsafe.
 pub trait IntoParameter {
-    type Parameter: Parameter;
+    type Parameter: InputParameter;
 
     fn into_parameter(self) -> Self::Parameter;
 }
 
 impl<T> IntoParameter for T
 where
-    T: Parameter,
+    T: InputParameter,
 {
     type Parameter = Self;
 
@@ -46,7 +46,7 @@ impl<'a> IntoParameter for Option<&'a str> {
 
 impl<T> IntoParameter for Option<T>
 where
-    T: FixedSizedCType + Parameter,
+    T: FixedSizedCType + InputParameter,
 {
     type Parameter = Nullable<T>;
 

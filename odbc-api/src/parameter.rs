@@ -170,13 +170,16 @@ use std::{convert::TryInto, ffi::c_void};
 use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
-    handles::{CData, HasDataType},
+    handles::{CData, CDataMut, HasDataType},
     DataType,
 };
 
-/// Extend the input trait with the guarantee, that the bound parameter buffer contains at least one
-/// element.
-pub unsafe trait Parameter: HasDataType {}
+/// Extend the [crate::HasDataType] trait with the guarantee, that the bound parameter buffer
+/// contains at least one element.
+pub unsafe trait InputParameter: HasDataType {}
+
+/// Guarantees that there is space in the output buffer for at least one element.
+pub unsafe trait OutParameter: CDataMut + HasDataType {}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.
@@ -236,7 +239,7 @@ where
     }
 }
 
-unsafe impl<T> Parameter for WithDataType<T> where T: Parameter {}
+unsafe impl<T> InputParameter for WithDataType<T> where T: InputParameter {}
 
 /// Binds a byte array as a VarChar input parameter.
 ///
@@ -314,4 +317,4 @@ unsafe impl HasDataType for VarChar<'_> {
     }
 }
 
-unsafe impl Parameter for VarChar<'_> {}
+unsafe impl InputParameter for VarChar<'_> {}
