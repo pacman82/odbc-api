@@ -26,7 +26,7 @@ pub use self::{
     handles::{ColumnDescription, DataType, Error, Nullability},
     into_parameter::IntoParameter,
     nullable::Nullable,
-    parameter::InputParameter,
+    parameter::{InputParameter, Out, OutputParameter, Parameter},
     parameter_collection::ParameterCollection,
     prepared::Prepared,
 };

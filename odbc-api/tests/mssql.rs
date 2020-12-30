@@ -314,7 +314,7 @@ fn wchar_as_char() {
 fn two_paramters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
-    let cursor = conn.execute(sql, (1960, 1970)).unwrap().unwrap();
+    let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
@@ -473,38 +473,17 @@ fn ignore_output_column() {
 
 #[test]
 fn output_parameter() {
-    use odbc_api::{sys::ParamType, Error, ParameterCollection};
+    use odbc_api::Out;
 
-    struct Out {
-        ret: Nullable<i32>,
-        param: Nullable<i32>,
-    }
-
-    unsafe impl ParameterCollection for &mut Out {
-        fn parameter_set_size(&self) -> u32 {
-            1
-        }
-        unsafe fn bind_parameters_to(
-            self,
-            stmt: &mut odbc_api::handles::Statement<'_>,
-        ) -> Result<(), Error> {
-            stmt.bind_parameter(1, ParamType::Output, &mut self.ret)?;
-            stmt.bind_parameter(2, ParamType::Output, &mut self.param)?;
-            Ok(())
-        }
-    }
-
-    let mut out = Out {
-        ret: Nullable::null(),
-        param: Nullable::null(),
-    };
+    let mut ret = Nullable::<i32>::null();
+    let mut param = Nullable::<i32>::null();
 
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("{? = call TestParam(?)}", &mut out).unwrap();
+    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), Out(&mut param))).unwrap();
 
     // See magic numbers hardcoded in setup.sql
-    assert_eq!(Some(99), out.ret.into_opt());
-    assert_eq!(Some(88), out.param.into_opt());
+    assert_eq!(Some(99), ret.into_opt());
+    assert_eq!(Some(88), param.into_opt());
 }
 
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic
