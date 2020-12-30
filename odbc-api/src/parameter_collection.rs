@@ -1,4 +1,4 @@
-use crate::{handles::Statement, Error, InputParameter};
+use crate::{handles::Statement, Error, InputParameter, Parameter};
 
 mod tuple;
 
@@ -38,7 +38,10 @@ mod tuple;
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let too_old = 1980;
 /// let too_young = 2000;
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE ? < year < ?;", (too_old, too_young))? {
+/// if let Some(cursor) = conn.execute(
+///     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
+///     (&too_old, &too_young),
+/// )? {
 ///     // Use cursor to congratulate only persons in the right age group...
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -77,16 +80,16 @@ pub unsafe trait ParameterCollection {
     unsafe fn bind_parameters_to(self, stmt: &mut Statement) -> Result<(), Error>;
 }
 
-unsafe impl<T> ParameterCollection for &T
+unsafe impl<T> ParameterCollection for T
 where
-    T: InputParameter,
+    T: Parameter,
 {
     fn parameter_set_size(&self) -> u32 {
         1
     }
 
     unsafe fn bind_parameters_to(self, stmt: &mut Statement) -> Result<(), Error> {
-        stmt.bind_input_parameter(1, self)
+        self.bind_parameter(1, stmt)
     }
 }
 

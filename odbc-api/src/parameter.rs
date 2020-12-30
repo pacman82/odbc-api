@@ -77,7 +77,10 @@
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let too_old = 1980;
 //! let too_young = 2000;
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE ? < year < ?;", (too_old, too_young))? {
+//! if let Some(cursor) = conn.execute(
+//!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
+//!     (&too_old, &too_young),
+//! )? {
 //!     // Use cursor to congratulate only persons in the right age group...
 //! }
 //! # Ok::<(), odbc_api::Error>(())
@@ -170,16 +173,73 @@ use std::{convert::TryInto, ffi::c_void};
 use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
-    handles::{CData, CDataMut, HasDataType},
-    DataType,
+    handles::{CData, CDataMut, HasDataType, Statement},
+    DataType, Error,
 };
 
-/// Extend the [crate::HasDataType] trait with the guarantee, that the bound parameter buffer
+/// Extend the [`crate::handles::HasDataType`] trait with the guarantee, that the bound parameter buffer
 /// contains at least one element.
 pub unsafe trait InputParameter: HasDataType {}
 
 /// Guarantees that there is space in the output buffer for at least one element.
-pub unsafe trait OutParameter: CDataMut + HasDataType {}
+pub unsafe trait OutputParameter: CDataMut + HasDataType {}
+
+/// Implementers of this trait can be used as individual parameters of in a
+/// [`crate::ParameterCollection`]. They can be bound as either input parameters, output parameters
+/// or both.
+pub unsafe trait Parameter {
+    unsafe fn bind_parameter(
+        self,
+        parameter_number: u16,
+        stmt: &mut Statement,
+    ) -> Result<(), Error>;
+}
+
+/// Bind immutatable references as input parametres.
+unsafe impl<T> Parameter for &T
+where
+    T: InputParameter,
+{
+    unsafe fn bind_parameter(
+        self,
+        parameter_number: u16,
+        stmt: &mut Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_input_parameter(parameter_number, self)
+    }
+}
+
+/// Bind mutable references as input/output parameter.
+unsafe impl<T> Parameter for &mut T
+where
+    T: OutputParameter,
+{
+    unsafe fn bind_parameter(
+        self,
+        parameter_number: u16,
+        stmt: &mut Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self)
+    }
+}
+
+/// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
+/// be bound as an output paramter only, rather than an input / output parameter.
+pub struct Out<'a, T>(pub &'a mut T);
+
+/// Mutable references wrapped in `Out` are bound as output parameters.
+unsafe impl<'a, T> Parameter for Out<'a, T>
+where
+    T: OutputParameter,
+{
+    unsafe fn bind_parameter(
+        self,
+        parameter_number: u16,
+        stmt: &mut Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
+    }
+}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.

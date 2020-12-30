@@ -2,11 +2,7 @@ use std::ffi::c_void;
 
 use odbc_sys::NULL_DATA;
 
-use crate::{
-    fixed_sized::FixedSizedCType,
-    handles::{CData, CDataMut, HasDataType},
-    InputParameter,
-};
+use crate::{InputParameter, OutputParameter, fixed_sized::FixedSizedCType, handles::{CData, CDataMut, HasDataType}};
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null
 /// representation, those memory layout is compatible with ODBC.
@@ -80,7 +76,7 @@ where
     }
 }
 
-unsafe impl<T> InputParameter for Nullable<T> where T: FixedSizedCType + InputParameter {}
+unsafe impl<T> InputParameter for Nullable<T> where T: FixedSizedCType + HasDataType {}
 
 unsafe impl<T> CDataMut for Nullable<T>
 where
@@ -94,3 +90,5 @@ where
         &mut self.value as *mut T as *mut c_void
     }
 }
+
+unsafe impl<T> OutputParameter for Nullable<T> where T: FixedSizedCType + HasDataType {}

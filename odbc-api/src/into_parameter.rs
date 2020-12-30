@@ -1,4 +1,4 @@
-use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, Nullable, InputParameter};
+use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, InputParameter, Nullable};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
