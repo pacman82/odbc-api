@@ -16,11 +16,11 @@ impl Default for Nullability {
 }
 
 impl Nullability {
-    pub fn new(nullable: odbc_sys::Nullable) -> Self {
+    pub fn new(nullable: odbc_sys::Nullability) -> Self {
         match nullable {
-            odbc_sys::Nullable::UNKNOWN => Nullability::Unknown,
-            odbc_sys::Nullable::NO_NULLS => Nullability::NoNulls,
-            odbc_sys::Nullable::NULLABLE => Nullability::Nullable,
+            odbc_sys::Nullability::UNKNOWN => Nullability::Unknown,
+            odbc_sys::Nullability::NO_NULLS => Nullability::NoNulls,
+            odbc_sys::Nullability::NULLABLE => Nullability::Nullable,
             other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
         }
     }

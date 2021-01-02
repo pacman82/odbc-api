@@ -141,7 +141,7 @@ impl<'s> Statement<'s> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut column_size = 0;
         let mut decimal_digits = 0;
-        let mut nullable = odbc_sys::Nullable::UNKNOWN;
+        let mut nullable = odbc_sys::Nullability::UNKNOWN;
 
         unsafe {
             SQLDescribeColW(
@@ -444,7 +444,7 @@ impl<'s> Statement<'s> {
                 let mut decimal_digits = 0;
                 let mut name_length = 0;
                 let mut data_type = SqlDataType::UNKNOWN_TYPE;
-                let mut nullable = odbc_sys::Nullable::UNKNOWN;
+                let mut nullable = odbc_sys::Nullability::UNKNOWN;
 
                 unsafe {
                     SQLDescribeColW(
@@ -590,7 +590,7 @@ impl<'s> Statement<'s> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut parameter_size = 0;
         let mut decimal_digits = 0;
-        let mut nullable = odbc_sys::Nullable::UNKNOWN;
+        let mut nullable = odbc_sys::Nullability::UNKNOWN;
         unsafe {
             SQLDescribeParam(
                 self.handle,

@@ -67,7 +67,7 @@ impl_fixed_sized!(u16, CDataType::UShort);
 impl_fixed_sized!(i32, CDataType::SLong);
 impl_fixed_sized!(u32, CDataType::ULong);
 impl_fixed_sized!(i8, CDataType::STinyInt);
-impl_fixed_sized!(u8, CDataType::UTinyInty);
+impl_fixed_sized!(u8, CDataType::UTinyInt);
 impl_fixed_sized!(Bit, CDataType::Bit);
 impl_fixed_sized!(i64, CDataType::SBigInt);
 impl_fixed_sized!(u64, CDataType::UBigInt);

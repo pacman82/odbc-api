@@ -4,6 +4,7 @@
 
 * `Input` has been renamed to `HasDataType`.
 * `Nullable` has been renamed to `Nullability`.
+* Update to odbc-sys 0.17.0.
 
 ## 0.12.0
 
