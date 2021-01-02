@@ -476,15 +476,15 @@ fn output_parameter() {
     use odbc_api::Out;
 
     let mut ret = Nullable::<i32>::null();
-    let mut param = Nullable::<i32>::null();
+    let mut param = Nullable::<i32>::new(7);
 
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), Out(&mut param)))
+    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), &mut param))
         .unwrap();
 
     // See magic numbers hardcoded in setup.sql
     assert_eq!(Some(99), ret.into_opt());
-    assert_eq!(Some(88), param.into_opt());
+    assert_eq!(Some(7 + 5), param.into_opt());
 }
 
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic

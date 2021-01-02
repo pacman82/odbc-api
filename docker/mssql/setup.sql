@@ -79,6 +79,6 @@ GO
 CREATE PROCEDURE TestParam   
 @OutParm int OUTPUT   
 AS
-SELECT @OutParm = 88  
+SELECT @OutParm = @OutParm + 5  
 RETURN 99  
 GO  

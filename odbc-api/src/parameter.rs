@@ -3,8 +3,10 @@
 //! ## In a nutshell
 //!
 //! * `()` -> No parameter
-//! * `a` -> Single parameter
-//! * `(a,b,c)` -> Fixed number of parameters
+//! * `&a` -> Single input parameter
+//! * `&mut a` -> Input Output parameter
+//! * `Out(&mut a)` -> Output parameter
+//! * `(&a,&b,&c)` -> Fixed number of parameters
 //! * `&[a]` -> Arbitrary number of parameters
 //! * a.into_parameter() -> Convert idiomatic Rust type into something bindable by ODBC.
 //!
@@ -109,22 +111,46 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! ## Passing the type you absolutly think should work, but does not.
+//! ## Output and Input/Output parameters
 //!
-//! Sadly not every type can be safely bound as something the ODBC C-API understands. Most prominent
-//! among those is a Rust string slice (`&str`).
+//! Mutable references are treated as input/output parameters. To use a parameter purely as an
+//! output parameter you may wrapt it into out. Consider a Mircosoft SQL Server with the following
+//! stored procedure:
+//!
+//! ```mssql
+//! CREATE PROCEDURE TestParam
+//! @OutParm int OUTPUT
+//! AS
+//! SELECT @OutParm = @OutParm + 5
+//! RETURN 99
+//! GO
+//! ```
+//!
+//! We bind the return value as the first output parameter. The second parameter is an input/output
+//! bound as a mutable reference.
 //!
 //! ```no_run
-//! use odbc_api::Environment;
+//! use odbc_api::{Environment, Out, Nullable};
 //!
 //! let env = unsafe {
 //!     Environment::new()?
 //! };
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
-//! // conn.execute("SELECT year FROM Birthdays WHERE name=?;", "Bernd")?; // <- compiler error.
+//!
+//! let mut ret = Nullable::<i32>::null();
+//! let mut param = Nullable::<i32>::new(7);
+//!
+//! conn.execute(
+//!     "{? = call TestParam(?)}",
+//!     (Out(&mut ret), &mut param))?;
+//!
+//! assert_eq!(Some(99), ret.into_opt());
+//! assert_eq!(Some(7 + 5), param.into_opt());
+//!
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
+//!
 //! ## Passing the type you absolutly think should work, but does not.
 //!
 //! Sadly not every type can be safely bound as something the ODBC C-API understands. Most prominent
@@ -225,6 +251,27 @@ where
 
 /// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
 /// be bound as an output parameter only, rather than an input / output parameter.
+///
+/// # Example
+///
+/// ```no_run
+/// use odbc_api::{Environment, Out, Nullable};
+///
+/// let env = unsafe {
+///     Environment::new()?
+/// };
+///
+/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+///
+/// let mut ret = Nullable::<i32>::null();
+/// let mut param = Nullable::<i32>::new(7);
+///
+/// conn.execute(
+///     "{? = call TestParam(?)}",
+///     (Out(&mut ret), &mut param))?;
+///
+/// # Ok::<(), odbc_api::Error>(())
+/// ```
 pub struct Out<'a, T>(pub &'a mut T);
 
 /// Mutable references wrapped in `Out` are bound as output parameters.
