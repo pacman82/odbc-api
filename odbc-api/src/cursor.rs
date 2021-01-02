@@ -177,7 +177,7 @@ where
 impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
-/// by either a prepared query or direct execution. Usually utilized throught the `Cursor` trait.
+/// by either a prepared query or direct execution. Usually utilized through the `Cursor` trait.
 pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
     statement: Stmt,
     // If we would not implement the drop handler, we could do without the Phantom member and an
@@ -279,12 +279,12 @@ where
         self.statement.borrow().col_name(column_number, buf)
     }
 
-    fn application_row_descriptor(&self) -> Result<Description, Error> {
-        self.statement.borrow().application_row_descriptor()
-    }
-
     fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
         ColumnNamesIt::new(self)
+    }
+
+    fn application_row_descriptor(&self) -> Result<Description, Error> {
+        self.statement.borrow().application_row_descriptor()
     }
 }
 
@@ -335,16 +335,16 @@ pub unsafe trait RowSetBuffer {
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
+    fn bind_type(&self) -> u32 {
+        (**self).bind_type()
+    }
+
     fn row_array_size(&self) -> u32 {
         (**self).row_array_size()
     }
 
     fn mut_num_fetch_rows(&mut self) -> &mut usize {
         (*self).mut_num_fetch_rows()
-    }
-
-    fn bind_type(&self) -> u32 {
-        (**self).bind_type()
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {

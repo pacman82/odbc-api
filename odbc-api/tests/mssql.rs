@@ -479,7 +479,8 @@ fn output_parameter() {
     let mut param = Nullable::<i32>::null();
 
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), Out(&mut param))).unwrap();
+    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), Out(&mut param)))
+        .unwrap();
 
     // See magic numbers hardcoded in setup.sql
     assert_eq!(Some(99), ret.into_opt());

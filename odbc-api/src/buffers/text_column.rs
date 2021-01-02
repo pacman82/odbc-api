@@ -117,7 +117,7 @@ impl TextColumn {
             self.values[offset..offset + text.len()].copy_from_slice(text);
             // Add terminating zero to string.
             self.values[offset + text.len()] = 0;
-            // And of courseset the indicator correctly.
+            // And of course set the indicator correctly.
             self.indicators[index] = text.len().try_into().unwrap();
         } else {
             self.indicators[index] = NULL_DATA;

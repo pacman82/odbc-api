@@ -2,7 +2,11 @@ use std::ffi::c_void;
 
 use odbc_sys::NULL_DATA;
 
-use crate::{InputParameter, OutputParameter, fixed_sized::FixedSizedCType, handles::{CData, CDataMut, HasDataType}};
+use crate::{
+    fixed_sized::FixedSizedCType,
+    handles::{CData, CDataMut, HasDataType},
+    InputParameter, OutputParameter,
+};
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null
 /// representation, those memory layout is compatible with ODBC.

@@ -147,7 +147,7 @@ impl TextRowSet {
         *self.num_rows as usize
     }
 
-    /// Takes one element from the iterater for each internal column buffer and appends it to the
+    /// Takes one element from the iterator for each internal column buffer and appends it to the
     /// end of the buffer. Should the buffer be not large enough to hold the element, it will be
     /// reallocated with `1.2` times its size.
     ///
@@ -176,16 +176,16 @@ impl TextRowSet {
 }
 
 unsafe impl RowSetBuffer for TextRowSet {
+    fn bind_type(&self) -> u32 {
+        0 // Specify column wise binding.
+    }
+
     fn row_array_size(&self) -> u32 {
         self.batch_size
     }
 
     fn mut_num_fetch_rows(&mut self) -> &mut usize {
         self.num_rows.as_mut()
-    }
-
-    fn bind_type(&self) -> u32 {
-        0 // Specify column wise binding.
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {

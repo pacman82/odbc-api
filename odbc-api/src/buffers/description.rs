@@ -10,7 +10,7 @@ use crate::DataType;
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug)]
 pub struct BufferDescription {
-    /// This indicates wether or not the buffer will be able to represent NULL values. This will
+    /// This indicates whether or not the buffer will be able to represent NULL values. This will
     /// cause an indicator buffer to be bound if the selected buffer kind does not already require
     /// one anyway.
     pub nullable: bool,

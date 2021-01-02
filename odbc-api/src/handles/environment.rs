@@ -114,8 +114,8 @@ impl Environment {
     ///
     /// # Parameters
     ///
-    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
-    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or whether the search starts from the beginning of the list
     ///   ([`FetchOrientation::First`]).
     /// * `buffer_description`: In case `true` is returned this buffer is filled with the
     ///   description of the driver.
@@ -162,8 +162,8 @@ impl Environment {
     ///
     /// # Parameters
     ///
-    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
-    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or whether the search starts from the beginning of the list
     ///   ([`FetchOrientation::First`]).
     ///
     /// # Return
@@ -205,8 +205,8 @@ impl Environment {
     ///
     /// # Parameters
     ///
-    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
-    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or whether the search starts from the beginning of the list
     ///   ([`FetchOrientation::First`], [`FetchOrientation::FirstSystem`],
     ///   [`FetchOrientation::FirstUser`]).
     ///
@@ -243,8 +243,8 @@ impl Environment {
     ///
     /// # Parameters
     ///
-    /// * `direction`: Determines wether the Driver Manager fetches the next driver in the list
-    ///   ([`FetchOrientation::Next`]) or wether the search starts from the beginning of the list
+    /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
+    ///   ([`FetchOrientation::Next`]) or whether the search starts from the beginning of the list
     ///   ([`FetchOrientation::First`], [`FetchOrientation::FirstSystem`],
     ///   [`FetchOrientation::FirstUser`]).
     /// * `buffer_name`: In case `true` is returned this buffer is filled with the name of the

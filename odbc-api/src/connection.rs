@@ -51,16 +51,16 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
 
-        let paramset_size = params.parameter_set_size();
+        let param_set_size = params.parameter_set_size();
 
-        if paramset_size == 0 {
+        if param_set_size == 0 {
             Ok(None)
         } else {
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.
             stmt.reset_parameters()?;
             unsafe {
-                stmt.set_paramset_size(paramset_size)?;
+                stmt.set_paramset_size(param_set_size)?;
                 // Bind new parameters passed by caller.
                 params.bind_parameters_to(&mut stmt)?;
                 stmt.exec_direct(query)?

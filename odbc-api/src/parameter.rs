@@ -195,7 +195,7 @@ pub unsafe trait Parameter {
     ) -> Result<(), Error>;
 }
 
-/// Bind immutatable references as input parametres.
+/// Bind immutable references as input parameters.
 unsafe impl<T> Parameter for &T
 where
     T: InputParameter,
@@ -224,7 +224,7 @@ where
 }
 
 /// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
-/// be bound as an output paramter only, rather than an input / output parameter.
+/// be bound as an output parameter only, rather than an input / output parameter.
 pub struct Out<'a, T>(pub &'a mut T);
 
 /// Mutable references wrapped in `Out` are bound as output parameters.

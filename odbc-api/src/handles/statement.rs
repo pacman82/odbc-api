@@ -306,7 +306,7 @@ impl<'s> Statement<'s> {
     }
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
-    /// specialized version takes a constant reference to parameter, but is therfore limmited to
+    /// specialized version takes a constant reference to parameter, but is therefore limited to
     /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
     /// input and output parameters.
     ///
@@ -582,7 +582,7 @@ impl<'s> Statement<'s> {
 
     /// Describes parameter marker associated with a prepared SQL statement.
     ///
-    /// # Paramters
+    /// # Parameters
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.

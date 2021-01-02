@@ -265,12 +265,12 @@ unsafe impl CDataMut for AnyColumnBuffer {
 /// A columnar buffer intended to be bound with [crate::Cursor::bind_buffer] in order to obtain
 /// results from a cursor.
 ///
-/// This buffer is designed to be versatile. It supports a wide variaty of usage scenarios. It is
-/// efficient in retrieving data, but expensive to allocate, as columns are allocated seperatly.
+/// This buffer is designed to be versatile. It supports a wide variety of usage scenarios. It is
+/// efficient in retrieving data, but expensive to allocate, as columns are allocated separately.
 /// This is required in order to efficiently allow for rebinding columns, if this buffer is used to
 /// provide array input parameters those maximum size is not known in advance.
 ///
-/// Most applications should find the overhead neglegible, especially if instances are reused.
+/// Most applications should find the overhead negligible, especially if instances are reused.
 pub struct ColumnarRowSet {
     /// Use a box, so it is safe for a cursor to take ownership of this buffer.
     num_rows: Box<usize>,
@@ -297,7 +297,7 @@ impl ColumnarRowSet {
         }
     }
 
-    /// Allows you to pass the buffer descriptions together with a one based column index refering
+    /// Allows you to pass the buffer descriptions together with a one based column index referring
     /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
     /// result set, by not binding them at all. There is no restriction on the order of column
     /// indices passed, but the function will panic, if the indices are not unique.
@@ -329,14 +329,14 @@ impl ColumnarRowSet {
 
     /// Use this method to gain access to the actual column data.
     ///
-    /// # Prameters
+    /// # Parameters
     ///
-    /// * `buffer_index`: Please note that the buffer index is not indentical to the ODBC column
+    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
     ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
     ///   the output result set. This is important, because not every column needs to be bound. Some
     ///   columns may simply be ignored. That being said, if every column of the output should is
     ///   bound in the buffer, in the same order in which they are enumerated in the result set, the
-    ///   relationship betwenn column index and buffer index is `buffer_index = column_index - 1'.
+    ///   relationship between column index and buffer index is `buffer_index = column_index - 1'.
     pub fn column(&self, buffer_index: usize) -> AnyColumnView<'_> {
         unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
     }
