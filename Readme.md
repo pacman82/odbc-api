@@ -18,7 +18,7 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 - [x] Support for columnwise bulk queries.
 - [ ] Support for rowise bulk inserts.
 - [ ] Support for rowise bulk queries.
-- [ ] Provide general purpose implementations of buffers to bind, which can be used in safe code without caveats.
+- [x] Support for Output parameters of stored procedures.
 - [x] Support prepared and 'one shot' queries.
 - [x] Pass parameters to queries
 - [ ] Support for async

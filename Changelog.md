@@ -2,6 +2,9 @@
 
 ## 0.13.0
 
+* Add support for output parameters in stored procedures.
+  * Input parameters now must be bound by reference.
+  * Input/output parameters are bound by mutable reference.
 * `Input` has been renamed to `HasDataType`.
 * `Nullable` has been renamed to `Nullability`.
 * Update to odbc-sys 0.17.0.
