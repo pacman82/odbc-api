@@ -339,13 +339,13 @@ fn column_names_iterator() {
 }
 
 #[test]
-fn bulk_insert() {
+fn bulk_insert_with_text_buffer() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "BulkInsert", &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(&conn, "BulkInsertWithTextBuffer", &["VARCHAR(50)"]).unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
-        .prepare("INSERT INTO BulkInsert (a) Values (?)")
+        .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
     let mut params = TextRowSet::new(5, [50].iter().copied());
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
@@ -358,7 +358,45 @@ fn bulk_insert() {
     let expected = "England\nFrance\nGermany";
 
     let cursor = conn
-        .execute("SELECT a FROM BulkInsert ORDER BY id;", ())
+        .execute("SELECT a FROM BulkInsertWithTextBuffer ORDER BY id;", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn bulk_insert_with_columnar_buffer() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "BulkInsertWithColumnarBuffer", &["VARCHAR(50)"]).unwrap();
+
+    // Fill a text buffer with three rows, and insert them into the database.
+    let mut prepared = conn
+        .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a) Values (?)")
+        .unwrap();
+    let description = [BufferDescription {
+        nullable: true,
+        kind: BufferKind::Text { max_str_len: 50 },
+    }]
+    .iter()
+    .copied();
+    let params = ColumnarRowSet::new(5, description);
+    // params.append(["England"].iter().map(|s| Some(s.as_bytes())));
+    // params.append(["France"].iter().map(|s| Some(s.as_bytes())));
+    // params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
+
+    prepared.execute(&params).unwrap();
+
+    // Assert that the table contains the rows that have just been inserted.
+    // let expected = "England\nFrance\nGermany";
+    let expected = "";
+
+    let cursor = conn
+        .execute(
+            "SELECT a FROM BulkInsertWithColumnarBuffer ORDER BY id;",
+            (),
+        )
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);

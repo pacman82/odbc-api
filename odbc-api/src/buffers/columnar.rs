@@ -2,8 +2,8 @@ use std::{collections::HashSet, ffi::c_void};
 
 use crate::{
     fixed_sized::Bit,
-    handles::{CData, CDataMut},
-    Error, RowSetBuffer,
+    handles::{CData, CDataMut, HasDataType},
+    DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
 use super::{
@@ -16,6 +16,12 @@ use super::{
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
+/// Since buffer shapes are same for all time / timestamps independent of the precision and we do
+/// not know the precise SQL type. In order to still be able to bind time / timestamp buffer as
+/// input without requiring the user to seperatly specify the precision, we declare Nano second
+/// precision, to not loose any information.
+const DEFAULT_TIME_PRECISION: i16 = 9;
+
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarRowSet`].
 ///
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
@@ -23,6 +29,9 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 /// options.
 #[derive(Debug)]
 pub enum AnyColumnView<'a> {
+    /// Since we currently always have an indicator buffer for the text length anyway, there is no
+    /// NULL values are always represntable and there is no dedicated representation for none NULL
+    /// values.
     Text(TextColumnIt<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
@@ -50,6 +59,9 @@ pub enum AnyColumnView<'a> {
 
 #[derive(Debug)]
 enum AnyColumnBuffer {
+    /// Since we currently always have an indicator buffer for the text length anyway, there is no
+    /// NULL values are always represntable and there is no dedicated representation for none NULL
+    /// values.
     Text(TextColumn),
     Date(Vec<Date>),
     Time(Vec<Time>),
@@ -262,6 +274,34 @@ unsafe impl CDataMut for AnyColumnBuffer {
     }
 }
 
+unsafe impl HasDataType for AnyColumnBuffer {
+    fn data_type(&self) -> DataType {
+        match self {
+            AnyColumnBuffer::Text(col) => col.data_type(),
+            AnyColumnBuffer::Date(_) | AnyColumnBuffer::NullableDate(_) => DataType::Date,
+            AnyColumnBuffer::Time(_) | AnyColumnBuffer::NullableTime(_) => DataType::Time {
+                precision: DEFAULT_TIME_PRECISION,
+            },
+            AnyColumnBuffer::Timestamp(_) | AnyColumnBuffer::NullableTimestamp(_) => {
+                DataType::Timestamp {
+                    precision: DEFAULT_TIME_PRECISION,
+                }
+            }
+            AnyColumnBuffer::F64(_) | AnyColumnBuffer::NullableF64(_) => DataType::Double,
+            AnyColumnBuffer::F32(_) | AnyColumnBuffer::NullableF32(_) => DataType::Float,
+            AnyColumnBuffer::I8(_) | AnyColumnBuffer::NullableI8(_) => DataType::Tinyint,
+            AnyColumnBuffer::I16(_) | AnyColumnBuffer::NullableI16(_) => DataType::SmallInt,
+            AnyColumnBuffer::I32(_) | AnyColumnBuffer::NullableI32(_) => DataType::Integer,
+            AnyColumnBuffer::I64(_) | AnyColumnBuffer::NullableI64(_) => DataType::Bigint,
+            // Few databases support unsigned types, binding U8 as tiny int might lead to weird
+            // stuff if the database has type is signed. I guess. Let's bind it as SmallInt by
+            // default, just to be on the safe side.
+            AnyColumnBuffer::U8(_) | AnyColumnBuffer::NullableU8(_) => DataType::SmallInt,
+            AnyColumnBuffer::Bit(_) | AnyColumnBuffer::NullableBit(_) => DataType::Bit,
+        }
+    }
+}
+
 /// A columnar buffer intended to be bound with [crate::Cursor::bind_buffer] in order to obtain
 /// results from a cursor.
 ///
@@ -363,6 +403,19 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl crate::Cursor) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
             cursor.bind_col(*col_number, column)?;
+        }
+        Ok(())
+    }
+}
+
+unsafe impl ParameterCollection for &ColumnarRowSet {
+    fn parameter_set_size(&self) -> u32 {
+        *self.num_rows as u32
+    }
+
+    unsafe fn bind_parameters_to(self, stmt: &mut crate::handles::Statement) -> Result<(), Error> {
+        for &(parameter_number, ref buffer) in &self.columns {
+            stmt.bind_input_parameter(parameter_number, buffer)?;
         }
         Ok(())
     }
