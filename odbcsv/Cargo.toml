@@ -32,7 +32,7 @@ readme = "Readme.md"
 odbc-api = { version = "0.13.0", path = "../odbc-api" }
 csv = "1.1.5"
 anyhow = "1.0.37"
-stderrlog = "0.5.0"
+stderrlog = "0.5.1"
 structopt = "0.3.21"
 log = "0.4.11"
 
