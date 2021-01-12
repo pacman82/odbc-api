@@ -34,7 +34,7 @@ csv = "1.1.5"
 anyhow = "1.0.38"
 stderrlog = "0.5.1"
 structopt = "0.3.21"
-log = "0.4.11"
+log = "0.4.13"
 
 [dev-dependencies]
 assert_cmd = "1.0.2"
