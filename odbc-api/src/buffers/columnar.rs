@@ -159,6 +159,42 @@ impl AnyColumnBuffer {
         }
     }
 
+    fn fill_default_slice<T: Default + Copy>(col: &mut [T]) {
+        let element = T::default();
+        for item in col {
+            *item = element;
+        }
+    }
+
+    /// Fills the column with the default representation of values, between `from` and `to` index.
+    pub fn fill_default(&mut self, from: usize, to: usize) {
+        match self {
+            AnyColumnBuffer::Text(col) => col.fill_null(from, to),
+            AnyColumnBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::Timestamp(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::F64(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::F32(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::I8(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::I16(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::I32(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::I64(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::U8(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::Bit(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyColumnBuffer::NullableDate(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableTime(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableTimestamp(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableF64(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableF32(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableI8(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableI16(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableI32(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableI64(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableU8(col) => col.fill_null(from, to),
+            AnyColumnBuffer::NullableBit(col) => col.fill_null(from, to),
+        }
+    }
+
     fn inner_cdata(&self) -> &dyn CData {
         match self {
             AnyColumnBuffer::Text(col) => col,
@@ -374,9 +410,9 @@ impl ColumnarRowSet {
     /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
     ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
     ///   the output result set. This is important, because not every column needs to be bound. Some
-    ///   columns may simply be ignored. That being said, if every column of the output should is
-    ///   bound in the buffer, in the same order in which they are enumerated in the result set, the
-    ///   relationship between column index and buffer index is `buffer_index = column_index - 1'.
+    ///   columns may simply be ignored. That being said, if every column of the output is bound in
+    ///   the buffer, in the same order in which they are enumerated in the result set, the
+    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
     pub fn column(&self, buffer_index: usize) -> AnyColumnView<'_> {
         unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
     }
@@ -384,6 +420,24 @@ impl ColumnarRowSet {
     /// Number of valid rows in the buffer.
     pub fn num_rows(&self) -> usize {
         *self.num_rows
+    }
+
+    /// Set number of valid rows in the buffer. May not be larger than the batch size. If the
+    /// specified number should be larger than the number of valid rows currently held by the buffer
+    /// additional rows with the default value are going to be created.
+    pub fn set_num_rows(&mut self, num_rows: usize) {
+        if num_rows > self.max_rows as usize {
+            panic!(
+                "Columnar buffer may not be resized to a value higher than the maximum number \
+                of rows initialy specified in the constructor."
+            );
+        }
+        if *self.num_rows < num_rows {
+            for (_col_index, ref mut column) in &mut self.columns {
+                column.fill_default(*self.num_rows, num_rows)
+            }
+        }
+        *self.num_rows = num_rows;
     }
 }
 

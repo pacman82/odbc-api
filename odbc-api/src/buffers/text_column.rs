@@ -140,6 +140,13 @@ impl TextColumn {
             col: &self,
         }
     }
+
+    /// Fills the column with NULL, between From and To
+    pub fn fill_null(&mut self, from: usize, to: usize) {
+        for index in from..to {
+            self.indicators[index] = NULL_DATA;
+        }
+    }
 }
 
 /// Iterator over a text column. See [`TextColumn::iter`]

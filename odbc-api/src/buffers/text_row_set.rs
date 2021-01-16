@@ -161,7 +161,7 @@ impl TextRowSet {
         let index = *self.num_rows;
         for column in &mut self.buffers {
             let text = row.next().expect(
-                "row passed to TextRowSet::append must contain one element for each column.",
+                "Row passed to TextRowSet::append must contain one element for each column.",
             );
             column.append(index, text);
         }

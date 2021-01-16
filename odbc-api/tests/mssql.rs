@@ -381,7 +381,8 @@ fn bulk_insert_with_columnar_buffer() {
     }]
     .iter()
     .copied();
-    let params = ColumnarRowSet::new(5, description);
+    let mut params = ColumnarRowSet::new(5, description);
+    params.set_num_rows(3);
     // params.append(["England"].iter().map(|s| Some(s.as_bytes())));
     // params.append(["France"].iter().map(|s| Some(s.as_bytes())));
     // params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
@@ -390,7 +391,7 @@ fn bulk_insert_with_columnar_buffer() {
 
     // Assert that the table contains the rows that have just been inserted.
     // let expected = "England\nFrance\nGermany";
-    let expected = "";
+    let expected = "NULL\nNULL\nNULL";
 
     let cursor = conn
         .execute(
@@ -437,18 +438,18 @@ fn parameter_option_str() {
 }
 
 #[test]
-fn use_columnar_buffer() {
+fn read_into_columnar_buffer() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "UseColumnarRowSet", &["INTEGER", "VARCHAR(20)"]).unwrap();
+    setup_empty_table(&conn, "ReadIntoColumnarBuffer", &["INTEGER", "VARCHAR(20)"]).unwrap();
     conn.execute(
-        "INSERT INTO UseColumnarRowSet (a, b) VALUES (42, 'Hello, World!')",
+        "INSERT INTO ReadIntoColumnarBuffer (a, b) VALUES (42, 'Hello, World!')",
         (),
     )
     .unwrap();
 
     // Get cursor querying table
     let cursor = conn
-        .execute("SELECT a,b FROM UseColumnarRowSet ORDER BY id", ())
+        .execute("SELECT a,b FROM ReadIntoColumnarBuffer ORDER BY id", ())
         .unwrap()
         .unwrap();
 
