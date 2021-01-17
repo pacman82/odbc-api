@@ -337,3 +337,79 @@
 //!     cursor.bind_buffer(buffer)
 //! }
 //! ```
+//!
+//! ## Inserting values into a table
+//!
+//! ### Inserting a single row into a table
+//!
+//! Inserting a single row can be done by executing a statement and binding the fields as parameters
+//! in a tuple.
+//!
+//! ```no_run
+//! use odbc_api::{Connection, Error, IntoParameter};
+//!
+//! fn insert_birth_year(conn: &Connection, name: &str, year: i16) -> Result<(), Error>{
+//!     conn.execute(
+//!         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
+//!         (&name.into_parameter(), &year)
+//!     )?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Columnar bulk inserts
+//!
+//! Inserting values row by row can introduce a lot of overhead. ODBC allows you to perform either
+//! row or column wise bulk inserts. Especially in pipelines for data science you may already have
+//! buffers in a columnar layout at hand. [`crate::buffers::ColumnarRowSet`] can be used for bulk
+//! inserts.
+//!
+//! ```no_run
+//! use odbc_api::{
+//!     Connection, Error, IntoParameter,
+//!     buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut}
+//! };
+//!
+//! fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
+//!
+//!     // All columns must have equal length.
+//!     assert_eq!(names.len(), years.len());
+//!
+//!     // Create a columnar buffer which fits the input parameters.
+//!     let buffer_description = [
+//!         BufferDescription {
+//!             kind: BufferKind::Text { max_str_len: 255 },
+//!             nullable: false,
+//!         },
+//!         BufferDescription {
+//!             kind: BufferKind::I16,
+//!             nullable: false,
+//!         },
+//!     ];
+//!     let mut buffer = ColumnarRowSet::new(
+//!         names.len() as u32,
+//!         buffer_description.iter().copied()
+//!     );
+//!
+//!     // Fill the buffer with values column by column
+//!     match buffer.column_mut(0) {
+//!         AnyColumnViewMut::Text(mut col) => {
+//!             col.write(names.iter().map(|s| Some(s.as_bytes())))
+//!         }
+//!         _ => panic!("We know the name column to hold text.")
+//!     }
+//!
+//!     match buffer.column_mut(1) {
+//!         AnyColumnViewMut::I16(mut col) => {
+//!             col.copy_from_slice(years)
+//!         }
+//!         _ => panic!("We know the year column to hold i16.")
+//!     }
+//!
+//!     conn.execute(
+//!         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
+//!         &buffer
+//!     )?;
+//!     Ok(())
+//! }
+//! ```

@@ -32,11 +32,11 @@ pub enum BufferKind {
     F64,
     /// 32 bit floating point
     F32,
-    /// Describes a buffer holding [`sys::Date`] values.
+    /// Describes a buffer holding [`crate::sys::Date`] values.
     Date,
-    /// Describes a buffer holding [`sys::Time`] values.
+    /// Describes a buffer holding [`crate::sys::Time`] values.
     Time,
-    /// Describes a buffer holding [`sys::Timestamp`] values.
+    /// Describes a buffer holding [`crate::sys::Timestamp`] values.
     Timestamp,
     /// Signed 8 Bit integer
     I8,

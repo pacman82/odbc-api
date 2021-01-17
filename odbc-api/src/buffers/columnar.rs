@@ -514,6 +514,62 @@ impl ColumnarRowSet {
     ///   columns may simply be ignored. That being said, if every column of the output is bound in
     ///   the buffer, in the same order in which they are enumerated in the result set, the
     ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
+    ///
+    /// # Example
+    ///
+    /// This method is intend to be called if using [`ColumnarRowSet`] for column wise bulk inserts.
+    ///
+    /// ```no_run
+    /// use odbc_api::{
+    ///     Connection, Error, IntoParameter,
+    ///     buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut}
+    /// };
+    ///
+    /// fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16])
+    ///     -> Result<(), Error>
+    /// {
+    ///
+    ///     // All columns must have equal length.
+    ///     assert_eq!(names.len(), years.len());
+    ///
+    ///     // Create a columnar buffer which fits the input parameters.
+    ///     let buffer_description = [
+    ///         BufferDescription {
+    ///             kind: BufferKind::Text { max_str_len: 255 },
+    ///             nullable: false,
+    ///         },
+    ///         BufferDescription {
+    ///             kind: BufferKind::I16,
+    ///             nullable: false,
+    ///         },
+    ///     ];
+    ///     let mut buffer = ColumnarRowSet::new(
+    ///         names.len() as u32,
+    ///         buffer_description.iter().copied()
+    ///     );
+    ///
+    ///     // Fill the buffer with values column by column
+    ///     match buffer.column_mut(0) {
+    ///         AnyColumnViewMut::Text(mut col) => {
+    ///             col.write(names.iter().map(|s| Some(s.as_bytes())))
+    ///         }
+    ///         _ => panic!("We know the name column to hold text.")
+    ///     }
+    ///
+    ///     match buffer.column_mut(1) {
+    ///         AnyColumnViewMut::I16(mut col) => {
+    ///             col.copy_from_slice(years)
+    ///         }
+    ///         _ => panic!("We know the year column to hold i16.")
+    ///     }
+    ///
+    ///     conn.execute(
+    ///         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
+    ///         &buffer
+    ///     )?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn column_mut(&mut self, buffer_index: usize) -> AnyColumnViewMut {
         unsafe { self.columns[buffer_index].1.view_mut(*self.num_rows) }
     }

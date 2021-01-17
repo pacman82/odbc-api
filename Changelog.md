@@ -2,6 +2,8 @@
 
 ## 0.13.1 (Next)
 
+* Add support for bulk inserts to `ColumnarRowSet`.
+
 ## 0.13.0
 
 * Add support for output parameters in stored procedures.
