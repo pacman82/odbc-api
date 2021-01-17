@@ -22,17 +22,33 @@ pub struct BufferDescription {
 /// buffers bound to ODBC cursors and statements.
 #[derive(Clone, Copy, Debug)]
 pub enum BufferKind {
-    Text { max_str_len: usize },
+    /// Text buffer holding strings with binary length of up to `max_str_len`.
+    Text {
+        /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
+        /// implicitly allocated if required.
+        max_str_len: usize
+    },
+    /// 64 bit floating point
     F64,
+    /// 32 bit floating point
     F32,
+    /// Describes a buffer holding [`sys::Date`] values.
     Date,
+    /// Describes a buffer holding [`sys::Time`] values.
     Time,
+    /// Describes a buffer holding [`sys::Timestamp`] values.
     Timestamp,
+    /// Signed 8 Bit integer
     I8,
+    /// Signed 16 Bit integer
     I16,
+    /// Signed 32 Bit integer
     I32,
+    /// Signed 64 Bit integer
     I64,
+    /// Unsigned 8 Bit integer
     U8,
+    /// Can either be zero or one
     Bit,
 }
 

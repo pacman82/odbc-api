@@ -57,10 +57,20 @@ pub enum DataType {
     /// `Time`. Hour, minute, and second fields, with valid values for hours of 00 to 23, valid
     /// values for minutes of 00 to 59, and valid values for seconds of 00 to 61. Precision p
     /// indicates the seconds precision.
-    Time { precision: i16 },
+    Time {
+        /// Number of radix ten digits used to represent the timestamp after the decimal points.
+        /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
+        /// by 9.
+        precision: i16
+    },
     /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as
     /// defined for the Date and Time variants.
-    Timestamp { precision: i16 },
+    Timestamp { 
+        /// Number of radix ten digits used to represent the timestamp after the decimal points.
+        /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
+        /// by 9.
+        precision: i16
+    },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
     /// (signed: -2^63 <= n <= 2^63 - 1, unsigned: 0 <= n <= 2^64 - 1). Has no corresponding
     /// type in SQL-92.
@@ -78,6 +88,8 @@ pub enum DataType {
         data_type: SqlDataType,
         /// Size of column element
         column_size: usize,
+        /// Decimal digits returned for the column element. Exact meaning if any depends on the
+        /// `data_type` field.
         decimal_digits: i16,
     },
 }

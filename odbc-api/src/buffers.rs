@@ -6,8 +6,8 @@ mod text_column;
 mod text_row_set;
 
 pub use self::{
-    columnar::{AnyColumnView, ColumnarRowSet},
+    columnar::{AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
     description::{BufferDescription, BufferKind},
-    text_column::{TextColumn, TextColumnIt},
+    text_column::{TextColumn, TextColumnIt, TextColumnWriter},
     text_row_set::TextRowSet,
 };

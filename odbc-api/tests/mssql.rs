@@ -3,7 +3,9 @@ mod common;
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
-    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet},
+    buffers::{
+        AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet,
+    },
     ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
 };
 use std::{ffi::CStr, iter, thread};
@@ -369,33 +371,58 @@ fn bulk_insert_with_text_buffer() {
 #[test]
 fn bulk_insert_with_columnar_buffer() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "BulkInsertWithColumnarBuffer", &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        "BulkInsertWithColumnarBuffer",
+        &["VARCHAR(50)", "INTEGER"],
+    )
+    .unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
-        .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a) Values (?)")
+        .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a,b) Values (?,?)")
         .unwrap();
-    let description = [BufferDescription {
-        nullable: true,
-        kind: BufferKind::Text { max_str_len: 50 },
-    }]
+    let description = [
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::Text { max_str_len: 50 },
+        },
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::I32,
+        },
+    ]
     .iter()
     .copied();
     let mut params = ColumnarRowSet::new(5, description);
     params.set_num_rows(3);
-    // params.append(["England"].iter().map(|s| Some(s.as_bytes())));
-    // params.append(["France"].iter().map(|s| Some(s.as_bytes())));
-    // params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
+    let mut view_mut = params.column_mut(0);
+    // Fill first column with text
+    match &mut view_mut {
+        AnyColumnViewMut::Text(col) => {
+            let input = ["England", "France", "Germany"];
+            col.write(input.iter().map(|&s| Some(s.as_bytes())))
+        }
+        _ => panic!("Unexpected column type"),
+    }
+    // Fill second column with integers
+    let mut view_mut = params.column_mut(1);
+    match &mut view_mut {
+        AnyColumnViewMut::NullableI32(col) => {
+            let input = [1, 2, 3];
+            col.write(input.iter().map(|&i| Some(i)))
+        }
+        _ => panic!("Unexpected column type"),
+    }
 
     prepared.execute(&params).unwrap();
 
     // Assert that the table contains the rows that have just been inserted.
-    // let expected = "England\nFrance\nGermany";
-    let expected = "NULL\nNULL\nNULL";
+    let expected = "England,1\nFrance,2\nGermany,3";
 
     let cursor = conn
         .execute(
-            "SELECT a FROM BulkInsertWithColumnarBuffer ORDER BY id;",
+            "SELECT a,b FROM BulkInsertWithColumnarBuffer ORDER BY id;",
             (),
         )
         .unwrap()

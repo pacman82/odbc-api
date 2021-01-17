@@ -14,6 +14,7 @@ use std::{ffi::c_void, ptr::null};
 pub struct Bit(pub u8);
 
 impl Bit {
+    /// Maps `1` to `true`, `0` to `false`. Panics if `Bit` should be invalid (not `0` or `1`).
     pub fn as_bool(self) -> bool {
         match self.0 {
             0 => false,

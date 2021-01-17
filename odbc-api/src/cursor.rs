@@ -119,6 +119,7 @@ pub trait Cursor: Sized {
         ColumnNamesIt::new(self)
     }
 
+    /// The Application row descriptor (ARD) for this statement handle.
     fn application_row_descriptor(&self) -> Result<Description<'_>, Error>;
 }
 

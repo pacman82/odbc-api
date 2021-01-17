@@ -6,11 +6,15 @@ use crate::{
     DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
-use super::{BufferDescription, BufferKind, TextColumn, TextColumnIt, column_with_indicator::{
+use super::{
+    column_with_indicator::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
         OptI64Column, OptI8Column, OptIt, OptTimeColumn, OptTimestampColumn, OptU8Column,
         OptWriter,
-    }, text_column::TextColumnWriter};
+    },
+    text_column::TextColumnWriter,
+    BufferDescription, BufferKind, TextColumn, TextColumnIt,
+};
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
@@ -486,7 +490,7 @@ impl ColumnarRowSet {
         }
     }
 
-    /// Use this method to gain access to the actual column data.
+    /// Use this method to gain read access to the actual column data.
     ///
     /// # Parameters
     ///
@@ -500,6 +504,16 @@ impl ColumnarRowSet {
         unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
     }
 
+    /// Use this method to gain write access to the actual column data.
+    ///
+    /// # Parameters
+    ///
+    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
+    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   the output result set. This is important, because not every column needs to be bound. Some
+    ///   columns may simply be ignored. That being said, if every column of the output is bound in
+    ///   the buffer, in the same order in which they are enumerated in the result set, the
+    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
     pub fn column_mut(&mut self, buffer_index: usize) -> AnyColumnViewMut {
         unsafe { self.columns[buffer_index].1.view_mut(*self.num_rows) }
     }

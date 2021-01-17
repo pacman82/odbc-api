@@ -32,6 +32,7 @@ impl<'d> Description<'d> {
         }
     }
 
+    /// Set precision for the specified field in the ARD.
     pub fn set_field_precision(&mut self, column_number: i16, precision: i32) -> Result<(), Error> {
         unsafe {
             SQLSetDescFieldW(
@@ -45,6 +46,7 @@ impl<'d> Description<'d> {
         }
     }
 
+    /// Set scale for the specified field in the ARD.
     pub fn set_field_scale(&mut self, column_number: i16, scale: i32) -> Result<(), Error> {
         unsafe {
             SQLSetDescFieldW(self.handle, column_number, Desc::Scale, scale as Pointer, 0)

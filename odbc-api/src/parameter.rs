@@ -214,6 +214,7 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// [`crate::ParameterCollection`]. They can be bound as either input parameters, output parameters
 /// or both.
 pub unsafe trait Parameter {
+    /// Bind the parameter in question to a specific `parameter_number`.
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
@@ -312,7 +313,10 @@ where
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
 pub struct WithDataType<T> {
+    /// Value to wrap with a Data Type. Should implement [`crate::handles::CData`], to be useful.
     pub value: T,
+    /// The SQL type this value is supposed to map onto. What exactly happens with this information
+    /// is up to the ODBC driver in use.
     pub data_type: DataType,
 }
 

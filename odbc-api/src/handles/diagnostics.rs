@@ -123,9 +123,9 @@ pub fn diagnostics(
 /// `std::fmt::Display` to retrieve status code and other information.
 #[derive(Default)]
 pub struct Record {
-    // All elements but the last one, may not be null. The last one must be null.
+    /// All elements but the last one, may not be null. The last one must be null.
     pub state: State,
-    // Error code returned by Driver manager or driver
+    /// Error code returned by Driver manager or driver
     pub native_error: i32,
     /// Buffer containing the error message. The buffer already has the correct size, and there is
     /// no terminating zero at the end.

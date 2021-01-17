@@ -5,7 +5,7 @@ use crate::{
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, convert::TryInto, ffi::CStr, ffi::c_void};
+use std::{cmp::min, convert::TryInto, ffi::c_void, ffi::CStr};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -141,17 +141,22 @@ impl TextColumn {
         }
     }
 
-    pub fn set_value<'b>(&mut self, index: usize, value: Option<&'b[u8]>) {
-        if let Some(value) = value {
-            self.indicators[index] = value.len().try_into().unwrap();
-            if value.len() > self.max_str_len {
-                panic!("Tried to insert a value into a text buffer which is larger than the \
-                    maximum allowed string length for the buffer.");
+    /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
+    /// panic on out of bounds index, or if input holds a text which is larger than the maximum
+    /// allowed element length. `input` must be specified without the terminating zero.
+    pub fn set_value<'b>(&mut self, index: usize, input: Option<&'b [u8]>) {
+        if let Some(input) = input {
+            self.indicators[index] = input.len().try_into().unwrap();
+            if input.len() > self.max_str_len {
+                panic!(
+                    "Tried to insert a value into a text buffer which is larger than the \
+                    maximum allowed string length for the buffer."
+                );
             }
             let start = (self.max_str_len + 1) * index;
-            let end = start + self.values.len();
+            let end = start + input.len();
             let buf = &mut self.values[start..end];
-            buf.copy_from_slice(value);
+            buf.copy_from_slice(input);
             // Let's insert a terminating zero at the end to be on the safe side, in case the
             // ODBC driver would not care about the value in the index buffer and only look for the
             // terminating zero.
@@ -172,7 +177,7 @@ impl TextColumn {
     pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_> {
         TextColumnWriter {
             text_column: self,
-            to: n
+            to: n,
         }
     }
 }
@@ -208,8 +213,9 @@ pub struct TextColumnWriter<'a> {
 }
 
 impl<'a> TextColumnWriter<'a> {
-
-    pub fn write<'b>(&mut self, it: impl Iterator<Item=Option<&'b [u8]>>) {
+    /// Fill the text column with values by consuming the iterator and copying its items into the
+    /// buffer. It will not extract more items from the iterator than the buffer may hold.
+    pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
         for (index, item) in it.enumerate().take(self.to) {
             self.text_column.set_value(index, item)
         }

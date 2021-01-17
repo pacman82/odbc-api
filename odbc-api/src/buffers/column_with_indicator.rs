@@ -66,7 +66,7 @@ where
     pub fn writer_n(&mut self, n: usize) -> OptWriter<'_, T> {
         OptWriter {
             indicators: &mut self.indicators[0..n],
-            values: &mut self.values[0..n]
+            values: &mut self.values[0..n],
         }
     }
 }

@@ -86,6 +86,7 @@ pub struct TextRowSet {
     /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
     /// invalidated, even if the `TextRowSet` instance is moved in memory.
     num_rows: Box<usize>,
+    /// Text buffers for the individual columns.
     buffers: Vec<TextColumn>,
 }
 

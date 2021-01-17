@@ -537,6 +537,7 @@ impl<'s> Statement<'s> {
         Ok(())
     }
 
+    /// The Application row descriptor (ARD) for this statement handle.
     pub fn application_row_descriptor(&self) -> Result<Description, Error> {
         let mut hdesc: HDesc = null_mut();
         unsafe {
@@ -614,6 +615,9 @@ impl<'s> Statement<'s> {
 /// by [`crate::Prepared::describe_param`].
 #[derive(Debug)]
 pub struct ParameterDescription {
+    // Todo: rename to nullability.
+    /// Indicates wether the parameter may be NULL not.
     pub nullable: Nullability,
+    /// The SQL Type associated with that parameter.
     pub data_type: DataType,
 }
