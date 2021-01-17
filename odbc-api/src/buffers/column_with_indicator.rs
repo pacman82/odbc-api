@@ -61,8 +61,18 @@ where
             self.indicators[index] = NULL_DATA;
         }
     }
+
+    /// Create a writer which writes to the first `n` elements of the buffer.
+    pub fn writer_n(&mut self, n: usize) -> OptWriter<'_, T> {
+        OptWriter {
+            indicators: &mut self.indicators[0..n],
+            values: &mut self.values[0..n]
+        }
+    }
 }
 
+/// Iterates over the elements of a column buffer. Returned by
+/// [`crate::buffer::ColumnarRowSet::column`] as part of an [`crate::buffer::AnyColumnView`].
 #[derive(Debug)]
 pub struct OptIt<'a, T> {
     indicators: &'a [isize],
@@ -153,5 +163,28 @@ where
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.as_mut_ptr() as *mut c_void
+    }
+}
+
+/// Used to fill a column buffer with an iterator. Returned by
+/// [`crate::buffer::ColumnarRowSet::column_mut`] as part of an [`crate::buffer::AnyColumnViewMut`].
+#[derive(Debug)]
+pub struct OptWriter<'a, T> {
+    indicators: &'a mut [isize],
+    values: &'a mut [T],
+}
+
+impl<'a, T> OptWriter<'a, T> {
+    /// Writes the elements returned by the iterator into the buffer, starting at the beginning.
+    /// Writes elements until the iterator returns `None` or the buffer can not hold more elements.
+    pub fn write(&mut self, it: impl Iterator<Item = Option<T>>) {
+        for (index, item) in it.enumerate().take(self.values.len()) {
+            if let Some(value) = item {
+                self.indicators[index] = 0;
+                self.values[index] = value;
+            } else {
+                self.indicators[index] = NULL_DATA;
+            }
+        }
     }
 }

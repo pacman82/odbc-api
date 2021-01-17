@@ -5,7 +5,7 @@ use crate::{
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, convert::TryInto, ffi::c_void, ffi::CStr};
+use std::{cmp::min, convert::TryInto, ffi::CStr, ffi::c_void};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -141,10 +141,38 @@ impl TextColumn {
         }
     }
 
+    pub fn set_value<'b>(&mut self, index: usize, value: Option<&'b[u8]>) {
+        if let Some(value) = value {
+            self.indicators[index] = value.len().try_into().unwrap();
+            if value.len() > self.max_str_len {
+                panic!("Tried to insert a value into a text buffer which is larger than the \
+                    maximum allowed string length for the buffer.");
+            }
+            let start = (self.max_str_len + 1) * index;
+            let end = start + self.values.len();
+            let buf = &mut self.values[start..end];
+            buf.copy_from_slice(value);
+            // Let's insert a terminating zero at the end to be on the safe side, in case the
+            // ODBC driver would not care about the value in the index buffer and only look for the
+            // terminating zero.
+            self.values[end + 1] = 0;
+        } else {
+            self.indicators[index] = NULL_DATA;
+        }
+    }
+
     /// Fills the column with NULL, between From and To
     pub fn fill_null(&mut self, from: usize, to: usize) {
         for index in from..to {
             self.indicators[index] = NULL_DATA;
+        }
+    }
+
+    /// A writer able to fill the first `n` elements of the buffer, from an iterator.
+    pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_> {
+        TextColumnWriter {
+            text_column: self,
+            to: n
         }
     }
 }
@@ -167,6 +195,23 @@ impl<'c> Iterator for TextColumnIt<'c> {
             let ret = unsafe { Some(self.col.value_at(self.pos)) };
             self.pos += 1;
             ret
+        }
+    }
+}
+
+/// Fills a text column buffer with elements from an Iterator.
+#[derive(Debug)]
+pub struct TextColumnWriter<'a> {
+    text_column: &'a mut TextColumn,
+    /// Upper limit, the text column writer will not write beyond this index.
+    to: usize,
+}
+
+impl<'a> TextColumnWriter<'a> {
+
+    pub fn write<'b>(&mut self, it: impl Iterator<Item=Option<&'b [u8]>>) {
+        for (index, item) in it.enumerate().take(self.to) {
+            self.text_column.set_value(index, item)
         }
     }
 }

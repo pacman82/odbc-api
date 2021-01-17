@@ -6,13 +6,11 @@ use crate::{
     DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
-use super::{
-    column_with_indicator::{
+use super::{BufferDescription, BufferKind, TextColumn, TextColumnIt, column_with_indicator::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
         OptI64Column, OptI8Column, OptIt, OptTimeColumn, OptTimestampColumn, OptU8Column,
-    },
-    BufferDescription, BufferKind, TextColumn, TextColumnIt,
-};
+        OptWriter,
+    }, text_column::TextColumnWriter};
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
@@ -55,6 +53,41 @@ pub enum AnyColumnView<'a> {
     NullableI64(OptIt<'a, i64>),
     NullableU8(OptIt<'a, u8>),
     NullableBit(OptIt<'a, Bit>),
+}
+
+/// A mutable borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarRowSet`].
+///
+/// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
+/// the slice is offered. Buffers over nullable columns can be accessed via an iterator over
+/// options.
+#[derive(Debug)]
+pub enum AnyColumnViewMut<'a> {
+    /// Since we currently always have an indicator buffer for the text length anyway, there is no
+    /// NULL values are always represntable and there is no dedicated representation for none NULL
+    /// values.
+    Text(TextColumnWriter<'a>),
+    Date(&'a mut [Date]),
+    Time(&'a mut [Time]),
+    Timestamp(&'a mut [Timestamp]),
+    F64(&'a mut [f64]),
+    F32(&'a mut [f32]),
+    I8(&'a mut [i8]),
+    I16(&'a mut [i16]),
+    I32(&'a mut [i32]),
+    I64(&'a mut [i64]),
+    U8(&'a mut [u8]),
+    Bit(&'a mut [Bit]),
+    NullableDate(OptWriter<'a, Date>),
+    NullableTime(OptWriter<'a, Time>),
+    NullableTimestamp(OptWriter<'a, Timestamp>),
+    NullableF64(OptWriter<'a, f64>),
+    NullableF32(OptWriter<'a, f32>),
+    NullableI8(OptWriter<'a, i8>),
+    NullableI16(OptWriter<'a, i16>),
+    NullableI32(OptWriter<'a, i32>),
+    NullableI64(OptWriter<'a, i64>),
+    NullableU8(OptWriter<'a, u8>),
+    NullableBit(OptWriter<'a, Bit>),
 }
 
 #[derive(Debug)]
@@ -280,6 +313,56 @@ impl AnyColumnBuffer {
             AnyColumnBuffer::NullableBit(col) => AnyColumnView::NullableBit(col.iter(num_rows)),
         }
     }
+
+    pub unsafe fn view_mut(&mut self, num_rows: usize) -> AnyColumnViewMut {
+        match self {
+            AnyColumnBuffer::Text(col) => AnyColumnViewMut::Text(col.writer_n(num_rows)),
+            AnyColumnBuffer::Date(col) => AnyColumnViewMut::Date(&mut col[0..num_rows]),
+            AnyColumnBuffer::Time(col) => AnyColumnViewMut::Time(&mut col[0..num_rows]),
+            AnyColumnBuffer::Timestamp(col) => AnyColumnViewMut::Timestamp(&mut col[0..num_rows]),
+            AnyColumnBuffer::F64(col) => AnyColumnViewMut::F64(&mut col[0..num_rows]),
+            AnyColumnBuffer::F32(col) => AnyColumnViewMut::F32(&mut col[0..num_rows]),
+            AnyColumnBuffer::I8(col) => AnyColumnViewMut::I8(&mut col[0..num_rows]),
+            AnyColumnBuffer::I16(col) => AnyColumnViewMut::I16(&mut col[0..num_rows]),
+            AnyColumnBuffer::I32(col) => AnyColumnViewMut::I32(&mut col[0..num_rows]),
+            AnyColumnBuffer::I64(col) => AnyColumnViewMut::I64(&mut col[0..num_rows]),
+            AnyColumnBuffer::U8(col) => AnyColumnViewMut::U8(&mut col[0..num_rows]),
+            AnyColumnBuffer::Bit(col) => AnyColumnViewMut::Bit(&mut col[0..num_rows]),
+            AnyColumnBuffer::NullableDate(col) => {
+                AnyColumnViewMut::NullableDate(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableTime(col) => {
+                AnyColumnViewMut::NullableTime(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableTimestamp(col) => {
+                AnyColumnViewMut::NullableTimestamp(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableF64(col) => {
+                AnyColumnViewMut::NullableF64(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableF32(col) => {
+                AnyColumnViewMut::NullableF32(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI8(col) => {
+                AnyColumnViewMut::NullableI8(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI16(col) => {
+                AnyColumnViewMut::NullableI16(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI32(col) => {
+                AnyColumnViewMut::NullableI32(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI64(col) => {
+                AnyColumnViewMut::NullableI64(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableU8(col) => {
+                AnyColumnViewMut::NullableU8(col.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableBit(col) => {
+                AnyColumnViewMut::NullableBit(col.writer_n(num_rows))
+            }
+        }
+    }
 }
 
 unsafe impl CData for AnyColumnBuffer {
@@ -415,6 +498,10 @@ impl ColumnarRowSet {
     ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
     pub fn column(&self, buffer_index: usize) -> AnyColumnView<'_> {
         unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
+    }
+
+    pub fn column_mut(&mut self, buffer_index: usize) -> AnyColumnViewMut {
+        unsafe { self.columns[buffer_index].1.view_mut(*self.num_rows) }
     }
 
     /// Number of valid rows in the buffer.
