@@ -72,7 +72,7 @@ where
 }
 
 /// Iterates over the elements of a column buffer. Returned by
-/// [`crate::buffer::ColumnarRowSet::column`] as part of an [`crate::buffer::AnyColumnView`].
+/// [`crate::buffers::ColumnarRowSet::column`] as part of an [`crate::buffers::AnyColumnView`].
 #[derive(Debug)]
 pub struct OptIt<'a, T> {
     indicators: &'a [isize],
@@ -167,7 +167,8 @@ where
 }
 
 /// Used to fill a column buffer with an iterator. Returned by
-/// [`crate::buffer::ColumnarRowSet::column_mut`] as part of an [`crate::buffer::AnyColumnViewMut`].
+/// [`crate::buffers::ColumnarRowSet::column_mut`] as part of an
+/// [`crate::buffers::AnyColumnViewMut`].
 #[derive(Debug)]
 pub struct OptWriter<'a, T> {
     indicators: &'a mut [isize],

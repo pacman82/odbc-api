@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.3.8 (next)
+## 0.3.9
+
+* Updated dependencies
+
+## 0.3.8
+
+* Updated dependencies
 
 ## 0.3.7
 

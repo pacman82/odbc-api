@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.13.1 (Next)
+## 0.13.1
 
 * Add support for bulk inserts to `ColumnarRowSet`.
+* New section about inserting values in the guide.
 
 ## 0.13.0
 
