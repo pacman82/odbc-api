@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.2
+
+* Add support for transactions.
+
 ## 0.13.1
 
 * Add support for bulk inserts to `ColumnarRowSet`.

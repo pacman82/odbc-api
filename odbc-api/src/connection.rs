@@ -140,6 +140,24 @@ impl<'c> Connection<'c> {
         self.prepare_utf16(&query)
     }
 
+    /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
+    /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
+    /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
+    /// the connection.
+    pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
+        self.connection.set_autocommit(enabled)
+    }
+
+    /// To commit a transaction in manual-commit mode.
+    pub fn commit(&self) -> Result<(), Error> {
+        self.connection.commit()
+    }
+
+    /// To rollback a transaction in manual-commit mode.
+    pub fn rollback(&self) -> Result<(), Error> {
+        self.connection.rollback()
+    }
+
     /// Allows sending this connection to different threads. This Connection will still be only be
     /// used by one thread at a time, but it may be a different thread each time.
     ///

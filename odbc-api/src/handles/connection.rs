@@ -125,7 +125,7 @@ impl<'c> Connection<'c> {
     /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
     /// the connection.
-    pub fn set_autocommit(&mut self, enabled: bool) -> Result<(), Error> {
+    pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
         let val = if enabled { 1u32 } else { 0u32 };
         unsafe {
             SQLSetConnectAttrW(
@@ -139,14 +139,14 @@ impl<'c> Connection<'c> {
     }
 
     /// To commit a transaction in manual-commit mode.
-    pub fn commit(&mut self) -> Result<(), Error> {
+    pub fn commit(&self) -> Result<(), Error> {
         unsafe {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit).into_result(self)
         }
     }
 
     /// Roll back a transaction in manual-commit mode.
-    pub fn rollback(&mut self) -> Result<(), Error> {
+    pub fn rollback(&self) -> Result<(), Error> {
         unsafe {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback)
                 .into_result(self)
