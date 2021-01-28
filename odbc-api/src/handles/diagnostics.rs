@@ -2,12 +2,12 @@ use super::{
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
 };
-use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZEW};
+use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZE};
 use std::{convert::TryInto, fmt};
 use widestring::{U16CStr, U16Str};
 
 /// A buffer large enough to hold an `SOLState` for diagnostics and a terminating zero.
-pub type State = [u16; SQLSTATE_SIZEW + 1];
+pub type State = [u16; SQLSTATE_SIZE + 1];
 
 /// Result of `diagnostics`.
 #[derive(Debug, Clone, Copy)]
@@ -61,7 +61,7 @@ pub fn diagnostics(
     // The total number of characters (excluding the terminating NULL) available to return in
     // `message_text`.
     let mut text_length = 0;
-    let mut state = [0; SQLSTATE_SIZEW + 1];
+    let mut state = [0; SQLSTATE_SIZE + 1];
     let mut native_error = 0;
     let ret = unsafe {
         // Starting with odbc 5 we may be able to specify utf8 encoding. until then, we may need to
@@ -147,6 +147,11 @@ impl Record {
             }
             None => false,
         }
+    }
+
+    /// True if state is 25000 invalid state transaction.
+    pub fn is_invalid_state_transaction(&self) -> bool {
+        self.state == [50, 53, 48, 48, 48, 0]
     }
 }
 

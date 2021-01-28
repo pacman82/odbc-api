@@ -8,11 +8,33 @@ use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
-        if let Err(e) = self.connection.disconnect() {
-            // Avoid panicking, if we already have a panic. We don't want to mask the original
-            // error.
-            if !panicking() {
-                panic!("Unexpected error disconnecting: {:?}", e)
+        match self.connection.disconnect() {
+            Ok(()) => (),
+            Err(Error::Diagnostics(record)) if record.is_invalid_state_transaction() => {
+                // Invalid transaction state. Let's rollback the current transaction and try again.
+                if let Err(e) = self.connection.rollback() {
+                    // Avoid panicking, if we already have a panic. We don't want to mask the original
+                    // error.
+                    if !panicking() {
+                        panic!("Unexpected error rolling back transaction (In order to recover \
+                                from invalid transaction state during disconnect): {:?}", e)
+                    }
+                }
+                // Transaction is rolled back. Now let's try again to disconnect.
+                if let Err(e) = self.connection.disconnect() {
+                    // Avoid panicking, if we already have a panic. We don't want to mask the original
+                    // error.
+                    if !panicking() {
+                        panic!("Unexpected error disconnecting): {:?}", e)
+                    }
+                }
+            }
+            Err(e) => {
+                // Avoid panicking, if we already have a panic. We don't want to mask the original
+                // error.
+                if !panicking() {
+                    panic!("Unexpected error disconnecting: {:?}", e)
+                }
             }
         }
     }
@@ -140,10 +162,16 @@ impl<'c> Connection<'c> {
         self.prepare_utf16(&query)
     }
 
-    /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
-    /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
-    /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
-    /// the connection.
+    /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode.
+    /// Switching from manual-commit mode to auto-commit mode automatically commits any open
+    /// transaction on the connection. There is no open or begin transaction method. Each statement
+    /// execution automatically starts a new transaction or adds to the existing one.
+    ///
+    /// In manual commit mode you can use [`Connection::commit`] or [`Connection::rollback`]. Keep
+    /// in mind, that even `SELECT` statements can open new transactions. This library will rollback
+    /// open transactions if a connection goes out of SCOPE. This however will log an error, since
+    /// the transaction state is only discovered during a failed disconnect. It is preferable that
+    /// the appliacation makes sure all transactions are closed if in manual commit mode.
     pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
         self.connection.set_autocommit(enabled)
     }

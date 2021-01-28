@@ -553,6 +553,70 @@ fn output_parameter() {
     assert_eq!(Some(7 + 5), param.into_opt());
 }
 
+#[test]
+fn manual_commit_mode() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        "ManualCommitMode",
+        &["INTEGER"],
+    )
+    .unwrap();
+
+    // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
+    conn.set_autocommit(false).unwrap();
+
+    // Insert a value into the table.
+    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (5);", ()).unwrap();
+
+    // But rollback the transaction immediatly.
+    conn.rollback().unwrap();
+
+    // Check that the table is still empty.
+    let cursor = conn
+        .execute("SELECT a FROM ManualCommitMode", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!(actual, "");
+
+    // Insert a value into the table.
+    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (42);", ()).unwrap();
+
+    // This time we commit the transaction, though.
+    conn.commit().unwrap();
+
+    // Check that the table contains the value.
+    let cursor = conn
+        .execute("SELECT a FROM ManualCommitMode", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!(actual, "42");
+
+    // Close transaction opened by SELECT Statement
+    conn.commit().unwrap();
+}
+
+/// This test checks the behaviour if a connections goes out of scope with a transacation still
+/// open.
+#[test]
+fn unfinished_transaction() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(
+        &conn,
+        "UnfinishedTransaction",
+        &["INTEGER"],
+    )
+    .unwrap();
+
+    // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
+    conn.set_autocommit(false).unwrap();
+
+    // Insert a value into the table.
+    conn.execute("INSERT INTO UnfinishedTransaction (a) VALUES (5);", ()).unwrap();
+}
+
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
