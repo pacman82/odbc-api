@@ -556,18 +556,14 @@ fn output_parameter() {
 #[test]
 fn manual_commit_mode() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
-        &conn,
-        "ManualCommitMode",
-        &["INTEGER"],
-    )
-    .unwrap();
+    setup_empty_table(&conn, "ManualCommitMode", &["INTEGER"]).unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
     conn.set_autocommit(false).unwrap();
 
     // Insert a value into the table.
-    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (5);", ()).unwrap();
+    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (5);", ())
+        .unwrap();
 
     // But rollback the transaction immediatly.
     conn.rollback().unwrap();
@@ -581,7 +577,8 @@ fn manual_commit_mode() {
     assert_eq!(actual, "");
 
     // Insert a value into the table.
-    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (42);", ()).unwrap();
+    conn.execute("INSERT INTO ManualCommitMode (a) VALUES (42);", ())
+        .unwrap();
 
     // This time we commit the transaction, though.
     conn.commit().unwrap();
@@ -603,18 +600,14 @@ fn manual_commit_mode() {
 #[test]
 fn unfinished_transaction() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(
-        &conn,
-        "UnfinishedTransaction",
-        &["INTEGER"],
-    )
-    .unwrap();
+    setup_empty_table(&conn, "UnfinishedTransaction", &["INTEGER"]).unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
     conn.set_autocommit(false).unwrap();
 
     // Insert a value into the table.
-    conn.execute("INSERT INTO UnfinishedTransaction (a) VALUES (5);", ()).unwrap();
+    conn.execute("INSERT INTO UnfinishedTransaction (a) VALUES (5);", ())
+        .unwrap();
 }
 
 /// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic

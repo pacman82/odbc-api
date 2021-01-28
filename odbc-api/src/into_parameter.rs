@@ -9,7 +9,6 @@ use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, InputParameter, Nu
 /// ODBC. This also provides a safe extension point for all kinds of parameters, as only the
 /// implementation of `Parameters` is unsafe.
 pub trait IntoParameter {
-
     type Parameter: InputParameter;
 
     fn into_parameter(self) -> Self::Parameter;

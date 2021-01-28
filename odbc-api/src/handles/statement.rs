@@ -436,8 +436,8 @@ impl<'s> Statement<'s> {
             SqlDataType::TIMESTAMP => DataType::Timestamp {
                 precision: self.col_precision(column_number)?.try_into().unwrap(),
             },
-            SqlDataType::EXT_BIG_INT => DataType::Bigint,
-            SqlDataType::EXT_TINY_INT => DataType::Tinyint,
+            SqlDataType::EXT_BIG_INT => DataType::BigInt,
+            SqlDataType::EXT_TINY_INT => DataType::TinyInt,
             SqlDataType::EXT_BIT => DataType::Bit,
             other => {
                 let mut column_size = 0;

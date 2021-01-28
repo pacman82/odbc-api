@@ -61,23 +61,23 @@ pub enum DataType {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
         /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
         /// by 9.
-        precision: i16
+        precision: i16,
     },
     /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as
     /// defined for the Date and Time variants.
-    Timestamp { 
+    Timestamp {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
         /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
         /// by 9.
-        precision: i16
+        precision: i16,
     },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
     /// (signed: -2^63 <= n <= 2^63 - 1, unsigned: 0 <= n <= 2^64 - 1). Has no corresponding
     /// type in SQL-92.
-    Bigint,
+    BigInt,
     /// `TINYINT`. Exact numeric value with precision 3 and scale 0 (signed: -128 <= n <= 127,
     /// unsigned: 0 <= n <= 255)
-    Tinyint,
+    TinyInt,
     /// `BIT`. Single bit binary data.
     Bit,
     /// The driver returned a type, but it is not among the other types of these enumeration. This
@@ -126,8 +126,8 @@ impl DataType {
             SqlDataType::TIMESTAMP => DataType::Timestamp {
                 precision: decimal_digits,
             },
-            SqlDataType::EXT_BIG_INT => DataType::Bigint,
-            SqlDataType::EXT_TINY_INT => DataType::Tinyint,
+            SqlDataType::EXT_BIG_INT => DataType::BigInt,
+            SqlDataType::EXT_TINY_INT => DataType::TinyInt,
             SqlDataType::EXT_BIT => DataType::Bit,
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
                 length: column_size,
@@ -156,8 +156,8 @@ impl DataType {
             DataType::Date => SqlDataType::DATE,
             DataType::Time { .. } => SqlDataType::TIME,
             DataType::Timestamp { .. } => SqlDataType::TIMESTAMP,
-            DataType::Bigint => SqlDataType::EXT_BIG_INT,
-            DataType::Tinyint => SqlDataType::EXT_TINY_INT,
+            DataType::BigInt => SqlDataType::EXT_BIG_INT,
+            DataType::TinyInt => SqlDataType::EXT_TINY_INT,
             DataType::Bit => SqlDataType::EXT_BIT,
             DataType::WVarchar { .. } => SqlDataType::EXT_W_VARCHAR,
             DataType::Other { data_type, .. } => *data_type,
@@ -177,8 +177,8 @@ impl DataType {
             | DataType::Date
             | DataType::Time { .. }
             | DataType::Timestamp { .. }
-            | DataType::Bigint
-            | DataType::Tinyint
+            | DataType::BigInt
+            | DataType::TinyInt
             | DataType::Bit => 0,
             DataType::Char { length }
             | DataType::Varchar { length }
@@ -201,8 +201,8 @@ impl DataType {
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
             | DataType::Date
-            | DataType::Bigint
-            | DataType::Tinyint
+            | DataType::BigInt
+            | DataType::TinyInt
             | DataType::Bit => 0,
             DataType::Numeric { scale, .. } | DataType::Decimal { scale, .. } => *scale,
             DataType::Time { precision } | DataType::Timestamp { precision } => *precision,
@@ -265,9 +265,9 @@ impl DataType {
                 20 + *precision as usize
             }),
             // 20 (a sign and 19 digits if signed or 20 digits if unsigned).
-            DataType::Bigint => Some(20),
+            DataType::BigInt => Some(20),
             // 4 if signed (a sign and 3 digits) or 3 if unsigned (3 digits).
-            DataType::Tinyint => Some(4),
+            DataType::TinyInt => Some(4),
             // 1 digit.
             DataType::Bit => Some(1),
         }

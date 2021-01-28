@@ -21,6 +21,7 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 - [ ] Support for rowise bulk queries.
 - [x] Support for Output parameters of stored procedures.
 - [x] Support prepared and 'one shot' queries.
+- [x] Transactions
 - [x] Pass parameters to queries
 - [ ] Support for async
 - [x] Support for Multithreading

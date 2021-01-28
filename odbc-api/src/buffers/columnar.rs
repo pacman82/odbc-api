@@ -412,10 +412,10 @@ unsafe impl HasDataType for AnyColumnBuffer {
             }
             AnyColumnBuffer::F64(_) | AnyColumnBuffer::NullableF64(_) => DataType::Double,
             AnyColumnBuffer::F32(_) | AnyColumnBuffer::NullableF32(_) => DataType::Float,
-            AnyColumnBuffer::I8(_) | AnyColumnBuffer::NullableI8(_) => DataType::Tinyint,
+            AnyColumnBuffer::I8(_) | AnyColumnBuffer::NullableI8(_) => DataType::TinyInt,
             AnyColumnBuffer::I16(_) | AnyColumnBuffer::NullableI16(_) => DataType::SmallInt,
             AnyColumnBuffer::I32(_) | AnyColumnBuffer::NullableI32(_) => DataType::Integer,
-            AnyColumnBuffer::I64(_) | AnyColumnBuffer::NullableI64(_) => DataType::Bigint,
+            AnyColumnBuffer::I64(_) | AnyColumnBuffer::NullableI64(_) => DataType::BigInt,
             // Few databases support unsigned types, binding U8 as tiny int might lead to weird
             // stuff if the database has type is signed. I guess. Let's bind it as SmallInt by
             // default, just to be on the safe side.

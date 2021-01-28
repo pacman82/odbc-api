@@ -94,9 +94,9 @@ impl_input_fixed_sized!(f32, DataType::Real);
 impl_input_fixed_sized!(Date, DataType::Date);
 impl_input_fixed_sized!(i16, DataType::SmallInt);
 impl_input_fixed_sized!(i32, DataType::Integer);
-impl_input_fixed_sized!(i8, DataType::Tinyint);
+impl_input_fixed_sized!(i8, DataType::TinyInt);
 impl_input_fixed_sized!(Bit, DataType::Bit);
-impl_input_fixed_sized!(i64, DataType::Bigint);
+impl_input_fixed_sized!(i64, DataType::BigInt);
 
 // Support for fixed size types, which are not unsigned. Time, Date and timestamp types could be
 // supported, implementation DataType would need to take an instance into account.

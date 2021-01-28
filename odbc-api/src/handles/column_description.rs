@@ -19,7 +19,6 @@ impl Default for Nullability {
 }
 
 impl Nullability {
-
     /// Construct a newe instance from a `Nullability` new type constant.
     pub fn new(nullability: odbc_sys::Nullability) -> Self {
         match nullability {

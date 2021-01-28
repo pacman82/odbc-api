@@ -20,7 +20,7 @@ pub struct BufferDescription {
 
 /// This class is used together with [`crate::buffers::BufferDescription`] to specify the layout of
 /// buffers bound to ODBC cursors and statements.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferKind {
     /// Text buffer holding strings with binary length of up to `max_str_len`.
     Text {
@@ -54,6 +54,76 @@ pub enum BufferKind {
 
 impl BufferKind {
     /// Describe a buffer which fits best the SQL Data Type.
+    ///
+    /// ```
+    /// use odbc_api::{DataType, buffers::BufferKind};
+    ///
+    /// assert_eq!(BufferKind::from_data_type(DataType::Unknown), None);
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Numeric { precision: 2, scale: 0 }),
+    ///     Some(BufferKind::I8)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Numeric { precision: 9, scale: 0 }),
+    ///     Some(BufferKind::I32)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Numeric { precision: 18, scale: 0 }),
+    ///     Some(BufferKind::I64)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Numeric { precision: 20, scale: 5 }),
+    ///     Some(BufferKind::Text { max_str_len: 20 + 2 })
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Varchar { length: 42 }),
+    ///     Some(BufferKind::Text { max_str_len: 42 })
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::BigInt),
+    ///     Some(BufferKind::I64)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Integer),
+    ///     Some(BufferKind::I32)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::SmallInt),
+    ///     Some(BufferKind::I16)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::TinyInt),
+    ///     Some(BufferKind::I8)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Float),
+    ///     Some(BufferKind::F32)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Double),
+    ///     Some(BufferKind::F64)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Date),
+    ///     Some(BufferKind::Date)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Time { precision: 0 }),
+    ///     Some(BufferKind::Time)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Bit),
+    ///     Some(BufferKind::Bit)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Time { precision: 3 }),
+    ///     Some(BufferKind::Text { max_str_len: 12 })
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Timestamp { precision: 3 }),
+    ///     Some(BufferKind::Timestamp)
+    /// );
+    /// ```
     pub fn from_data_type(data_type: DataType) -> Option<Self> {
         let buffer_kind = match data_type {
             DataType::Unknown
@@ -64,24 +134,24 @@ impl BufferKind {
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 10 => BufferKind::I32,
             DataType::Numeric { precision, scale }
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 19 => BufferKind::I64,
+            DataType::Integer => BufferKind::I32,
+            DataType::SmallInt => BufferKind::I16,
+            DataType::Float | DataType::Real => BufferKind::F32,
+            DataType::Double => BufferKind::F64,
+            DataType::Date => BufferKind::Date,
+            DataType::Time { precision: 0 } => BufferKind::Time,
+            DataType::Timestamp { precision: _ } => BufferKind::Timestamp,
+            DataType::BigInt => BufferKind::I64,
+            DataType::TinyInt => BufferKind::I8,
+            DataType::Bit => BufferKind::Bit,
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
             | DataType::Char { length } => BufferKind::Text { max_str_len : length },
             // Specialized buffers for Numeric and decimal are not yet supported.
             | DataType::Numeric { precision: _, scale: _ }
-            | DataType::Decimal { precision: _, scale: _ } => BufferKind::Text { max_str_len: data_type.column_size() },
-            DataType::Integer => BufferKind::I32,
-            DataType::SmallInt => BufferKind::I16,
-            DataType::Float => BufferKind::F32,
-            DataType::Real => BufferKind::F32,
-            DataType::Double => BufferKind::F64,
-            DataType::Date => BufferKind::Date,
-            DataType::Time { precision: _ } => BufferKind::Time,
-            DataType::Timestamp { precision: _ } => BufferKind::Timestamp,
-            DataType::Bigint => BufferKind::I64,
-            DataType::Tinyint => BufferKind::I8,
-            DataType::Bit => BufferKind::Bit,
+            | DataType::Decimal { precision: _, scale: _ }
+            | DataType::Time { precision: _ } => BufferKind::Text { max_str_len: data_type.display_size().unwrap() },
         };
         Some(buffer_kind)
     }
