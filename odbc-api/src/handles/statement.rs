@@ -6,12 +6,11 @@ use super::{
     data_type::DataType,
     drop_handle,
     error::{Error, IntoResult},
-    Description,
 };
 use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, Len, ParamType, Pointer,
+    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer,
     SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
-    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetStmtAttr,
+    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt,
     SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute,
     ULen,
 };
@@ -535,22 +534,6 @@ impl<'s> Statement<'s> {
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
         }
         Ok(())
-    }
-
-    /// The Application row descriptor (ARD) for this statement handle.
-    pub fn application_row_descriptor(&self) -> Result<Description, Error> {
-        let mut hdesc: HDesc = null_mut();
-        unsafe {
-            SQLGetStmtAttr(
-                self.handle,
-                StatementAttribute::AppRowDesc,
-                &mut hdesc as *mut HDesc as Pointer,
-                0,
-                null_mut(),
-            )
-            .into_result(self)?;
-            Ok(Description::new(hdesc))
-        }
     }
 
     /// # Safety

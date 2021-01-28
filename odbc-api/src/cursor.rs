@@ -1,5 +1,5 @@
 use crate::{
-    handles::{CDataMut, Description, Statement},
+    handles::{CDataMut, Statement},
     ColumnDescription, DataType, Error,
 };
 
@@ -118,9 +118,6 @@ pub trait Cursor: Sized {
     fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
         ColumnNamesIt::new(self)
     }
-
-    /// The Application row descriptor (ARD) for this statement handle.
-    fn application_row_descriptor(&self) -> Result<Description<'_>, Error>;
 }
 
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See
@@ -282,10 +279,6 @@ where
 
     fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
         ColumnNamesIt::new(self)
-    }
-
-    fn application_row_descriptor(&self) -> Result<Description, Error> {
-        self.statement.borrow().application_row_descriptor()
     }
 }
 
