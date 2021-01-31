@@ -74,13 +74,13 @@ impl<'c> Connection<'c> {
         query: &U16Str,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
-        let mut stmt = self.connection.allocate_statement()?;
-
         let param_set_size = params.parameter_set_size();
 
         if param_set_size == 0 {
             Ok(None)
         } else {
+            let mut stmt = self.connection.allocate_statement()?;
+
             // Reset parameters so we do not dereference stale once by mistake if we call
             // `exec_direct`.
             stmt.reset_parameters()?;

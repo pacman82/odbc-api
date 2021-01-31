@@ -187,7 +187,10 @@ fn columnar_fetch_varbinary() {
     assert_eq!(DataType::Varbinary { length: 10 }, data_type);
     let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
     assert_eq!(BufferKind::Binary { length: 10 }, buffer_kind);
-    let buffer_desc = BufferDescription { kind: buffer_kind, nullable: true };
+    let buffer_desc = BufferDescription {
+        kind: buffer_kind,
+        nullable: true,
+    };
     let row_set_buffer = ColumnarRowSet::new(10, iter::once(buffer_desc));
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
@@ -227,7 +230,10 @@ fn columnar_fetch_binary() {
     assert_eq!(DataType::Binary { length: 5 }, data_type);
     let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
     assert_eq!(BufferKind::Binary { length: 5 }, buffer_kind);
-    let buffer_desc = BufferDescription { kind: buffer_kind, nullable: true };
+    let buffer_desc = BufferDescription {
+        kind: buffer_kind,
+        nullable: true,
+    };
     let row_set_buffer = ColumnarRowSet::new(10, iter::once(buffer_desc));
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
@@ -241,6 +247,47 @@ fn columnar_fetch_binary() {
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
     assert_eq!(None, col_it.next()); // Expecting iterator end.
+}
+
+#[test]
+fn columnar_insert_varbinary() {
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "ColumnarInsertVarbinary", &["VARBINARY(10)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::Binary { length: 5 },
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+    buffer.set_num_rows(3);
+
+    if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
+        writer.write(
+            [Some(&b"Hello"[..]), Some(&b"World"[..]), None]
+                .iter()
+                .copied(),
+        );
+    } else {
+        panic!("Expected binary column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        "INSERT INTO ColumnarInsertVarbinary (a) VALUES (?)",
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute("SELECT a FROM ColumnarInsertVarbinary ORDER BY Id", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "48656C6C6F\n576F726C64\nNULL";
+    assert_eq!(expected, actual);
 }
 
 #[test]
