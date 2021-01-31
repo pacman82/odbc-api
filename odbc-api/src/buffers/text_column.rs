@@ -58,8 +58,8 @@ impl TextColumn {
         }
     }
 
-    /// Changes the max_str_len of the buffer. This operation is useful if you find an unexpected
-    /// large input string during insertion.
+    /// Changes the maximum string length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input string during insertion.
     ///
     /// This is however costly, as not only does the new buffer have to be allocated, but all values
     /// have to copied from the old to the new buffer.

@@ -22,6 +22,11 @@ pub struct BufferDescription {
 /// buffers bound to ODBC cursors and statements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferKind {
+    /// Variable sized binary buffer, holding up to `length` bytes per value.
+    Binary {
+        /// Maximum number of bytes per value.
+        length: usize,
+    },
     /// Text buffer holding strings with binary length of up to `max_str_len`.
     Text {
         /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
@@ -144,6 +149,8 @@ impl BufferKind {
             DataType::BigInt => BufferKind::I64,
             DataType::TinyInt => BufferKind::I8,
             DataType::Bit => BufferKind::Bit,
+            DataType::Varbinary { length } => BufferKind::Binary 
+            { length },
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
