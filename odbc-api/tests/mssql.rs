@@ -203,6 +203,46 @@ fn columnar_fetch_varbinary() {
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
 
+/// Bind a columnar buffer to a BINARY(5) column and fetch data.
+#[test]
+fn columnar_fetch_binary() {
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "ColumnarFetchBinary", &["BINARY(5)"]).unwrap();
+    conn.execute(
+        "INSERT INTO ColumnarFetchBinary (a) Values \
+        (CONVERT(Binary(5), 'Hello')),\
+        (CONVERT(Binary(5), 'World')),\
+        (NULL)",
+        (),
+    )
+    .unwrap();
+
+    // Retrieve values
+    let cursor = conn
+        .execute("SELECT a FROM ColumnarFetchBinary ORDER BY Id", ())
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+    assert_eq!(DataType::Binary { length: 5 }, data_type);
+    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
+    assert_eq!(BufferKind::Binary { length: 5 }, buffer_kind);
+    let buffer_desc = BufferDescription { kind: buffer_kind, nullable: true };
+    let row_set_buffer = ColumnarRowSet::new(10, iter::once(buffer_desc));
+    let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let col_view = batch.column(0);
+    let mut col_it = if let AnyColumnView::Binary(col_it) = col_view {
+        col_it
+    } else {
+        panic!("Column View expected to be binary")
+    };
+    assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
+    assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
+    assert_eq!(Some(None), col_it.next()); // Expecting NULL
+    assert_eq!(None, col_it.next()); // Expecting iterator end.
+}
+
 #[test]
 fn all_types() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
