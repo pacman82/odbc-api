@@ -31,7 +31,7 @@ pub enum BufferKind {
     Text {
         /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
         /// implicitly allocated if required.
-        max_str_len: usize
+        max_str_len: usize,
     },
     /// 64 bit floating point
     F64,
