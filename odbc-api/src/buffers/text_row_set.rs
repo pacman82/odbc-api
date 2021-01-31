@@ -1,4 +1,4 @@
-use super::TextColumn;
+use super::text_column::TextColumn;
 use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
 use std::{ffi::CStr, str::Utf8Error};
 

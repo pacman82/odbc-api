@@ -7,13 +7,14 @@ use crate::{
 };
 
 use super::{
+    bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
     column_with_indicator::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
         OptI64Column, OptI8Column, OptIt, OptTimeColumn, OptTimestampColumn, OptU8Column,
         OptWriter,
     },
-    text_column::TextColumnWriter,
-    BufferDescription, BufferKind, TextColumn, TextColumnIt,
+    text_column::{TextColumn, TextColumnIt, TextColumnWriter},
+    BufferDescription, BufferKind,
 };
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
@@ -35,6 +36,7 @@ pub enum AnyColumnView<'a> {
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
     Text(TextColumnIt<'a>),
+    Binary(BinColumnIt<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
     Timestamp(&'a [Timestamp]),
@@ -70,6 +72,7 @@ pub enum AnyColumnViewMut<'a> {
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
     Text(TextColumnWriter<'a>),
+    Binary(BinColumnWriter<'a>),
     Date(&'a mut [Date]),
     Time(&'a mut [Time]),
     Timestamp(&'a mut [Timestamp]),
@@ -99,6 +102,7 @@ enum AnyColumnBuffer {
     /// Since we currently always have an indicator buffer for the text length anyway, there is no
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
+    Binary(BinColumn),
     Text(TextColumn),
     Date(Vec<Date>),
     Time(Vec<Time>),
@@ -128,6 +132,9 @@ impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
     pub fn new(max_rows: u32, desc: BufferDescription) -> Self {
         match (desc.kind, desc.nullable) {
+            (BufferKind::Binary { length }, _) => {
+                AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
+            }
             (BufferKind::Text { max_str_len }, _) => {
                 AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
             }
@@ -206,6 +213,7 @@ impl AnyColumnBuffer {
     /// Fills the column with the default representation of values, between `from` and `to` index.
     pub fn fill_default(&mut self, from: usize, to: usize) {
         match self {
+            AnyColumnBuffer::Binary(col) => col.fill_null(from, to),
             AnyColumnBuffer::Text(col) => col.fill_null(from, to),
             AnyColumnBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
             AnyColumnBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
@@ -234,6 +242,7 @@ impl AnyColumnBuffer {
 
     fn inner_cdata(&self) -> &dyn CData {
         match self {
+            AnyColumnBuffer::Binary(col) => col,
             AnyColumnBuffer::Text(col) => col,
             AnyColumnBuffer::F64(col) => col,
             AnyColumnBuffer::F32(col) => col,
@@ -262,6 +271,7 @@ impl AnyColumnBuffer {
 
     fn inner_cdata_mut(&mut self) -> &mut dyn CDataMut {
         match self {
+            AnyColumnBuffer::Binary(col) => col,
             AnyColumnBuffer::Text(col) => col,
             AnyColumnBuffer::F64(col) => col,
             AnyColumnBuffer::F32(col) => col,
@@ -290,6 +300,7 @@ impl AnyColumnBuffer {
 
     pub unsafe fn view(&self, num_rows: usize) -> AnyColumnView {
         match self {
+            AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.iter(num_rows)),
             AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.iter(num_rows)),
             AnyColumnBuffer::Date(col) => AnyColumnView::Date(&col[0..num_rows]),
             AnyColumnBuffer::Time(col) => AnyColumnView::Time(&col[0..num_rows]),
@@ -321,6 +332,7 @@ impl AnyColumnBuffer {
     pub unsafe fn view_mut(&mut self, num_rows: usize) -> AnyColumnViewMut {
         match self {
             AnyColumnBuffer::Text(col) => AnyColumnViewMut::Text(col.writer_n(num_rows)),
+            AnyColumnBuffer::Binary(col) => AnyColumnViewMut::Binary(col.writer_n(num_rows)),
             AnyColumnBuffer::Date(col) => AnyColumnViewMut::Date(&mut col[0..num_rows]),
             AnyColumnBuffer::Time(col) => AnyColumnViewMut::Time(&mut col[0..num_rows]),
             AnyColumnBuffer::Timestamp(col) => AnyColumnViewMut::Timestamp(&mut col[0..num_rows]),
@@ -400,6 +412,7 @@ unsafe impl CDataMut for AnyColumnBuffer {
 unsafe impl HasDataType for AnyColumnBuffer {
     fn data_type(&self) -> DataType {
         match self {
+            AnyColumnBuffer::Binary(col) => col.data_type(),
             AnyColumnBuffer::Text(col) => col.data_type(),
             AnyColumnBuffer::Date(_) | AnyColumnBuffer::NullableDate(_) => DataType::Date,
             AnyColumnBuffer::Time(_) | AnyColumnBuffer::NullableTime(_) => DataType::Time {
@@ -577,6 +590,29 @@ impl ColumnarRowSet {
     /// Number of valid rows in the buffer.
     pub fn num_rows(&self) -> usize {
         *self.num_rows
+    }
+
+    /// Use this method to change the maximum element length of a variable sized column. This method
+    /// panics if buffer index is not a variable sized text or binary buffer.
+    ///
+    /// # Parameters
+    ///
+    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
+    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   the output result set. This is important, because not every column needs to be bound. Some
+    ///   columns may simply be ignored. That being said, if every column of the output is bound in
+    ///   the buffer, in the same order in which they are enumerated in the result set, the
+    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
+    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
+    ///   The length is exculding the terminating zero if a text buffer is specified.
+    ///
+    pub fn rebind(&mut self, buffer_index: usize, new_max_len: usize) {
+        let (_col_indext, ref mut buffer) = self.columns[buffer_index];
+        match buffer {
+            AnyColumnBuffer::Binary(buf) => buf.rebind(new_max_len, *self.num_rows),
+            AnyColumnBuffer::Text(_) => {}
+            _ => panic!("Rebind must be called on a column type with variable length."),
+        }
     }
 
     /// Set number of valid rows in the buffer. May not be larger than the batch size. If the
