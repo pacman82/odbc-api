@@ -49,7 +49,7 @@ impl BinColumn {
             let offset = row_index * self.max_len;
             // Indicator value might be larger than max_len.
             let length = min(self.max_len, len as usize);
-            Some(&self.values[offset..offset + length + 1])
+            Some(&self.values[offset..offset + length])
         }
     }
 
@@ -201,7 +201,7 @@ unsafe impl CData for BinColumn {
     }
 
     fn buffer_length(&self) -> isize {
-        (self.max_len + 1).try_into().unwrap()
+        self.max_len.try_into().unwrap()
     }
 }
 

@@ -8,11 +8,10 @@ use super::{
     error::{Error, IntoResult},
 };
 use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer,
-    SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW,
-    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLNumResultCols, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute,
-    ULen,
+    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
+    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLDescribeParam,
+    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLNumResultCols, SQLPrepareW,
+    SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
@@ -406,6 +405,9 @@ impl<'s> Statement<'s> {
         let kind = self.col_concise_type(column_number)?;
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
+            SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap()
+            },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },

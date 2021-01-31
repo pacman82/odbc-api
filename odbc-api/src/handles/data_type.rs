@@ -81,9 +81,7 @@ pub enum DataType {
     /// `BIT`. Single bit binary data.
     Bit,
     /// `VARBINARY`. Variable sized type for binary data.
-    Varbinary {
-        length: usize,
-    },
+    Varbinary { length: usize },
     /// The driver returned a type, but it is not among the other types of these enumeration. This
     /// is a catchall, in case the library is incomplete, or the data source supports custom or
     /// non-standard types.

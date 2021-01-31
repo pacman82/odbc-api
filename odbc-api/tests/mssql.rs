@@ -163,6 +163,46 @@ fn bind_numeric_to_float() {
     assert_eq!(&[1.23], row_set_cursor.fetch().unwrap().unwrap().get());
 }
 
+/// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
+#[test]
+fn columnar_fetch_varbinary() {
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "ColumnarFetchVarbinary", &["VARBINARY(10)"]).unwrap();
+    conn.execute(
+        "INSERT INTO ColumnarFetchVarbinary (a) Values \
+        (CONVERT(Varbinary(10), 'Hello')),\
+        (CONVERT(Varbinary(10), 'World')),\
+        (NULL)",
+        (),
+    )
+    .unwrap();
+
+    // Retrieve values
+    let cursor = conn
+        .execute("SELECT a FROM ColumnarFetchVarbinary ORDER BY Id", ())
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+    assert_eq!(DataType::Varbinary { length: 10 }, data_type);
+    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
+    assert_eq!(BufferKind::Binary { length: 10 }, buffer_kind);
+    let buffer_desc = BufferDescription { kind: buffer_kind, nullable: true };
+    let row_set_buffer = ColumnarRowSet::new(10, iter::once(buffer_desc));
+    let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let col_view = batch.column(0);
+    let mut col_it = if let AnyColumnView::Binary(col_it) = col_view {
+        col_it
+    } else {
+        panic!("Column View expected to be binary")
+    };
+    assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
+    assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
+    assert_eq!(Some(None), col_it.next()); // Expecting NULL
+    assert_eq!(None, col_it.next()); // Expecting iterator end.
+}
+
 #[test]
 fn all_types() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
@@ -433,7 +473,7 @@ fn bulk_insert_with_columnar_buffer() {
 }
 
 #[test]
-fn send_connecion() {
+fn send_connection() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let conn = unsafe { conn.promote_to_send() };
 
