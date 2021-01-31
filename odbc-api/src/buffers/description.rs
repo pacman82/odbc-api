@@ -149,7 +149,7 @@ impl BufferKind {
             DataType::BigInt => BufferKind::I64,
             DataType::TinyInt => BufferKind::I8,
             DataType::Bit => BufferKind::Bit,
-            DataType::Varbinary { length } => BufferKind::Binary 
+            DataType::Varbinary { length } | DataType::Binary { length  } => BufferKind::Binary 
             { length },
             DataType::Varchar { length }
             | DataType::WVarchar { length }

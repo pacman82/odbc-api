@@ -408,6 +408,9 @@ impl<'s> Statement<'s> {
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
                 length: self.col_octet_length(column_number)?.try_into().unwrap()
             },
+            SqlDataType::EXT_BINARY => DataType::Binary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap()
+            },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },

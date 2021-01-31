@@ -80,8 +80,10 @@ pub enum DataType {
     TinyInt,
     /// `BIT`. Single bit binary data.
     Bit,
-    /// `VARBINARY`. Variable sized type for binary data.
+    /// `VARBINARY(n)`. Type for variable sized binary data.
     Varbinary { length: usize },
+    /// `BINARY(n)`. Type for fixed sized binary data.
+    Binary { length: usize },
     /// The driver returned a type, but it is not among the other types of these enumeration. This
     /// is a catchall, in case the library is incomplete, or the data source supports custom or
     /// non-standard types.
@@ -146,7 +148,8 @@ impl DataType {
     pub fn data_type(&self) -> SqlDataType {
         match self {
             DataType::Unknown => SqlDataType::UNKNOWN_TYPE,
-            DataType::Varbinary { .. } => SqlDataType::EXT_BINARY,
+            DataType::Binary { .. } => SqlDataType::EXT_BINARY,
+            DataType::Varbinary { .. } => SqlDataType::EXT_VAR_BINARY,
             DataType::Char { .. } => SqlDataType::CHAR,
             DataType::Numeric { .. } => SqlDataType::NUMERIC,
             DataType::Decimal { .. } => SqlDataType::DECIMAL,
@@ -186,6 +189,7 @@ impl DataType {
             DataType::Char { length }
             | DataType::Varchar { length }
             | DataType::Varbinary { length }
+            | DataType::Binary { length }
             | DataType::WVarchar { length } => *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
@@ -205,6 +209,7 @@ impl DataType {
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
             | DataType::Varbinary { .. }
+            | DataType::Binary { .. }
             | DataType::Date
             | DataType::BigInt
             | DataType::TinyInt
@@ -227,7 +232,7 @@ impl DataType {
                 decimal_digits: _,
             } => None,
             // Each binary byte is represented by a 2-digit hexadecimal number.
-            DataType::Varbinary { length } => Some(*length * 2),
+            DataType::Varbinary { length } | DataType::Binary { length } => Some(*length * 2),
             // The defined (for fixed types) or maximum (for variable types) number of characters
             // needed to display the data in character form.
             DataType::Varchar { length }
