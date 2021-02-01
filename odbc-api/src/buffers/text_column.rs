@@ -176,7 +176,7 @@ impl TextColumn {
     /// A writer able to fill the first `n` elements of the buffer, from an iterator.
     pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_> {
         TextColumnWriter {
-            text_column: self,
+            column: self,
             to: n,
         }
     }
@@ -207,18 +207,36 @@ impl<'c> Iterator for TextColumnIt<'c> {
 /// Fills a text column buffer with elements from an Iterator.
 #[derive(Debug)]
 pub struct TextColumnWriter<'a> {
-    text_column: &'a mut TextColumn,
+    column: &'a mut TextColumn,
     /// Upper limit, the text column writer will not write beyond this index.
     to: usize,
 }
 
 impl<'a> TextColumnWriter<'a> {
     /// Fill the text column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold.
+    /// buffer. It will not extract more items from the iterator than the buffer may hold. Should
+    /// some elements be longer than the maximum string length a rebind is triggered and the buffer
+    /// is reallocated to make room for the longer elements.
     pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
         for (index, item) in it.enumerate().take(self.to) {
-            self.text_column.set_value(index, item)
+            if let Some(item) = item {
+                if item.len() > self.column.max_str_len {
+                    self.rebind((item.len() as f64 * 1.2) as usize)
+                }
+            }
+            self.column.set_value(index, item)
         }
+    }
+
+    /// Use this method to change the maximum string length (excluding terminating zero).
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
+    ///   The length is exculding the terminating zero.
+    ///
+    pub fn rebind(&mut self, new_max_len: usize) {
+        self.column.rebind(new_max_len, self.to)
     }
 }
 

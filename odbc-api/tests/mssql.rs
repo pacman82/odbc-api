@@ -253,7 +253,7 @@ fn columnar_fetch_binary() {
 fn columnar_insert_varbinary() {
     // Setup
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "ColumnarInsertVarbinary", &["VARBINARY(10)"]).unwrap();
+    setup_empty_table(&conn, "ColumnarInsertVarbinary", &["VARBINARY(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -261,14 +261,19 @@ fn columnar_insert_varbinary() {
         nullable: true,
     };
     let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
-    buffer.set_num_rows(3);
 
+    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
+    // reallocation of the underlying buffer.
+    let input = [
+        Some(&b"Hello"[..]),
+        Some(&b"World"[..]),
+        None,
+        Some(&b"Hello, World!"[..]),
+    ];
+
+    buffer.set_num_rows(input.len());
     if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
-        writer.write(
-            [Some(&b"Hello"[..]), Some(&b"World"[..]), None]
-                .iter()
-                .copied(),
-        );
+        writer.write(input.iter().copied());
     } else {
         panic!("Expected binary column writer");
     };
@@ -286,7 +291,7 @@ fn columnar_insert_varbinary() {
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
-    let expected = "48656C6C6F\n576F726C64\nNULL";
+    let expected = "48656C6C6F\n576F726C64\nNULL\n48656C6C6F2C20576F726C6421";
     assert_eq!(expected, actual);
 }
 

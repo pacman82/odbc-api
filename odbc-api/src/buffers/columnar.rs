@@ -592,29 +592,6 @@ impl ColumnarRowSet {
         *self.num_rows
     }
 
-    /// Use this method to change the maximum element length of a variable sized column. This method
-    /// panics if buffer index is not a variable sized text or binary buffer.
-    ///
-    /// # Parameters
-    ///
-    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
-    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
-    ///   the output result set. This is important, because not every column needs to be bound. Some
-    ///   columns may simply be ignored. That being said, if every column of the output is bound in
-    ///   the buffer, in the same order in which they are enumerated in the result set, the
-    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
-    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
-    ///   The length is exculding the terminating zero if a text buffer is specified.
-    ///
-    pub fn rebind(&mut self, buffer_index: usize, new_max_len: usize) {
-        let (_col_indext, ref mut buffer) = self.columns[buffer_index];
-        match buffer {
-            AnyColumnBuffer::Binary(buf) => buf.rebind(new_max_len, *self.num_rows),
-            AnyColumnBuffer::Text(_) => {}
-            _ => panic!("Rebind must be called on a column type with variable length."),
-        }
-    }
-
     /// Set number of valid rows in the buffer. May not be larger than the batch size. If the
     /// specified number should be larger than the number of valid rows currently held by the buffer
     /// additional rows with the default value are going to be created.

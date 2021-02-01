@@ -179,11 +179,28 @@ pub struct BinColumnWriter<'a> {
 
 impl<'a> BinColumnWriter<'a> {
     /// Fill the binary column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold.
+    /// buffer. It will not extract more items from the iterator than the buffer may hold. Should
+    /// some elements be longer than the maximum element length a rebind is triggered and the buffer
+    /// is reallocated to make room for the longer elements.
     pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
         for (index, item) in it.enumerate().take(self.to) {
+            if let Some(item) = item {
+                if item.len() > self.column.max_len {
+                    self.rebind((item.len() as f64 * 1.2) as usize)
+                }
+            }
             self.column.set_value(index, item)
         }
+    }
+
+    /// Use this method to change the maximum element length.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
+    ///
+    pub fn rebind(&mut self, new_max_len: usize) {
+        self.column.rebind(new_max_len, self.to)
     }
 }
 
