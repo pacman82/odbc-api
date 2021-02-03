@@ -67,6 +67,9 @@ impl TextColumn {
     /// This method could also be used to reduce the maximum string length, which would truncate
     /// strings in the process.
     ///
+    /// This method does not adjust indicator buffers as these might hold values larger than the
+    /// maximum string length.
+    ///
     /// # Parameters
     ///
     /// * `new_max_str_len`: New maximum string length without terminating zero.
@@ -96,6 +99,22 @@ impl TextColumn {
         }
         self.values = new_values;
         self.max_str_len = new_max_str_len;
+    }
+
+    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_len`: New maximum string length without terminating zero.
+    pub fn set_max_len(&mut self, new_max_len: usize) {
+        let batch_size = self.indicators.len();
+        // Allocate a new buffer large enough to hold a batch of strings with maximum length.
+        let new_values = vec![0u8; (new_max_len + 1) * batch_size];
+        // Set all indicators to NULL
+        self.fill_null(0, batch_size);
+        self.values = new_values;
+        self.max_str_len = new_max_len;
     }
 
     /// Appends a new element to the column buffer. Rebinds the buffer to increase maximum string
@@ -214,29 +233,23 @@ pub struct TextColumnWriter<'a> {
 
 impl<'a> TextColumnWriter<'a> {
     /// Fill the text column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold. Should
-    /// some elements be longer than the maximum string length a rebind is triggered and the buffer
-    /// is reallocated to make room for the longer elements.
+    /// buffer. It will not extract more items from the iterator than the buffer may hold. This
+    /// method panics if strings returned by the iterator are larger than the maximum element length
+    /// of the buffer.
     pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
         for (index, item) in it.enumerate().take(self.to) {
-            if let Some(item) = item {
-                if item.len() > self.column.max_str_len {
-                    self.rebind((item.len() as f64 * 1.2) as usize)
-                }
-            }
             self.column.set_value(index, item)
         }
     }
 
-    /// Use this method to change the maximum string length (excluding terminating zero).
+    /// Changes the maximum string length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
     ///
     /// # Parameters
     ///
-    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
-    ///   The length is exculding the terminating zero.
-    ///
-    pub fn rebind(&mut self, new_max_len: usize) {
-        self.column.rebind(new_max_len, self.to)
+    /// * `new_max_len`: New maximum string length without terminating zero.
+    pub fn set_max_len(&mut self, new_max_len: usize) {
+        self.column.set_max_len(new_max_len)
     }
 }
 

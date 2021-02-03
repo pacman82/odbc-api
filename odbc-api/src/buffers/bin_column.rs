@@ -3,7 +3,6 @@ use crate::{
     DataType,
 };
 
-use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void};
 
@@ -54,41 +53,17 @@ impl BinColumn {
     }
 
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input during insertion.
-    ///
-    /// This is however costly, as not only does the new buffer have to be allocated, but all values
-    /// have to copied from the old to the new buffer.
-    ///
-    /// This method could also be used to reduce the maximum element length, which would truncate
-    /// values in the process.
+    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
     ///
     /// # Parameters
     ///
     /// * `new_max_len`: New maximum string length without terminating zero.
-    /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn rebind(&mut self, new_max_len: usize, num_rows: usize) {
-        debug!(
-            "Rebinding binary column buffer with {} elements. Maximum length {} => {}",
-            num_rows, self.max_len, new_max_len
-        );
-
+    pub fn set_max_len(&mut self, new_max_len: usize) {
         let batch_size = self.indicators.len();
         // Allocate a new buffer large enough to hold a batch of strings with maximum length.
-        let mut new_values = vec![0u8; new_max_len * batch_size];
-        // Copy values from old to new buffer.
-        let max_copy_length = min(self.max_len, new_max_len);
-        for ((&indicator, old_value), new_value) in self
-            .indicators
-            .iter()
-            .zip(self.values.chunks_exact_mut(self.max_len))
-            .zip(new_values.chunks_exact_mut(new_max_len))
-            .take(num_rows)
-        {
-            if indicator != NULL_DATA {
-                let num_bytes_to_copy = min(indicator as usize, max_copy_length);
-                new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
-            }
-        }
+        let new_values = vec![0u8; new_max_len * batch_size];
+        // Set all indicators to NULL
+        self.fill_null(0, batch_size);
         self.values = new_values;
         self.max_len = new_max_len;
     }
@@ -179,28 +154,23 @@ pub struct BinColumnWriter<'a> {
 
 impl<'a> BinColumnWriter<'a> {
     /// Fill the binary column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold. Should
-    /// some elements be longer than the maximum element length a rebind is triggered and the buffer
-    /// is reallocated to make room for the longer elements.
+    /// buffer. It will not extract more items from the iterator than the buffer may hold. This
+    /// method panics if elements of the iterator are larger than the maximum element length of the
+    /// buffer.
     pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
         for (index, item) in it.enumerate().take(self.to) {
-            if let Some(item) = item {
-                if item.len() > self.column.max_len {
-                    self.rebind((item.len() as f64 * 1.2) as usize)
-                }
-            }
             self.column.set_value(index, item)
         }
     }
 
-    /// Use this method to change the maximum element length.
+    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
     ///
     /// # Parameters
     ///
-    /// * `new_max_len`: New maximum length of values in the column. Existing values are truncated.
-    ///
-    pub fn rebind(&mut self, new_max_len: usize) {
-        self.column.rebind(new_max_len, self.to)
+    /// * `new_max_len`: New maximum element length
+    pub fn set_max_len(&mut self, new_max_len: usize) {
+        self.column.set_max_len(new_max_len)
     }
 }
 
