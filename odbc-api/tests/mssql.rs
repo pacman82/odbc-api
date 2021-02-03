@@ -249,6 +249,7 @@ fn columnar_fetch_binary() {
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
 
+/// Insert values into a varbinary column using a columnar buffer
 #[test]
 fn columnar_insert_varbinary() {
     // Setup
@@ -273,6 +274,8 @@ fn columnar_insert_varbinary() {
 
     buffer.set_num_rows(input.len());
     if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
+        // Reset length to make room for `Hello, World!`.
+        writer.set_max_len(13);
         writer.write(input.iter().copied());
     } else {
         panic!("Expected binary column writer");
@@ -292,6 +295,57 @@ fn columnar_insert_varbinary() {
         .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "48656C6C6F\n576F726C64\nNULL\n48656C6C6F2C20576F726C6421";
+    assert_eq!(expected, actual);
+}
+
+/// Insert values into a varbinary column using a columnar buffer
+#[test]
+fn columnar_insert_varchar() {
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "ColumnarInsertVarchar", &["VARCHAR(13)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        // Buffer size purpusfully choosen too small, so we would get a painc if `set_max_len` would
+        // not work.
+        kind: BufferKind::Text { max_str_len: 5 },
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+
+    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
+    // reallocation of the underlying buffer.
+    let input = [
+        Some(&b"Hello"[..]),
+        Some(&b"World"[..]),
+        None,
+        Some(&b"Hello, World!"[..]),
+    ];
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
+        // Reset length to make room for `Hello, World!`.
+        writer.set_max_len(13);
+        writer.write(input.iter().copied());
+    } else {
+        panic!("Expected text column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        "INSERT INTO ColumnarInsertVarchar (a) VALUES (?)",
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute("SELECT a FROM ColumnarInsertVarchar ORDER BY Id", ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "Hello\nWorld\nNULL\nHello, World!";
     assert_eq!(expected, actual);
 }
 
