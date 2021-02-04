@@ -21,36 +21,44 @@ fn connect_to_movies_db() {
 #[test]
 fn describe_columns() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT title, year FROM Movies ORDER BY year;";
+    setup_empty_table(
+        &conn,
+        "DescribeColumns",
+        &[
+            "VARCHAR(255) NOT NULL",
+            "INTEGER",
+            "BINARY(12)",
+            "VARBINARY(100)",
+        ],
+    )
+    .unwrap();
+    let sql = "SELECT a,b,c,d FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 2);
-    let mut cd = ColumnDescription::default();
-    cursor.describe_col(1, &mut cd).unwrap();
+    assert_eq!(cursor.num_result_cols().unwrap(), 4);
+    let mut actual = ColumnDescription::default();
 
-    cursor.describe_col(1, &mut cd).unwrap();
-    let name = U16String::from_str("title");
-
-    // Expectation title column
-    let title_desc = ColumnDescription {
-        name: name.into_vec(),
-        data_type: DataType::Varchar { length: 255 },
-        nullability: Nullability::NoNulls,
+    let desc = |name, data_type, nullability| ColumnDescription {
+        name: U16String::from_str(name).into_vec(),
+        data_type,
+        nullability,
     };
 
-    assert_eq!(title_desc, cd);
+    let expected = desc("a", DataType::Varchar { length: 255 }, Nullability::NoNulls);
+    cursor.describe_col(1, &mut actual).unwrap();
+    assert_eq!(expected, actual);
 
-    cursor.describe_col(2, &mut cd).unwrap();
-    let name = U16String::from_str("year");
+    let expected = desc("b", DataType::Integer, Nullability::Nullable);
+    cursor.describe_col(2, &mut actual).unwrap();
+    assert_eq!(expected, actual);
 
-    // Expectation year column
-    let year_desc = ColumnDescription {
-        name: name.into_vec(),
-        data_type: DataType::Integer,
-        nullability: Nullability::Nullable,
-    };
+    let expected = desc("c", DataType::Binary { length: 12 }, Nullability::Nullable);
+    cursor.describe_col(3, &mut actual).unwrap();
+    assert_eq!(expected, actual);
 
-    assert_eq!(year_desc, cd);
+    let expected = desc("d", DataType::Varbinary { length: 100 }, Nullability::Nullable);
+    cursor.describe_col(4, &mut actual).unwrap();
+    assert_eq!(expected, actual);
 }
 
 #[test]
@@ -333,11 +341,8 @@ fn columnar_insert_varchar() {
     };
 
     // Bind buffer and insert values.
-    conn.execute(
-        "INSERT INTO ColumnarInsertVarchar (a) VALUES (?)",
-        &buffer,
-    )
-    .unwrap();
+    conn.execute("INSERT INTO ColumnarInsertVarchar (a) VALUES (?)", &buffer)
+        .unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
