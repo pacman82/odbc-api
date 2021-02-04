@@ -8,6 +8,7 @@
 * Renamed `DataType::Bigint` to `DataType::BigInt` in order to be consistent with `DataType::SmallInt`.
 * Removed Application Row Descriptor handle. Likely to be reintroduced later though.
 * `ColumnarRowSet` now has support for variadic binary data types.
+* Add support for binary data types.
 
 ## 0.13.2
 
