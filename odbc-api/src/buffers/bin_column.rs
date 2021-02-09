@@ -122,7 +122,7 @@ impl BinColumn {
     }
 }
 
-/// Iterator over a binary column. See [`BinColumn::iter`]
+/// Iterator over a binary column. See [`crate::buffers::AnyColumnView`]
 #[derive(Debug)]
 pub struct BinColumnIt<'c> {
     pos: usize,
@@ -144,7 +144,8 @@ impl<'c> Iterator for BinColumnIt<'c> {
     }
 }
 
-/// Fills a binary column buffer with elements from an Iterator.
+/// Fills a binary column buffer with elements from an Iterator. See
+/// [`crate::buffers::AnyColumnViewMut`]
 #[derive(Debug)]
 pub struct BinColumnWriter<'a> {
     column: &'a mut BinColumn,

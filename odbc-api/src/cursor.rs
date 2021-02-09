@@ -175,7 +175,8 @@ where
 impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
-/// by either a prepared query or direct execution. Usually utilized through the `Cursor` trait.
+/// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
+/// trait.
 pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
     statement: Stmt,
     // If we would not implement the drop handler, we could do without the Phantom member and an
