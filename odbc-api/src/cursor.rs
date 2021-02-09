@@ -12,7 +12,7 @@ use std::{
 };
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
-pub trait Cursor: Sized {
+pub trait Cursor {
     /// Fetch a column description using the column index.
     ///
     /// # Parameters
@@ -79,6 +79,7 @@ pub trait Cursor: Sized {
     /// Binds this cursor to a buffer holding a row set.
     fn bind_buffer<B>(self, row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
     where
+        Self: Sized,
         B: RowSetBuffer;
 
     /// Data type of the specified column.
@@ -122,14 +123,14 @@ pub trait Cursor: Sized {
 
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See
 /// `Cursor::column_names`.
-pub struct ColumnNamesIt<'c, C> {
+pub struct ColumnNamesIt<'c, C: ?Sized> {
     cursor: &'c C,
     buffer: Vec<u16>,
     column: u16,
     num_cols: u16,
 }
 
-impl<'c, C: Cursor> ColumnNamesIt<'c, C> {
+impl<'c, C: Cursor + ?Sized> ColumnNamesIt<'c, C> {
     fn new(cursor: &'c C) -> Result<Self, Error> {
         Ok(Self {
             cursor,
