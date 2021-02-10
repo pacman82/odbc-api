@@ -53,7 +53,7 @@ impl TextColumn {
             let length = min(self.max_str_len, str_len as usize);
             Some(
                 CStr::from_bytes_with_nul(&self.values[offset..offset + length + 1])
-                    .expect("ODBC driver indicated must indicate string length correctly."),
+                    .expect("ODBC driver must indicate string length correctly."),
             )
         }
     }
