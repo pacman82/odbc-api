@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0
+
+* Replaced `TextCloumn::value_at` with `TextColumn::cstr_at`.
+
 ## 0.14.0
 
 * Fix: `BufferKind::from_data_type` now uses `display_size` rather than `column_size` then mapping `Numeric` and `Decimal` types to `Text` buffers.

@@ -3,7 +3,7 @@ use crate::{
     DataType,
 };
 
-use log::debug;
+use log::{debug, warn};
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void, ffi::CStr};
 
@@ -36,7 +36,10 @@ impl TextColumn {
         }
     }
 
-    /// Return the value for the given row index.
+    /// Return the value at the given row index as a C String.
+    ///
+    /// Should the value contain an interior `nul` only the string up to the first `nul` is returned
+    /// and a warning is emmitted.
     ///
     /// # Safety
     ///
@@ -44,17 +47,34 @@ impl TextColumn {
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&CStr> {
+    pub unsafe fn cstr_at(&self, row_index: usize) -> Option<&CStr> {
         let str_len = self.indicators[row_index];
         if str_len == NULL_DATA {
             None
         } else {
             let offset = row_index * (self.max_str_len + 1);
             let length = min(self.max_str_len, str_len as usize);
-            Some(
-                CStr::from_bytes_with_nul(&self.values[offset..offset + length + 1])
-                    .expect("ODBC driver must indicate string length correctly."),
-            )
+            // Some databases allow for storing interior nuls (like MSSQL). Also an erroneous driver
+            // could pad zeros at the end. So lets search for the first `nul` within the string.
+
+            // If there are no interior nuls, bytes (usually the case) is identical to the CStr we
+            // want to return, including the terminating zero.
+            let bytes = &self.values[offset..offset + length + 1];
+            let end = bytes
+                .iter()
+                .position(|&c| c == 0)
+                .expect("ODBC driver must terminate string with a zero.");
+            // We checked that there are no interior nuls just above.
+            let cstr = CStr::from_bytes_with_nul_unchecked(&bytes[..end + 1]);
+            if end != length {
+                warn!(
+                    "Interior nul detected. Indicated length: {}, Buffer length: {}, Value: {}",
+                    str_len,
+                    self.max_str_len,
+                    cstr.to_string_lossy()
+                );
+            }
+            Some(cstr)
         }
     }
 
@@ -216,7 +236,7 @@ impl<'c> Iterator for TextColumnIt<'c> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.value_at(self.pos)) };
+            let ret = unsafe { Some(self.col.cstr_at(self.pos)) };
             self.pos += 1;
             ret
         }
