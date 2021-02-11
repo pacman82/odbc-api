@@ -315,7 +315,7 @@ fn columnar_insert_varchar() {
 
     // Fill buffer with values
     let desc = BufferDescription {
-        // Buffer size purpusfully choosen too small, so we would get a painc if `set_max_len` would
+        // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
         // not work.
         kind: BufferKind::Text { max_str_len: 5 },
         nullable: true,
@@ -504,7 +504,7 @@ fn wchar_as_char() {
 }
 
 #[test]
-fn two_paramters_in_tuple() {
+fn two_parameters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
@@ -756,7 +756,7 @@ fn manual_commit_mode() {
     conn.execute("INSERT INTO ManualCommitMode (a) VALUES (5);", ())
         .unwrap();
 
-    // But rollback the transaction immediatly.
+    // But rollback the transaction immediately.
     conn.rollback().unwrap();
 
     // Check that the table is still empty.
@@ -786,7 +786,7 @@ fn manual_commit_mode() {
     conn.commit().unwrap();
 }
 
-/// This test checks the behaviour if a connections goes out of scope with a transacation still
+/// This test checks the behaviour if a connections goes out of scope with a transaction still
 /// open.
 #[test]
 fn unfinished_transaction() {
@@ -801,7 +801,20 @@ fn unfinished_transaction() {
         .unwrap();
 }
 
-/// This test is insipired by a bug caused from a fetch statement generating a lot of diagnostic
+/// Test behavior of strings with interior nul
+#[test]
+fn interior_nul() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
+
+    conn.execute("INSERT INTO InteriorNul (a) VALUES (?);", &"a\0b".into_parameter()).unwrap();
+    let cursor = conn.execute("SELECT CAST(A AS VARBINARY) FROM InteriorNul;", ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "610062";
+    assert_eq!(expected, actual);
+}
+
+/// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
 #[ignore = "Runs for a very long time"]
@@ -812,7 +825,7 @@ fn many_diagnostic_messages() {
     // Setup table
     setup_empty_table(&conn, "ManyDiagnosticMessages", &["VARCHAR(2)"]).unwrap();
 
-    // Incidentialy our batch size is too large to be hold in an `i16`.
+    // Incidentally our batch size is too large to be hold in an `i16`.
     let batch_size = 2 << 15;
 
     // Fill each row in the buffer with two letters.
