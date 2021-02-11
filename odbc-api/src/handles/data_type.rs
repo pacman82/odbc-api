@@ -99,12 +99,9 @@ pub enum DataType {
 }
 
 impl DataType {
-
-
     /// This constructor is useful to create an instance of the enumeration using values returned by
     /// ODBC Api calls like `SQLDescribeCol`, rather than just initializing a variant directly.
     pub fn new(data_type: SqlDataType, column_size: usize, decimal_digits: i16) -> Self {
-
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_BINARY => DataType::Binary {

@@ -56,7 +56,11 @@ fn describe_columns() {
     cursor.describe_col(3, &mut actual).unwrap();
     assert_eq!(expected, actual);
 
-    let expected = desc("d", DataType::Varbinary { length: 100 }, Nullability::Nullable);
+    let expected = desc(
+        "d",
+        DataType::Varbinary { length: 100 },
+        Nullability::Nullable,
+    );
     cursor.describe_col(4, &mut actual).unwrap();
     assert_eq!(expected, actual);
 }
@@ -807,13 +811,23 @@ fn interior_nul() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
 
-    conn.execute("INSERT INTO InteriorNul (a) VALUES (?);", &"a\0b".into_parameter()).unwrap();
-    let cursor = conn.execute("SELECT CAST(A AS VARBINARY) FROM InteriorNul;", ()).unwrap().unwrap();
+    conn.execute(
+        "INSERT INTO InteriorNul (a) VALUES (?);",
+        &"a\0b".into_parameter(),
+    )
+    .unwrap();
+    let cursor = conn
+        .execute("SELECT CAST(A AS VARBINARY) FROM InteriorNul;", ())
+        .unwrap()
+        .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "610062";
     assert_eq!(expected, actual);
 
-    let cursor = conn.execute("SELECT A FROM InteriorNul;", ()).unwrap().unwrap();
+    let cursor = conn
+        .execute("SELECT A FROM InteriorNul;", ())
+        .unwrap()
+        .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "a";
     assert_eq!(expected, actual);
