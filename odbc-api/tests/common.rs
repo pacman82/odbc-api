@@ -87,7 +87,7 @@ impl SingleColumnRowSetBuffer<TextColumn> {
         }
 
         // Safe due to out of bounds check above
-        unsafe { self.column.value_at(index) }
+        unsafe { self.column.cstr_at(index) }
     }
 }
 

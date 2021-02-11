@@ -130,7 +130,7 @@ impl TextRowSet {
     /// Access the element at the specified position in the row set.
     pub fn at(&self, col_index: usize, row_index: usize) -> Option<&CStr> {
         assert!(row_index < *self.num_rows as usize);
-        unsafe { self.buffers[col_index].value_at(row_index) }
+        unsafe { self.buffers[col_index].cstr_at(row_index) }
     }
 
     /// Access the element at the specified position in the row set.

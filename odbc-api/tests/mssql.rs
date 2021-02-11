@@ -812,6 +812,11 @@ fn interior_nul() {
     let actual = cursor_to_string(cursor);
     let expected = "610062";
     assert_eq!(expected, actual);
+
+    let cursor = conn.execute("SELECT A FROM InteriorNul;", ()).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "a";
+    assert_eq!(expected, actual);
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
