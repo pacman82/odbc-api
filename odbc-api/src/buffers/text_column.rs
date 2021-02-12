@@ -3,9 +3,9 @@ use crate::{
     DataType,
 };
 
-use log::{debug, warn};
+use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, convert::TryInto, ffi::c_void, ffi::CStr};
+use std::{cmp::min, convert::TryInto, ffi::c_void};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -36,10 +36,8 @@ impl TextColumn {
         }
     }
 
-    /// Return the value at the given row index as a C String.
-    ///
-    /// Should the value contain an interior `nul` only the string up to the first `nul` is returned
-    /// and a warning is emmitted.
+    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
+    /// the terminating nul.
     ///
     /// # Safety
     ///
@@ -47,34 +45,14 @@ impl TextColumn {
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn cstr_at(&self, row_index: usize) -> Option<&CStr> {
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
         let str_len = self.indicators[row_index];
         if str_len == NULL_DATA {
             None
         } else {
             let offset = row_index * (self.max_str_len + 1);
             let length = min(self.max_str_len, str_len as usize);
-            // Some databases allow for storing interior nuls (like MSSQL). Also an erroneous driver
-            // could pad zeros at the end. So lets search for the first `nul` within the string.
-
-            // If there are no interior nuls, bytes (usually the case) is identical to the CStr we
-            // want to return, including the terminating zero.
-            let bytes = &self.values[offset..offset + length + 1];
-            let end = bytes
-                .iter()
-                .position(|&c| c == 0)
-                .expect("ODBC driver must terminate string with a zero.");
-            // We checked that there are no interior nuls just above.
-            let cstr = CStr::from_bytes_with_nul_unchecked(&bytes[..end + 1]);
-            if end != length {
-                warn!(
-                    "Interior nul detected. Indicated length: {}, Buffer length: {}, Value: {}",
-                    str_len,
-                    self.max_str_len,
-                    cstr.to_string_lossy()
-                );
-            }
-            Some(cstr)
+            Some(&self.values[offset..offset + length])
         }
     }
 
@@ -230,13 +208,13 @@ pub struct TextColumnIt<'c> {
 }
 
 impl<'c> Iterator for TextColumnIt<'c> {
-    type Item = Option<&'c CStr>;
+    type Item = Option<&'c [u8]>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.cstr_at(self.pos)) };
+            let ret = unsafe { Some(self.col.value_at(self.pos)) };
             self.pos += 1;
             ret
         }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12
+
+* Fix: Interior nuls in the values of a VARCHAR columns cause no longer a panic.
+
 ## 0.3.11
 
 * Updated dependencies

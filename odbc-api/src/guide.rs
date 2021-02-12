@@ -73,7 +73,6 @@
 //!                     let record = (0..batch.num_cols()).map(|col_index| {
 //!                         batch
 //!                             .at(col_index, row_index)
-//!                             .map(CStr::to_bytes)
 //!                             .unwrap_or(&[])
 //!                     });
 //!                     // Writes row as csv
