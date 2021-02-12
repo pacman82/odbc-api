@@ -1,6 +1,6 @@
 use super::text_column::TextColumn;
 use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
-use std::{ffi::CStr, str::Utf8Error};
+use std::str::{from_utf8, Utf8Error};
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
@@ -60,7 +60,6 @@ use std::{ffi::CStr, str::Utf8Error};
 ///                     let record = (0..batch.num_cols()).map(|col_index| {
 ///                         batch
 ///                             .at(col_index, row_index)
-///                             .map(CStr::to_bytes)
 ///                             .unwrap_or(&[])
 ///                     });
 ///                     // Writes row as csv
@@ -128,14 +127,14 @@ impl TextRowSet {
     }
 
     /// Access the element at the specified position in the row set.
-    pub fn at(&self, col_index: usize, row_index: usize) -> Option<&CStr> {
+    pub fn at(&self, col_index: usize, row_index: usize) -> Option<&[u8]> {
         assert!(row_index < *self.num_rows as usize);
-        unsafe { self.buffers[col_index].cstr_at(row_index) }
+        unsafe { self.buffers[col_index].value_at(row_index) }
     }
 
     /// Access the element at the specified position in the row set.
     pub fn at_as_str(&self, col_index: usize, row_index: usize) -> Result<Option<&str>, Utf8Error> {
-        self.at(col_index, row_index).map(CStr::to_str).transpose()
+        self.at(col_index, row_index).map(from_utf8).transpose()
     }
 
     /// Return the number of columns in the row set.

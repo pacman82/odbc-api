@@ -8,7 +8,7 @@ use odbc_api::{
     },
     ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
 };
-use std::{ffi::CStr, iter, thread};
+use std::{iter, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -143,8 +143,8 @@ fn bind_char() {
     row_set_cursor.fetch().unwrap();
 
     assert_eq!(
-        Some("abcde"),
-        buf.value_at(0).map(|cstr| cstr.to_str().unwrap())
+        Some(&b"abcde"[..]),
+        buf.value_at(0)
     );
 }
 
@@ -159,8 +159,8 @@ fn bind_varchar() {
     row_set_cursor.fetch().unwrap();
 
     assert_eq!(
-        Some("Hello, World!"),
-        buf.value_at(0).map(|cstr| cstr.to_str().unwrap())
+        Some(&b"Hello, World!"[..]),
+        buf.value_at(0)
     );
 }
 
@@ -695,7 +695,7 @@ fn read_into_columnar_buffer() {
     }
     match dbg!(batch.column(1)) {
         AnyColumnView::Text(mut col) => assert_eq!(
-            Some(CStr::from_bytes_with_nul(b"Hello, World!\0").unwrap()),
+            Some(&b"Hello, World!"[..]),
             col.next().unwrap()
         ),
         _ => panic!("Unexpected buffer type"),
@@ -817,19 +817,11 @@ fn interior_nul() {
     )
     .unwrap();
     let cursor = conn
-        .execute("SELECT CAST(A AS VARBINARY) FROM InteriorNul;", ())
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
-    let expected = "610062";
-    assert_eq!(expected, actual);
-
-    let cursor = conn
         .execute("SELECT A FROM InteriorNul;", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
-    let expected = "a";
+    let expected = "a\0b";
     assert_eq!(expected, actual);
 }
 
