@@ -4,7 +4,7 @@ version = "0.3.12"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 license = "MIT"
-repository = "https://github.com/pacman82/odbc-api"
+repository = "https://github.com/pacman82/odbc-api/tree/master/odbcsv"
 documentation = "https://docs.rs/odbcsv/"
 
 # A short blurb about the package. This is not rendered in any format when
