@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* `Cursor::fetch` is now safe.
+
 ## 0.15.0
 
 * Text column buffers throught the API now use `&[u8]` to represent queried strings instead of `CStr` to account for the possibility of interior nuls.

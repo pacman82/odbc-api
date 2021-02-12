@@ -40,8 +40,9 @@ pub trait Cursor {
     ///
     /// # Safety
     ///
-    /// Fetch dereferences bound buffers and is therefore unsafe.
-    unsafe fn fetch(&mut self) -> Result<bool, Error>;
+    /// Fetch dereferences any bound buffers. To make it safe implementations of Cursor have to take
+    /// care not to outlive any bound buffer.
+    fn fetch(&mut self) -> Result<bool, Error>;
 
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
     fn unbind_cols(&mut self) -> Result<(), Error>;
@@ -221,7 +222,7 @@ where
         self.statement.borrow().num_result_cols()
     }
 
-    unsafe fn fetch(&mut self) -> Result<bool, Error> {
+    fn fetch(&mut self) -> Result<bool, Error> {
         self.statement.borrow_mut().fetch()
     }
 
@@ -372,7 +373,7 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
-        let has_data = unsafe { self.cursor.fetch()? };
+        let has_data = self.cursor.fetch()?;
         if has_data {
             Ok(Some(&self.buffer))
         } else {
