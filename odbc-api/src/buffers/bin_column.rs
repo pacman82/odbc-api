@@ -88,7 +88,7 @@ impl BinColumn {
     /// Sets the value of the buffer at index to NULL or the specified bytes. This method will panic
     /// on out of bounds index, or if input holds a value which is longer than the maximum allowed
     /// element length.
-    pub fn set_value<'b>(&mut self, index: usize, input: Option<&'b [u8]>) {
+    pub fn set_value(&mut self, index: usize, input: Option<&[u8]>) {
         if let Some(input) = input {
             self.indicators[index] = input.len().try_into().unwrap();
             if input.len() > self.max_len {

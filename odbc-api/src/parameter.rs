@@ -215,6 +215,12 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// or both.
 pub unsafe trait Parameter {
     /// Bind the parameter in question to a specific `parameter_number`.
+    ///
+    /// # Safety
+    ///
+    /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
+    /// the parameter remains valid while it is bound. If the parameter is bound as an output
+    /// parameter it must also be ensured that it is exclusivly referenced by statement.
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
