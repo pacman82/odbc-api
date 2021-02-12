@@ -42,7 +42,7 @@ Here are some of the tradeoffs I made in this library to make my life (and hopef
 
 ### Commiting to one version of the ODBC Api
 
-The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however uses ODBC version `3.8` fixed.
+The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however currently fixes the ODBC version to `3.8`.
 
 ### Use of the Wide ODBC methods returning UTF-16
 
@@ -50,5 +50,5 @@ Idiomatic Rust uses UTF-8. Sadly the narrow C-Methods in ODBC do not always impl
 
 ### Warnings are logged
 
-ODBC calls produce a Result. If successful they may also produce any number of warnings. These are logged away using the `log` crate with the `warn` severity. Rust type systems would have been powerful enough to express the presence of warnings in the Return type, yet I did not want to loose out on simply using `?`-operator for error propagation. Also I never wanted to do something with these warnings besides logging them. Some overhead is introduced, as the messages for these warnings are allocated, even if you do not register a backend for the `log` crate at all.
+ODBC calls produce a Result. If successful they may also produce any number of warnings. Applications currently have no means to react to these warnings. They are logged using the `log` crate with the `warn` severity. Rust type systems would have been powerful enough to express the presence of warnings in the Return type, yet I did not want to loose out on simply using `?`-operator for error propagation. Also I never wanted to do something with these warnings besides logging them. Some overhead is introduced, as the messages for these warnings are allocated, even if you do not register a backend for the `log` crate at all.
 
