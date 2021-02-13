@@ -9,22 +9,24 @@ ODBC (Open Database Connectivity) bindings for Rust.
 
 ## Usage
 
+To utilize this library you need to link against the `odbc` library of your systems odbc driver manager. It should be automatically detected by the build. On Windows systems it should always be preinstalled on Linux distributions and OS-X you should verify that a driver manager like [unix-odbc](http://www.unixodbc.org/) is installed.
+
 Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for code examples and a tour of the features.
 
 ## Features
 
-- [x] Connect using either Data Source names (DSN) or connection strings
-- [x] Provide nice erros and log diagnostic output.
-- [x] Support for columnwise bulk inserts.
-- [x] Support for columnwise bulk queries.
-- [ ] Support for rowise bulk inserts.
-- [ ] Support for rowise bulk queries.
-- [x] Support for Output parameters of stored procedures.
-- [x] Support prepared and 'one shot' queries.
-- [x] Transactions
-- [x] Pass parameters to queries
-- [ ] Support for async
-- [x] Support for Multithreading
+* [x] Connect using either Data Source names (DSN) or connection strings
+* [x] Provide nice erros and log diagnostic output.
+* [x] Support for columnwise bulk inserts.
+* [x] Support for columnwise bulk queries.
+* [ ] Support for rowise bulk inserts.
+* [ ] Support for rowise bulk queries.
+* [x] Support for Output parameters of stored procedures.
+* [x] Support prepared and 'one shot' queries.
+* [x] Transactions
+* [x] Pass parameters to queries
+* [ ] Support for async
+* [x] Support for Multithreading
 
 ## Motivation
 
@@ -51,4 +53,3 @@ Idiomatic Rust uses UTF-8. Sadly the narrow C-Methods in ODBC do not always impl
 ### Warnings are logged
 
 ODBC calls produce a Result. If successful they may also produce any number of warnings. Applications currently have no means to react to these warnings. They are logged using the `log` crate with the `warn` severity. Rust type systems would have been powerful enough to express the presence of warnings in the Return type, yet I did not want to loose out on simply using `?`-operator for error propagation. Also I never wanted to do something with these warnings besides logging them. Some overhead is introduced, as the messages for these warnings are allocated, even if you do not register a backend for the `log` crate at all.
-
