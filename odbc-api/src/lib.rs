@@ -11,6 +11,7 @@ mod fixed_sized;
 mod into_parameter;
 mod nullable;
 mod parameter_collection;
+mod preallocated;
 mod prepared;
 
 pub mod buffers;
@@ -28,6 +29,7 @@ pub use self::{
     nullable::Nullable,
     parameter::{InputParameter, Out, OutputParameter, Parameter},
     parameter_collection::ParameterCollection,
+    preallocated::Preallocated,
     prepared::Prepared,
 };
 // Reexports

@@ -142,10 +142,7 @@ fn bind_char() {
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
 
-    assert_eq!(
-        Some(&b"abcde"[..]),
-        buf.value_at(0)
-    );
+    assert_eq!(Some(&b"abcde"[..]), buf.value_at(0));
 }
 
 #[test]
@@ -158,10 +155,7 @@ fn bind_varchar() {
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
 
-    assert_eq!(
-        Some(&b"Hello, World!"[..]),
-        buf.value_at(0)
-    );
+    assert_eq!(Some(&b"Hello, World!"[..]), buf.value_at(0));
 }
 
 #[test]
@@ -408,20 +402,40 @@ fn prepared_statement() {
     // Execute it two times with different parameters
     {
         let cursor = prepared.execute(&1968).unwrap().unwrap();
-        let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
-        let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
-        let batch = cursor.fetch().unwrap().unwrap();
-        let title = batch.at_as_str(0, 0).unwrap().unwrap();
+        let title = cursor_to_string(cursor);
         assert_eq!("2001: A Space Odyssey", title);
     }
 
     {
         let cursor = prepared.execute(&1993).unwrap().unwrap();
-        let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
-        let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
-        let batch = cursor.fetch().unwrap().unwrap();
-        let title = batch.at_as_str(0, 0).unwrap().unwrap();
+        let title = cursor_to_string(cursor);
         assert_eq!("Jurassic Park", title);
+    }
+}
+
+#[test]
+fn preallocated() {
+    // Prepare the statement once
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, "Preallocated", &["VARCHAR(10)"]).unwrap();
+    let mut prealloc = conn.preallocate().unwrap();
+
+    // Execute it two times with different parameters
+    {
+        let res = prealloc
+            .execute("INSERT INTO Preallocated (a) VALUES ('Hello')", ())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute("SELECT a FROM Preallocated ORDER BY id", ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
     }
 }
 
@@ -694,10 +708,9 @@ fn read_into_columnar_buffer() {
         _ => panic!("Unexpected buffer type"),
     }
     match dbg!(batch.column(1)) {
-        AnyColumnView::Text(mut col) => assert_eq!(
-            Some(&b"Hello, World!"[..]),
-            col.next().unwrap()
-        ),
+        AnyColumnView::Text(mut col) => {
+            assert_eq!(Some(&b"Hello, World!"[..]), col.next().unwrap())
+        }
         _ => panic!("Unexpected buffer type"),
     }
 
