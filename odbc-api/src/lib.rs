@@ -7,6 +7,7 @@
 mod connection;
 mod cursor;
 mod environment;
+mod execute;
 mod fixed_sized;
 mod into_parameter;
 mod nullable;

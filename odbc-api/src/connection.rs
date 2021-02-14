@@ -1,4 +1,9 @@
-use crate::{CursorImpl, Error, Preallocated, Prepared, handles::{self, Statement}, parameter_collection::ParameterCollection};
+use crate::{
+    execute::execute_with_parameters,
+    handles::{self, Statement},
+    parameter_collection::ParameterCollection,
+    CursorImpl, Error, Preallocated, Prepared,
+};
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
@@ -70,29 +75,8 @@ impl<'c> Connection<'c> {
         query: &U16Str,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
-        let param_set_size = params.parameter_set_size();
-
-        if param_set_size == 0 {
-            Ok(None)
-        } else {
-            let mut stmt = self.connection.allocate_statement()?;
-
-            // Reset parameters so we do not dereference stale once by mistake if we call
-            // `exec_direct`.
-            stmt.reset_parameters()?;
-            unsafe {
-                stmt.set_paramset_size(param_set_size)?;
-                // Bind new parameters passed by caller.
-                params.bind_parameters_to(&mut stmt)?;
-                stmt.exec_direct(query)?
-            };
-            // Check if a result set has been created.
-            if stmt.num_result_cols()? == 0 {
-                Ok(None)
-            } else {
-                Ok(Some(CursorImpl::new(stmt)))
-            }
-        }
+        let lazy_statement = move || self.connection.allocate_statement();
+        execute_with_parameters(lazy_statement, Some(query), params)
     }
 
     /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for

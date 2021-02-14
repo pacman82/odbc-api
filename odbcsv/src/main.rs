@@ -227,11 +227,8 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
                     buffer.num_rows()
                 );
                 for row_index in 0..buffer.num_rows() {
-                    let record = (0..buffer.num_cols()).map(|col_index| {
-                        buffer
-                            .at(col_index, row_index)
-                            .unwrap_or(&[])
-                    });
+                    let record = (0..buffer.num_cols())
+                        .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
                     writer.write_record(record)?;
                 }
             }
