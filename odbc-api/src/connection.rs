@@ -1,8 +1,4 @@
-use crate::{
-    handles::{self, Statement},
-    parameter_collection::ParameterCollection,
-    CursorImpl, Error, Prepared,
-};
+use crate::{CursorImpl, Error, Preallocated, Prepared, handles::{self, Statement}, parameter_collection::ParameterCollection};
 use std::thread::panicking;
 use widestring::{U16Str, U16String};
 
@@ -163,6 +159,11 @@ impl<'c> Connection<'c> {
     pub fn prepare(&self, query: &str) -> Result<Prepared, Error> {
         let query = U16String::from_str(query);
         self.prepare_utf16(&query)
+    }
+
+    pub fn preallocate(&self) -> Result<Preallocated, Error> {
+        let stmt = self.connection.allocate_statement()?;
+        Ok(Preallocated::new(stmt))
     }
 
     /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode.
