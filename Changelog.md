@@ -1,8 +1,10 @@
 # Changelog
 
-## Next
+## 0.16.0
 
 * `Cursor::fetch` is now safe.
+* Introduced `Connection::preallocate` to allow for efficient prealloaction of statement handles in interactive clients.
+* Renamed `Connection::exec_direct_utf16` into `Connection::execute_utf16`.
 
 ## 0.15.0
 
