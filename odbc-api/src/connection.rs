@@ -55,22 +55,8 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
-    /// Executes a statement. This is the fastest way to submit an SQL statement for one-time
-    /// execution.
-    ///
-    /// # Parameters
-    ///
-    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". A
-    ///   question mark (`?`) may be used to indicate positional parameters in the statement text.
-    /// * `params`: Used to bind the placeholders in the statement text to argument values You can
-    ///   use `()` to represent no parameters.
-    ///
-    /// # Return
-    ///
-    /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
-    /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
-    /// rows.
-    pub fn exec_direct_utf16(
+    /// Executes an sql statement using a wide string. See [`Self::execute`].
+    pub fn execute_utf16(
         &self,
         query: &U16Str,
         params: impl ParameterCollection,
@@ -79,14 +65,15 @@ impl<'c> Connection<'c> {
         execute_with_parameters(lazy_statement, Some(query), params)
     }
 
-    /// Executes a prepareable statement. This is the fastest way to submit an SQL statement for
-    /// one-time execution.
+    /// Executes an SQL statement. This is the fastest way to submit an SQL statement for one-time
+    /// execution.
     ///
     /// # Parameters
     ///
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
     /// * `params`: `?` may be used as a placeholder in the statement text. You can use `()` to
-    ///   represent no parameters.
+    ///   represent no parameters. See the [`crate::parameter`] module level documentation for more
+    ///   information on how to pass parameters.
     ///
     /// # Return
     ///
@@ -117,7 +104,7 @@ impl<'c> Connection<'c> {
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<Statement>>, Error> {
         let query = U16String::from_str(query);
-        self.exec_direct_utf16(&query, params)
+        self.execute_utf16(&query, params)
     }
 
     /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
@@ -145,6 +132,36 @@ impl<'c> Connection<'c> {
         self.prepare_utf16(&query)
     }
 
+    /// Allocates an SQL statement handle. This is recommended if you want to sequentially execute
+    /// different queries over the same connection, as you avoid the overhead of allocating a
+    /// statement handle for each query.
+    ///
+    /// Should you want to repeatedly execute the same query with different parameters try
+    /// [`Self::prepare`] instead.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use odbc_api::{Connection, Error};
+    /// use std::io::{self, stdin, Read};
+    ///
+    /// fn interactive(conn: &Connection) -> io::Result<()>{
+    ///     let mut statement = conn.preallocate().unwrap();
+    ///     let mut query = String::new();
+    ///     stdin().read_line(&mut query)?;
+    ///     while !query.is_empty() {
+    ///         match statement.execute(&query, ()) {
+    ///             Err(e) => println!("{}", e),
+    ///             Ok(None) => println!("No results set generated."),
+    ///             Ok(Some(cursor)) => {
+    ///                 // ...print cursor contents...
+    ///             },
+    ///         }
+    ///         stdin().read_line(&mut query)?;
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn preallocate(&self) -> Result<Preallocated, Error> {
         let stmt = self.connection.allocate_statement()?;
         Ok(Preallocated::new(stmt))
