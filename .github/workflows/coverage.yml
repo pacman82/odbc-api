@@ -41,7 +41,7 @@ jobs:
 
       - name: Run grcov
         env:
-          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           RUSTDOCFLAGS: "-Cpanic=abort"
           CARGO_INCREMENTAL: 0
         run: |
