@@ -1,2 +1,8 @@
 ODBC Driver 17 for SQL Server
 	Description=Microsoft ODBC Driver 17 for SQL Server
+
+SQLite
+	Description=SQLite ODBC Driver
+
+SQLite3
+	Description=SQLite3 ODBC Driver

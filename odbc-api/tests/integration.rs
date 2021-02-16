@@ -1,5 +1,7 @@
 mod common;
 
+use test_case::test_case;
+
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
@@ -12,6 +14,52 @@ use std::{iter, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+
+#[cfg(target_os = "windows")]
+const SQLITE_3: &str =
+    "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
+#[cfg(not(target_os = "windows"))]
+const SQLITE_3: &str = "Driver={SQLite3};Database=sqlite-test.db";
+
+/// Verify writer panics if too large elements are inserted into a binary column of ColumnarRowSet
+/// buffer.
+#[test]
+#[should_panic]
+fn insert_too_large_element_in_bin_column() {
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::Binary { length: 1 },
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+    buffer.set_num_rows(1);
+    if let AnyColumnViewMut::Binary(mut col) = buffer.column_mut(0) {
+        col.write(iter::once(Some(&b"too large input."[..])))
+    }
+}
+
+/// Verify writer panics if too large elements are inserted into a text column of ColumnarRowSet
+/// buffer.
+#[test]
+#[should_panic]
+fn insert_too_large_element_in_text_column() {
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::Text { max_str_len: 1 },
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+    buffer.set_num_rows(1);
+    if let AnyColumnViewMut::Text(mut col) = buffer.column_mut(0) {
+        col.write(iter::once(Some(&b"too large input."[..])))
+    }
+}
+
+#[test]
+fn bogus_connection_string() {
+    let conn = ENV.connect_with_connection_string("foobar");
+    assert!(matches!(conn, Err(_)));
+}
 
 #[test]
 fn connect_to_movies_db() {
@@ -305,10 +353,13 @@ fn columnar_insert_varbinary() {
 }
 
 /// Insert values into a varbinary column using a columnar buffer
-#[test]
-fn columnar_insert_varchar() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_insert_varchar(connection_string: &str) {
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "ColumnarInsertVarchar", &["VARCHAR(13)"]).unwrap();
 
     // Fill buffer with values
@@ -413,10 +464,14 @@ fn prepared_statement() {
     }
 }
 
-#[test]
-fn preallocated() {
+/// Insert values into a varbinary column using a columnar buffer
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn preallocated(connection_string: &str) {
     // Prepare the statement once
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "Preallocated", &["VARCHAR(10)"]).unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
@@ -549,9 +604,12 @@ fn column_names_iterator() {
     assert_eq!(&["title", "year"], names.as_slice());
 }
 
-#[test]
-fn bulk_insert_with_text_buffer() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bulk_insert_with_text_buffer(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "BulkInsertWithTextBuffer", &["VARCHAR(50)"]).unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
@@ -577,9 +635,12 @@ fn bulk_insert_with_text_buffer() {
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn bulk_insert_with_columnar_buffer() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bulk_insert_with_columnar_buffer(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(
         &conn,
         "BulkInsertWithColumnarBuffer",
@@ -655,9 +716,12 @@ fn send_connection() {
     handle.join().unwrap();
 }
 
-#[test]
-fn parameter_option_str() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn parameter_option_str(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "ParameterOptionStr", &["VARCHAR(50)"]).unwrap();
     let sql = "INSERT INTO ParameterOptionStr (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
@@ -673,9 +737,12 @@ fn parameter_option_str() {
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn read_into_columnar_buffer() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn read_into_columnar_buffer(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "ReadIntoColumnarBuffer", &["INTEGER", "VARCHAR(20)"]).unwrap();
     conn.execute(
         "INSERT INTO ReadIntoColumnarBuffer (a, b) VALUES (42, 'Hello, World!')",
@@ -720,9 +787,12 @@ fn read_into_columnar_buffer() {
 
 /// In use cases there the user supplies the query it may be necessary to ignore one column then
 /// binding the buffers. This test constructs a result set with 3 columns and ignores the second
-#[test]
-fn ignore_output_column() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn ignore_output_column(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(
         &conn,
         "IgnoreOutputColumn",
@@ -761,9 +831,12 @@ fn output_parameter() {
     assert_eq!(Some(7 + 5), param.into_opt());
 }
 
-#[test]
-fn manual_commit_mode() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn manual_commit_mode(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "ManualCommitMode", &["INTEGER"]).unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
@@ -805,9 +878,12 @@ fn manual_commit_mode() {
 
 /// This test checks the behaviour if a connections goes out of scope with a transaction still
 /// open.
-#[test]
-fn unfinished_transaction() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn unfinished_transaction(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     setup_empty_table(&conn, "UnfinishedTransaction", &["INTEGER"]).unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
