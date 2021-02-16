@@ -127,9 +127,3 @@ where
         Ok(())
     }
 }
-
-#[test]
-fn bogus_connection_string() {
-    let conn = ENV.connect_with_connection_string("foobar");
-    assert!(matches!(conn, Err(_)));
-}

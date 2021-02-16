@@ -28,14 +28,19 @@ jobs:
         run: docker ps -a  
       - name: Check logs
         run: docker logs odbc-api_mssql_1
-      - name: Install SQL Server Driver
+      - name: Install ODBC Drivers
         run: |
           curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
           curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
           apt-get update
           ACCEPT_EULA=Y apt-get install -y msodbcsql17
           ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
+          apt-get install -y sqlite3 libsqliteodbc
+          sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
+          sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
         shell: sudo bash {0}
+      - name: Print odbcinst.ini
+        run: cat /etc/odbcinst.ini
       - name: Copy test expectations
         run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
 

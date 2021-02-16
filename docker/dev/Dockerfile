@@ -10,4 +10,8 @@ RUN echo msodbcsql17 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections
 
 # [Optional] Uncomment this section to install additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends unixodbc-dev msodbcsql17
+    && apt-get -y install --no-install-recommends unixodbc-dev msodbcsql17 sqlite3 libsqliteodbc
+
+# Fix SQLite driver paths
+RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
+RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
