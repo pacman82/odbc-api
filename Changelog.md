@@ -1,5 +1,7 @@
 # Changelog
 
+## Next
+
 ## 0.16.0
 
 * `Cursor::fetch` is now safe.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Insert now logs batch number and rows
+
 ## 0.3.13
 
 * Update dependencies
