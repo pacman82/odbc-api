@@ -19,7 +19,8 @@ lazy_static! {
 /// * `csv`: csv used in the roundtrip. Table schema is currently hardcoded.
 /// * `table_name`: Each test must use its unique table name, to avoid race conditions with other
 ///   tests.
-fn roundtrip(csv: &'static str, table_name: &str) -> Assert {
+/// * `batch_size`: Batch size for insert
+fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Setup table for test. We use the table name only in this test.
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
@@ -36,7 +37,15 @@ fn roundtrip(csv: &'static str, table_name: &str) -> Assert {
     // Insert csv
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&["-vvvv", "insert", "--connection-string", MSSQL, table_name])
+        .args(&[
+            "-vvvv",
+            "insert",
+            "--connection-string",
+            MSSQL,
+            "--batch-size",
+            &batch_size.to_string(),
+            table_name,
+        ])
         .write_stdin(csv)
         .assert()
         .success();
@@ -110,14 +119,14 @@ fn insert() {
         USA,329000000\n\
     ";
 
-    roundtrip(csv, "odbcsv_insert").success();
+    roundtrip(csv, "odbcsv_insert", 5).success();
 }
 
 #[test]
 fn insert_empty_document() {
     let csv = "country,population\n";
 
-    roundtrip(csv, "odbcsv_empty_document").success();
+    roundtrip(csv, "odbcsv_empty_document", 5).success();
 }
 
 #[test]
@@ -128,7 +137,7 @@ fn insert_batch_size_one() {
         USA,329000000\n\
     ";
 
-    roundtrip(csv, "odbcsv_insert_batch_size_one").success();
+    roundtrip(csv, "odbcsv_insert_batch_size_one", 1).success();
 }
 
 #[test]
@@ -139,7 +148,7 @@ fn insert_with_nulls() {
         USA,329000000\n\
     ";
 
-    roundtrip(csv, "odbcsv_insert_with_nulls").success();
+    roundtrip(csv, "odbcsv_insert_with_nulls", 5).success();
 }
 
 /// An "optional" for list-drivers command. It checks for the existence of a "list-drivers.txt". If
