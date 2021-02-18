@@ -10,7 +10,7 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLDescribeParam,
-    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLNumResultCols, SQLPrepareW,
+    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLPrepareW,
     SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
@@ -255,6 +255,10 @@ impl<'s> Statement<'s> {
     /// returns the data in those columns. If the application has specified a pointer to a row
     /// status array or a buffer in which to return the number of rows fetched, `fetch` also returns
     /// this information. Calls to `fetch` can be mixed with calls to `fetch_scroll`.
+    ///
+    /// # Safety
+    ///
+    /// Fetch dereferences bound column pointers.
     pub fn fetch(&mut self) -> Result<bool, Error> {
         unsafe {
             match SQLFetch(self.handle) {
@@ -262,6 +266,25 @@ impl<'s> Statement<'s> {
                 other => other.into_result(self).map(|()| true),
             }
         }
+    }
+
+    /// Retrieves data for a single column in the result set or for a single parameter.
+    pub fn get_data(
+        &mut self,
+        col_or_param_num: u16,
+        target: &mut impl CDataMut,
+    ) -> Result<(), Error> {
+        unsafe {
+            SQLGetData(
+                self.handle,
+                col_or_param_num,
+                target.cdata_type(),
+                target.mut_value_ptr(),
+                target.buffer_length(),
+                target.mut_indicator_ptr(),
+            )
+        }
+        .into_result(self)
     }
 
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
