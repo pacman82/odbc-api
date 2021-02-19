@@ -1,6 +1,6 @@
 use crate::{
-    handles::{CDataMut, Statement},
-    ColumnDescription, DataType, Error,
+    handles::{CursorMethods, Statement},
+    ColumnDescription, DataType, Error, OutputParameter,
 };
 
 use std::{
@@ -13,6 +13,27 @@ use std::{
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor {
+    /// Statement type of the cursor. This is always an instantiation of
+    /// [`crate::handles::Statement`] with a generic parameter indicating the lifetime of the
+    /// associated connection.
+    ///
+    /// So this trait could have had a lifetime parameter instead and provided access to the
+    /// underlying type. However by using the projection of only the cursor methods of the
+    /// underlying statement, consumers of this trait no only have to worry about the lifetime of
+    /// the statement itself (e.g. the prepared query) and not about the lifetime of the connection
+    /// it belongs to.
+    type Statement: CursorMethods;
+
+    /// Provides access to the underlying statement handle.
+    ///
+    /// # Safety
+    ///
+    /// Assinging to this statement handle or binding buffers to it may invalidate the invariants
+    /// of safe wrapper types (i.e. [`crate::RowSetCursor`]). Some actions like closing the cursor
+    /// may just result in ODBC transition errors, others like binding columns may even cause actual
+    /// invalid memory access if not used with care.
+    unsafe fn stmt(&mut self) -> &mut Self::Statement;
+
     /// Fetch a column description using the column index.
     ///
     /// # Parameters
@@ -31,45 +52,15 @@ pub trait Cursor {
     /// Number of columns in result set.
     fn num_result_cols(&self) -> Result<i16, Error>;
 
-    /// Returns the next set of rows in the result set.
+    /// Advances the cursor to the next row in the result set.
     ///
-    /// If any columns are bound, it returns the data in those columns. If the application has
-    /// specified a pointer to a row status array or a buffer in which to return the number of rows
-    /// fetched, `fetch` also returns this information. Calls to `fetch` can be mixed with calls to
-    /// `fetch_scroll`.
-    ///
-    /// # Safety
-    ///
-    /// Fetch dereferences any bound buffers. To make it safe implementations of Cursor have to take
-    /// care not to outlive any bound buffer.
-    fn fetch(&mut self) -> Result<bool, Error>;
-
-    /// Release all column buffers bound by `bind_col`. Except bookmark column.
-    fn unbind_cols(&mut self) -> Result<(), Error>;
-
-    /// Binds application data buffers to columns in the result set
-    ///
-    /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
-    /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
-    /// column than there are columns in the result set. This error cannot be detected until the
-    /// result set has been created, so it is returned by `fetch`, not `bind_col`.
-    /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
-    /// retrieving data from the data source with `fetch`, the driver converts the data to this
-    /// type. When it sends data to the source, the driver converts the data from this type.
-    /// * `target_value`: Pointer to the data buffer to bind to the column.
-    /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
-    /// aka. block fetching data).
-    /// * `indicator`: Buffer is going to hold length or indicator values.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to make sure the bound columns live until they are no
-    /// longer bound.
-    unsafe fn bind_col(
-        &mut self,
-        column_number: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error>;
+    /// While this method is very convinient due to the fact that the application does not have to
+    /// declare and bind specific buffers it is also in many situations extremly slow. Concrete
+    /// performance depends on the ODBC driver in question, but it is likely it performs a roundtrip
+    /// to the datasource for each individual row. It is also likely an extra conversion is
+    /// performed then requesting individual fields, since the C buffer type is not known to the
+    /// driver in advance.
+    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self>>, Error>;
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
@@ -119,6 +110,32 @@ pub trait Cursor {
     /// This is a wrapper around `col_name` introduced for convenience.
     fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {
         ColumnNamesIt::new(self)
+    }
+}
+
+/// An individual row of an result set. See [`crate::Cursor::next_row`].
+pub struct CursorRow<'c, C: ?Sized> {
+    cursor: &'c mut C,
+}
+
+impl<'c, C> CursorRow<'c, C> {
+    fn new(cursor: &'c mut C) -> Self {
+        CursorRow { cursor }
+    }
+}
+
+impl<'c, C> CursorRow<'c, C>
+where
+    C: Cursor,
+{
+    /// Fills a suitable taregt buffer with a field from the current row of the result set. This
+    /// method can not be called repeatedly for the same field.
+    pub fn get_data(
+        &mut self,
+        col_or_param_num: u16,
+        target: &mut impl OutputParameter,
+    ) -> Result<(), Error> {
+        unsafe { self.cursor.stmt().get_data(col_or_param_num, target) }
     }
 }
 
@@ -207,6 +224,12 @@ impl<'o, S> Cursor for CursorImpl<'o, S>
 where
     S: BorrowMut<Statement<'o>>,
 {
+    type Statement = Statement<'o>;
+
+    unsafe fn stmt(&mut self) -> &mut Self::Statement {
+        self.statement.borrow_mut()
+    }
+
     fn describe_col(
         &self,
         column_number: u16,
@@ -222,20 +245,14 @@ where
         self.statement.borrow().num_result_cols()
     }
 
-    fn fetch(&mut self) -> Result<bool, Error> {
-        self.statement.borrow_mut().fetch()
-    }
-
-    fn unbind_cols(&mut self) -> Result<(), Error> {
-        self.statement.borrow_mut().unbind_cols()
-    }
-
-    unsafe fn bind_col(
-        &mut self,
-        column_number: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error> {
-        self.statement.borrow_mut().bind_col(column_number, target)
+    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self>>, Error> {
+        let row_available = unsafe { self.statement.borrow_mut().fetch()? };
+        let ret = if row_available {
+            Some(CursorRow::new(self))
+        } else {
+            None
+        };
+        Ok(ret)
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
@@ -362,7 +379,7 @@ impl<C, B> RowSetCursor<C, B> {
     }
 }
 
-impl<C, B> RowSetCursor<C, B>
+impl<'o, C, B> RowSetCursor<C, B>
 where
     C: Cursor,
 {
@@ -373,7 +390,7 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
-        let has_data = self.cursor.fetch()?;
+        let has_data = unsafe { self.cursor.stmt().fetch()? };
         if has_data {
             Ok(Some(&self.buffer))
         } else {
@@ -383,7 +400,7 @@ where
 
     /// Unbind the buffer, leaving the cursor free to bind another buffer to it.
     pub fn unbind(mut self) -> Result<C, Error> {
-        self.cursor.unbind_cols()?;
+        unsafe { self.cursor.stmt().unbind_cols()? };
         Ok(self.cursor)
     }
 }

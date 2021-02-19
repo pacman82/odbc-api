@@ -302,7 +302,10 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
             // Batch is full. We need to send it to the data base and clear it, before we insert
             // more rows into it.
             statement.execute(&buffer)?;
-            info!("Insert batch {} with {} rows into DB.", num_batch, batch_size);
+            info!(
+                "Insert batch {} with {} rows into DB.",
+                num_batch, batch_size
+            );
             buffer.clear();
         }
 

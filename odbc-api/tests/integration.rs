@@ -16,8 +16,7 @@ const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
 #[cfg(target_os = "windows")]
-const SQLITE_3: &str =
-    "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
+const SQLITE_3: &str = "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
 #[cfg(not(target_os = "windows"))]
 const SQLITE_3: &str = "Driver={SQLite3};Database=sqlite-test.db";
 
@@ -912,6 +911,33 @@ fn interior_nul() {
     let actual = cursor_to_string(cursor);
     let expected = "a\0b";
     assert_eq!(expected, actual);
+}
+
+/// Use get_data to retrieve a string
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn get_data_int(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "GetDataInt", &["INTEGER"]).unwrap();
+
+    conn.execute("INSERT INTO GetDataInt (a) VALUES (42)", ())
+        .unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT a FROM GetDataInt", ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = Nullable::<i32>::null();
+
+    row.get_data(1, &mut actual).unwrap();
+    assert_eq!(Some(42), actual.into_opt());
+
+    // Cursor has reached its end
+    assert!(cursor.next_row().unwrap().is_none())
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

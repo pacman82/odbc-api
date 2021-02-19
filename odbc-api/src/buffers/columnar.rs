@@ -2,8 +2,8 @@ use std::{collections::HashSet, ffi::c_void};
 
 use crate::{
     fixed_sized::Bit,
-    handles::{CData, CDataMut, HasDataType},
-    DataType, Error, ParameterCollection, RowSetBuffer,
+    handles::{CData, CDataMut, CursorMethods, HasDataType},
+    Cursor, DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
 use super::{
@@ -624,9 +624,9 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
         self.num_rows.as_mut()
     }
 
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl crate::Cursor) -> Result<(), Error> {
+    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
-            cursor.bind_col(*col_number, column)?;
+            cursor.stmt().bind_col(*col_number, column)?;
         }
         Ok(())
     }

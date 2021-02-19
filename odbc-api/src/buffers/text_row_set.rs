@@ -1,5 +1,5 @@
 use super::text_column::TextColumn;
-use crate::{Cursor, Error, ParameterCollection, RowSetBuffer};
+use crate::{handles::CursorMethods, Cursor, Error, ParameterCollection, RowSetBuffer};
 use std::str::{from_utf8, Utf8Error};
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
@@ -191,7 +191,7 @@ unsafe impl RowSetBuffer for TextRowSet {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         for (index, column_buffer) in self.buffers.iter_mut().enumerate() {
             let column_number = (index + 1) as u16;
-            cursor.bind_col(column_number, column_buffer)?;
+            cursor.stmt().bind_col(column_number, column_buffer)?;
         }
         Ok(())
     }
