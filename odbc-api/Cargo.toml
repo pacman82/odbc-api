@@ -30,7 +30,7 @@ readme = "../Readme.md"
 
 [dependencies]
 odbc-sys = "0.17.0"
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 log = "0.4.14"
 widestring = "0.4.3"
 force-send-sync = "1.0.0"
