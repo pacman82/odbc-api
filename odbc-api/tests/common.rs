@@ -1,6 +1,9 @@
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers, buffers::TextColumn, handles::CDataMut, Connection, Cursor, Environment, RowSetBuffer,
+    buffers,
+    buffers::TextColumn,
+    handles::{CDataMut, CursorMethods},
+    Connection, Cursor, Environment, RowSetBuffer,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
@@ -123,7 +126,7 @@ where
     }
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
-        cursor.bind_col(1, &mut self.column)?;
+        cursor.stmt().bind_col(1, &mut self.column)?;
         Ok(())
     }
 }

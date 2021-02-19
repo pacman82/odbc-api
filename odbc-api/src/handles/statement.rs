@@ -248,84 +248,6 @@ impl<'s> Statement<'s> {
         .into_result(self)
     }
 
-    /// Returns the next row set in the result set.
-    ///
-    /// It can be called only while a result set exists: I.e., after a call that creates a result
-    /// set and before the cursor over that result set is closed. If any columns are bound, it
-    /// returns the data in those columns. If the application has specified a pointer to a row
-    /// status array or a buffer in which to return the number of rows fetched, `fetch` also returns
-    /// this information. Calls to `fetch` can be mixed with calls to `fetch_scroll`.
-    ///
-    /// # Safety
-    ///
-    /// Fetch dereferences bound column pointers.
-    pub fn fetch(&mut self) -> Result<bool, Error> {
-        unsafe {
-            match SQLFetch(self.handle) {
-                SqlReturn::NO_DATA => Ok(false),
-                other => other.into_result(self).map(|()| true),
-            }
-        }
-    }
-
-    /// Retrieves data for a single column in the result set or for a single parameter.
-    pub fn get_data(
-        &mut self,
-        col_or_param_num: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error> {
-        unsafe {
-            SQLGetData(
-                self.handle,
-                col_or_param_num,
-                target.cdata_type(),
-                target.mut_value_ptr(),
-                target.buffer_length(),
-                target.mut_indicator_ptr(),
-            )
-        }
-        .into_result(self)
-    }
-
-    /// Release all column buffers bound by `bind_col`. Except bookmark column.
-    pub fn unbind_cols(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
-    }
-
-    /// Binds application data buffers to columns in the result set.
-    ///
-    /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
-    /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
-    /// column than there are columns in the result set. This error cannot be detected until the
-    /// result set has been created, so it is returned by `fetch`, not `bind_col`.
-    /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
-    /// retrieving data from the data source with `fetch`, the driver converts the data to this
-    /// type. When it sends data to the source, the driver converts the data from this type.
-    /// * `target_value`: Pointer to the data buffer to bind to the column.
-    /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
-    /// aka. block fetching data).
-    /// * `indicator`: Buffer is going to hold length or indicator values.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to make sure the bound columns live until they are no
-    /// longer bound.
-    pub unsafe fn bind_col(
-        &mut self,
-        column_number: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error> {
-        SQLBindCol(
-            self.handle,
-            column_number,
-            target.cdata_type(),
-            target.mut_value_ptr(),
-            target.buffer_length(),
-            target.mut_indicator_ptr(),
-        )
-        .into_result(self)
-    }
-
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
     /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
@@ -619,6 +541,100 @@ impl<'s> Statement<'s> {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
             nullable: Nullability::new(nullable),
         })
+    }
+}
+
+/// Methods available to a statement in cursor states (New, Open, closed, etc.). Implementing this
+/// trait only means the methods are available. It does not imply the statement is actually in a
+/// correct Cursor state.
+///
+/// Also hepful to reason about statements indpendent of their lifetime argument refering to an open
+/// connection.
+pub trait CursorMethods {
+    /// Binds application data buffers to columns in the result set.
+    ///
+    /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
+    /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
+    /// column than there are columns in the result set. This error cannot be detected until the
+    /// result set has been created, so it is returned by `fetch`, not `bind_col`.
+    /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
+    /// retrieving data from the data source with `fetch`, the driver converts the data to this
+    /// type. When it sends data to the source, the driver converts the data from this type.
+    /// * `target_value`: Pointer to the data buffer to bind to the column.
+    /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
+    /// aka. block fetching data).
+    /// * `indicator`: Buffer is going to hold length or indicator values.
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to make sure the bound columns live until they are no
+    /// longer bound.
+    unsafe fn bind_col(
+        &mut self,
+        column_number: u16,
+        target: &mut impl CDataMut,
+    ) -> Result<(), Error>;
+
+    /// Returns the next row set in the result set.
+    ///
+    /// It can be called only while a result set exists: I.e., after a call that creates a result
+    /// set and before the cursor over that result set is closed. If any columns are bound, it
+    /// returns the data in those columns. If the application has specified a pointer to a row
+    /// status array or a buffer in which to return the number of rows fetched, `fetch` also returns
+    /// this information. Calls to `fetch` can be mixed with calls to `fetch_scroll`.
+    ///
+    /// # Safety
+    ///
+    /// Fetch dereferences bound column pointers.
+    unsafe fn fetch(&mut self) -> Result<bool, Error>;
+
+    /// Release all column buffers bound by `bind_col`. Except bookmark column.
+    fn unbind_cols(&mut self) -> Result<(), Error>;
+
+    /// Retrieves data for a single column in the result set or for a single parameter.
+    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error>;
+}
+
+impl<'o> CursorMethods for Statement<'o> {
+    unsafe fn bind_col(
+        &mut self,
+        column_number: u16,
+        target: &mut impl CDataMut,
+    ) -> Result<(), Error> {
+        SQLBindCol(
+            self.handle,
+            column_number,
+            target.cdata_type(),
+            target.mut_value_ptr(),
+            target.buffer_length(),
+            target.mut_indicator_ptr(),
+        )
+        .into_result(self)
+    }
+
+    unsafe fn fetch(&mut self) -> Result<bool, Error> {
+        match SQLFetch(self.handle) {
+            SqlReturn::NO_DATA => Ok(false),
+            other => other.into_result(self).map(|()| true),
+        }
+    }
+
+    fn unbind_cols(&mut self) -> Result<(), Error> {
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
+    }
+
+    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error> {
+        unsafe {
+            SQLGetData(
+                self.handle,
+                col_or_param_num,
+                target.cdata_type(),
+                target.mut_value_ptr(),
+                target.buffer_length(),
+                target.mut_indicator_ptr(),
+            )
+        }
+        .into_result(self)
     }
 }
 

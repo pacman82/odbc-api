@@ -26,7 +26,7 @@ pub use {
     diagnostics::Record,
     environment::Environment,
     error::Error,
-    statement::{ParameterDescription, Statement},
+    statement::{CursorMethods, ParameterDescription, Statement},
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
