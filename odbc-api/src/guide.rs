@@ -6,10 +6,10 @@
 //! sources are databases, but ODBC drivers are also available for various file types like Excel or
 //! CSV.
 //!
-//! Your application does not does not link against a driver, but will link against an ODBC driver
-//! manager which must be installed on the system you intend to run the application. On modern
-//! Windows Platforms ODBC is always installed, on OS-X or Linux distributions a driver manager like
-//! [unixODBC](http://www.unixodbc.org/) must be installed by whomever manages the system.
+//! Your application does not link against a driver, but will link against an ODBC driver manager
+//! which must be installed on the system you intend to run the application. On modern Windows
+//! Platforms ODBC is always installed, on OS-X or Linux distributions a driver manager like
+//! [unixODBC](http://www.unixodbc.org/) must be installed.
 //!
 //! To connect to a data source a driver for the specific data source in question must be installed.
 //! On windows you can type 'ODBC Data Sources' into the search box to start a little GUI which
@@ -202,7 +202,9 @@
 //! environment. This way the compiler will catch programming errors early. The most popular among
 //! them seems to be returning a `Connection` from a function which also creates the environment.
 //!
-//! ## Executing a statement
+//! ## Executing SQL statments
+//!
+//! ### Executing a single SQL statement
 //!
 //! With our ODBC connection all set up and ready to go, we can execute an SQL query:
 //!
@@ -232,6 +234,70 @@
 //! or no cursor at all. Should a cursor exists, it must be consumed or closed. The `drop` handler
 //! of Cursor will close it for us. If the `Option` is `None` there is nothing to close, so is all
 //! taken care of, nice.
+//!
+//! ### Executing a many SQL statements in sequence
+//!
+//! Execution of a statement, its bound parameters, its buffers and result set, are all managed by
+//! ODBC using a statement handle. If you call [`crate::Connection::execute`] a new one is allocated
+//! each time and the resulting cursor takes ownership of it (giving you an easier time with the
+//! borrow checker). In a use case there you want to execute multiple SQL Statements over the same
+//! connection in sequence, you may want to reuse an already allocated statement handle. This is
+//! what the [`crate::Preallocated`] struct is for. Please note that if you want to execute the same
+//! query with different parameters you can have potentially even better performance by utilizing
+//! prepared Statements ([`crate::Prepared`]).
+//!
+//! ```
+//! use odbc_api::{Connection, Error};
+//! use std::io::{self, stdin, Read};
+//!
+//! fn interactive(conn: &Connection) -> io::Result<()>{
+//!     let mut statement = conn.preallocate().unwrap();
+//!     let mut query = String::new();
+//!     stdin().read_line(&mut query)?;
+//!     while !query.is_empty() {
+//!         match statement.execute(&query, ()) {
+//!             Err(e) => println!("{}", e),
+//!             Ok(None) => println!("No results set generated."),
+//!             Ok(Some(cursor)) => {
+//!                 // ...print cursor contents...
+//!             },
+//!         }
+//!         stdin().read_line(&mut query)?;
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Executing prepared queries
+//!
+//! Should your use case require you to execute the same query several times with different
+//! parameters, prepared queries are the way to go. These give the ODBC driver a chance to store
+//! cache the access plan associated with your SQL statement. It is not unlike compiling your
+//! program once and executing it several times.
+//!
+//! ```
+//! use odbc_api::{Connection, Error, IntoParameter};
+//! use std::io::{self, stdin, Read};
+//!
+//! fn interactive(conn: &Connection) -> io::Result<()>{
+//!     let mut prepared = conn.prepare("SELECT * FROM Movies WHERE title=?;").unwrap();
+//!     let mut title = String::new();
+//!     stdin().read_line(&mut title)?;
+//!     while !title.is_empty() {
+//!         match prepared.execute(&title.into_parameter()) {
+//!             Err(e) => println!("{}", e),
+//!             // Most drivers would return a result set even if no Movie with the title is found,
+//!             // the result set would just be empty. Well, most drivers.
+//!             Ok(None) => println!("No results set generated."),
+//!             Ok(Some(cursor)) => {
+//!                 // ...print cursor contents...
+//!             },
+//!         }
+//!         stdin().read_line(&mut title)?;
+//!     }
+//!     Ok(())
+//! }
+//! ```
 //!
 //! ## Fetching results
 //!
