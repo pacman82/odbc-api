@@ -5,6 +5,7 @@
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
 * Removed `RowSetCursor::unbind` due to soundness issue, if fetching continues without any buffers bound.
 * Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
+* `RowSetCursor` now implements `Drop`.
 
 ## 0.16.0
 
@@ -19,7 +20,7 @@
 ## 0.14.0
 
 * Fix: `BufferKind::from_data_type` now uses `display_size` rather than `column_size` then mapping `Numeric` and `Decimal` types to `Text` buffers.
-* `BufferKind::from_data_type` now maps `DataType::Time` with `precision` > 0 to `BufferKind::Text` in order to avoid loosing fractional seconds. 
+* `BufferKind::from_data_type` now maps `DataType::Time` with `precision` > 0 to `BufferKind::Text` in order to avoid loosing fractional seconds.
 * Renamed `DataType::Tinyint` to `DataType::TinyInt` in order to be consistent with `DataType::SmallInt`.
 * Renamed `DataType::Bigint` to `DataType::BigInt` in order to be consistent with `DataType::SmallInt`.
 * Removed Application Row Descriptor handle. Likely to be reintroduced later though.

@@ -188,6 +188,7 @@ fn bind_char() {
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 5);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
+    drop(row_set_cursor);
 
     assert_eq!(Some(&b"abcde"[..]), buf.value_at(0));
 }
@@ -201,6 +202,8 @@ fn bind_varchar() {
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
+
+    drop(row_set_cursor);
 
     assert_eq!(Some(&b"Hello, World!"[..]), buf.value_at(0));
 }
