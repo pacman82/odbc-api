@@ -60,7 +60,15 @@ pub trait Cursor {
     /// to the datasource for each individual row. It is also likely an extra conversion is
     /// performed then requesting individual fields, since the C buffer type is not known to the
     /// driver in advance.
-    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self>>, Error>;
+    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self::Statement>>, Error> {
+        let row_available = unsafe { self.stmt().fetch()? };
+        let ret = if row_available {
+            Some(CursorRow::new(unsafe { self.stmt() }))
+        } else {
+            None
+        };
+        Ok(ret)
+    }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
@@ -114,19 +122,19 @@ pub trait Cursor {
 }
 
 /// An individual row of an result set. See [`crate::Cursor::next_row`].
-pub struct CursorRow<'c, C: ?Sized> {
-    cursor: &'c mut C,
+pub struct CursorRow<'c, S: ?Sized> {
+    statement: &'c mut S,
 }
 
-impl<'c, C> CursorRow<'c, C> {
-    fn new(cursor: &'c mut C) -> Self {
-        CursorRow { cursor }
+impl<'c, S: ?Sized> CursorRow<'c, S> {
+    fn new(statement: &'c mut S) -> Self {
+        CursorRow { statement }
     }
 }
 
-impl<'c, C> CursorRow<'c, C>
+impl<'c, S> CursorRow<'c, S>
 where
-    C: Cursor,
+    S: CursorMethods,
 {
     /// Fills a suitable taregt buffer with a field from the current row of the result set. This
     /// method can not be called repeatedly for the same field.
@@ -135,7 +143,7 @@ where
         col_or_param_num: u16,
         target: &mut impl OutputParameter,
     ) -> Result<(), Error> {
-        unsafe { self.cursor.stmt().get_data(col_or_param_num, target) }
+        self.statement.get_data(col_or_param_num, target)
     }
 }
 
@@ -243,16 +251,6 @@ where
 
     fn num_result_cols(&self) -> Result<i16, Error> {
         self.statement.borrow().num_result_cols()
-    }
-
-    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self>>, Error> {
-        let row_available = unsafe { self.statement.borrow_mut().fetch()? };
-        let ret = if row_available {
-            Some(CursorRow::new(self))
-        } else {
-            None
-        };
-        Ok(ret)
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
