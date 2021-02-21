@@ -2,6 +2,9 @@
 
 ## Next
 
+* Introduces `Cursor::next_row` to fetch data without binding buffers first.
+* Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
+
 ## 0.16.0
 
 * `Cursor::fetch` is now safe.
