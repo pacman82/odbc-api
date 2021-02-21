@@ -366,21 +366,19 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
 
 /// A row set cursor iterates in blocks over row sets, filling them in buffers, instead of iterating
 /// the result set row by row. This is usually much faster.
-pub struct RowSetCursor<C, B> {
+pub struct RowSetCursor<C: Cursor, B> {
     buffer: B,
     cursor: C,
-}
-
-impl<C, B> RowSetCursor<C, B> {
-    fn new(buffer: B, cursor: C) -> Self {
-        Self { buffer, cursor }
-    }
 }
 
 impl<C, B> RowSetCursor<C, B>
 where
     C: Cursor,
 {
+    fn new(buffer: B, cursor: C) -> Self {
+        Self { buffer, cursor }
+    }
+
     /// Fills the bound buffer with the next row set.
     ///
     /// # Return
@@ -393,6 +391,18 @@ where
             Ok(Some(&self.buffer))
         } else {
             Ok(None)
+        }
+    }
+}
+
+impl<C, B> Drop for RowSetCursor<C, B> where C: Cursor {
+    fn drop(&mut self) {
+        if let Err(e) = unsafe { self.cursor.stmt().unbind_cols() } {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexpected error unbinding columns: {:?}", e)
+            }
         }
     }
 }
