@@ -341,8 +341,8 @@ pub unsafe trait RowSetBuffer {
     ///
     /// # Safety
     ///
-    /// It's the implementations responsibility to ensure that all bound buffers are valid as
-    /// specified and live long enough.
+    /// It's the implementations responsibility to ensure that all bound buffers are valid until
+    /// unbound or the statement handle is deleted.
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>;
 }
 
@@ -377,7 +377,7 @@ impl<C, B> RowSetCursor<C, B> {
     }
 }
 
-impl<'o, C, B> RowSetCursor<C, B>
+impl<C, B> RowSetCursor<C, B>
 where
     C: Cursor,
 {
