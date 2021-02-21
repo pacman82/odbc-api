@@ -588,9 +588,6 @@ pub trait CursorMethods {
     /// Fetch dereferences bound column pointers.
     unsafe fn fetch(&mut self) -> Result<bool, Error>;
 
-    /// Release all column buffers bound by `bind_col`. Except bookmark column.
-    fn unbind_cols(&mut self) -> Result<(), Error>;
-
     /// Retrieves data for a single column in the result set or for a single parameter.
     fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error>;
 }
@@ -617,10 +614,6 @@ impl<'o> CursorMethods for Statement<'o> {
             SqlReturn::NO_DATA => Ok(false),
             other => other.into_result(self).map(|()| true),
         }
-    }
-
-    fn unbind_cols(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
     }
 
     fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error> {

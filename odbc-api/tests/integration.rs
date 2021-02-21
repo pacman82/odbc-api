@@ -940,43 +940,6 @@ fn get_data_int(connection_string: &str) {
     assert!(cursor.next_row().unwrap().is_none())
 }
 
-/// Binds a buffer to a batch cursor, unbinds it and continues to use the cursor.
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(SQLITE_3; "SQLite 3")]
-fn unbind_buffer(connection_string: &str) {
-    let conn = ENV
-        .connect_with_connection_string(connection_string)
-        .unwrap();
-    setup_empty_table(&conn, "UnbindBuffer", &["INTEGER"]).unwrap();
-
-    // Insert a value into the table.
-    conn.execute("INSERT INTO UnbindBuffer (a) VALUES (5),(42);", ())
-        .unwrap();
-
-    let cursor = conn
-        .execute("SELECT a FROM UnbindBuffer", ())
-        .unwrap()
-        .unwrap();
-
-    
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
-
-    let batch = row_set_cursor.fetch().unwrap().unwrap();
-    assert_eq!("5", batch.at_as_str(0, 0).unwrap().unwrap());
-    
-    let mut cursor = row_set_cursor.unbind().unwrap();
-
-    // Not necessary to make this test work, but it increases our chance to find some error, should
-    // the buffers still be erroneously bound to the buffer.
-    drop(buffer);
-
-    let mut row = cursor.next_row().unwrap().unwrap();
-    let mut actual = Nullable::<i32>::null();
-    row.get_data(1, &mut actual).unwrap();
-    assert_eq!(Some(42), actual.into_opt());
-}
-
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

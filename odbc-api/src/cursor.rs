@@ -395,10 +395,4 @@ where
             Ok(None)
         }
     }
-
-    /// Unbind the buffer, leaving the cursor free to bind another buffer to it.
-    pub fn unbind(mut self) -> Result<C, Error> {
-        unsafe { self.cursor.stmt().unbind_cols()? };
-        Ok(self.cursor)
-    }
 }
