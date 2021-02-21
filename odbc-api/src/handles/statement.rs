@@ -590,6 +590,9 @@ pub trait CursorMethods {
 
     /// Retrieves data for a single column in the result set or for a single parameter.
     fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error>;
+
+    /// Release all column buffers bound by `bind_col`. Except bookmark column.
+    fn unbind_cols(&mut self) -> Result<(), Error>;
 }
 
 impl<'o> CursorMethods for Statement<'o> {
@@ -628,6 +631,10 @@ impl<'o> CursorMethods for Statement<'o> {
             )
         }
         .into_result(self)
+    }
+
+    fn unbind_cols(&mut self) -> Result<(), Error> {
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
     }
 }
 
