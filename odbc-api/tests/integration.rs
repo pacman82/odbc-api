@@ -463,7 +463,7 @@ fn prepared_statement() {
     }
 }
 
-/// Insert values into a varbinary column using a columnar buffer
+/// Reuse a preallocated handle, two times in a row.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn preallocated(connection_string: &str) {
@@ -474,7 +474,7 @@ fn preallocated(connection_string: &str) {
     setup_empty_table(&conn, "Preallocated", &["VARCHAR(10)"]).unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
-    // Execute it two times with different parameters
+    // Execute it two statements in a row. One INSERT, one SELECT.
     {
         let res = prealloc
             .execute("INSERT INTO Preallocated (a) VALUES ('Hello')", ())
@@ -490,6 +490,52 @@ fn preallocated(connection_string: &str) {
         let actual = cursor_to_string(cursor);
         let expected = "Hello";
         assert_eq!(expected, actual);
+    }
+}
+
+/// Reuse a preallocated handle. Verify that columns bound to the statement during a previous
+/// execution are not dereferenced during a second one.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn preallocation_soundness(connection_string: &str) {
+    // Prepare the statement once
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "PreallocationSoundness", &["VARCHAR(10)"]).unwrap();
+    let mut prealloc = conn.preallocate().unwrap();
+
+    {
+        let res = prealloc
+            .execute("INSERT INTO PreallocationSoundness (a) VALUES ('Hello')", ())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute("SELECT a FROM PreallocationSoundness ORDER BY id", ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
+    }
+
+    {
+        let mut cursor = prealloc
+            .execute("SELECT a FROM PreallocationSoundness ORDER BY id", ())
+            .unwrap()
+            .unwrap();
+
+        // let actual = cursor_to_string(cursor);
+        // let expected = "Hello";
+        // assert_eq!(expected, actual);
+
+        // Fetch without binding buffers. If columns would still be bound we might see an invalid
+        // memory access.
+        let _row = cursor.next_row().unwrap().unwrap();
+        assert!(cursor.next_row().unwrap().is_none());
     }
 }
 
