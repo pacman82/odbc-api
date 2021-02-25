@@ -6,6 +6,7 @@
 * Removed `RowSetCursor::unbind` due to soundness issue, if fetching continues without any buffers bound.
 * Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
 * `RowSetCursor` now implements `Drop`.
+* `Statement::set_num_rows_fetched` now takes an option to allow unbinding a previously set reference.
 
 ## 0.16.0
 

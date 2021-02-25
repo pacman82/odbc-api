@@ -214,21 +214,6 @@ impl<'s> Statement<'s> {
         .into_result(self)
     }
 
-    /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
-    ///
-    /// # Safety
-    ///
-    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    pub unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut ULen) -> Result<(), Error> {
-        SQLSetStmtAttrW(
-            self.handle,
-            StatementAttribute::RowsFetchedPtr,
-            num_rows as *mut ULen as Pointer,
-            0,
-        )
-        .into_result(self)
-    }
-
     /// Sets the binding type to columnar binding for batch cursors.
     ///
     /// Any Positive number indicates a row wise binding with that row length. `0` indicates a
@@ -593,6 +578,17 @@ pub trait CursorMethods {
 
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
     fn unbind_cols(&mut self) -> Result<(), Error>;
+
+    /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
+    /// Passing `None` for `num_rows` is going to unbind the value from the statement.
+    ///
+    /// # Safety
+    ///
+    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
+    unsafe fn set_num_rows_fetched(
+        &mut self,
+        num_rows: Option<&mut ULen>,
+    ) -> Result<(), Error>;
 }
 
 impl<'o> CursorMethods for Statement<'o> {
@@ -635,6 +631,16 @@ impl<'o> CursorMethods for Statement<'o> {
 
     fn unbind_cols(&mut self) -> Result<(), Error> {
         unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
+    }
+
+    unsafe fn set_num_rows_fetched(
+        &mut self,
+        num_rows: Option<&mut ULen>,
+    ) -> Result<(), Error> {
+        let value = num_rows
+            .map(|r| r as *mut ULen as Pointer)
+            .unwrap_or_else(null_mut);
+        SQLSetStmtAttrW(self.handle, StatementAttribute::RowsFetchedPtr, value, 0).into_result(self)
     }
 }
 
