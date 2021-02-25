@@ -531,10 +531,6 @@ fn preallocation_soundness(connection_string: &str) {
             .unwrap()
             .unwrap();
 
-        // let actual = cursor_to_string(cursor);
-        // let expected = "Hello";
-        // assert_eq!(expected, actual);
-
         // Fetch without binding buffers. If columns would still be bound we might see an invalid
         // memory access.
         let _row = cursor.next_row().unwrap().unwrap();

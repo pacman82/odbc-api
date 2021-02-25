@@ -265,7 +265,7 @@ where
         unsafe {
             stmt.set_row_bind_type(row_set_buffer.bind_type())?;
             stmt.set_row_array_size(row_set_buffer.row_array_size())?;
-            stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())?;
+            stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))?;
             row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
@@ -395,13 +395,22 @@ where
     }
 }
 
-impl<C, B> Drop for RowSetCursor<C, B> where C: Cursor {
+impl<C, B> Drop for RowSetCursor<C, B>
+where
+    C: Cursor,
+{
     fn drop(&mut self) {
-        if let Err(e) = unsafe { self.cursor.stmt().unbind_cols() } {
-            // Avoid panicking, if we already have a panic. We don't want to mask the original
-            // error.
-            if !panicking() {
-                panic!("Unexpected error unbinding columns: {:?}", e)
+        unsafe {
+            let stmt = self.cursor.stmt();
+            if let Err(e) = stmt
+                .unbind_cols()
+                .and_then(|()| stmt.set_num_rows_fetched(None))
+            {
+                // Avoid panicking, if we already have a panic. We don't want to mask the original
+                // error.
+                if !panicking() {
+                    panic!("Unexpected error unbinding columns: {:?}", e)
+                }
             }
         }
     }
