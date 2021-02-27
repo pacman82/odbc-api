@@ -208,7 +208,7 @@ use crate::{
 pub unsafe trait InputParameter: HasDataType {}
 
 /// Guarantees that there is space in the output buffer for at least one element.
-pub unsafe trait OutputParameter: CDataMut + HasDataType {}
+pub unsafe trait Output: CDataMut + HasDataType {}
 
 /// Implementers of this trait can be used as individual parameters of in a
 /// [`crate::ParameterCollection`]. They can be bound as either input parameters, output parameters
@@ -245,7 +245,7 @@ where
 /// Bind mutable references as input/output parameter.
 unsafe impl<T> Parameter for &mut T
 where
-    T: OutputParameter,
+    T: Output,
 {
     unsafe fn bind_parameter(
         self,
@@ -284,7 +284,7 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// Mutable references wrapped in `Out` are bound as output parameters.
 unsafe impl<'a, T> Parameter for Out<'a, T>
 where
-    T: OutputParameter,
+    T: Output,
 {
     unsafe fn bind_parameter(
         self,

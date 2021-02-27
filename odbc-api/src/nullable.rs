@@ -5,7 +5,7 @@ use odbc_sys::NULL_DATA;
 use crate::{
     fixed_sized::FixedSizedCType,
     handles::{CData, CDataMut, HasDataType},
-    InputParameter, OutputParameter,
+    InputParameter, Output,
 };
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null
@@ -95,4 +95,4 @@ where
     }
 }
 
-unsafe impl<T> OutputParameter for Nullable<T> where T: FixedSizedCType + HasDataType {}
+unsafe impl<T> Output for Nullable<T> where T: FixedSizedCType + HasDataType {}

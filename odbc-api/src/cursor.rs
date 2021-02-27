@@ -1,6 +1,6 @@
 use crate::{
     handles::{Statement, StatementImpl},
-    ColumnDescription, DataType, Error, OutputParameter,
+    ColumnDescription, DataType, Error, Output,
 };
 
 use std::{
@@ -141,7 +141,7 @@ where
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
-        target: &mut impl OutputParameter,
+        target: &mut impl Output,
     ) -> Result<(), Error> {
         self.statement.get_data(col_or_param_num, target)
     }
