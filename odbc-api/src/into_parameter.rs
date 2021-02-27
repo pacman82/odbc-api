@@ -1,4 +1,4 @@
-use crate::{fixed_sized::Pod, parameter::VarChar, InputParameter, Nullable};
+use crate::{fixed_sized::Pod, parameter::VarCharRef, InputParameter, Nullable};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -26,20 +26,20 @@ where
 }
 
 impl<'a> IntoParameter for &'a str {
-    type Parameter = VarChar<'a>;
+    type Parameter = VarCharRef<'a>;
 
     fn into_parameter(self) -> Self::Parameter {
-        VarChar::new(self.as_bytes())
+        VarCharRef::new(self.as_bytes())
     }
 }
 
 impl<'a> IntoParameter for Option<&'a str> {
-    type Parameter = VarChar<'a>;
+    type Parameter = VarCharRef<'a>;
 
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            None => VarChar::null(),
+            None => VarCharRef::null(),
         }
     }
 }

@@ -8,7 +8,7 @@ use odbc_api::{
     buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet,
     },
-    parameter::VarChar512,
+    parameter::VarChar32,
     ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
 };
 use std::{iter, thread};
@@ -795,8 +795,10 @@ fn parameter_varchar_512(connection_string: &str) {
     let sql = "INSERT INTO ParameterVarchar512 (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
 
-    prepared.execute(&VarChar512::new(None)).unwrap();
-    prepared.execute(&VarChar512::new(Some(b"Bernd"))).unwrap();
+    prepared.execute(&VarChar32::copy_from_bytes(None)).unwrap();
+    prepared
+        .execute(&VarChar32::copy_from_bytes(Some(b"Bernd")))
+        .unwrap();
 
     let cursor = conn
         .execute("SELECT a FROM ParameterVarchar512 ORDER BY id", ())
@@ -1033,7 +1035,7 @@ fn get_data_string(connection_string: &str) {
         .unwrap();
 
     let mut row = cursor.next_row().unwrap().unwrap();
-    let mut actual = VarChar512::new(None);
+    let mut actual = VarChar32::copy_from_bytes(None);
 
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(Some(&b"Hello, World!"[..]), actual.as_bytes());
@@ -1057,7 +1059,7 @@ fn large_strings(connection_string: &str) {
         .unwrap();
     setup_empty_table(&conn, "LargeStrings", &["Varchar(max)"]).unwrap();
 
-    let input = String::from_utf8(vec![b'a';2000]).unwrap();
+    let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
 
     conn.execute(
         "INSERT INTO LargeStrings (a) VALUES (?)",
@@ -1071,7 +1073,7 @@ fn large_strings(connection_string: &str) {
         .unwrap();
 
     let mut row = cursor.next_row().unwrap().unwrap();
-    let mut buf = VarChar512::new(None);
+    let mut buf = VarChar32::copy_from_bytes(None);
     let mut actual = String::new();
 
     loop {
@@ -1081,8 +1083,39 @@ fn large_strings(connection_string: &str) {
             break;
         }
     }
-    
+
     assert_eq!(input, actual);
+}
+
+/// Test insertion and retrieving of large string values using get_data. Try to provoke
+/// `SQL_NO_TOTAL` as a return value in the indicator buffer.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+fn large_strings_get_text(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "LargeStringsGetText", &["Varchar(max)"]).unwrap();
+
+    let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
+
+    conn.execute(
+        "INSERT INTO LargeStringsGetText (a) VALUES (?)",
+        &input.into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT a FROM LargeStringsGetText ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = Vec::new();
+
+    row.get_text(1, &mut actual).unwrap();
+
+    assert_eq!(input, String::from_utf8(actual).unwrap());
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

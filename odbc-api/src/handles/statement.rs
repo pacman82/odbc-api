@@ -52,7 +52,7 @@ impl<'s> StatementImpl<'s> {
     }
 }
 
-/// An ODBC statement handle. In this crate it is implemented by [`Self::StatementImpl`]. In ODBC
+/// An ODBC statement handle. In this crate it is implemented by [`self::StatementImpl`]. In ODBC
 /// Statements are used to execute statements and retrieve results. Both paramater and result
 /// buffers are bound to the statemend and dereferenced during statement execution and fetching
 /// results.

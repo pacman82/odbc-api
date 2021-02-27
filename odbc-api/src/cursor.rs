@@ -1,11 +1,13 @@
 use crate::{
     handles::{Statement, StatementImpl},
+    parameter::VarCharMut,
     ColumnDescription, DataType, Error, Output,
 };
 
 use std::{
     borrow::BorrowMut,
     char::{decode_utf16, REPLACEMENT_CHARACTER},
+    cmp::max,
     convert::TryInto,
     marker::PhantomData,
     thread::panicking,
@@ -139,7 +141,7 @@ where
     /// Fills a suitable taregt buffer with a field from the current row of the result set. This
     /// method drains the data from the field. It can be called repeatedly to if not all the data
     /// fit in the output buffer at once. It should not called repeatedly to fetch the same value
-    /// twice.
+    /// twice. Column index starts at `1`.
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
@@ -148,7 +150,45 @@ where
         self.statement.get_data(col_or_param_num, target)
     }
 
-    // pub fn get_text(&mut self, )
+    /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
+    /// index starts at `1`.
+    pub fn get_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<(), Error> {
+        // Utilize all of the allocated buffer. Make sure buffer can at least hold the terminating
+        // zero.
+        buf.resize(max(1, buf.capacity()), 0);
+        let mut target = VarCharMut::from_buffer(buf.as_mut_slice(), None);
+        // Fetch binary data into buffer.
+        self.get_data(col_or_param_num, &mut target)?;
+        loop {
+            match target.num_truncated() {
+                // We did get the complete value. Nothing left todo.
+                Some(0) => break,
+                // We did not get all of the value in one go, but the data source has been friendly
+                // enough to tell us how much is missing.
+                Some(still_missing) => {
+                    let old_len = buf.len();
+                    buf.resize(old_len + still_missing, 0);
+                    target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
+                    self.get_data(col_or_param_num, &mut target)?;
+                    break;
+                }
+                // Get data returned `NO_TOTAL` in the indicator value. Let's fetch the data with
+                // repeated calls to get_data.
+                None => {
+                    let old_len = buf.len();
+                    // Use an exponantial strategy for increasing buffer size. +1 For handling
+                    // initial buffer size of 1.
+                    buf.resize(old_len * 2, 0);
+                    target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
+                    self.get_data(col_or_param_num, &mut target)?;
+                }
+            }
+        }
+        // Drop terminating zero at the end.
+        let zero = buf.pop();
+        debug_assert_eq!(Some(0), zero);
+        Ok(())
+    }
 }
 
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See

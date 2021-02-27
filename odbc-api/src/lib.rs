@@ -22,7 +22,7 @@ pub mod parameter;
 
 pub use self::{
     connection::Connection,
-    cursor::{Cursor, CursorImpl, RowSetBuffer, RowSetCursor, CursorRow},
+    cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverInfo, Environment},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Error, Nullability},
