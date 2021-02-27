@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle, buffer::buf_ptr, drop_handle, error::Error, error::IntoResult,
-    statement::Statement,
+    statement::StatementImpl,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
@@ -113,11 +113,11 @@ impl<'c> Connection<'c> {
     }
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
-    pub fn allocate_statement(&self) -> Result<Statement, Error> {
+    pub fn allocate_statement(&self) -> Result<StatementImpl, Error> {
         let mut out = null_mut();
         unsafe {
             SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out).into_result(self)?;
-            Ok(Statement::new(out as HStmt))
+            Ok(StatementImpl::new(out as HStmt))
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::{
     execute::execute_with_parameters,
-    handles::{self, Statement},
+    handles::{self, StatementImpl},
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Preallocated, Prepared,
 };
@@ -60,7 +60,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &U16Str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<Statement>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementImpl>>, Error> {
         let lazy_statement = move || self.connection.allocate_statement();
         execute_with_parameters(lazy_statement, Some(query), params)
     }
@@ -102,7 +102,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<Statement>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementImpl>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }

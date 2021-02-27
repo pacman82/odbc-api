@@ -1,5 +1,5 @@
 use crate::{
-    handles::{CursorMethods, Statement},
+    handles::{Statement, StatementImpl},
     ColumnDescription, DataType, Error, OutputParameter,
 };
 
@@ -22,7 +22,7 @@ pub trait Cursor {
     /// underlying statement, consumers of this trait no only have to worry about the lifetime of
     /// the statement itself (e.g. the prepared query) and not about the lifetime of the connection
     /// it belongs to.
-    type Statement: CursorMethods;
+    type Statement: Statement;
 
     /// Provides access to the underlying statement handle.
     ///
@@ -134,7 +134,7 @@ impl<'c, S: ?Sized> CursorRow<'c, S> {
 
 impl<'c, S> CursorRow<'c, S>
 where
-    S: CursorMethods,
+    S: Statement,
 {
     /// Fills a suitable taregt buffer with a field from the current row of the result set. This
     /// method can not be called repeatedly for the same field.
@@ -204,18 +204,18 @@ impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
-pub struct CursorImpl<'open_connection, Stmt: BorrowMut<Statement<'open_connection>>> {
+pub struct CursorImpl<'open_connection, Stmt: BorrowMut<StatementImpl<'open_connection>>> {
     statement: Stmt,
     // If we would not implement the drop handler, we could do without the Phantom member and an
     // overall simpler declaration (without any lifetimes), since we could instead simply
     // specialize each implementation. Since drop handlers can not specialized, though we need
     // to deal with this.
-    connection: PhantomData<Statement<'open_connection>>,
+    connection: PhantomData<StatementImpl<'open_connection>>,
 }
 
 impl<'o, S> Drop for CursorImpl<'o, S>
 where
-    S: BorrowMut<Statement<'o>>,
+    S: BorrowMut<StatementImpl<'o>>,
 {
     fn drop(&mut self) {
         if let Err(e) = self.statement.borrow_mut().close_cursor() {
@@ -230,9 +230,9 @@ where
 
 impl<'o, S> Cursor for CursorImpl<'o, S>
 where
-    S: BorrowMut<Statement<'o>>,
+    S: BorrowMut<StatementImpl<'o>>,
 {
-    type Statement = Statement<'o>;
+    type Statement = StatementImpl<'o>;
 
     unsafe fn stmt(&mut self) -> &mut Self::Statement {
         self.statement.borrow_mut()
@@ -302,7 +302,7 @@ where
 
 impl<'o, S> CursorImpl<'o, S>
 where
-    S: BorrowMut<Statement<'o>>,
+    S: BorrowMut<StatementImpl<'o>>,
 {
     pub(crate) fn new(statement: S) -> Self {
         Self {

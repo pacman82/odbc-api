@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
     buffers::TextColumn,
-    handles::{CDataMut, CursorMethods},
+    handles::{CDataMut, Statement},
     Connection, Cursor, Environment, RowSetBuffer,
 };
 

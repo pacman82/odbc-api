@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 
 use widestring::U16Str;
 
-use crate::{handles::Statement, CursorImpl, Error, ParameterCollection};
+use crate::{handles::StatementImpl, CursorImpl, Error, ParameterCollection};
 
 /// Shared implementation for executing a query with parameters between [`Connection`],
 /// [`Preallocated`] and [`Prepared`].
@@ -21,7 +21,7 @@ pub fn execute_with_parameters<'o, S>(
     params: impl ParameterCollection,
 ) -> Result<Option<CursorImpl<'o, S>>, Error>
 where
-    S: BorrowMut<Statement<'o>>,
+    S: BorrowMut<StatementImpl<'o>>,
 {
     let paramset_size = params.parameter_set_size();
     if paramset_size == 0 {

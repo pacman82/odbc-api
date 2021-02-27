@@ -199,7 +199,7 @@ use std::{convert::TryInto, ffi::c_void};
 use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
-    handles::{CData, CDataMut, HasDataType, Statement},
+    handles::{CData, CDataMut, HasDataType, StatementImpl},
     DataType, Error,
 };
 
@@ -224,7 +224,7 @@ pub unsafe trait Parameter {
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut Statement,
+        stmt: &mut StatementImpl,
     ) -> Result<(), Error>;
 }
 
@@ -236,7 +236,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut Statement,
+        stmt: &mut StatementImpl,
     ) -> Result<(), Error> {
         stmt.bind_input_parameter(parameter_number, self)
     }
@@ -250,7 +250,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut Statement,
+        stmt: &mut StatementImpl,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self)
     }
@@ -289,7 +289,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut Statement,
+        stmt: &mut StatementImpl,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
     }

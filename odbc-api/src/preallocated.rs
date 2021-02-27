@@ -1,7 +1,7 @@
 use widestring::{U16Str, U16String};
 
 use crate::{
-    execute::execute_with_parameters, handles::Statement, CursorImpl, Error, ParameterCollection,
+    execute::execute_with_parameters, handles::StatementImpl, CursorImpl, Error, ParameterCollection,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -31,11 +31,11 @@ use crate::{
 /// }
 /// ```
 pub struct Preallocated<'open_connection> {
-    statement: Statement<'open_connection>,
+    statement: StatementImpl<'open_connection>,
 }
 
 impl<'o> Preallocated<'o> {
-    pub(crate) fn new(statement: Statement<'o>) -> Self {
+    pub(crate) fn new(statement: StatementImpl<'o>) -> Self {
         Self { statement }
     }
 
@@ -44,7 +44,7 @@ impl<'o> Preallocated<'o> {
         &mut self,
         query: &U16Str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
     }
 
@@ -92,7 +92,7 @@ impl<'o> Preallocated<'o> {
         &mut self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }

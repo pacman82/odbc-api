@@ -1,17 +1,17 @@
 use crate::{
     execute::execute_with_parameters,
-    handles::{ParameterDescription, Statement},
+    handles::{ParameterDescription, StatementImpl},
     CursorImpl, Error, ParameterCollection,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
 /// once.
 pub struct Prepared<'open_connection> {
-    statement: Statement<'open_connection>,
+    statement: StatementImpl<'open_connection>,
 }
 
 impl<'o> Prepared<'o> {
-    pub(crate) fn new(statement: Statement<'o>) -> Self {
+    pub(crate) fn new(statement: StatementImpl<'o>) -> Self {
         Self { statement }
     }
 
@@ -25,7 +25,7 @@ impl<'o> Prepared<'o> {
     pub fn execute(
         &mut self,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut Statement<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), None, params)
     }
 

@@ -1,5 +1,5 @@
 use super::text_column::TextColumn;
-use crate::{handles::CursorMethods, Cursor, Error, ParameterCollection, RowSetBuffer};
+use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
 use std::str::{from_utf8, Utf8Error};
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
@@ -202,7 +202,7 @@ unsafe impl ParameterCollection for &TextRowSet {
         *self.num_rows as u32
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut crate::handles::Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut crate::handles::StatementImpl) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
             stmt.bind_input_parameter(parameter_number, column)?;

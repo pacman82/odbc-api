@@ -17,12 +17,12 @@ use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
-pub struct Statement<'s> {
+pub struct StatementImpl<'s> {
     parent: PhantomData<&'s HDbc>,
     handle: HStmt,
 }
 
-unsafe impl<'c> AsHandle for Statement<'c> {
+unsafe impl<'c> AsHandle for StatementImpl<'c> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -32,7 +32,7 @@ unsafe impl<'c> AsHandle for Statement<'c> {
     }
 }
 
-impl<'s> Drop for Statement<'s> {
+impl<'s> Drop for StatementImpl<'s> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Stmt);
@@ -40,7 +40,7 @@ impl<'s> Drop for Statement<'s> {
     }
 }
 
-impl<'s> Statement<'s> {
+impl<'s> StatementImpl<'s> {
     /// # Safety
     ///
     /// `handle` must be a valid (successfully allocated) statement handle.
@@ -529,13 +529,15 @@ impl<'s> Statement<'s> {
     }
 }
 
-/// Methods available to a statement in cursor states (New, Open, closed, etc.). Implementing this
-/// trait only means the methods are available. It does not imply the statement is actually in a
-/// correct Cursor state.
+/// An ODBC statement handle. In this crate it is implemented by [`Self::StatementImpl`]. In ODBC
+/// Statements are used to execute statements and retrieve results. Both paramater and result
+/// buffers are bound to the statemend and dereferenced during statement execution and fetching
+/// results.
 ///
-/// Also hepful to reason about statements indpendent of their lifetime argument refering to an open
-/// connection.
-pub trait CursorMethods {
+/// The trait allows us to reason about statements without taking the lifetime of their connection
+/// into account. It also allows for the trait to be implemented by a handle taking ownership of
+/// both, the statement and the connection.
+pub trait Statement {
     /// Binds application data buffers to columns in the result set.
     ///
     /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
@@ -591,7 +593,7 @@ pub trait CursorMethods {
     ) -> Result<(), Error>;
 }
 
-impl<'o> CursorMethods for Statement<'o> {
+impl<'o> Statement for StatementImpl<'o> {
     unsafe fn bind_col(
         &mut self,
         column_number: u16,
