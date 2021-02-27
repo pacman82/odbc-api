@@ -1,6 +1,6 @@
 use crate::{
     execute::execute_with_parameters,
-    handles::{self, StatementImpl},
+    handles::{self, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Preallocated, Prepared,
 };

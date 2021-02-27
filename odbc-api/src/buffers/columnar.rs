@@ -2,7 +2,7 @@ use std::{collections::HashSet, ffi::c_void};
 
 use crate::{
     fixed_sized::Bit,
-    handles::{CData, CDataMut, Statement, HasDataType},
+    handles::{CData, CDataMut, HasDataType, Statement},
     Cursor, DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
@@ -637,7 +637,10 @@ unsafe impl ParameterCollection for &ColumnarRowSet {
         *self.num_rows as u32
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut crate::handles::StatementImpl) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(
+        self,
+        stmt: &mut crate::handles::StatementImpl,
+    ) -> Result<(), Error> {
         for &(parameter_number, ref buffer) in &self.columns {
             stmt.bind_input_parameter(parameter_number, buffer)?;
         }

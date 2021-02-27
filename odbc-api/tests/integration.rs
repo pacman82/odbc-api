@@ -510,7 +510,10 @@ fn preallocation_soundness(connection_string: &str) {
 
     {
         let res = prealloc
-            .execute("INSERT INTO PreallocationSoundness (a) VALUES ('Hello')", ())
+            .execute(
+                "INSERT INTO PreallocationSoundness (a) VALUES ('Hello')",
+                (),
+            )
             .unwrap();
         assert!(res.is_none());
     }

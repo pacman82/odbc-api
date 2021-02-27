@@ -1,7 +1,8 @@
 use widestring::{U16Str, U16String};
 
 use crate::{
-    execute::execute_with_parameters, handles::StatementImpl, CursorImpl, Error, ParameterCollection,
+    execute::execute_with_parameters, handles::StatementImpl, CursorImpl, Error,
+    ParameterCollection,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See

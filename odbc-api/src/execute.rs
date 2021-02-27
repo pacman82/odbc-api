@@ -2,7 +2,10 @@ use std::borrow::BorrowMut;
 
 use widestring::U16Str;
 
-use crate::{handles::StatementImpl, CursorImpl, Error, ParameterCollection};
+use crate::{
+    handles::{Statement, StatementImpl},
+    CursorImpl, Error, ParameterCollection,
+};
 
 /// Shared implementation for executing a query with parameters between [`Connection`],
 /// [`Preallocated`] and [`Prepared`].

@@ -199,7 +199,7 @@ use std::{convert::TryInto, ffi::c_void};
 use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
-    handles::{CData, CDataMut, HasDataType, StatementImpl},
+    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
     DataType, Error,
 };
 

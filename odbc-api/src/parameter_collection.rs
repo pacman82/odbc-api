@@ -1,4 +1,7 @@
-use crate::{handles::StatementImpl, Error, InputParameter, Parameter};
+use crate::{
+    handles::{Statement, StatementImpl},
+    Error, InputParameter, Parameter,
+};
 
 mod tuple;
 
