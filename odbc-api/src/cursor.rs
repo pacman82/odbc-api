@@ -137,7 +137,9 @@ where
     S: Statement,
 {
     /// Fills a suitable taregt buffer with a field from the current row of the result set. This
-    /// method should not be called repeatedly for the same field.
+    /// method drains the data from the field. It can be called repeatedly to if not all the data
+    /// fit in the output buffer at once. It should not called repeatedly to fetch the same value
+    /// twice.
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
@@ -145,6 +147,8 @@ where
     ) -> Result<(), Error> {
         self.statement.get_data(col_or_param_num, target)
     }
+
+    // pub fn get_text(&mut self, )
 }
 
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See

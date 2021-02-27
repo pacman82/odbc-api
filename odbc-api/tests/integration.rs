@@ -1047,6 +1047,44 @@ fn get_data_string(connection_string: &str) {
     assert!(cursor.next_row().unwrap().is_none())
 }
 
+/// Test insertion and retrieving of large string values using get_data. Try to provoke
+/// `SQL_NO_TOTAL` as a return value in the indicator buffer.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+fn large_strings(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "LargeStrings", &["Varchar(max)"]).unwrap();
+
+    let input = String::from_utf8(vec![b'a';2000]).unwrap();
+
+    conn.execute(
+        "INSERT INTO LargeStrings (a) VALUES (?)",
+        &input.into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT a FROM LargeStrings ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut buf = VarChar512::new(None);
+    let mut actual = String::new();
+
+    loop {
+        row.get_data(1, &mut buf).unwrap();
+        actual += &std::str::from_utf8(buf.as_bytes().unwrap()).unwrap();
+        if buf.is_complete() {
+            break;
+        }
+    }
+    
+    assert_eq!(input, actual);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
@@ -1084,48 +1122,3 @@ fn many_diagnostic_messages() {
 
     // We do not have an explicit assertion, we are just happy if no integer addition overflows.
 }
-
-// #[test]
-// fn bind_numeric() {
-
-//     // See:
-//     // https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
-//     // https://stackoverflow.com/questions/9177795/how-to-convert-sql-numeric-struct-to-double-and-string
-
-//     let mut conn = env.connect_with_connection_string(MSSQL).unwrap();
-//     let sql = "SELECT my_numeric FROM AllTheTypes;";
-//     let mut cursor = conn.exec_direct(sql).unwrap().unwrap();
-
-//     let mut buf: Vec<Numeric> = vec![Numeric::default(); 1];
-
-//     let mut ard = cursor.application_row_descriptor().unwrap();
-//     unsafe {
-//         ard.set_field_type(1, SqlDataType::NUMERIC).unwrap();
-//         ard.set_field_scale(1, 2).unwrap();
-//         ard.set_field_precision(1, 3).unwrap();
-//     }
-
-//     let bind_args = BindColParameters {
-//         indicator: null_mut(),
-//         target_length: size_of::<Numeric>() as i64,
-//         target_type: CDataType::Numeric, // CDataType:ArdType
-//         target_value: buf.as_mut_ptr() as Pointer,
-//     };
-
-//     unsafe {
-//         cursor.set_row_array_size(1).unwrap();
-//         cursor.bind_col(1, bind_args).unwrap();
-//     }
-
-//     cursor.fetch().unwrap();
-
-//     assert_eq!(
-//         Numeric {
-//             precision: 0,
-//             scale: 0,
-//             sign: 0,
-//             val: [0; 16]
-//         },
-//         buf[0]
-//     );
-// }

@@ -194,9 +194,9 @@
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
 
-use std::{cmp::min, convert::TryInto, ffi::c_void};
+use std::{convert::TryInto, ffi::c_void};
 
-use odbc_sys::{CDataType, NULL_DATA};
+use odbc_sys::{CDataType, NULL_DATA, NO_TOTAL};
 
 use crate::{
     handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
@@ -441,6 +441,7 @@ unsafe impl InputParameter for VarChar<'_> {}
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as an element
 /// of a rowise output, but not be used in columnar parameter arrays or output buffers.
+#[derive(Debug, Clone, Copy)]
 pub struct VarChar512 {
     buffer: [u8; 512],
     indicator: isize,
@@ -472,11 +473,49 @@ impl VarChar512 {
 
     /// Returns the binary representation of the string, excluding the terminating zero.
     pub fn as_bytes(&self) -> Option<&[u8]> {
-        if self.indicator == NULL_DATA {
-            None
-        } else {
-            let length = min(512 - 1, self.indicator.try_into().unwrap());
-            Some(&self.buffer[..length])
+        const MAX: isize = (VarChar512::BUFFER_LEN - 1) as isize;
+        match self.indicator {
+            NULL_DATA => None,
+            0..=MAX => Some(&self.buffer[..(self.indicator as usize)]),
+            // This case includes both: indicators larger than max and `NO_TOTAL`
+            _ => {
+                Some(&self.buffer[..(Self::BUFFER_LEN - 1)])
+            }
+        }
+    }
+
+    /// Call this method to ensure that the entire field content did fit into the buffer. If you
+    /// retrieve a field using [`crate::CursorRow::get_data`], you can repeat the call until this
+    /// method is false to read all the data.
+    ///
+    /// ```
+    /// use odbc_api::{CursorRow, parameter::VarChar512, Error, handles::Statement};
+    ///
+    /// fn process_large_text<S: Statement>(
+    ///     col_index: u16,
+    ///     row: &mut CursorRow<S>
+    /// ) -> Result<(), Error>{
+    ///     let mut buf = VarChar512::new(None);
+    ///     row.get_data(col_index, &mut buf)?;
+    ///     while !buf.is_complete() {
+    ///         // Process bytes in stream without allocation. We can assume repeated calls to
+    ///         // get_data do not return `None` since it would have done so on the first call.
+    ///         process_text_slice(buf.as_bytes().unwrap());
+    ///     }
+    ///     Ok(())
+    /// }
+    ///
+    /// fn process_text_slice(text: &[u8]) { /*...*/}
+    ///
+    /// ```
+    pub fn is_complete(&self) -> bool {
+        match self.indicator {
+            NULL_DATA => true,
+            NO_TOTAL => false,
+            other => { 
+                let other: usize = other.try_into().unwrap();
+                other < Self::BUFFER_LEN
+            }
         }
     }
 }
