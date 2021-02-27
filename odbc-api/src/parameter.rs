@@ -194,7 +194,7 @@
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
 
-use std::{convert::TryInto, ffi::c_void};
+use std::{cmp::min, convert::TryInto, ffi::c_void};
 
 use odbc_sys::{CDataType, NULL_DATA};
 
@@ -435,3 +435,101 @@ unsafe impl HasDataType for VarChar<'_> {
 }
 
 unsafe impl InputParameter for VarChar<'_> {}
+
+/// A stack allocated VarChar type able to hold strings up to a length of 512 bytes (including the
+/// terminating zero).
+///
+/// Due to its memory layout this type can be bound either as a single parameter, or as an element
+/// of a rowise output, but not be used in columnar parameter arrays or output buffers.
+pub struct VarChar512 {
+    buffer: [u8; 512],
+    indicator: isize,
+}
+
+impl VarChar512 {
+    /// Length of the allocated buffer in bytes including terminating zero.
+    const BUFFER_LEN: usize = 512;
+
+    /// Constructs a new instance of VarChar512. `None` is used as a representation of `NULL` and
+    /// values in some with more than 512 - 1 bytes will cause a panic (-1 because of the byte
+    /// required for the terminating zero).
+    pub fn new(bytes: Option<&[u8]>) -> Self {
+        if let Some(bytes) = bytes {
+            let mut buffer = [0; Self::BUFFER_LEN];
+            if bytes.len() > Self::BUFFER_LEN - 1 {
+                panic!("Value is to large to be stored in a VarChar512");
+            }
+            buffer[..bytes.len()].copy_from_slice(bytes);
+            let indicator = bytes.len() as isize;
+            VarChar512 { buffer, indicator }
+        } else {
+            VarChar512 {
+                buffer: [0; Self::BUFFER_LEN],
+                indicator: NULL_DATA,
+            }
+        }
+    }
+
+    /// Returns the binary representation of the string, excluding the terminating zero.
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        if self.indicator == NULL_DATA {
+            None
+        } else {
+            let length = min(512 - 1, self.indicator.try_into().unwrap());
+            Some(&self.buffer[..length])
+        }
+    }
+}
+
+unsafe impl CData for VarChar512 {
+    fn cdata_type(&self) -> CDataType {
+        CDataType::Char
+    }
+
+    fn indicator_ptr(&self) -> *const isize {
+        &self.indicator as *const isize
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.buffer.as_ptr() as *const c_void
+    }
+
+    fn buffer_length(&self) -> isize {
+        // This is the maximum buffer length, but it is NOT the length of an instance of VarChar512
+        // due to the missing size of the indicator value. As such the buffer length can not be used
+        // to correctly index a columnar buffer of VarChar512.
+        512
+    }
+}
+
+unsafe impl HasDataType for VarChar512 {
+    fn data_type(&self) -> DataType {
+        // Buffer length minus 1 for terminating zero
+        DataType::Varchar { length: 512 - 1 }
+    }
+}
+
+unsafe impl CDataMut for VarChar512 {
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
+        &mut self.indicator as *mut isize
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.buffer.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl Output for VarChar512 {}
+unsafe impl InputParameter for VarChar512 {}
+
+#[cfg(test)]
+mod tests {
+    use super::VarChar512;
+
+
+    #[test]
+    #[should_panic]
+    fn construct_to_large_varchar_512() {
+        VarChar512::new(Some(&vec![b'a'; 512]));
+    }
+}

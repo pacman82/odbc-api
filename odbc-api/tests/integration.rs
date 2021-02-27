@@ -8,6 +8,7 @@ use odbc_api::{
     buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet,
     },
+    parameter::VarChar512,
     ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
 };
 use std::{iter, thread};
@@ -786,6 +787,29 @@ fn parameter_option_str(connection_string: &str) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
+fn parameter_varchar_512(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "ParameterVarchar512", &["VARCHAR(50)"]).unwrap();
+    let sql = "INSERT INTO ParameterVarchar512 (a) VALUES (?);";
+    let mut prepared = conn.prepare(sql).unwrap();
+
+    prepared.execute(&VarChar512::new(None)).unwrap();
+    prepared.execute(&VarChar512::new(Some(b"Bernd"))).unwrap();
+
+    let cursor = conn
+        .execute("SELECT a FROM ParameterVarchar512 ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let actual = cursor_to_string(cursor);
+    let expected = "NULL\nBernd";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn read_into_columnar_buffer(connection_string: &str) {
     let conn = ENV
         .connect_with_connection_string(connection_string)
@@ -961,7 +985,7 @@ fn interior_nul() {
     assert_eq!(expected, actual);
 }
 
-/// Use get_data to retrieve a string
+/// Use get_data to retrieve an integer
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_int(connection_string: &str) {
@@ -983,6 +1007,41 @@ fn get_data_int(connection_string: &str) {
 
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(Some(42), actual.into_opt());
+
+    // Cursor has reached its end
+    assert!(cursor.next_row().unwrap().is_none())
+}
+
+/// Use get_data to retrieve a string
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn get_data_string(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "GetDataString", &["Varchar(50)"]).unwrap();
+
+    conn.execute(
+        "INSERT INTO GetDataString (a) VALUES ('Hello, World!'), (NULL)",
+        (),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT a FROM GetDataString ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = VarChar512::new(None);
+
+    row.get_data(1, &mut actual).unwrap();
+    assert_eq!(Some(&b"Hello, World!"[..]), actual.as_bytes());
+
+    // second row
+    row = cursor.next_row().unwrap().unwrap();
+    row.get_data(1, &mut actual).unwrap();
+    assert!(actual.as_bytes().is_none());
 
     // Cursor has reached its end
     assert!(cursor.next_row().unwrap().is_none())

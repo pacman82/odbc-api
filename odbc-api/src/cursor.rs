@@ -137,7 +137,7 @@ where
     S: Statement,
 {
     /// Fills a suitable taregt buffer with a field from the current row of the result set. This
-    /// method can not be called repeatedly for the same field.
+    /// method should not be called repeatedly for the same field.
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,

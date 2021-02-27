@@ -51,7 +51,7 @@ impl TextColumn {
             None
         } else {
             let offset = row_index * (self.max_str_len + 1);
-            let length = min(self.max_str_len, str_len as usize);
+            let length = min(self.max_str_len, str_len.try_into().unwrap());
             Some(&self.values[offset..offset + length])
         }
     }
