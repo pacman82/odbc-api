@@ -1,5 +1,5 @@
 use crate::{
-    fixed_sized::{Bit, FixedSizedCType},
+    fixed_sized::{Bit, Pod},
     handles::{CData, CDataMut},
 };
 use odbc_sys::{Date, Time, Timestamp, NULL_DATA};
@@ -100,7 +100,7 @@ impl<'a, T> Iterator for OptIt<'a, T> {
 
 unsafe impl<T> CData for ColumnWithIndicator<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn cdata_type(&self) -> odbc_sys::CDataType {
         T::C_DATA_TYPE
@@ -121,7 +121,7 @@ where
 
 unsafe impl<T> CDataMut for ColumnWithIndicator<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.indicators.as_mut_ptr() as *mut isize
@@ -134,7 +134,7 @@ where
 
 unsafe impl<T> CData for Vec<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn cdata_type(&self) -> odbc_sys::CDataType {
         T::C_DATA_TYPE
@@ -155,7 +155,7 @@ where
 
 unsafe impl<T> CDataMut for Vec<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         null_mut()

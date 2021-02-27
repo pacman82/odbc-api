@@ -24,8 +24,9 @@ impl Bit {
     }
 }
 
-/// Trait implemented to fixed C size types.
-pub unsafe trait FixedSizedCType: Default + Copy + CData {
+/// A plain old data type. With an associated C Type. Must be completly stack allocated without any
+/// external references. In additon to that the buffer size must be known to ODBC in advance.
+pub unsafe trait Pod: Default + Copy + CData {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;
 }
@@ -51,7 +52,7 @@ macro_rules! impl_fixed_sized {
             }
         }
 
-        unsafe impl FixedSizedCType for $t {
+        unsafe impl Pod for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;
         }
     };

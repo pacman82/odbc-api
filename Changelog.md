@@ -7,6 +7,8 @@
 * Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
 * `RowSetCursor` now implements `Drop`.
 * `Statement::set_num_rows_fetched` now takes an option to allow unbinding a previously set reference.
+* Trait `OutputParameter` has been renamed to `Output`.
+* Trait `FixedSizedCType` has been renamed to `Pod`.
 
 ## 0.16.0
 

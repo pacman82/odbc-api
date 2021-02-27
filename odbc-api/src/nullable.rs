@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use odbc_sys::NULL_DATA;
 
 use crate::{
-    fixed_sized::FixedSizedCType,
+    fixed_sized::Pod,
     handles::{CData, CDataMut, HasDataType},
     InputParameter, Output,
 };
@@ -52,7 +52,7 @@ impl<T> Nullable<T> {
 
 unsafe impl<T> CData for Nullable<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn cdata_type(&self) -> odbc_sys::CDataType {
         self.value.cdata_type()
@@ -73,18 +73,18 @@ where
 
 unsafe impl<T> HasDataType for Nullable<T>
 where
-    T: FixedSizedCType + HasDataType,
+    T: Pod + HasDataType,
 {
     fn data_type(&self) -> crate::DataType {
         self.value.data_type()
     }
 }
 
-unsafe impl<T> InputParameter for Nullable<T> where T: FixedSizedCType + HasDataType {}
+unsafe impl<T> InputParameter for Nullable<T> where T: Pod + HasDataType {}
 
 unsafe impl<T> CDataMut for Nullable<T>
 where
-    T: FixedSizedCType,
+    T: Pod,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         &mut self.indicator as *mut isize
@@ -95,4 +95,4 @@ where
     }
 }
 
-unsafe impl<T> Output for Nullable<T> where T: FixedSizedCType + HasDataType {}
+unsafe impl<T> Output for Nullable<T> where T: Pod + HasDataType {}

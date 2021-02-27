@@ -1,4 +1,4 @@
-use crate::{fixed_sized::FixedSizedCType, parameter::VarChar, InputParameter, Nullable};
+use crate::{fixed_sized::Pod, parameter::VarChar, InputParameter, Nullable};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -46,7 +46,7 @@ impl<'a> IntoParameter for Option<&'a str> {
 
 impl<T> IntoParameter for Option<T>
 where
-    T: FixedSizedCType + InputParameter,
+    T: Pod + InputParameter,
 {
     type Parameter = Nullable<T>;
 
