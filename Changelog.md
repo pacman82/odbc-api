@@ -3,6 +3,7 @@
 ## Next
 
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
+* Allow retrieving abitrarily large strings from the data source.
 * Removed `RowSetCursor::unbind` due to soundness issue, if fetching continues without any buffers bound.
 * Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
 * `RowSetCursor` now implements `Drop`.
