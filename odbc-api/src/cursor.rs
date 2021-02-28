@@ -63,7 +63,8 @@ pub trait Cursor {
     /// performance depends on the ODBC driver in question, but it is likely it performs a roundtrip
     /// to the datasource for each individual row. It is also likely an extra conversion is
     /// performed then requesting individual fields, since the C buffer type is not known to the
-    /// driver in advance.
+    /// driver in advance. Consider binding a buffer to the cursor first using
+    /// [`Self::bind_buffer`].
     fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self::Statement>>, Error> {
         let row_available = unsafe { self.stmt().fetch()? };
         let ret = if row_available {

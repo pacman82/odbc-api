@@ -260,7 +260,7 @@
 //!             Ok(None) => println!("No results set generated."),
 //!             Ok(Some(cursor)) => {
 //!                 // ...print cursor contents...
-//!             },
+//!             }
 //!         }
 //!         stdin().read_line(&mut query)?;
 //!     }
@@ -291,7 +291,7 @@
 //!             Ok(None) => println!("No results set generated."),
 //!             Ok(Some(cursor)) => {
 //!                 // ...print cursor contents...
-//!             },
+//!             }
 //!         }
 //!         stdin().read_line(&mut title)?;
 //!     }
@@ -313,6 +313,33 @@
 //!
 //! * [`crate::buffers::TextRowSet`]
 //! * [`crate::buffers::ColumnarRowSet`]
+//!
+//! ### Fetching results row by row without binding buffers upfront.
+//!
+//! Fetching data without binding buffers, may imply lots of roundtrips to the data source (one by
+//! row, or even by field). Also the driver has no upfront knowledge what C-Type your value should
+//! be represented as, preventing further optimizations. Usually it is the slowest possible way to
+//! siphon data out of a data source. That being said, it is a convinient programming model, as the
+//! developer does not need to prepare and allocate the buffers beforehand. It is also a good way to
+//! retrieve really large single values out of a data source (like one large text file).
+//!
+//! ```
+//! use odbc_api::{Connection, Error, IntoParameter, Cursor};
+//!
+//! fn get_large_text(name: &str, conn: &mut Connection<'_>) -> Result<Option<String>, Error> {
+//!     let mut cursor = conn
+//!         .execute("SELECT content FROM LargeFiles WHERE name=?", &name.into_parameter())?
+//!         .expect("Assume select statement creates cursor");
+//!     if let Some(mut row) = cursor.next_row()? {
+//!         let mut buf = Vec::new();
+//!         row.get_text(1, &mut buf)?;
+//!         let ret = String::from_utf8(buf).unwrap();
+//!         Ok(Some(ret))
+//!     } else {
+//!         Ok(None)
+//!     }
+//! }
+//! ```
 //!
 //! ### Fetching results column wise with `ColumnarRowSet`.
 //!
