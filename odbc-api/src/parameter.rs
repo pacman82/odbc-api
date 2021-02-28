@@ -548,25 +548,23 @@ where
     ///
     /// ```
     pub fn is_complete(&self) -> bool {
-        self.num_truncated() == Some(0)
-    }
-
-    /// Number of bytes truncated, by ODBC so value would fit in this buffer. If the value did fit
-    /// the result is `Some(0)`. `None` indicates that the truncated amount is unknown (`get_data`
-    /// returned `NO_TOTAL`).
-    pub fn num_truncated(&self) -> Option<usize> {
         match self.indicator {
-            NULL_DATA => Some(0),
-            NO_TOTAL => None,
+            NULL_DATA => true,
+            NO_TOTAL => false,
             other => {
                 let other: usize = other.try_into().unwrap();
-                if other < self.buffer.borrow().len() {
-                    Some(0)
-                } else {
-                    Some(other - self.buffer.borrow().len() + 1)
-                }
+                other < self.buffer.borrow().len()
             }
         }
+    }
+
+    /// Read access to the underlying ODBC indicator. After data has been fetched the indicator
+    /// value is set to the length the buffer should have had, excluding the terminating zere. It
+    /// may also be `NULL_DATA` to indicate `NULL` or `NO_TOTAL` which tells us the data source
+    /// does not know how big the buffer must be to hold the complete value. `NO_TOTAL` implies that
+    /// the content of the current buffer is valid up to its maximum capacity.
+    pub fn indicator(&self) -> isize {
+        self.indicator
     }
 }
 

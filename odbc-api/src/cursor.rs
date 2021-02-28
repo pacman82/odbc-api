@@ -4,6 +4,8 @@ use crate::{
     ColumnDescription, DataType, Error, Output,
 };
 
+use odbc_sys::{NO_TOTAL, NULL_DATA};
+
 use std::{
     borrow::BorrowMut,
     char::{decode_utf16, REPLACEMENT_CHARACTER},
@@ -156,25 +158,20 @@ where
         // Utilize all of the allocated buffer. Make sure buffer can at least hold the terminating
         // zero.
         buf.resize(max(1, buf.capacity()), 0);
+        // We repeatedly fetch data and add it to the buffer. The buffer length is therfore the
+        // accumulated value size. This variable keeps track of the number of bytes we added with
+        // the current call to get_data.
+        let mut fetch_size: isize = buf.len().try_into().unwrap();
         let mut target = VarCharMut::from_buffer(buf.as_mut_slice(), None);
         // Fetch binary data into buffer.
         self.get_data(col_or_param_num, &mut target)?;
         loop {
-            match target.num_truncated() {
-                // We did get the complete value. Nothing left todo.
-                Some(0) => break,
-                // We did not get all of the value in one go, but the data source has been friendly
-                // enough to tell us how much is missing.
-                Some(still_missing) => {
-                    let old_len = buf.len();
-                    buf.resize(old_len + still_missing, 0);
-                    target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
-                    self.get_data(col_or_param_num, &mut target)?;
-                    break;
-                }
-                // Get data returned `NO_TOTAL` in the indicator value. Let's fetch the data with
-                // repeated calls to get_data.
-                None => {
+            match target.indicator() {
+                // Value is `NULL`. We are done here.
+                NULL_DATA => break,
+                // We do not know how large the value is. Let's fetch the data with repeated calls
+                // to get_data.
+                NO_TOTAL => {
                     let old_len = buf.len();
                     // Use an exponantial strategy for increasing buffer size. +1 For handling
                     // initial buffer size of 1.
@@ -182,11 +179,28 @@ where
                     target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
+                // We did get the complete value, inculding the terminating zero. Let's resize the
+                // buffer to match the retrieved value exactly (exculding terminating zero).
+                indicator if indicator < fetch_size => {
+                    assert!(indicator >= 0);
+                    // Since the indicator refers to value length without terminating zero, this
+                    // also implicitly drops the terminating zero at the end of the buffer.
+                    let shrink_by: usize = (fetch_size - indicator).try_into().unwrap();
+                    buf.resize(buf.len() - shrink_by, 0);
+                    break;
+                }
+                // We did not get all of the value in one go, but the data source has been friendly
+                // enough to tell us how much is missing.
+                indicator => {
+                    let still_missing = (indicator - fetch_size + 1) as usize;
+                    fetch_size = (still_missing + 1).try_into().unwrap();
+                    let old_len = buf.len();
+                    buf.resize(old_len + still_missing, 0);
+                    target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
+                    self.get_data(col_or_param_num, &mut target)?;
+                }
             }
         }
-        // Drop terminating zero at the end.
-        let zero = buf.pop();
-        debug_assert_eq!(Some(0), zero);
         Ok(())
     }
 }

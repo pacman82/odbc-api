@@ -1118,6 +1118,38 @@ fn large_strings_get_text(connection_string: &str) {
     assert_eq!(input, String::from_utf8(actual).unwrap());
 }
 
+/// Retrieving of short string values using get_data. This also helps to assert that we correctly
+/// shorten the vectors length if the capacity of the originally passed in vector had been larger
+/// than the retrieved string.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn short_strings_get_text(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, "ShortStringsGetText", &["Varchar(15)"]).unwrap();
+
+    conn.execute(
+        "INSERT INTO ShortStringsGetText (a) VALUES ('Hello, World!')",
+        (),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT a FROM ShortStringsGetText ORDER BY id", ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+
+    // Make inintial buffer larger than the string we want to fetch.
+    let mut actual = Vec::with_capacity(100);
+
+    row.get_text(1, &mut actual).unwrap();
+
+    assert_eq!("Hello, World!", std::str::from_utf8(&actual).unwrap());
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
