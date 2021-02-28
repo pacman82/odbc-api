@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.3.14
 
 * Insert now logs batch number and rows
 

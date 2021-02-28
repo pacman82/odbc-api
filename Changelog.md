@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.17.0
 
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
 * Allow retrieving abitrarily large strings from the data source.
