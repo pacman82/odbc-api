@@ -155,7 +155,12 @@ where
 
     /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
     /// index starts at `1`.
-    pub fn get_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<(), Error> {
+    ///
+    /// # Return
+    ///
+    /// `true` indicates that the value has not been `NULL` and the value has been placed in `buf`.
+    /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
+    pub fn get_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<bool, Error> {
         // Utilize all of the allocated buffer. Make sure buffer can at least hold the terminating
         // zero.
         buf.resize(max(1, buf.capacity()), 0);
@@ -166,10 +171,13 @@ where
         let mut target = VarCharMut::from_buffer(buf.as_mut_slice(), None);
         // Fetch binary data into buffer.
         self.get_data(col_or_param_num, &mut target)?;
-        loop {
+        let not_null = loop {
             match target.indicator() {
                 // Value is `NULL`. We are done here.
-                NULL_DATA => break,
+                NULL_DATA => {
+                    buf.clear();
+                    break false;
+                },
                 // We do not know how large the value is. Let's fetch the data with repeated calls
                 // to get_data.
                 NO_TOTAL => {
@@ -188,7 +196,7 @@ where
                     // also implicitly drops the terminating zero at the end of the buffer.
                     let shrink_by: usize = (fetch_size - indicator).try_into().unwrap();
                     buf.resize(buf.len() - shrink_by, 0);
-                    break;
+                    break true;
                 }
                 // We did not get all of the value in one go, but the data source has been friendly
                 // enough to tell us how much is missing.
@@ -201,8 +209,8 @@ where
                     self.get_data(col_or_param_num, &mut target)?;
                 }
             }
-        }
-        Ok(())
+        };
+        Ok(not_null)
     }
 }
 

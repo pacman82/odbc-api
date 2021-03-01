@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0 (next)
+
+* `CursorRow::get_text` now returns `bool` with `false` indicating a `NULL` field.
+
 ## 0.17.0
 
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
