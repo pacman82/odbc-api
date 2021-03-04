@@ -4,8 +4,17 @@ use crate::{
 };
 
 use log::debug;
-use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, convert::TryInto, ffi::c_void};
+use odbc_sys::{CDataType, NO_TOTAL, NULL_DATA};
+use std::{cmp::min, convert::TryInto, ffi::c_void, mem::size_of};
+use widestring::U16Str;
+
+/// A column buffer for character data. The actual encoding used may depend on your system locale.
+pub type CharColumn = TextColumn<u8>;
+
+/// This buffer uses wide characters which implies UTF-16 encoding. UTF-8 encoding is preferable for
+/// most applications, but contrary to its sibling [`crate::buffers::CharColumn`] this buffer types
+/// implied encoding does not depend on the system locale.
+pub type WCharColumn = TextColumn<u16>;
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
@@ -13,25 +22,30 @@ use std::{cmp::min, convert::TryInto, ffi::c_void};
 /// manager should take care of the conversion. Since elements of this type have variable length an
 /// indicator buffer needs to be bound, whether the column is nullable or not, and therefore does
 /// not matter for this buffer.
+///
+/// Character type `C` is intended to be either `u8` or `u16`.
 #[derive(Debug)]
-pub struct TextColumn {
+pub struct TextColumn<C> {
     /// Maximum text length without terminating zero.
     max_str_len: usize,
-    values: Vec<u8>,
+    values: Vec<C>,
     /// Elements in this buffer are either `NULL_DATA` or hold the length of the element in value
     /// with the same index. Please note that this value may be larger than `max_str_len` if the
     /// text has been truncated.
     indicators: Vec<isize>,
 }
 
-impl TextColumn {
+impl<C> TextColumn<C> {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
     /// one in order to make space for the null terminating zero at the end of strings.
-    pub fn new(batch_size: usize, max_str_len: usize) -> Self {
+    pub fn new(batch_size: usize, max_str_len: usize) -> Self
+    where
+        C: Default + Copy,
+    {
         TextColumn {
             max_str_len,
-            values: vec![0; (max_str_len + 1) * batch_size],
+            values: vec![C::default(); (max_str_len + 1) * batch_size],
             indicators: vec![0; batch_size],
         }
     }
@@ -39,20 +53,31 @@ impl TextColumn {
     /// Return the bytes of string at the specified position. Including interior nuls, but excluding
     /// the terminating nul.
     ///
+    /// Implementation is private so we can maintain the extra invariant of &[u16] being Utf-16 in
+    /// the implementation for `C` being `u16`.
+    ///
     /// # Safety
     ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
+    unsafe fn value_at_impl(&self, row_index: usize) -> Option<&[C]> {
         let str_len = self.indicators[row_index];
-        if str_len == NULL_DATA {
-            None
-        } else {
-            let offset = row_index * (self.max_str_len + 1);
-            let length = min(self.max_str_len, str_len.try_into().unwrap());
-            Some(&self.values[offset..offset + length])
+        match str_len {
+            NULL_DATA => None,
+            // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
+            NO_TOTAL => {
+                let offset = row_index * (self.max_str_len + 1);
+                Some(&self.values[offset..offset + self.max_str_len])
+            }
+            _ => {
+                let offset = row_index * (self.max_str_len + 1);
+                let length_in_bytes: usize = str_len.try_into().unwrap();
+                let length_in_chars = length_in_bytes / size_of::<C>();
+                let length = min(self.max_str_len, length_in_chars);
+                Some(&self.values[offset..offset + length])
+            }
         }
     }
 
@@ -72,7 +97,10 @@ impl TextColumn {
     ///
     /// * `new_max_str_len`: New maximum string length without terminating zero.
     /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize) {
+    pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize)
+    where
+        C: Default + Copy,
+    {
         debug!(
             "Rebinding text column buffer with {} elements. Maximum string length {} => {}",
             num_rows, self.max_str_len, new_max_str_len
@@ -80,7 +108,7 @@ impl TextColumn {
 
         let batch_size = self.indicators.len();
         // Allocate a new buffer large enough to hold a batch of strings with maximum length.
-        let mut new_values = vec![0u8; (new_max_str_len + 1) * batch_size];
+        let mut new_values = vec![C::default(); (new_max_str_len + 1) * batch_size];
         // Copy values from old to new buffer.
         let max_copy_length = min(self.max_str_len, new_max_str_len);
         for ((&indicator, old_value), new_value) in self
@@ -90,9 +118,20 @@ impl TextColumn {
             .zip(new_values.chunks_exact_mut(new_max_str_len + 1))
             .take(num_rows)
         {
-            if indicator != NULL_DATA {
-                let num_bytes_to_copy = min(indicator as usize, max_copy_length);
-                new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
+            match indicator {
+                NULL_DATA => (),
+                NO_TOTAL => {
+                    // There is no good choice here in case we are expanding the buffer. Since
+                    // NO_TOTAL indicates that we use the entire buffer, but in truth it would now
+                    // be padded with 0. I currently cannot think of any usecase there it would
+                    // matter.
+                    new_value[..max_copy_length].clone_from_slice(&old_value[..max_copy_length]);
+                }
+                _ => {
+                    let num_bytes_to_copy =
+                        min(indicator as usize / size_of::<C>(), max_copy_length);
+                    new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
+                }
             }
         }
         self.values = new_values;
@@ -105,10 +144,13 @@ impl TextColumn {
     /// # Parameters
     ///
     /// * `new_max_len`: New maximum string length without terminating zero.
-    pub fn set_max_len(&mut self, new_max_len: usize) {
+    pub fn set_max_len(&mut self, new_max_len: usize)
+    where
+        C: Default + Copy,
+    {
         let batch_size = self.indicators.len();
         // Allocate a new buffer large enough to hold a batch of strings with maximum length.
-        let new_values = vec![0u8; (new_max_len + 1) * batch_size];
+        let new_values = vec![C::default(); (new_max_len + 1) * batch_size];
         // Set all indicators to NULL
         self.fill_null(0, batch_size);
         self.values = new_values;
@@ -123,7 +165,10 @@ impl TextColumn {
     /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
     ///   currently in the buffer.
     /// * `text`: Text to store without terminating zero.
-    pub fn append(&mut self, index: usize, text: Option<&[u8]>) {
+    pub fn append(&mut self, index: usize, text: Option<&[C]>)
+    where
+        C: Default + Copy,
+    {
         if let Some(text) = text {
             if text.len() > self.max_str_len {
                 let new_max_str_len = (text.len() as f64 * 1.2) as usize;
@@ -133,9 +178,9 @@ impl TextColumn {
             let offset = index * (self.max_str_len + 1);
             self.values[offset..offset + text.len()].copy_from_slice(text);
             // Add terminating zero to string.
-            self.values[offset + text.len()] = 0;
+            self.values[offset + text.len()] = C::default();
             // And of course set the indicator correctly.
-            self.indicators[index] = text.len().try_into().unwrap();
+            self.indicators[index] = (text.len() * size_of::<C>()).try_into().unwrap();
         } else {
             self.indicators[index] = NULL_DATA;
         }
@@ -150,7 +195,7 @@ impl TextColumn {
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt {
+    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt<C> {
         TextColumnIt {
             pos: 0,
             num_rows,
@@ -161,15 +206,18 @@ impl TextColumn {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `input` must be specified without the terminating zero.
-    pub fn set_value(&mut self, index: usize, input: Option<&[u8]>) {
+    pub fn set_value(&mut self, index: usize, input: Option<&[C]>)
+    where
+        C: Default + Copy,
+    {
         if let Some(input) = input {
-            self.indicators[index] = input.len().try_into().unwrap();
             if input.len() > self.max_str_len {
                 panic!(
                     "Tried to insert a value into a text buffer which is larger than the \
                     maximum allowed string length for the buffer."
                 );
             }
+            self.indicators[index] = (input.len() * size_of::<C>()).try_into().unwrap();
             let start = (self.max_str_len + 1) * index;
             let end = start + input.len();
             let buf = &mut self.values[start..end];
@@ -177,7 +225,7 @@ impl TextColumn {
             // Let's insert a terminating zero at the end to be on the safe side, in case the
             // ODBC driver would not care about the value in the index buffer and only look for the
             // terminating zero.
-            self.values[end + 1] = 0;
+            self.values[end + 1] = C::default();
         } else {
             self.indicators[index] = NULL_DATA;
         }
@@ -191,7 +239,7 @@ impl TextColumn {
     }
 
     /// A writer able to fill the first `n` elements of the buffer, from an iterator.
-    pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_> {
+    pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_, C> {
         TextColumnWriter {
             column: self,
             to: n,
@@ -199,42 +247,89 @@ impl TextColumn {
     }
 }
 
-/// Iterator over a text column. See [`TextColumn::iter`]
-#[derive(Debug)]
-pub struct TextColumnIt<'c> {
-    pos: usize,
-    num_rows: usize,
-    col: &'c TextColumn,
+impl CharColumn {
+    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
+    /// the terminating nul.
+    ///
+    /// # Safety
+    ///
+    /// The column buffer does not know how many elements were in the last row group, and therefore
+    /// can not guarantee the accessed element to be valid and in a defined state. It also can not
+    /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
+    /// equal to the maximum number of elements in the buffer.
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
+        self.value_at_impl(row_index)
+    }
 }
 
-impl<'c> Iterator for TextColumnIt<'c> {
-    type Item = Option<&'c [u8]>;
+impl WCharColumn {
+    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
+    /// the terminating nul.
+    ///
+    /// # Safety
+    ///
+    /// The column buffer does not know how many elements were in the last row group, and therefore
+    /// can not guarantee the accessed element to be valid and in a defined state. It also can not
+    /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
+    /// equal to the maximum number of elements in the buffer.
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&U16Str> {
+        self.value_at_impl(row_index).map(U16Str::from_slice)
+    }
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
+/// Iterator over a text column. See [`TextColumn::iter`]
+#[derive(Debug)]
+pub struct TextColumnIt<'c, C> {
+    pos: usize,
+    num_rows: usize,
+    col: &'c TextColumn<C>,
+}
+
+impl<'c, C> TextColumnIt<'c, C> {
+    fn next_impl(&mut self) -> Option<Option<&'c [C]>> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.value_at(self.pos)) };
+            let ret = unsafe { Some(self.col.value_at_impl(self.pos)) };
             self.pos += 1;
             ret
         }
     }
 }
 
+impl<'c> Iterator for TextColumnIt<'c, u8> {
+    type Item = Option<&'c [u8]>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl()
+    }
+}
+
+impl<'c> Iterator for TextColumnIt<'c, u16> {
+    type Item = Option<&'c U16Str>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl().map(|opt| opt.map(U16Str::from_slice))
+    }
+}
+
 /// Fills a text column buffer with elements from an Iterator.
 #[derive(Debug)]
-pub struct TextColumnWriter<'a> {
-    column: &'a mut TextColumn,
+pub struct TextColumnWriter<'a, C> {
+    column: &'a mut TextColumn<C>,
     /// Upper limit, the text column writer will not write beyond this index.
     to: usize,
 }
 
-impl<'a> TextColumnWriter<'a> {
+impl<'a, C> TextColumnWriter<'a, C> {
     /// Fill the text column with values by consuming the iterator and copying its items into the
     /// buffer. It will not extract more items from the iterator than the buffer may hold. This
     /// method panics if strings returned by the iterator are larger than the maximum element length
     /// of the buffer.
-    pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
+    pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [C]>>)
+    where
+        C: 'b + Default + Copy,
+    {
         for (index, item) in it.enumerate().take(self.to) {
             self.column.set_value(index, item)
         }
@@ -246,12 +341,15 @@ impl<'a> TextColumnWriter<'a> {
     /// # Parameters
     ///
     /// * `new_max_len`: New maximum string length without terminating zero.
-    pub fn set_max_len(&mut self, new_max_len: usize) {
+    pub fn set_max_len(&mut self, new_max_len: usize)
+    where
+        C: Default + Copy,
+    {
         self.column.set_max_len(new_max_len)
     }
 }
 
-unsafe impl CData for TextColumn {
+unsafe impl CData for CharColumn {
     fn cdata_type(&self) -> CDataType {
         CDataType::Char
     }
@@ -269,7 +367,7 @@ unsafe impl CData for TextColumn {
     }
 }
 
-unsafe impl HasDataType for TextColumn {
+unsafe impl HasDataType for CharColumn {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.max_str_len,
@@ -277,7 +375,35 @@ unsafe impl HasDataType for TextColumn {
     }
 }
 
-unsafe impl CDataMut for TextColumn {
+unsafe impl CDataMut for CharColumn {
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
+        self.indicators.as_mut_ptr()
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl CData for WCharColumn {
+    fn cdata_type(&self) -> CDataType {
+        CDataType::WChar
+    }
+
+    fn indicator_ptr(&self) -> *const isize {
+        self.indicators.as_ptr()
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.values.as_ptr() as *const c_void
+    }
+
+    fn buffer_length(&self) -> isize {
+        ((self.max_str_len + 1) * 2).try_into().unwrap()
+    }
+}
+
+unsafe impl CDataMut for WCharColumn {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.indicators.as_mut_ptr()
     }

@@ -3,7 +3,7 @@ use odbc_api::{
     buffers,
     buffers::TextColumn,
     handles::{CDataMut, Statement},
-    Connection, Cursor, Environment, RowSetBuffer,
+    Connection, Cursor, Environment, RowSetBuffer, U16Str,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
@@ -73,7 +73,26 @@ pub struct SingleColumnRowSetBuffer<C> {
     column: C,
 }
 
-impl SingleColumnRowSetBuffer<TextColumn> {
+impl SingleColumnRowSetBuffer<TextColumn<u16>> {
+    pub fn with_wide_text_column(batch_size: u32, max_str_len: usize) -> Self {
+        Self {
+            num_rows_fetched: Box::new(0),
+            batch_size,
+            column: TextColumn::new(batch_size as usize, max_str_len),
+        }
+    }
+
+    pub fn value_at(&self, index: usize) -> Option<&U16Str> {
+        if index >= *self.num_rows_fetched {
+            panic!("Out of bounds access. In SingleColumnRowSetBuffer")
+        }
+
+        // Safe due to out of bounds check above
+        unsafe { self.column.value_at(index) }
+    }
+}
+
+impl SingleColumnRowSetBuffer<TextColumn<u8>> {
     pub fn with_text_column(batch_size: u32, max_str_len: usize) -> Self {
         Self {
             num_rows_fetched: Box::new(0),

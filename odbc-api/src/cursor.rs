@@ -177,7 +177,7 @@ where
                 NULL_DATA => {
                     buf.clear();
                     break false;
-                },
+                }
                 // We do not know how large the value is. Let's fetch the data with repeated calls
                 // to get_data.
                 NO_TOTAL => {

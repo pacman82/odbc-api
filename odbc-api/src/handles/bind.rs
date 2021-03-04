@@ -18,9 +18,9 @@ pub unsafe trait CData {
     /// Pointer to a value corresponding to the one described by `cdata_type`.
     fn value_ptr(&self) -> *const c_void;
 
-    /// Maximum length of the type. It is required to index values in bound buffers, if more than
-    /// one parameter is bound. Can be set to zero for types not bound as parameter arrays, i.e.
-    /// `CStr`.
+    /// Maximum length of the type in bytes (not characters). It is required to index values in
+    /// bound buffers, if more than one parameter is bound. Can be set to zero for types not bound
+    /// as parameter arrays, i.e. `CStr`.
     fn buffer_length(&self) -> isize;
 }
 

@@ -35,7 +35,7 @@ pub enum AnyColumnView<'a> {
     /// Since we currently always have an indicator buffer for the text length anyway, there is no
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
-    Text(TextColumnIt<'a>),
+    Text(TextColumnIt<'a, u8>),
     Binary(BinColumnIt<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
@@ -71,7 +71,7 @@ pub enum AnyColumnViewMut<'a> {
     /// Since we currently always have an indicator buffer for the text length anyway, there is no
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
-    Text(TextColumnWriter<'a>),
+    Text(TextColumnWriter<'a, u8>),
     Binary(BinColumnWriter<'a>),
     Date(&'a mut [Date]),
     Time(&'a mut [Time]),
@@ -103,7 +103,7 @@ enum AnyColumnBuffer {
     /// NULL values are always represntable and there is no dedicated representation for none NULL
     /// values.
     Binary(BinColumn),
-    Text(TextColumn),
+    Text(TextColumn<u8>),
     Date(Vec<Date>),
     Time(Vec<Time>),
     Timestamp(Vec<Timestamp>),

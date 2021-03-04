@@ -86,7 +86,7 @@ pub struct TextRowSet {
     /// invalidated, even if the `TextRowSet` instance is moved in memory.
     num_rows: Box<usize>,
     /// Text buffers for the individual columns.
-    buffers: Vec<TextColumn>,
+    buffers: Vec<TextColumn<u8>>,
 }
 
 impl TextRowSet {

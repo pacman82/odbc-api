@@ -11,6 +11,6 @@ pub use self::{
     column_with_indicator::{OptIt, OptWriter},
     columnar::{AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
     description::{BufferDescription, BufferKind},
-    text_column::{TextColumn, TextColumnIt, TextColumnWriter},
+    text_column::{CharColumn, TextColumn, TextColumnIt, TextColumnWriter, WCharColumn},
     text_row_set::TextRowSet,
 };

@@ -181,32 +181,117 @@ fn prices() {
     assert_eq!(&[1, 2, 3], row_set_cursor.fetch().unwrap().unwrap().get());
 }
 
-#[test]
-fn bind_char() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT my_char FROM AllTheTypes;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_char(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "BindChar";
+    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 5);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
     drop(row_set_cursor);
 
-    assert_eq!(Some(&b"abcde"[..]), buf.value_at(0));
+    assert_eq!(Some(&b"Hello"[..]), buf.value_at(0));
 }
 
-#[test]
-fn bind_varchar() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT my_varchar FROM AllTheTypes;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_char_to_wchar(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "BindCharToWChar";
+    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
 
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::with_wide_text_column(1, 5);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
+    drop(row_set_cursor);
+
+    assert_eq!(
+        Some(U16String::from_str("Hello").as_ustr()),
+        buf.value_at(0)
+    );
+}
+
+/// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
+/// `NO_TOTAL` on MSSQL.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn truncate_fixed_sized(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "TruncateFixedSized";
+    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 3);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
+    drop(row_set_cursor);
+
+    assert_eq!(Some(&b"Hel"[..]), buf.value_at(0));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_varchar(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "BindVarchar";
+    setup_empty_table(&conn, table_name, &["VARCHAR(100)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
-
     drop(row_set_cursor);
 
     assert_eq!(Some(&b"Hello, World!"[..]), buf.value_at(0));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_varchar_to_wchar(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "BindVarcharToWChar";
+    setup_empty_table(&conn, table_name, &["VARCHAR(100)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::with_wide_text_column(1, 100);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
+    drop(row_set_cursor);
+
+    assert_eq!(
+        Some(U16String::from_str("Hello, World!").as_ustr()),
+        buf.value_at(0)
+    );
 }
 
 #[test]
