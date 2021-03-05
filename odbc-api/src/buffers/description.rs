@@ -91,6 +91,12 @@ impl BufferKind {
     ///     BufferKind::from_data_type(DataType::Varchar { length: 42 }),
     ///     Some(BufferKind::Text { max_str_len: 42 })
     /// );
+    /// // We do not care about the encoding in the datasource. WVarchar is mapped to `Text`, too
+    /// // (instead of `WText`).
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::WVarchar { length: 42 }),
+    ///     Some(BufferKind::Text { max_str_len: 42 })
+    /// );
     /// assert_eq!(
     ///     BufferKind::from_data_type(DataType::BigInt),
     ///     Some(BufferKind::I64)
