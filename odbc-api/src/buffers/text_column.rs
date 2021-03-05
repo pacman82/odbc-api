@@ -53,16 +53,13 @@ impl<C> TextColumn<C> {
     /// Return the bytes of string at the specified position. Including interior nuls, but excluding
     /// the terminating nul.
     ///
-    /// Implementation is private so we can maintain the extra invariant of &[u16] being Utf-16 in
-    /// the implementation for `C` being `u16`.
-    ///
     /// # Safety
     ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    unsafe fn value_at_impl(&self, row_index: usize) -> Option<&[C]> {
+    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[C]> {
         let str_len = self.indicators[row_index];
         match str_len {
             NULL_DATA => None,
@@ -247,23 +244,9 @@ impl<C> TextColumn<C> {
     }
 }
 
-impl CharColumn {
-    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
-    /// the terminating nul.
-    ///
-    /// # Safety
-    ///
-    /// The column buffer does not know how many elements were in the last row group, and therefore
-    /// can not guarantee the accessed element to be valid and in a defined state. It also can not
-    /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
-    /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
-        self.value_at_impl(row_index)
-    }
-}
 
 impl WCharColumn {
-    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
+    /// The string slice at the specified position as `U16Str`. Includes interior nuls, but excludes
     /// the terminating nul.
     ///
     /// # Safety
@@ -272,8 +255,8 @@ impl WCharColumn {
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&U16Str> {
-        self.value_at_impl(row_index).map(U16Str::from_slice)
+    pub unsafe fn ustr_at(&self, row_index: usize) -> Option<&U16Str> {
+        self.value_at(row_index).map(U16Str::from_slice)
     }
 }
 
@@ -290,7 +273,7 @@ impl<'c, C> TextColumnIt<'c, C> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.value_at_impl(self.pos)) };
+            let ret = unsafe { Some(self.col.value_at(self.pos)) };
             self.pos += 1;
             ret
         }
@@ -367,14 +350,6 @@ unsafe impl CData for CharColumn {
     }
 }
 
-unsafe impl HasDataType for CharColumn {
-    fn data_type(&self) -> DataType {
-        DataType::Varchar {
-            length: self.max_str_len,
-        }
-    }
-}
-
 unsafe impl CDataMut for CharColumn {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.indicators.as_mut_ptr()
@@ -382,6 +357,14 @@ unsafe impl CDataMut for CharColumn {
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl HasDataType for CharColumn {
+    fn data_type(&self) -> DataType {
+        DataType::Varchar {
+            length: self.max_str_len,
+        }
     }
 }
 
@@ -410,5 +393,13 @@ unsafe impl CDataMut for WCharColumn {
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl HasDataType for WCharColumn {
+    fn data_type(&self) -> DataType {
+        DataType::WVarchar {
+            length: self.max_str_len,
+        }
     }
 }

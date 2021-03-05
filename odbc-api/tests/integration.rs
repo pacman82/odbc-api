@@ -222,7 +222,7 @@ fn bind_char_to_wchar(connection_string: &str) {
 
     assert_eq!(
         Some(U16String::from_str("Hello").as_ustr()),
-        buf.value_at(0)
+        buf.ustr_at(0)
     );
 }
 
@@ -290,7 +290,7 @@ fn bind_varchar_to_wchar(connection_string: &str) {
 
     assert_eq!(
         Some(U16String::from_str("Hello, World!").as_ustr()),
-        buf.value_at(0)
+        buf.ustr_at(0)
     );
 }
 
@@ -440,15 +440,15 @@ fn columnar_insert_varbinary() {
     assert_eq!(expected, actual);
 }
 
-/// Insert values into a varbinary column using a columnar buffer
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_varchar(connection_string: &str) {
+    let table_name = "ColumnarInsertVarchar";
     // Setup
     let conn = ENV
         .connect_with_connection_string(connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ColumnarInsertVarchar", &["VARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -478,12 +478,73 @@ fn columnar_insert_varchar(connection_string: &str) {
     };
 
     // Bind buffer and insert values.
-    conn.execute("INSERT INTO ColumnarInsertVarchar (a) VALUES (?)", &buffer)
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute("SELECT a FROM ColumnarInsertVarchar ORDER BY Id", ())
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "Hello\nWorld\nNULL\nHello, World!";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_insert_wide_varchar(connection_string: &str) {
+    let table_name = "ColumnarInsertWideVarchar";
+    // Setup
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["NVARCHAR(13)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
+        // not work.
+        kind: BufferKind::WText { max_str_len: 5 },
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+
+    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
+    // reallocation of the underlying buffer.
+    let input = [
+        Some(U16String::from_str("Hello")),
+        Some(U16String::from_str("World")),
+        None,
+        Some(U16String::from_str("Hello, World!")),
+    ];
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::WText(mut writer) = buffer.column_mut(0) {
+        // Reset length to make room for `Hello, World!`.
+        writer.set_max_len(13);
+        writer.write(
+            input
+                .iter()
+                .map(|opt| opt.as_ref().map(|ustring| ustring.as_slice())),
+        );
+    } else {
+        panic!("Expected text column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -675,21 +736,54 @@ fn parameter_option_integer_none() {
     assert!(cursor.fetch().unwrap().is_none());
 }
 
-#[test]
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(SQLITE_3; "SQLite 3")] SQLite will work only if increasing length to VARCHAR(2).
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
-fn char() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    // VARCHAR(2) <- VARCHAR(1) would be enough to held the character, but we de not allocate
-    // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "Char", &["VARCHAR(1)"]).unwrap();
+fn char(connection_string: &str) {
+    let conn = ENV.connect_with_connection_string(connection_string).unwrap();
+    let table_name = "Char";
+    
+    setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
-    conn.execute("INSERT INTO CHAR (a) VALUES ('A'), ('Ü');", ())
+    conn.execute(&format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name), ())
         .unwrap();
 
-    let sql = "SELECT a FROM Char ORDER BY id;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let output = cursor_to_string(cursor);
     assert_eq!("A\nÜ", output);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn wchar(connection_string: &str) {
+    let conn = ENV.connect_with_connection_string(connection_string).unwrap();
+    let table_name = "WChar";
+    
+    setup_empty_table(&conn, table_name, &["NVARCHAR(1)"]).unwrap();
+
+    conn.execute(&format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name), ())
+        .unwrap();
+
+    let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+
+    let desc = BufferDescription {
+        nullable: false,
+        kind: BufferKind::WText { max_str_len: 1 },
+    };
+    let row_set_buffer = ColumnarRowSet::new(2, iter::once(desc));
+    let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = row_set_cursor.fetch().unwrap().unwrap();
+    let col = batch.column(0);
+    let mut wtext_col = match col {
+        AnyColumnView::WText(col) => col,
+        _ => panic!("Unexpected column type"),
+    };
+    assert_eq!(U16String::from_str("A"), wtext_col.next().unwrap().unwrap());
+    assert_eq!(U16String::from_str("Ü"), wtext_col.next().unwrap().unwrap());
+    assert!(wtext_col.next().is_none());
+    assert!(row_set_cursor.fetch().unwrap().is_none());
 }
 
 #[test]

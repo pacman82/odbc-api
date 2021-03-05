@@ -82,13 +82,13 @@ impl SingleColumnRowSetBuffer<TextColumn<u16>> {
         }
     }
 
-    pub fn value_at(&self, index: usize) -> Option<&U16Str> {
+    pub fn ustr_at(&self, index: usize) -> Option<&U16Str> {
         if index >= *self.num_rows_fetched {
             panic!("Out of bounds access. In SingleColumnRowSetBuffer")
         }
 
         // Safe due to out of bounds check above
-        unsafe { self.column.value_at(index) }
+        unsafe { self.column.ustr_at(index) }
     }
 }
 

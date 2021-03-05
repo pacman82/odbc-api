@@ -33,6 +33,13 @@ pub enum BufferKind {
         /// implicitly allocated if required.
         max_str_len: usize,
     },
+    /// UTF-16 encoded text buffer holding strings with length of up to `max_str_len`. Length is in
+    /// terms of 2-Byte characters.
+    WText {
+        /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
+        /// implicitly allocated if required.
+        max_str_len: usize,
+    },
     /// 64 bit floating point
     F64,
     /// 32 bit floating point

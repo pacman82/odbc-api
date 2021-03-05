@@ -14,7 +14,7 @@ use super::{
         OptWriter,
     },
     text_column::{TextColumn, TextColumnIt, TextColumnWriter},
-    BufferDescription, BufferKind,
+    BufferDescription, BufferKind, CharColumn, WCharColumn,
 };
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
@@ -32,10 +32,10 @@ const DEFAULT_TIME_PRECISION: i16 = 9;
 /// options.
 #[derive(Debug)]
 pub enum AnyColumnView<'a> {
-    /// Since we currently always have an indicator buffer for the text length anyway, there is no
-    /// NULL values are always represntable and there is no dedicated representation for none NULL
-    /// values.
+    /// Nullable character data in the system encoding.
     Text(TextColumnIt<'a, u8>),
+    /// Nullable character data encoded in UTF-16.
+    WText(TextColumnIt<'a, u16>),
     Binary(BinColumnIt<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
@@ -68,10 +68,10 @@ pub enum AnyColumnView<'a> {
 /// options.
 #[derive(Debug)]
 pub enum AnyColumnViewMut<'a> {
-    /// Since we currently always have an indicator buffer for the text length anyway, there is no
-    /// NULL values are always represntable and there is no dedicated representation for none NULL
-    /// values.
+    /// Nullable character data in system encoding.
     Text(TextColumnWriter<'a, u8>),
+    /// Nullable character data encoded in UTF-16.
+    WText(TextColumnWriter<'a, u16>),
     Binary(BinColumnWriter<'a>),
     Date(&'a mut [Date]),
     Time(&'a mut [Time]),
@@ -99,11 +99,13 @@ pub enum AnyColumnViewMut<'a> {
 
 #[derive(Debug)]
 enum AnyColumnBuffer {
-    /// Since we currently always have an indicator buffer for the text length anyway, there is no
-    /// NULL values are always represntable and there is no dedicated representation for none NULL
-    /// values.
+    /// A buffer for holding both nullable and required binary data.
     Binary(BinColumn),
-    Text(TextColumn<u8>),
+    /// A buffer for holding both nullable and required text data. Uses the system encoding for
+    /// character data.
+    Text(CharColumn),
+    /// A buffer for holding both nullable and required text data. Uses UTF-16 encoding
+    WText(WCharColumn),
     Date(Vec<Date>),
     Time(Vec<Time>),
     Timestamp(Vec<Timestamp>),
@@ -137,6 +139,9 @@ impl AnyColumnBuffer {
             }
             (BufferKind::Text { max_str_len }, _) => {
                 AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+            }
+            (BufferKind::WText { max_str_len }, _) => {
+                AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
             }
             (BufferKind::Date, false) => {
                 AnyColumnBuffer::Date(vec![Date::default(); max_rows as usize])
@@ -215,6 +220,7 @@ impl AnyColumnBuffer {
         match self {
             AnyColumnBuffer::Binary(col) => col.fill_null(from, to),
             AnyColumnBuffer::Text(col) => col.fill_null(from, to),
+            AnyColumnBuffer::WText(col) => col.fill_null(from, to),
             AnyColumnBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
             AnyColumnBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
             AnyColumnBuffer::Timestamp(col) => Self::fill_default_slice(&mut col[from..to]),
@@ -244,6 +250,7 @@ impl AnyColumnBuffer {
         match self {
             AnyColumnBuffer::Binary(col) => col,
             AnyColumnBuffer::Text(col) => col,
+            AnyColumnBuffer::WText(col) => col,
             AnyColumnBuffer::F64(col) => col,
             AnyColumnBuffer::F32(col) => col,
             AnyColumnBuffer::Date(col) => col,
@@ -273,6 +280,7 @@ impl AnyColumnBuffer {
         match self {
             AnyColumnBuffer::Binary(col) => col,
             AnyColumnBuffer::Text(col) => col,
+            AnyColumnBuffer::WText(col) => col,
             AnyColumnBuffer::F64(col) => col,
             AnyColumnBuffer::F32(col) => col,
             AnyColumnBuffer::Date(col) => col,
@@ -302,6 +310,7 @@ impl AnyColumnBuffer {
         match self {
             AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.iter(num_rows)),
             AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.iter(num_rows)),
+            AnyColumnBuffer::WText(col) => AnyColumnView::WText(col.iter(num_rows)),
             AnyColumnBuffer::Date(col) => AnyColumnView::Date(&col[0..num_rows]),
             AnyColumnBuffer::Time(col) => AnyColumnView::Time(&col[0..num_rows]),
             AnyColumnBuffer::Timestamp(col) => AnyColumnView::Timestamp(&col[0..num_rows]),
@@ -332,6 +341,7 @@ impl AnyColumnBuffer {
     pub unsafe fn view_mut(&mut self, num_rows: usize) -> AnyColumnViewMut {
         match self {
             AnyColumnBuffer::Text(col) => AnyColumnViewMut::Text(col.writer_n(num_rows)),
+            AnyColumnBuffer::WText(col) => AnyColumnViewMut::WText(col.writer_n(num_rows)),
             AnyColumnBuffer::Binary(col) => AnyColumnViewMut::Binary(col.writer_n(num_rows)),
             AnyColumnBuffer::Date(col) => AnyColumnViewMut::Date(&mut col[0..num_rows]),
             AnyColumnBuffer::Time(col) => AnyColumnViewMut::Time(&mut col[0..num_rows]),
@@ -414,6 +424,7 @@ unsafe impl HasDataType for AnyColumnBuffer {
         match self {
             AnyColumnBuffer::Binary(col) => col.data_type(),
             AnyColumnBuffer::Text(col) => col.data_type(),
+            AnyColumnBuffer::WText(col) => col.data_type(),
             AnyColumnBuffer::Date(_) | AnyColumnBuffer::NullableDate(_) => DataType::Date,
             AnyColumnBuffer::Time(_) | AnyColumnBuffer::NullableTime(_) => DataType::Time {
                 precision: DEFAULT_TIME_PRECISION,
