@@ -1,4 +1,4 @@
-use super::text_column::TextColumn;
+use super::{Indicator, text_column::TextColumn};
 use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
 use std::{
     cmp::min,
@@ -159,6 +159,32 @@ impl TextRowSet {
         self.at(col_index, row_index).map(from_utf8).transpose()
     }
 
+    /// Indicator value at the specified position. Useful to detect truncation of data.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use odbc_api::buffers::{Indicator, TextRowSet};
+    ///
+    /// fn is_truncated(buffer: &TextRowSet, col_index: usize, row_index: usize) -> bool {
+    ///     match buffer.indicator_at(col_index, row_index) {
+    ///         // There is no value, therefore there is no value not fitting in the column buffer.
+    ///         Indicator::Null => false,
+    ///         // The value did not fit into the column buffer, we do not even know, by how much.
+    ///         Indicator::NoTotal => true,
+    ///         Indicator::Length(total_length) => {
+    ///             // If the maximum string length is shorter than the values total length, the
+    ///             // has been truncated to fit into the buffer.
+    ///             buffer.max_len(col_index) < total_length
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    pub fn indicator_at(&self, col_index: usize, row_index: usize) -> Indicator {
+        assert!(row_index < *self.num_rows as usize);
+        unsafe { self.buffers[col_index].indicator_at(row_index) }
+    }
+
     /// Return the number of columns in the row set.
     pub fn num_cols(&self) -> usize {
         self.buffers.len()
@@ -167,6 +193,11 @@ impl TextRowSet {
     /// Return the number of rows in the row set.
     pub fn num_rows(&self) -> usize {
         *self.num_rows as usize
+    }
+
+    /// Maximum length in bytes of elemenst in a column.
+    pub fn max_len(&self, col_index: usize) -> usize {
+        self.buffers[col_index].max_len()
     }
 
     /// Takes one element from the iterator for each internal column buffer and appends it to the
