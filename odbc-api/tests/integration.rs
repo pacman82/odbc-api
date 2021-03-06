@@ -220,10 +220,7 @@ fn bind_char_to_wchar(connection_string: &str) {
     row_set_cursor.fetch().unwrap();
     drop(row_set_cursor);
 
-    assert_eq!(
-        Some(U16String::from_str("Hello").as_ustr()),
-        buf.ustr_at(0)
-    );
+    assert_eq!(Some(U16String::from_str("Hello").as_ustr()), buf.ustr_at(0));
 }
 
 /// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
@@ -583,7 +580,7 @@ fn bind_integer_parameter() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, &1968).unwrap().unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -696,7 +693,7 @@ fn integer_parameter_as_string() {
         .execute(sql, &"1968".into_parameter())
         .unwrap()
         .unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -713,7 +710,7 @@ fn parameter_option_integer_some() {
         .execute(sql, &Some(1968).into_parameter())
         .unwrap()
         .unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -730,7 +727,7 @@ fn parameter_option_integer_none() {
         .execute(sql, &None::<i32>.into_parameter())
         .unwrap()
         .unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     assert!(cursor.fetch().unwrap().is_none());
@@ -740,13 +737,18 @@ fn parameter_option_integer_none() {
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite will work only if increasing length to VARCHAR(2).
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn char(connection_string: &str) {
-    let conn = ENV.connect_with_connection_string(connection_string).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     let table_name = "Char";
-    
+
     setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
+        (),
+    )
+    .unwrap();
 
     let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -757,13 +759,18 @@ fn char(connection_string: &str) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn wchar(connection_string: &str) {
-    let conn = ENV.connect_with_connection_string(connection_string).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
     let table_name = "WChar";
-    
+
     setup_empty_table(&conn, table_name, &["NVARCHAR(1)"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
+        (),
+    )
+    .unwrap();
 
     let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -808,7 +815,7 @@ fn two_parameters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor).unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let batch = cursor.fetch().unwrap().unwrap();
@@ -1327,6 +1334,36 @@ fn short_strings_get_text(connection_string: &str) {
     row.get_text(1, &mut actual).unwrap();
 
     assert_eq!("Hello, World!", std::str::from_utf8(&actual).unwrap());
+}
+
+/// Demonstrates applying an upper limit to a text buffer and detecting truncation.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn capped_text_buffer(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "CappedTextBuffer";
+
+    // Prepare table content
+    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
+        (),
+    )
+    .unwrap();
+
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .unwrap()
+        .unwrap();
+
+    let row_set_buffer = TextRowSet::for_cursor(1, &cursor, Some(5)).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = row_set_cursor.fetch().unwrap().unwrap();
+    let field = batch.at_as_str(0, 0).unwrap().unwrap();
+    // Only 'Hello' from 'Hello, World!' remains due to upper limit.
+    assert_eq!("Hello", field);
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

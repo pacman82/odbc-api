@@ -60,8 +60,8 @@
 //!             writer.write_record(headline)?;
 //!
 //!             // Use schema in cursor to initialize a text buffer large enough to hold the largest
-//!             // possible strings for each column.
-//!             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor)?;
+//!             // possible strings for each column up to an upper limit of 4KiB.
+//!             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor, Some(4096))?;
 //!             // Bind the buffer to the cursor. It is now being filled with every call to fetch.
 //!             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 //!

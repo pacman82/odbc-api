@@ -214,7 +214,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
             writer.write_record(headline)?;
 
-            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor)?;
+            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor, None)?;
             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
             // Use this number to count the batches. Only used for logging.
