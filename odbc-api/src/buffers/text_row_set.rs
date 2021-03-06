@@ -1,6 +1,9 @@
 use super::text_column::TextColumn;
 use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
-use std::str::{from_utf8, Utf8Error};
+use std::{
+    cmp::min,
+    str::{from_utf8, Utf8Error},
+};
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum
 /// length string representation for each element in the row set at once.
@@ -47,8 +50,8 @@ use std::str::{from_utf8, Utf8Error};
 ///             writer.write_record(headline)?;
 ///
 ///             // Use schema in cursor to initialize a text buffer large enough to hold the largest
-///             // possible strings for each column.
-///             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor)?;
+///             // possible strings for each column up to an upper limit of 4KiB
+///             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor, Some(4096))?;
 ///             // Bind the buffer to the cursor. It is now being filled with every call to fetch.
 ///             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 ///
@@ -90,19 +93,38 @@ pub struct TextRowSet {
 }
 
 impl TextRowSet {
-    /// Use `cursor` to query the display size for each column of the row set and allocates the
-    /// buffers accordingly. For character data the length in characters is multiplied by 4 in order
-    /// to have enough space for 4 byte utf-8 characters.
-    pub fn for_cursor(batch_size: u32, cursor: &impl Cursor) -> Result<TextRowSet, Error> {
+    /// The resulting text buffer is not in any way tied to the cursor, other than that its buffer
+    /// sizes a tailor fitted to result set the cursor is iterating over.
+    ///
+    /// # Parameters
+    ///
+    /// * `batch_size`: The maximum number of rows the buffer is able to hold.
+    /// * `cursor`: Used to query the display size for each column of the row set. For character
+    ///   data the length in characters is multiplied by 4 in order to have enough space for 4 byte
+    ///   utf-8 characters. This is a pessimization for some data sources (e.g. SQLite 3) which do
+    ///   interpret the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
+    /// * `max_str_limit`: Some queries make it hard to estimate a sensible upper bound and
+    ///   sometimes drivers are just not that good at it. This argument allows you to specify an
+    ///   upper bound for the length of character data.
+    pub fn for_cursor(
+        batch_size: u32,
+        cursor: &impl Cursor,
+        max_str_limit: Option<usize>,
+    ) -> Result<TextRowSet, Error> {
         let num_cols = cursor.num_result_cols()?;
         let buffers = (1..(num_cols + 1))
             .map(|col_index| {
-                let max_str_len =
+                // Ask driver for buffer length
+                let reported_len =
                     if let Some(encoded_len) = cursor.col_data_type(col_index as u16)?.utf8_len() {
                         encoded_len
                     } else {
                         cursor.col_display_size(col_index as u16)? as usize
                     };
+                // Apply upper bound if specified
+                let max_str_len = max_str_limit
+                    .map(|limit| min(limit, reported_len))
+                    .unwrap_or(reported_len);
                 Ok(TextColumn::new(batch_size as usize, max_str_len))
             })
             .collect::<Result<_, Error>>()?;

@@ -6,6 +6,8 @@
 * `TextColumn` is now generic over its character type. The type alias `CharColumn` for
   `TextColumn<u8>` can serve as a drop in replacement for the previous iteration of `TextColumn`.
 * `AnyColumnBuffer` has a new variant called `WText` holding a UTF-16 `TextColumn<u16>` or `WCharColumn`.
+* `TextRowSet::for_cursor` has a new parameter `max_str_limit` to designate the upper limit for column buffer size.
+
 ## 0.17.0
 
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
