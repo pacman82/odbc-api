@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.15
+
+* New optional parameter `max-str-len` can be used to limit memory consumption.
+
 ## 0.3.14
 
 * Insert now logs batch number and rows
