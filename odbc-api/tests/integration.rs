@@ -4,13 +4,7 @@ use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{
-    buffers::{
-        AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, TextRowSet,
-    },
-    parameter::VarChar32,
-    ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
-};
+use odbc_api::{ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String, buffers::{AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator, TextRowSet}, parameter::VarChar32};
 use std::{iter, thread};
 
 const MSSQL: &str =
@@ -1364,6 +1358,10 @@ fn capped_text_buffer(connection_string: &str) {
     let field = batch.at_as_str(0, 0).unwrap().unwrap();
     // Only 'Hello' from 'Hello, World!' remains due to upper limit.
     assert_eq!("Hello", field);
+    // Indicator reports actual length of the field on the database.
+    assert_eq!(Indicator::Length(13), batch.indicator_at(0, 0));
+    // Assert that maximum length is reported correctly.
+    assert_eq!(5, batch.max_len(0));
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

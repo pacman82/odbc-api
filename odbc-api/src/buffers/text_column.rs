@@ -4,9 +4,11 @@ use crate::{
 };
 
 use log::debug;
-use odbc_sys::{CDataType, NO_TOTAL, NULL_DATA};
+use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void, mem::size_of};
 use widestring::U16Str;
+
+use super::Indicator;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
 pub type CharColumn = TextColumn<u8>;
@@ -50,8 +52,8 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// Return the bytes of string at the specified position. Including interior nuls, but excluding
-    /// the terminating nul.
+    /// Bytes of string at the specified position. Includes interior nuls, but excludes the
+    /// terminating nul.
     ///
     /// # Safety
     ///
@@ -60,22 +62,37 @@ impl<C> TextColumn<C> {
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
     pub unsafe fn value_at(&self, row_index: usize) -> Option<&[C]> {
-        let str_len = self.indicators[row_index];
-        match str_len {
-            NULL_DATA => None,
+        match self.indicator_at(row_index) {
+            Indicator::Null => None,
             // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
-            NO_TOTAL => {
+            Indicator::NoTotal => {
                 let offset = row_index * (self.max_str_len + 1);
                 Some(&self.values[offset..offset + self.max_str_len])
             }
-            _ => {
+            Indicator::Length(length_in_bytes) => {
                 let offset = row_index * (self.max_str_len + 1);
-                let length_in_bytes: usize = str_len.try_into().unwrap();
                 let length_in_chars = length_in_bytes / size_of::<C>();
                 let length = min(self.max_str_len, length_in_chars);
                 Some(&self.values[offset..offset + length])
             }
         }
+    }
+
+    /// Maximum length of elements in bytes.
+    pub fn max_len(&self) -> usize {
+        self.max_str_len
+    }
+
+    /// Indicator value at the specified position. Useful to detect truncation of data.
+    ///
+    /// # Safety
+    ///
+    /// The column buffer does not know how many elements were in the last row group, and therefore
+    /// can not guarantee the accessed element to be valid and in a defined state. It also can not
+    /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
+    /// equal to the maximum number of elements in the buffer.
+    pub unsafe fn indicator_at(&self, row_index: usize) -> Indicator {
+        Indicator::from_isize(self.indicators[row_index])
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find
@@ -115,18 +132,18 @@ impl<C> TextColumn<C> {
             .zip(new_values.chunks_exact_mut(new_max_str_len + 1))
             .take(num_rows)
         {
-            match indicator {
-                NULL_DATA => (),
-                NO_TOTAL => {
+            match Indicator::from_isize(indicator) {
+                Indicator::Null => (),
+                Indicator::NoTotal => {
                     // There is no good choice here in case we are expanding the buffer. Since
                     // NO_TOTAL indicates that we use the entire buffer, but in truth it would now
                     // be padded with 0. I currently cannot think of any usecase there it would
                     // matter.
                     new_value[..max_copy_length].clone_from_slice(&old_value[..max_copy_length]);
                 }
-                _ => {
+                Indicator::Length(num_bytes_len) => {
                     let num_bytes_to_copy =
-                        min(indicator as usize / size_of::<C>(), max_copy_length);
+                        min(num_bytes_len / size_of::<C>(), max_copy_length);
                     new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
                 }
             }
@@ -243,7 +260,6 @@ impl<C> TextColumn<C> {
         }
     }
 }
-
 
 impl WCharColumn {
     /// The string slice at the specified position as `U16Str`. Includes interior nuls, but excludes
