@@ -90,6 +90,30 @@ fn query_mssql() {
 }
 
 #[test]
+fn max_str_len() {
+    let csv = "title,year\n\
+        Jura,1993\n\
+        2001,1968\n\
+        Inte,\n\
+    ";
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--max-str-len",
+            "4",
+            "--connection-string",
+            MSSQL,
+            "SELECT title, year from Movies",
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
+
+#[test]
 fn placeholders() {
     let csv = "title\n\
         2001: A Space Odyssey\n\

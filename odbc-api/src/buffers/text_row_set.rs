@@ -1,4 +1,4 @@
-use super::{Indicator, text_column::TextColumn};
+use super::{text_column::TextColumn, Indicator};
 use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
 use std::{
     cmp::min,
@@ -109,7 +109,7 @@ impl TextRowSet {
     pub fn for_cursor(
         batch_size: u32,
         cursor: &impl Cursor,
-        max_str_limit: Option<usize>,
+        max_str_len: Option<usize>,
     ) -> Result<TextRowSet, Error> {
         let num_cols = cursor.num_result_cols()?;
         let buffers = (1..(num_cols + 1))
@@ -122,7 +122,7 @@ impl TextRowSet {
                         cursor.col_display_size(col_index as u16)? as usize
                     };
                 // Apply upper bound if specified
-                let max_str_len = max_str_limit
+                let max_str_len = max_str_len
                     .map(|limit| min(limit, reported_len))
                     .unwrap_or(reported_len);
                 Ok(TextColumn::new(batch_size as usize, max_str_len))

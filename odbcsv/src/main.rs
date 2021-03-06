@@ -65,6 +65,10 @@ struct QueryOpt {
     /// but require more memory during execution.
     #[structopt(long, default_value = "5000")]
     batch_size: u32,
+    /// Maximum string length in bytes. If ommitted no limit is applied and the ODBC driver is taken
+    /// for its word regarding the maximum length of the columns.
+    #[structopt(long, short = "m")]
+    max_str_len: Option<usize>,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
     #[structopt(long, short = "o")]
@@ -187,6 +191,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         parameters,
         query,
         batch_size,
+        max_str_len,
     } = opt;
 
     // If an output file has been specified write to it, otherwise use stdout instead.
@@ -214,7 +219,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
             let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
             writer.write_record(headline)?;
 
-            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor, None)?;
+            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor, *max_str_len)?;
             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
             // Use this number to count the batches. Only used for logging.

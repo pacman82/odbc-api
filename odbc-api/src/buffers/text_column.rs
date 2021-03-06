@@ -142,8 +142,7 @@ impl<C> TextColumn<C> {
                     new_value[..max_copy_length].clone_from_slice(&old_value[..max_copy_length]);
                 }
                 Indicator::Length(num_bytes_len) => {
-                    let num_bytes_to_copy =
-                        min(num_bytes_len / size_of::<C>(), max_copy_length);
+                    let num_bytes_to_copy = min(num_bytes_len / size_of::<C>(), max_copy_length);
                     new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
                 }
             }

@@ -4,7 +4,14 @@ use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String, buffers::{AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator, TextRowSet}, parameter::VarChar32};
+use odbc_api::{
+    buffers::{
+        AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
+        TextRowSet,
+    },
+    parameter::VarChar32,
+    ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
+};
 use std::{iter, thread};
 
 const MSSQL: &str =
