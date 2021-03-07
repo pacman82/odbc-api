@@ -291,13 +291,24 @@ impl DataType {
         }
     }
 
-    /// The (maximum) length of the utf-8 representation in bytes.
+    /// The maximum length of the UTF-8 representation in bytes.
     pub fn utf8_len(&self) -> Option<usize> {
         match self {
             // One character may need up to four bytes to be represented in utf-8.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::Char { length } => Some(length * 4),
+            other => other.display_size(),
+        }
+    }
+
+    /// The maximum length of the UTF-16 representation in 2-Byte characters.
+    pub fn utf16_len(&self) -> Option<usize> {
+        match self {
+            // One character may need up to two u16 to be represented in utf-16.
+            DataType::Varchar { length }
+            | DataType::WVarchar { length }
+            | DataType::Char { length } => Some(length * 2),
             other => other.display_size(),
         }
     }
