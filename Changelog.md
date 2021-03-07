@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.18.0 (next)
+## 0.19.0
+
+* Add variant `DataType::WChar` for fixed sized UTF-16 character data.
+* Add method `DataType::utf16_len`.
+
+## 0.18.0
 
 * `CursorRow::get_text` now returns `bool` with `false` indicating a `NULL` field.
 * `TextColumn` is now generic over its character type. The type alias `CharColumn` for
