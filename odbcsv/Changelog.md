@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.16
+
+* Update dependencies
+
 ## 0.3.15
 
 * New optional parameter `max-str-len` can be used to limit memory consumption.
