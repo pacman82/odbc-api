@@ -78,13 +78,14 @@ fn describe_columns() {
             "INTEGER",
             "BINARY(12)",
             "VARBINARY(100)",
+            "NCHAR(10)",
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 4);
+    assert_eq!(cursor.num_result_cols().unwrap(), 5);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -111,6 +112,10 @@ fn describe_columns() {
         Nullability::Nullable,
     );
     cursor.describe_col(4, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+
+    let expected = desc("e", DataType::WChar { length: 10 }, Nullability::Nullable);
+    cursor.describe_col(5, &mut actual).unwrap();
     assert_eq!(expected, actual);
 }
 

@@ -10,6 +10,11 @@ pub enum DataType {
         /// Column size in characters (excluding terminating zero).
         length: usize,
     },
+    /// `NChar(n)`. Character string of fixed length.
+    WChar {
+        /// Column size in characters (excluding terminating zero).
+        length: usize,
+    },
     /// `Numeric(p,s). Signed, exact, numeric value with a precision p and scale s (1 <= p <= 15; s
     /// <= p)
     Numeric {
@@ -142,6 +147,9 @@ impl DataType {
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
                 length: column_size,
             },
+            SqlDataType::EXT_W_CHAR => DataType::WChar {
+                length: column_size,
+            },
             other => DataType::Other {
                 data_type: other,
                 column_size,
@@ -172,6 +180,7 @@ impl DataType {
             DataType::TinyInt => SqlDataType::EXT_TINY_INT,
             DataType::Bit => SqlDataType::EXT_BIT,
             DataType::WVarchar { .. } => SqlDataType::EXT_W_VARCHAR,
+            DataType::WChar { .. } => SqlDataType::EXT_W_CHAR,
             DataType::Other { data_type, .. } => *data_type,
         }
     }
@@ -196,6 +205,7 @@ impl DataType {
             | DataType::Varchar { length }
             | DataType::Varbinary { length }
             | DataType::Binary { length }
+            | DataType::WChar { length }
             | DataType::WVarchar { length } => *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
@@ -214,6 +224,7 @@ impl DataType {
             | DataType::Double
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
+            | DataType::WChar { .. }
             | DataType::Varbinary { .. }
             | DataType::Binary { .. }
             | DataType::Date
@@ -243,6 +254,7 @@ impl DataType {
             // needed to display the data in character form.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
+            | DataType::WChar { length }
             | DataType::Char { length } => Some(*length),
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
@@ -297,6 +309,7 @@ impl DataType {
             // One character may need up to four bytes to be represented in utf-8.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
+            | DataType::WChar { length }
             | DataType::Char { length } => Some(length * 4),
             other => other.display_size(),
         }
@@ -308,6 +321,7 @@ impl DataType {
             // One character may need up to two u16 to be represented in utf-16.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
+            | DataType::WChar { length }
             | DataType::Char { length } => Some(length * 2),
             other => other.display_size(),
         }
