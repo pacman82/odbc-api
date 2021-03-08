@@ -95,40 +95,44 @@ fn describe_columns() {
         nullability,
     };
 
-    let expected = desc("a", DataType::Varchar { length: 255 }, Nullability::NoNulls);
+    let kind = DataType::Varchar { length: 255 };
+    let expected = desc("a", kind, Nullability::NoNulls);
     cursor.describe_col(1, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(1).unwrap());
 
-    let expected = desc("b", DataType::Integer, Nullability::Nullable);
+    let kind = DataType::Integer;
+    let expected = desc("b", kind, Nullability::Nullable);
     cursor.describe_col(2, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(2).unwrap());
 
-    let expected = desc("c", DataType::Binary { length: 12 }, Nullability::Nullable);
+    let kind = DataType::Binary { length: 12 };
+    let expected = desc("c", kind, Nullability::Nullable);
     cursor.describe_col(3, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(3).unwrap());
 
-    let expected = desc(
-        "d",
-        DataType::Varbinary { length: 100 },
-        Nullability::Nullable,
-    );
+    let kind = DataType::Varbinary { length: 100 };
+    let expected = desc("d", kind, Nullability::Nullable);
     cursor.describe_col(4, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(4).unwrap());
 
-    let expected = desc("e", DataType::WChar { length: 10 }, Nullability::Nullable);
+    let kind = DataType::WChar { length: 10 };
+    let expected = desc("e", kind, Nullability::Nullable);
     cursor.describe_col(5, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(5).unwrap());
 
-    let expected = desc(
-        "f",
-        DataType::Numeric {
-            precision: 3,
-            scale: 2,
-        },
-        Nullability::Nullable,
-    );
+    let kind = DataType::Numeric {
+        precision: 3,
+        scale: 2,
+    };
+    let expected = desc("f", kind, Nullability::Nullable);
     cursor.describe_col(6, &mut actual).unwrap();
     assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(6).unwrap());
 }
 
 #[test]

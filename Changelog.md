@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.1
+
+* Fix: `Statement::col_data_type` now returns `DataType::WChar` instead of `DataType::Other` then appropriate.
+
 ## 0.19.0
 
 * Add variant `DataType::WChar` for fixed sized UTF-16 character data.
