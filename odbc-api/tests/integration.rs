@@ -79,13 +79,14 @@ fn describe_columns() {
             "BINARY(12)",
             "VARBINARY(100)",
             "NCHAR(10)",
+            "NUMERIC(3,2)",
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 5);
+    assert_eq!(cursor.num_result_cols().unwrap(), 6);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -116,6 +117,17 @@ fn describe_columns() {
 
     let expected = desc("e", DataType::WChar { length: 10 }, Nullability::Nullable);
     cursor.describe_col(5, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+
+    let expected = desc(
+        "f",
+        DataType::Numeric {
+            precision: 3,
+            scale: 2,
+        },
+        Nullability::Nullable,
+    );
+    cursor.describe_col(6, &mut actual).unwrap();
     assert_eq!(expected, actual);
 }
 
@@ -553,32 +565,6 @@ fn columnar_insert_wide_varchar(connection_string: &str) {
     let actual = cursor_to_string(cursor);
     let expected = "Hello\nWorld\nNULL\nHello, World!";
     assert_eq!(expected, actual);
-}
-
-#[test]
-fn all_types() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT my_char, my_numeric, my_varchar, my_float FROM AllTheTypes;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
-
-    let mut cd = ColumnDescription::default();
-    // Assert types
-    cursor.describe_col(1, &mut cd).unwrap();
-    assert_eq!(DataType::Char { length: 5 }, cd.data_type);
-    cursor.describe_col(2, &mut cd).unwrap();
-    assert_eq!(
-        DataType::Numeric {
-            precision: 3,
-            scale: 2
-        },
-        cd.data_type
-    );
-    cursor.describe_col(3, &mut cd).unwrap();
-    assert_eq!(DataType::Varchar { length: 100 }, cd.data_type);
-
-    // mssql returns real if type is declared `FLOAT(3)` in transact SQL
-    cursor.describe_col(4, &mut cd).unwrap();
-    assert_eq!(DataType::Real, cd.data_type);
 }
 
 #[test]

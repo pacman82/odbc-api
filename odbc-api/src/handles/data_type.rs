@@ -304,6 +304,18 @@ impl DataType {
     }
 
     /// The maximum length of the UTF-8 representation in bytes.
+    ///
+    /// ```
+    /// use odbc_api::DataType;
+    /// // Characterset datatypes length is multiplied by four.
+    /// assert_eq!(DataType::Varchar { length: 10 }.utf8_len(), Some(40));
+    /// assert_eq!(DataType::Char { length: 10 }.utf8_len(), Some(40));
+    /// assert_eq!(DataType::WVarchar { length: 10 }.utf8_len(), Some(40));
+    /// assert_eq!(DataType::WChar { length: 10 }.utf8_len(), Some(40));
+    /// // For other types return value is identical to display size as they are assumed to be
+    /// // entirely representable with ASCII characeters.
+    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), Some(10 + 2));
+    /// ```
     pub fn utf8_len(&self) -> Option<usize> {
         match self {
             // One character may need up to four bytes to be represented in utf-8.
@@ -316,6 +328,18 @@ impl DataType {
     }
 
     /// The maximum length of the UTF-16 representation in 2-Byte characters.
+    ///
+    /// ```
+    /// use odbc_api::DataType;
+    /// // Characterset datatypes length is multiplied by two.
+    /// assert_eq!(DataType::Varchar { length: 10 }.utf16_len(), Some(20));
+    /// assert_eq!(DataType::Char { length: 10 }.utf16_len(), Some(20));
+    /// assert_eq!(DataType::WVarchar { length: 10 }.utf16_len(), Some(20));
+    /// assert_eq!(DataType::WChar { length: 10 }.utf16_len(), Some(20));
+    /// // For other types return value is identical to display size as they are assumed to be
+    /// // entirely representable with ASCII characeters.
+    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), Some(10 + 2));
+    /// ```
     pub fn utf16_len(&self) -> Option<usize> {
         match self {
             // One character may need up to two u16 to be represented in utf-16.

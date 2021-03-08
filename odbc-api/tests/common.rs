@@ -19,7 +19,7 @@ pub fn setup_empty_table(
 ) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
 
-    let column_names = &["a", "b", "c", "d", "e"];
+    let column_names = &["a", "b", "c", "d", "e", "f"];
     let cols = column_types
         .iter()
         .zip(column_names)
