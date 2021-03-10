@@ -3,6 +3,7 @@
 ## 0.19.1
 
 * Fix: `Statement::col_data_type` now returns `DataType::WChar` instead of `DataType::Other` then appropriate.
+* Fix: An out of bounds panic with columnar inserts from text buffer, if the last value of the buffer had maximum length in a buffer with the maximum number of rows filled (yes, of by one error).
 
 ## 0.19.0
 

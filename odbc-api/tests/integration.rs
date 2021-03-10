@@ -476,7 +476,7 @@ fn columnar_insert_varchar(connection_string: &str) {
         kind: BufferKind::Text { max_str_len: 5 },
         nullable: true,
     };
-    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+    let mut buffer = ColumnarRowSet::new(4, iter::once(desc));
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.

@@ -238,7 +238,7 @@ impl<C> TextColumn<C> {
             // Let's insert a terminating zero at the end to be on the safe side, in case the
             // ODBC driver would not care about the value in the index buffer and only look for the
             // terminating zero.
-            self.values[end + 1] = C::default();
+            self.values[end] = C::default();
         } else {
             self.indicators[index] = NULL_DATA;
         }
