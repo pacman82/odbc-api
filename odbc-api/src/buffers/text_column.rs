@@ -319,14 +319,14 @@ pub struct TextColumnWriter<'a, C> {
     to: usize,
 }
 
-impl<'a, C> TextColumnWriter<'a, C> {
+impl<'a, C> TextColumnWriter<'a, C> where C: Default + Copy {
     /// Fill the text column with values by consuming the iterator and copying its items into the
     /// buffer. It will not extract more items from the iterator than the buffer may hold. This
     /// method panics if strings returned by the iterator are larger than the maximum element length
     /// of the buffer.
     pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [C]>>)
     where
-        C: 'b + Default + Copy,
+        C: 'b,
     {
         for (index, item) in it.enumerate().take(self.to) {
             self.column.set_value(index, item)
@@ -340,10 +340,13 @@ impl<'a, C> TextColumnWriter<'a, C> {
     ///
     /// * `new_max_len`: New maximum string length without terminating zero.
     pub fn set_max_len(&mut self, new_max_len: usize)
-    where
-        C: Default + Copy,
     {
         self.column.set_max_len(new_max_len)
+    }
+
+    /// Change a single value in the column at the specified index.
+    pub fn set_value(&mut self, index: usize, value: Option<&[C]>) {
+        self.column.set_value(index, value)
     }
 }
 

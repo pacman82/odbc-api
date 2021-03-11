@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.2
+
+* Add `TextColumnWriter::set_value`.
+
 ## 0.19.1
 
 * Fix: `Statement::col_data_type` now returns `DataType::WChar` instead of `DataType::Other` then appropriate.
