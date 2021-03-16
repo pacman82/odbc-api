@@ -437,6 +437,7 @@ fn columnar_insert_varbinary() {
     if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
         // Reset length to make room for `Hello, World!`.
         writer.set_max_len(13);
+        assert_eq!(13, writer.max_len());
         writer.write(input.iter().copied());
     } else {
         panic!("Expected binary column writer");
@@ -491,6 +492,7 @@ fn columnar_insert_varchar(connection_string: &str) {
     if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
         // Reset length to make room for `Hello, World!`.
         writer.set_max_len(13);
+        assert_eq!(writer.max_len(), 13);
         writer.write(input.iter().copied());
     } else {
         panic!("Expected text column writer");

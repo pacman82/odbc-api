@@ -68,6 +68,11 @@ impl BinColumn {
         self.max_len = new_max_len;
     }
 
+    /// Maximum length of elements in bytes.
+    pub fn max_len(&self) -> usize {
+        self.max_len
+    }
+
     /// Iterator over the first `num_rows` values of a binary column.
     ///
     /// # Safety
@@ -172,6 +177,11 @@ impl<'a> BinColumnWriter<'a> {
     /// * `new_max_len`: New maximum element length
     pub fn set_max_len(&mut self, new_max_len: usize) {
         self.column.set_max_len(new_max_len)
+    }
+
+    /// Maximum length
+    pub fn max_len(&self) -> usize {
+        self.column.max_len()
     }
 }
 

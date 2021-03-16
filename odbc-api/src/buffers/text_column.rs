@@ -78,7 +78,7 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// Maximum length of elements in bytes.
+    /// Maximum length of elements
     pub fn max_len(&self) -> usize {
         self.max_str_len
     }
@@ -331,6 +331,11 @@ impl<'a, C> TextColumnWriter<'a, C> where C: Default + Copy {
         for (index, item) in it.enumerate().take(self.to) {
             self.column.set_value(index, item)
         }
+    }
+
+    /// Maximum string length without terminating zero
+    pub fn max_len(&self) -> usize {
+        self.column.max_len()
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find
