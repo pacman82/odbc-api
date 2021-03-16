@@ -48,5 +48,13 @@ odbcsv query \
 1990 2010
 ```
 
-Use `--help` to see all options.
+### Insert data from CSV to database
 
+```shell
+odbcsv insert \
+--input birthdays.csv \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+Birthdays \
+```
+
+Use `--help` to see all options.
