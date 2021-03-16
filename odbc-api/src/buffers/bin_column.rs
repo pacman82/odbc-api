@@ -1,8 +1,10 @@
 use crate::{
+    buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
     DataType,
 };
 
+use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void};
 
@@ -125,6 +127,85 @@ impl BinColumn {
             to: n,
         }
     }
+
+    /// Changes the maximum number of bytes per row the buffer can hold. This operation is useful if
+    /// you find an unexpected large input during insertion.
+    ///
+    /// This is however costly, as not only does the new buffer have to be allocated, but all values
+    /// have to copied from the old to the new buffer.
+    ///
+    /// This method could also be used to reduce the maximum length, which would truncate values in
+    /// the process.
+    ///
+    /// This method does not adjust indicator buffers as these might hold values larger than the
+    /// maximum length.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_len`: New maximum element length in bytes.
+    /// * `num_rows`: Number of valid rows currently stored in this buffer.
+    pub fn rebind(&mut self, new_max_len: usize, num_rows: usize) {
+        debug!(
+            "Rebinding binary column buffer with {} elements. Maximum length {} => {}",
+            num_rows, self.max_len, new_max_len
+        );
+
+        let batch_size = self.indicators.len();
+        // Allocate a new buffer large enough to hold a batch of elements with maximum length.
+        let mut new_values = vec![0; new_max_len * batch_size];
+        // Copy values from old to new buffer.
+        let max_copy_length = min(self.max_len, new_max_len);
+        for ((&indicator, old_value), new_value) in self
+            .indicators
+            .iter()
+            .zip(self.values.chunks_exact_mut(self.max_len))
+            .zip(new_values.chunks_exact_mut(new_max_len))
+            .take(num_rows)
+        {
+            match Indicator::from_isize(indicator) {
+                Indicator::Null => (),
+                Indicator::NoTotal => {
+                    // There is no good choice here in case we are expanding the buffer. Since
+                    // NO_TOTAL indicates that we use the entire buffer, but in truth it would now
+                    // be padded with 0. I currently cannot think of any usecase there it would
+                    // matter.
+                    new_value[..max_copy_length].clone_from_slice(&old_value[..max_copy_length]);
+                }
+                Indicator::Length(num_bytes_len) => {
+                    let num_bytes_to_copy = min(num_bytes_len, max_copy_length);
+                    new_value[..num_bytes_to_copy].copy_from_slice(&old_value[..num_bytes_to_copy]);
+                }
+            }
+        }
+        self.values = new_values;
+        self.max_len = new_max_len;
+    }
+
+    /// Appends a new element to the column buffer. Rebinds the buffer to increase maximum element
+    /// length should the input be to large.
+    ///
+    /// # Parameters
+    ///
+    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
+    ///   currently in the buffer.
+    /// * `bytes`: Value to store without terminating zero.
+    pub fn append(&mut self, index: usize, bytes: Option<&[u8]>) {
+        if let Some(text) = bytes {
+            if text.len() > self.max_len {
+                let new_max_str_len = (text.len() as f64 * 1.2) as usize;
+                self.rebind(new_max_str_len, index)
+            }
+
+            let offset = index * self.max_len;
+            self.values[offset..offset + text.len()].copy_from_slice(text);
+            // Add terminating zero to string.
+            self.values[offset + text.len()] = 0;
+            // And of course set the indicator correctly.
+            self.indicators[index] = text.len().try_into().unwrap();
+        } else {
+            self.indicators[index] = NULL_DATA;
+        }
+    }
 }
 
 /// Iterator over a binary column. See [`crate::buffers::AnyColumnView`]
@@ -182,6 +263,84 @@ impl<'a> BinColumnWriter<'a> {
     /// Maximum length
     pub fn max_len(&self) -> usize {
         self.column.max_len()
+    }
+
+    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input during insertion.
+    ///
+    /// This is however costly, as not only does the new buffer have to be allocated, but all values
+    /// have to copied from the old to the new buffer.
+    ///
+    /// This method could also be used to reduce the maximum element length, which would truncate
+    /// values in the process.
+    ///
+    /// This method does not adjust indicator buffers as these might hold values larger than the
+    /// maximum element length.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_len`: New maximum element length.
+    /// * `num_rows`: Number of valid rows currently stored in this buffer.
+    pub fn rebind(&mut self, new_max_len: usize, num_rows: usize) {
+        self.column.rebind(new_max_len, num_rows)
+    }
+
+    /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum element
+    /// length should the value be larger than the maximum allowed element length. The number of
+    /// rows the column buffer can hold stays constant, but during rebind only values befor `index`
+    /// would be copied to the new memory location. Therefore this method is intended to be used to
+    /// fill the buffer elementwise and in order. Hence the name `append`.
+    ///
+    /// # Parameters
+    ///
+    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
+    ///   currently in the buffer.
+    /// * `bytes`: Value to store
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use odbc_api::buffers::{
+    ///     ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView
+    /// };
+    /// # use std::iter;
+    ///
+    /// let desc = BufferDescription {
+    ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+    ///     // encounter larger inputs.
+    ///     kind: BufferKind::Binary { length: 1 },
+    ///     nullable: true,
+    /// };
+    ///
+    /// // Input values to insert.
+    /// let input : [Option<&[u8]>; 5]= [
+    ///     Some(&[1]),
+    ///     Some(&[2,3]),
+    ///     Some(&[4,5,6]),
+    ///     None,
+    ///     Some(&[7,8,9,10,11,12]),
+    /// ];
+    ///
+    /// let mut buffer = ColumnarRowSet::new(input.len() as u32, iter::once(desc));
+    ///
+    /// buffer.set_num_rows(input.len());
+    /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
+    ///     for (index, &bytes) in input.iter().enumerate() {
+    ///         writer.append(index, bytes)
+    ///     }
+    /// } else {
+    ///     panic!("Expected binary column writer");
+    /// }
+    ///
+    /// if let AnyColumnView::Binary(col) = buffer.column(0) {
+    ///     assert!(col.zip(input.iter().copied()).all(|(expected, actual)| expected == actual))
+    /// } else {
+    ///     panic!("Expected binary column slice");   
+    /// }
+    /// ```
+    ///
+    pub fn append(&mut self, index: usize, text: Option<&[u8]>) {
+        self.column.append(index, text)
     }
 }
 

@@ -1,14 +1,12 @@
 use crate::{
     handles::{CData, CDataMut, HasDataType},
-    DataType,
+    DataType, buffers::Indicator
 };
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, convert::TryInto, ffi::c_void, mem::size_of};
 use widestring::U16Str;
-
-use super::Indicator;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
 pub type CharColumn = TextColumn<u8>;
@@ -383,13 +381,15 @@ where
     /// length should the text be larger than the maximum allowed string size. The number of rows
     /// the column buffer can hold stays constant, but during rebind only values befor `index` would
     /// be copied to the new memory location. Therefore this method is intended to be used to fill
-    /// the buffer elementwise and in order. Hence the name `append_at`.
+    /// the buffer elementwise and in order. Hence the name `append`.
     ///
     /// # Parameters
     ///
     /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
     ///   currently in the buffer.
     /// * `text`: Text to store without terminating zero.
+    ///
+    /// # Example
     ///
     /// ```
     /// # use odbc_api::buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut};
@@ -416,14 +416,14 @@ where
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
     ///     for (index, &text) in input.iter().enumerate() {
-    ///         writer.append_at(index, text)
+    ///         writer.append(index, text)
     ///     }
     /// } else {
     ///     panic!("Expected text column writer");
     /// };
     /// ```
     ///
-    pub fn append_at(&mut self, index: usize, text: Option<&[C]>) {
+    pub fn append(&mut self, index: usize, text: Option<&[C]>) {
         self.column.append(index, text)
     }
 }

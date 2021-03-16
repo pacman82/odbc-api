@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.19.3
+
+Increased support for adaptive buffering during inserts using `ColumnarRowSet`:
+
+* Add `TextColumnWriter::append`.
+* Add `TextColumnWriter::max_len`.
+* Add `TextColumnWriter::rebind`.
+* Add `BinColumnWriter::max_len`.
+* Add `BinColumnWriter::rebind`.
+* Add `BinColumnWriter::append`.
+
 ## 0.19.2
 
 * Add `TextColumnWriter::set_value`.

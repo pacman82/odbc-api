@@ -547,7 +547,7 @@ fn adaptive_columnar_insert_varchar(connection_string: &str) {
     buffer.set_num_rows(input.len());
     if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
         for (index, &text) in input.iter().enumerate() {
-            writer.append_at(index, text)
+            writer.append(index, text)
         }
     } else {
         panic!("Expected text column writer");
