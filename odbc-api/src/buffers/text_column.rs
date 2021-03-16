@@ -319,7 +319,10 @@ pub struct TextColumnWriter<'a, C> {
     to: usize,
 }
 
-impl<'a, C> TextColumnWriter<'a, C> where C: Default + Copy {
+impl<'a, C> TextColumnWriter<'a, C>
+where
+    C: Default + Copy,
+{
     /// Fill the text column with values by consuming the iterator and copying its items into the
     /// buffer. It will not extract more items from the iterator than the buffer may hold. This
     /// method panics if strings returned by the iterator are larger than the maximum element length
@@ -344,14 +347,84 @@ impl<'a, C> TextColumnWriter<'a, C> where C: Default + Copy {
     /// # Parameters
     ///
     /// * `new_max_len`: New maximum string length without terminating zero.
-    pub fn set_max_len(&mut self, new_max_len: usize)
-    {
+    pub fn set_max_len(&mut self, new_max_len: usize) {
         self.column.set_max_len(new_max_len)
+    }
+
+    /// Changes the maximum string length the buffer can hold. This operation is useful if you find
+    /// an unexpected large input string during insertion.
+    ///
+    /// This is however costly, as not only does the new buffer have to be allocated, but all values
+    /// have to copied from the old to the new buffer.
+    ///
+    /// This method could also be used to reduce the maximum string length, which would truncate
+    /// strings in the process.
+    ///
+    /// This method does not adjust indicator buffers as these might hold values larger than the
+    /// maximum string length.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_max_str_len`: New maximum string length without terminating zero.
+    /// * `num_rows`: Rows up to this index will be copied from the old memory to the newly
+    ///   allocated memory. This is used as an optimization as to not copy all values. If the buffer
+    ///   contained values after `num_rows` their indicator values remain, but their values will be
+    ///   all zeroes.
+    pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize) {
+        self.column.rebind(new_max_str_len, num_rows)
     }
 
     /// Change a single value in the column at the specified index.
     pub fn set_value(&mut self, index: usize, value: Option<&[C]>) {
         self.column.set_value(index, value)
+    }
+
+    /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum string
+    /// length should the text be larger than the maximum allowed string size. The number of rows
+    /// the column buffer can hold stays constant, but during rebind only values befor `index` would
+    /// be copied to the new memory location. Therefore this method is intended to be used to fill
+    /// the buffer elementwise and in order. Hence the name `append_at`.
+    ///
+    /// # Parameters
+    ///
+    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
+    ///   currently in the buffer.
+    /// * `text`: Text to store without terminating zero.
+    ///
+    /// ```
+    /// # use odbc_api::buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut};
+    /// # use std::iter;
+    ///
+    /// let desc = BufferDescription {
+    ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+    ///     // encounter larger inputs.
+    ///     kind: BufferKind::Text { max_str_len: 1 },
+    ///     nullable: true,
+    /// };
+    ///
+    /// // Input values to insert.
+    /// let input = [
+    ///     Some(&b"Hi"[..]),
+    ///     Some(&b"Hello"[..]),
+    ///     Some(&b"World"[..]),
+    ///     None,
+    ///     Some(&b"Hello, World!"[..]),
+    /// ];
+    ///
+    /// let mut buffer = ColumnarRowSet::new(input.len() as u32, iter::once(desc));
+    ///
+    /// buffer.set_num_rows(input.len());
+    /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
+    ///     for (index, &text) in input.iter().enumerate() {
+    ///         writer.append_at(index, text)
+    ///     }
+    /// } else {
+    ///     panic!("Expected text column writer");
+    /// };
+    /// ```
+    ///
+    pub fn append_at(&mut self, index: usize, text: Option<&[C]>) {
+        self.column.append(index, text)
     }
 }
 

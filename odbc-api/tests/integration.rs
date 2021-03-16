@@ -517,6 +517,61 @@ fn columnar_insert_varchar(connection_string: &str) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
+fn adaptive_columnar_insert_varchar(connection_string: &str) {
+    let table_name = "AdaptiveColumnarInsertVarchar";
+    // Setup
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+        // encounter larger inputs.
+        kind: BufferKind::Text { max_str_len: 1 },
+        nullable: true,
+    };
+
+    // Input values to insert.
+    let input = [
+        Some(&b"Hi"[..]),
+        Some(&b"Hello"[..]),
+        Some(&b"World"[..]),
+        None,
+        Some(&b"Hello, World!"[..]),
+    ];
+
+    let mut buffer = ColumnarRowSet::new(input.len() as u32, iter::once(desc));
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
+        for (index, &text) in input.iter().enumerate() {
+            writer.append_at(index, text)
+        }
+    } else {
+        panic!("Expected text column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "Hi\nHello\nWorld\nNULL\nHello, World!";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_wide_varchar(connection_string: &str) {
     let table_name = "ColumnarInsertWideVarchar";
     // Setup
