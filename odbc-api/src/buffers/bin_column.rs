@@ -304,7 +304,7 @@ impl<'a> BinColumnWriter<'a> {
     ///     ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView
     /// };
     /// # use std::iter;
-    ///
+    /// #
     /// let desc = BufferDescription {
     ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
     ///     // encounter larger inputs.
@@ -338,7 +338,6 @@ impl<'a> BinColumnWriter<'a> {
     ///     panic!("Expected binary column slice");   
     /// }
     /// ```
-    ///
     pub fn append(&mut self, index: usize, text: Option<&[u8]>) {
         self.column.append(index, text)
     }

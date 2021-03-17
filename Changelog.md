@@ -11,6 +11,11 @@ Increased support for adaptive buffering during inserts using `ColumnarRowSet`:
 * Add `BinColumnWriter::rebind`.
 * Add `BinColumnWriter::append`.
 
+Support for directly writing formatted text with fixed length to the underlying buffers.
+
+* Add `TextColumn::set_mut`.
+* Add `TextColumnWriter::set_mut`.
+
 ## 0.19.2
 
 * Add `TextColumnWriter::set_value`.

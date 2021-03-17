@@ -1,6 +1,7 @@
 use crate::{
+    buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
-    DataType, buffers::Indicator
+    DataType,
 };
 
 use log::debug;
@@ -222,24 +223,59 @@ impl<C> TextColumn<C> {
         C: Default + Copy,
     {
         if let Some(input) = input {
-            if input.len() > self.max_str_len {
-                panic!(
-                    "Tried to insert a value into a text buffer which is larger than the \
-                    maximum allowed string length for the buffer."
-                );
-            }
-            self.indicators[index] = (input.len() * size_of::<C>()).try_into().unwrap();
-            let start = (self.max_str_len + 1) * index;
-            let end = start + input.len();
-            let buf = &mut self.values[start..end];
-            buf.copy_from_slice(input);
-            // Let's insert a terminating zero at the end to be on the safe side, in case the
-            // ODBC driver would not care about the value in the index buffer and only look for the
-            // terminating zero.
-            self.values[end] = C::default();
+            self.set_mut(index, input.len()).copy_from_slice(input);
         } else {
             self.indicators[index] = NULL_DATA;
         }
+    }
+
+    /// Can be used to set a value at a specific row index without performing a memcopy on an input
+    /// slice and instead provides direct access to the underlying buffer.
+    ///
+    /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
+    /// be more convinient. This method is very useful if you want to `write!` a string value to the
+    /// buffer and the binary (**!**) length of the formatted string is known upfront.
+    ///
+    /// # Example: Write timestamp to text column.
+    ///
+    /// ```
+    /// use odbc_api::buffers::TextColumn;
+    /// use std::io::Write;
+    ///
+    /// /// Writes times formatted as hh::mm::ss.fff
+    /// fn write_time(
+    ///     col: &mut TextColumn<u8>,
+    ///     index: usize,
+    ///     hours: u8,
+    ///     minutes: u8,
+    ///     seconds: u8,
+    ///     milliseconds: u16)
+    /// {
+    ///     write!(
+    ///         col.set_mut(index, 12),
+    ///         "{:02}:{:02}:{:02}.{:03}",
+    ///         hours, minutes, seconds, milliseconds
+    ///     ).unwrap();
+    /// }
+    /// ```
+    pub fn set_mut(&mut self, index: usize, length: usize) -> &mut [C]
+    where
+        C: Default,
+    {
+        if length > self.max_str_len {
+            panic!(
+                "Tried to insert a value into a text buffer which is larger than the maximum \
+                allowed string length for the buffer."
+            );
+        }
+        self.indicators[index] = (length * size_of::<C>()).try_into().unwrap();
+        let start = (self.max_str_len + 1) * index;
+        let end = start + length;
+        // Let's insert a terminating zero at the end to be on the safe side, in case the ODBC
+        // driver would not care about the value in the index buffer and only look for the
+        // terminating zero.
+        self.values[end] = C::default();
+        &mut self.values[start..end]
     }
 
     /// Fills the column with NULL, between From and To
@@ -394,7 +430,7 @@ where
     /// ```
     /// # use odbc_api::buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut};
     /// # use std::iter;
-    ///
+    /// #
     /// let desc = BufferDescription {
     ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
     ///     // encounter larger inputs.
@@ -425,6 +461,48 @@ where
     ///
     pub fn append(&mut self, index: usize, text: Option<&[C]>) {
         self.column.append(index, text)
+    }
+
+    /// Can be used to set a value at a specific row index without performing a memcopy on an input
+    /// slice and instead provides direct access to the underlying buffer.
+    ///
+    /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
+    /// be more convinient. This method is very useful if you want to `write!` a string value to the
+    /// buffer and the binary (**!**) length of the formatted string is known upfront.
+    ///
+    /// # Example: Write timestamp to text column.
+    ///
+    /// ```
+    /// use odbc_api::buffers::TextColumnWriter;
+    /// use std::io::Write;
+    ///
+    /// /// Writes times formatted as hh::mm::ss.fff
+    /// fn write_time(
+    ///     col: &mut TextColumnWriter<u8>,
+    ///     index: usize,
+    ///     hours: u8,
+    ///     minutes: u8,
+    ///     seconds: u8,
+    ///     milliseconds: u16)
+    /// {
+    ///     write!(
+    ///         col.set_mut(index, 12),
+    ///         "{:02}:{:02}:{:02}.{:03}",
+    ///         hours, minutes, seconds, milliseconds
+    ///     ).unwrap();
+    /// }
+    ///
+    /// # use odbc_api::buffers::CharColumn;
+    /// # let mut buf = CharColumn::new(1, 12);
+    /// # let mut writer = buf.writer_n(1);
+    /// # write_time(&mut writer, 0, 12, 23, 45, 678);
+    /// # assert_eq!(
+    /// #   "12:23:45.678",
+    /// #   std::str::from_utf8(unsafe { buf.value_at(0) }.unwrap()).unwrap()
+    /// # );
+    /// ```
+    pub fn set_mut(&mut self, index: usize, length: usize) -> &mut [C] {
+        self.column.set_mut(index, length)
     }
 }
 
