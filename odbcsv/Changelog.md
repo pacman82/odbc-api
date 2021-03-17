@@ -1,8 +1,17 @@
 # Changelog
 
+## 0.3.19
+
+* Update dependencies
+
+## 0.3.18
+
+* Update dependencies
+
 ## 0.3.17
 
 * Update dependencies
+* Fix: A panic could happend during insert due to an out of bounds access to an input buffer.
 
 ## 0.3.16
 
