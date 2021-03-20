@@ -1,5 +1,6 @@
 mod common;
 
+use odbc_sys::Timestamp;
 use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
@@ -406,6 +407,88 @@ fn columnar_fetch_binary() {
     };
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
+    assert_eq!(Some(None), col_it.next()); // Expecting NULL
+    assert_eq!(None, col_it.next()); // Expecting iterator end.
+}
+
+/// Bind a columnar buffer to a DATETIME2 column and fetch data.
+#[test]
+fn columnar_fetch_timestamp() {
+    let table_name = "ColumnarFetchTimestamp";
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    conn.execute(
+        &format!(
+            "INSERT INTO {} (a) Values \
+        ({{ ts '2021-03-20 15:24:12.12' }}),\
+        ({{ ts '2020-03-20 15:24:12' }}),\
+        ({{ ts '1970-01-01 00:00:00' }}),\
+        (NULL)",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
+    // Retrieve values
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+    assert_eq!(DataType::Timestamp { precision: 7 }, data_type);
+    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
+    assert_eq!(BufferKind::Timestamp, buffer_kind);
+    let buffer_desc = BufferDescription {
+        kind: buffer_kind,
+        nullable: true,
+    };
+    let row_set_buffer = ColumnarRowSet::new(10, iter::once(buffer_desc));
+    let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let col_view = batch.column(0);
+    let mut col_it = if let AnyColumnView::NullableTimestamp(col_it) = col_view {
+        col_it
+    } else {
+        panic!("Column View expected to be binary")
+    };
+    assert_eq!(
+        Some(&Timestamp {
+            year: 2021,
+            month: 3,
+            day: 20,
+            hour: 15,
+            minute: 24,
+            second: 12,
+            fraction: 120_000_000,
+        }),
+        col_it.next().unwrap()
+    );
+    assert_eq!(
+        Some(&Timestamp {
+            year: 2020,
+            month: 3,
+            day: 20,
+            hour: 15,
+            minute: 24,
+            second: 12,
+            fraction: 0,
+        }),
+        col_it.next().unwrap()
+    );
+    assert_eq!(
+        Some(&Timestamp {
+            year: 1970,
+            month: 1,
+            day: 1,
+            hour: 0,
+            minute: 0,
+            second: 0,
+            fraction: 0,
+        }),
+        col_it.next().unwrap()
+    );
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
