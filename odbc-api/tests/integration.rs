@@ -493,6 +493,69 @@ fn columnar_fetch_timestamp() {
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
 
+/// Insert values into a DATETIME2 column using a columnar buffer
+#[test]
+fn columnar_insert_timestamp() {
+    let table_name = "ColmunarInsertTimestamp";
+    // Setup
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::Timestamp,
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+
+    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
+    // reallocation of the underlying buffer.
+    let input = [
+        Some(Timestamp {
+            year: 2020,
+            month: 3,
+            day: 20,
+            hour: 16,
+            minute: 13,
+            second: 54,
+            fraction: 0,
+        }),
+        Some(Timestamp {
+            year: 2021,
+            month: 3,
+            day: 20,
+            hour: 16,
+            minute: 13,
+            second: 54,
+            fraction: 123456700,
+        }),
+        None,
+    ];
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::NullableTimestamp(mut writer) = buffer.column_mut(0) {
+        writer.write(input.iter().copied());
+    } else {
+        panic!("Expected timestamp column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
+    assert_eq!(expected, actual);
+}
+
 /// Insert values into a varbinary column using a columnar buffer
 #[test]
 fn columnar_insert_varbinary() {
