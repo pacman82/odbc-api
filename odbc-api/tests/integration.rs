@@ -1,6 +1,6 @@
 mod common;
 
-use odbc_sys::Timestamp;
+use odbc_sys::{SqlDataType, Timestamp};
 use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
@@ -81,13 +81,15 @@ fn describe_columns() {
             "VARBINARY(100)",
             "NCHAR(10)",
             "NUMERIC(3,2)",
+            "DATETIME2",
+            "TIME",
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e,f FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f,g,h FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 6);
+    assert_eq!(cursor.num_result_cols().unwrap(), 8);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -134,6 +136,22 @@ fn describe_columns() {
     cursor.describe_col(6, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(6).unwrap());
+
+    let kind = DataType::Timestamp { precision: 7 };
+    let expected = desc("g", kind, Nullability::Nullable);
+    cursor.describe_col(7, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(7).unwrap());
+
+    let kind = DataType::Other {
+        data_type: SqlDataType(-154),
+        column_size: 16,
+        decimal_digits: 7,
+    };
+    let expected = desc("h", kind, Nullability::Nullable);
+    cursor.describe_col(8, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(8).unwrap());
 }
 
 #[test]
@@ -412,12 +430,15 @@ fn columnar_fetch_binary() {
 }
 
 /// Bind a columnar buffer to a DATETIME2 column and fetch data.
-#[test]
-fn columnar_fetch_timestamp() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_fetch_timestamp(connection_string: &str) {
     let table_name = "ColumnarFetchTimestamp";
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["DATETIME2(3)"]).unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {} (a) Values \
@@ -437,7 +458,7 @@ fn columnar_fetch_timestamp() {
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
-    assert_eq!(DataType::Timestamp { precision: 7 }, data_type);
+    assert_eq!(DataType::Timestamp { precision: 3 }, data_type);
     let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
     assert_eq!(BufferKind::Timestamp, buffer_kind);
     let buffer_desc = BufferDescription {
@@ -553,6 +574,73 @@ fn columnar_insert_timestamp() {
         .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
+    assert_eq!(expected, actual);
+}
+
+/// Insert values into a DATETIME2(3) column using a columnar buffer. Milliseconds precision is
+/// different from the default precision 7 (100ns).
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_insert_timestamp_ms(connection_string: &str) {
+    let table_name = "ColmunarInsertTimestampMs";
+    // Setup
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["DATETIME2(3)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::Timestamp,
+        nullable: true,
+    };
+    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+
+    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
+    // reallocation of the underlying buffer.
+    let input = [
+        Some(Timestamp {
+            year: 2020,
+            month: 3,
+            day: 20,
+            hour: 16,
+            minute: 13,
+            second: 54,
+            fraction: 0,
+        }),
+        Some(Timestamp {
+            year: 2021,
+            month: 3,
+            day: 20,
+            hour: 16,
+            minute: 13,
+            second: 54,
+            fraction: 123456700,
+        }),
+        None,
+    ];
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::NullableTimestamp(mut writer) = buffer.column_mut(0) {
+        writer.write(input.iter().copied());
+    } else {
+        panic!("Expected timestamp column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "2020-03-20 16:13:54.000\n2021-03-20 16:13:54.123\nNULL";
     assert_eq!(expected, actual);
 }
 
