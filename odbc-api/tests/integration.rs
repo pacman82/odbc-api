@@ -568,7 +568,7 @@ fn columnar_insert_varbinary() {
         kind: BufferKind::Binary { length: 5 },
         nullable: true,
     };
-    let mut buffer = ColumnarRowSet::new(10, iter::once(desc));
+    let mut buffer = ColumnarRowSet::new(4, iter::once(desc));
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -713,6 +713,61 @@ fn adaptive_columnar_insert_varchar(connection_string: &str) {
         .unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "Hi\nHello\nWorld\nNULL\nHello, World!";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn adaptive_columnar_insert_varbin(connection_string: &str) {
+    let table_name = "AdaptiveColumnarInsertVarbin";
+    // Setup
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["VARBINARY(13)"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+        // encounter larger inputs.
+        kind: BufferKind::Binary { length: 1 },
+        nullable: true,
+    };
+
+    // Input values to insert.
+    let input = [
+        Some(&b"Hi"[..]),
+        Some(&b"Hello"[..]),
+        Some(&b"World"[..]),
+        None,
+        Some(&b"Hello, World!"[..]),
+    ];
+
+    let mut buffer = ColumnarRowSet::new(input.len() as u32, iter::once(desc));
+
+    buffer.set_num_rows(input.len());
+    if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
+        for (index, &bytes) in input.iter().enumerate() {
+            writer.append(index, bytes)
+        }
+    } else {
+        panic!("Expected binary column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "4869\n48656C6C6F\n576F726C64\nNULL\n48656C6C6F2C20576F726C6421";
     assert_eq!(expected, actual);
 }
 

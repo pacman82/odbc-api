@@ -188,20 +188,18 @@ impl BinColumn {
     ///
     /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
     ///   currently in the buffer.
-    /// * `bytes`: Value to store without terminating zero.
+    /// * `bytes`: Value to store.
     pub fn append(&mut self, index: usize, bytes: Option<&[u8]>) {
-        if let Some(text) = bytes {
-            if text.len() > self.max_len {
-                let new_max_str_len = (text.len() as f64 * 1.2) as usize;
-                self.rebind(new_max_str_len, index)
+        if let Some(bytes) = bytes {
+            if bytes.len() > self.max_len {
+                let new_max_len = (bytes.len() as f64 * 1.2) as usize;
+                self.rebind(new_max_len, index)
             }
 
             let offset = index * self.max_len;
-            self.values[offset..offset + text.len()].copy_from_slice(text);
-            // Add terminating zero to string.
-            self.values[offset + text.len()] = 0;
+            self.values[offset..offset + bytes.len()].copy_from_slice(bytes);
             // And of course set the indicator correctly.
-            self.indicators[index] = text.len().try_into().unwrap();
+            self.indicators[index] = bytes.len().try_into().unwrap();
         } else {
             self.indicators[index] = NULL_DATA;
         }
@@ -338,8 +336,8 @@ impl<'a> BinColumnWriter<'a> {
     ///     panic!("Expected binary column slice");   
     /// }
     /// ```
-    pub fn append(&mut self, index: usize, text: Option<&[u8]>) {
-        self.column.append(index, text)
+    pub fn append(&mut self, index: usize, bytes: Option<&[u8]>) {
+        self.column.append(index, bytes)
     }
 }
 

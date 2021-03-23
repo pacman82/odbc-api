@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.5
+
+* Fix: `BinColumnWriter::append` erroneously inserted a terminating zero at the end of the value.
+
 ## 0.19.4
 
 * Fix: Timestamps buffers are now bound with a default precision of 7 (100ns) in order to avoid an 'invalid precision' error than inserting (occurred with MSSQL). Previously the precision had been 9 (1ns).
