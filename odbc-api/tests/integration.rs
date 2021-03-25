@@ -5,14 +5,10 @@ use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{
-    buffers::{
+use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    },
-    parameter::VarChar32,
-    ColumnDescription, Cursor, DataType, IntoParameter, Nullability, Nullable, U16String,
-};
+    }, parameter::VarChar32};
 use std::{iter, thread};
 
 const MSSQL: &str =
@@ -1157,6 +1153,21 @@ fn two_parameters_in_tuple() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
+    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
+    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+
+    let batch = cursor.fetch().unwrap().unwrap();
+    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+
+    assert_eq!("2001: A Space Odyssey", title);
+}
+
+#[test]
+fn heterogenous_parameters_in_array() {
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
+    let params: [Box<dyn InputParameter>; 2] = [Box::new(1960), Box::new(1970)];
+    let cursor = conn.execute(sql, &params[..]).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
     let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
