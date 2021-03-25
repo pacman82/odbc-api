@@ -5,10 +5,15 @@ use test_case::test_case;
 
 use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
 
-use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
+use odbc_api::{
+    buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    }, parameter::VarChar32};
+    },
+    parameter::VarChar32,
+    ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    U16String,
+};
 use std::{iter, thread};
 
 const MSSQL: &str =
@@ -1162,19 +1167,32 @@ fn two_parameters_in_tuple() {
     assert_eq!("2001: A Space Odyssey", title);
 }
 
-#[test]
-fn heterogenous_parameters_in_array() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
-    let params: [Box<dyn InputParameter>; 2] = [Box::new(1960), Box::new(1970)];
-    let cursor = conn.execute(sql, &params[..]).unwrap().unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
-    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn heterogenous_parameters_in_array(connection_string: &str) {
+    let table_name = "heterogenous_parameters_in_array";
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
 
-    let batch = cursor.fetch().unwrap().unwrap();
-    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+    // Setup table
+    setup_empty_table(&conn, table_name, &["INTEGER", "VARCHAR(13)"]).unwrap();
+    let insert_sql = format!(
+        "INSERT INTO {} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')",
+        table_name
+    );
+    conn.execute(&insert_sql, ()).unwrap();
 
-    assert_eq!("2001: A Space Odyssey", title);
+    // Execute test
+    let query = format!(
+        "SELECT a,b FROM {} where  a > ? AND b = ?;",
+        table_name
+    );
+    let params: [Box<dyn InputParameter>; 2] = [Box::new(2), Box::new("Hello".into_parameter())];
+    let cursor = conn.execute(&query, &params[..]).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!("3,Hello", actual);
 }
 
 #[test]

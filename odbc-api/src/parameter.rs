@@ -8,7 +8,9 @@
 //! * `Out(&mut a)` -> Output parameter
 //! * `(&a,&b,&c)` -> Fixed number of parameters
 //! * `&[a]` -> Arbitrary number of parameters
-//! * a.into_parameter() -> Convert idiomatic Rust type into something bindable by ODBC.
+//! * `Box<dyn InputParameter>` -> Aribtrary input parameter
+//! * `&[Box<dyn InputParameter>]` -> Aribtrary number of arbitrary input parameters
+//! * `a.into_parameter()` -> Convert idiomatic Rust type into something bindable by ODBC.
 //!
 //! ## Passing a single parameter
 //!
@@ -109,6 +111,34 @@
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! ## Passing an input parameters with dynamic type
+//!
+//! Should you have an input parameters whose type you only know at runtime, it comes in handy to
+//! know that `Box<dyn InputParameter>` implements [`crate::parameter::InputParameter`].
+//!
+//! In case you want to read paramaters from the command line you can also let ODBC do the work of
+//! converting the text input into something more suitable.
+//!
+//! ```
+//! use odbc_api::{Connection, IntoParameter, Error, parameter::VarCharRef};
+//! 
+//! fn execute_arbitrary_command(connection: &Connection, query: &str, parameters: &[&str])
+//!     -> Result<(), Error>
+//! {
+//!     // Convert the input strings into parameters suitable to for use with ODBC. Type argument
+//!     // `VarCharRef` could have been omitted but is left in this example for clarity.
+//!     let params: Vec<VarCharRef> = parameters
+//!         .iter()
+//!         .map(|param| param.into_parameter())
+//!         .collect();
+//!
+//!     // Execute the query as a one off, and pass the parameters. String parameters are parsed and
+//!     // converted into something more suitable by the data source itself.
+//!     connection.execute(&query, params.as_slice())?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ## Output and Input/Output parameters
