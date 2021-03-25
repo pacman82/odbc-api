@@ -362,6 +362,33 @@ where
 
 unsafe impl<T> InputParameter for WithDataType<T> where T: InputParameter {}
 
+// Allow for input parameters whose type is only known at runtime.
+unsafe impl CData for Box<dyn InputParameter> {
+    fn cdata_type(&self) -> CDataType {
+        self.as_ref().cdata_type()
+    }
+
+    fn indicator_ptr(&self) -> *const isize {
+        self.as_ref().indicator_ptr()
+    }
+
+    fn value_ptr(&self) -> *const c_void {
+        self.as_ref().value_ptr()
+    }
+
+    fn buffer_length(&self) -> isize {
+        self.as_ref().buffer_length()
+    }
+}
+
+unsafe impl HasDataType for Box<dyn InputParameter> {
+    fn data_type(&self) -> DataType {
+        self.as_ref().data_type()
+    }
+}
+
+unsafe impl InputParameter for Box<dyn InputParameter> {}
+
 /// Binds a byte array as a VarChar input parameter.
 ///
 /// While a byte array can provide us with a pointer to the start of the array and the length of the
