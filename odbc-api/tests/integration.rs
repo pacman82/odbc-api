@@ -517,7 +517,7 @@ fn columnar_fetch_timestamp(connection_string: &str) {
 /// Insert values into a DATETIME2 column using a columnar buffer
 #[test]
 fn columnar_insert_timestamp() {
-    let table_name = "ColmunarInsertTimestamp";
+    let table_name = "ColumnarInsertTimestamp";
     // Setup
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
@@ -1670,7 +1670,7 @@ fn short_strings_get_text(connection_string: &str) {
 
     let mut row = cursor.next_row().unwrap().unwrap();
 
-    // Make inintial buffer larger than the string we want to fetch.
+    // Make initial buffer larger than the string we want to fetch.
     let mut actual = Vec::with_capacity(100);
 
     row.get_text(1, &mut actual).unwrap();

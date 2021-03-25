@@ -24,8 +24,8 @@ impl Bit {
     }
 }
 
-/// A plain old data type. With an associated C Type. Must be completly stack allocated without any
-/// external references. In additon to that the buffer size must be known to ODBC in advance.
+/// A plain old data type. With an associated C Type. Must be completely stack allocated without any
+/// external references. In addition to that the buffer size must be known to ODBC in advance.
 pub unsafe trait Pod: Default + Copy + CData {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;

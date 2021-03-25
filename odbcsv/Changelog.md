@@ -15,7 +15,7 @@
 ## 0.3.17
 
 * Update dependencies
-* Fix: A panic could happend during insert due to an out of bounds access to an input buffer.
+* Fix: A panic could happen during insert due to an out of bounds access to an input buffer.
 
 ## 0.3.16
 

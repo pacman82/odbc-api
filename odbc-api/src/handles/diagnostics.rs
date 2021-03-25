@@ -11,7 +11,7 @@ pub type State = [u16; SQLSTATE_SIZE + 1];
 
 /// Result of `diagnostics`.
 #[derive(Debug, Clone, Copy)]
-pub struct DiagResult {
+pub struct DiagnosticResult {
     /// A five-character SQLSTATE code (and terminating NULL) for the diagnostic record
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
     /// subclass. For more information, see [SQLSTATE][1]s.
@@ -41,7 +41,7 @@ pub struct DiagResult {
 /// * `Some(rec)` - The function successfully returned diagnostic information.
 /// message. No diagnostic records were generated. To determine that a truncation occurred, the
 /// application must compare the buffer length to the actual number of bytes available, which is
-/// found in `DiagResult::text_length`.
+/// found in [`self::DiagnosticResult::text_length]`.
 /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for the
 /// specified Handle. The function also returns `NoData` for any positive `rec_number` if there are
 /// no diagnostic records available.
@@ -51,7 +51,7 @@ pub fn diagnostics(
     handle: &dyn AsHandle,
     rec_number: i16,
     message_text: &mut Vec<u16>,
-) -> Option<DiagResult> {
+) -> Option<DiagnosticResult> {
     assert!(rec_number > 0);
 
     // Use all the memory available in the buffer, but don't allocate any extra.
@@ -77,7 +77,7 @@ pub fn diagnostics(
             &mut text_length,
         )
     };
-    let result = DiagResult {
+    let result = DiagnosticResult {
         state,
         native_error,
     };
@@ -89,7 +89,7 @@ pub fn diagnostics(
                 // The `message_text` buffer was too small to hold the requested diagnostic message.
                 // No diagnostic records were generated. To determine that a truncation occurred,
                 // the application must compare the buffer length to the actual number of bytes
-                // available, which is found in `DiagResult::text_length`.
+                // available, which is found in `DiagnosticResult::text_length`.
 
                 // Resize with +1 to account for terminating zero
                 message_text.resize(text_length + 1, 0);

@@ -10,7 +10,7 @@ pub enum Indicator {
     /// Field exists, but its length had not be reported by the driver.
     NoTotal,
     /// Fields exists. Value indicates number of bytes required to store the value. In case of
-    /// truncated data, this is the untruncated true length.
+    /// truncated data, this is the true length of the data, before truncation occurred.
     Length(usize),
 }
 

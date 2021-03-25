@@ -6,7 +6,7 @@ Query an ODBC data source and output the result as CSV or to insert from CSV int
 
 Several installation options are available.
 
-### Download prebuild binaries
+### Download prebuilt binaries
 
 You can download the latest binaries here from the `odbc-api` GitHub release: <https://github.com/pacman82/odbc-api/releases/latest>.
 

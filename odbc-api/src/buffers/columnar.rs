@@ -21,7 +21,7 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
 /// not know the precise SQL type. In order to still be able to bind time / timestamp buffer as
-/// input without requiring the user to seperatly specify the precision, we declare 100 Nano second
+/// input without requiring the user to separately specify the precision, we declare 100 Nano second
 /// precision. This was the highest precision still supported by MSSQL in the tests.
 const DEFAULT_TIME_PRECISION: i16 = 7;
 
@@ -609,8 +609,8 @@ impl ColumnarRowSet {
     pub fn set_num_rows(&mut self, num_rows: usize) {
         if num_rows > self.max_rows as usize {
             panic!(
-                "Columnar buffer may not be resized to a value higher than the maximum number \
-                of rows initialy specified in the constructor."
+                "Columnar buffer may not be resized to a value higher than the maximum number of \
+                rows initially specified in the constructor."
             );
         }
         if *self.num_rows < num_rows {

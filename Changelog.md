@@ -50,7 +50,7 @@ Support for directly writing formatted text with fixed length to the underlying 
 ## 0.17.0
 
 * Introduces `Cursor::next_row` to fetch data without binding buffers first.
-* Allow retrieving abitrarily large strings from the data source.
+* Allow retrieving arbitrarily large strings from the data source.
 * Removed `RowSetCursor::unbind` due to soundness issue, if fetching continues without any buffers bound.
 * Hides internal interface of `Cursor` trait behind `Cursor::stmt`.
 * `RowSetCursor` now implements `Drop`.
@@ -66,7 +66,7 @@ Support for directly writing formatted text with fixed length to the underlying 
 
 ## 0.15.0
 
-* Text column buffers throught the API now use `&[u8]` to represent queried strings instead of `CStr` to account for the possibility of interior nuls.
+* Text column buffers throughout the API now use `&[u8]` to represent queried strings instead of `CStr` to account for the possibility of interior nuls.
 
 ## 0.14.0
 
@@ -144,7 +144,7 @@ Support for directly writing formatted text with fixed length to the underlying 
 * `VarCharParam` renamed into `VarChar`.
 * `TextRowSet::new` renamed into `TextRowSet::for_cursor`.
 * trait `ParameterCollection` has a new method `parameter_set_size`.
-* `Parameter` trait is now inherting from `Input`.
+* `Parameter` trait is now inheriting from `Input`.
 * `ColumnBuffer` trait is replaced by `CDataMut`.
 * Extended guide with section about parameter binding.
 

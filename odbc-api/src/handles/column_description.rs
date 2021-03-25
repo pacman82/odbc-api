@@ -4,7 +4,7 @@ use std::char::{decode_utf16, DecodeUtf16Error};
 /// Indication of whether a column is nullable or not.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Nullability {
-    /// Indicates that we do not know wether the column is Nullable or not.
+    /// Indicates that we do not know whether the column is Nullable or not.
     Unknown,
     /// The column may hold NULL values.
     Nullable,
@@ -19,7 +19,7 @@ impl Default for Nullability {
 }
 
 impl Nullability {
-    /// Construct a newe instance from a `Nullability` new type constant.
+    /// Construct a new instance from a `Nullability` new type constant.
     pub fn new(nullability: odbc_sys::Nullability) -> Self {
         match nullability {
             odbc_sys::Nullability::UNKNOWN => Nullability::Unknown,

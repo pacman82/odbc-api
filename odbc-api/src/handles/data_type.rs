@@ -64,7 +64,7 @@ pub enum DataType {
     /// indicates the seconds precision.
     Time {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
-        /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
+        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and Nanoseconds
         /// by 9.
         precision: i16,
     },
@@ -72,7 +72,7 @@ pub enum DataType {
     /// defined for the Date and Time variants.
     Timestamp {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
-        /// E.g. Milliseconds would be represented by precision 3, Micorseconds by 6 and Nanoseconds
+        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and Nanoseconds
         /// by 9.
         precision: i16,
     },
@@ -307,13 +307,13 @@ impl DataType {
     ///
     /// ```
     /// use odbc_api::DataType;
-    /// // Characterset datatypes length is multiplied by four.
+    /// // Character set data types length is multiplied by four.
     /// assert_eq!(DataType::Varchar { length: 10 }.utf8_len(), Some(40));
     /// assert_eq!(DataType::Char { length: 10 }.utf8_len(), Some(40));
     /// assert_eq!(DataType::WVarchar { length: 10 }.utf8_len(), Some(40));
     /// assert_eq!(DataType::WChar { length: 10 }.utf8_len(), Some(40));
     /// // For other types return value is identical to display size as they are assumed to be
-    /// // entirely representable with ASCII characeters.
+    /// // entirely representable with ASCII characters.
     /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), Some(10 + 2));
     /// ```
     pub fn utf8_len(&self) -> Option<usize> {
@@ -331,13 +331,13 @@ impl DataType {
     ///
     /// ```
     /// use odbc_api::DataType;
-    /// // Characterset datatypes length is multiplied by two.
+    /// // Character set data types length is multiplied by two.
     /// assert_eq!(DataType::Varchar { length: 10 }.utf16_len(), Some(20));
     /// assert_eq!(DataType::Char { length: 10 }.utf16_len(), Some(20));
     /// assert_eq!(DataType::WVarchar { length: 10 }.utf16_len(), Some(20));
     /// assert_eq!(DataType::WChar { length: 10 }.utf16_len(), Some(20));
     /// // For other types return value is identical to display size as they are assumed to be
-    /// // entirely representable with ASCII characeters.
+    /// // entirely representable with ASCII characters.
     /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), Some(10 + 2));
     /// ```
     pub fn utf16_len(&self) -> Option<usize> {

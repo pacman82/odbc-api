@@ -26,8 +26,8 @@ pub fn execute_with_parameters<'o, S>(
 where
     S: BorrowMut<StatementImpl<'o>>,
 {
-    let paramset_size = params.parameter_set_size();
-    if paramset_size == 0 {
+    let parameter_set_size = params.parameter_set_size();
+    if parameter_set_size == 0 {
         Ok(None)
     } else {
         // Only allocate the statement, if we know we are going to execute something.
@@ -37,7 +37,7 @@ where
         // `exec_direct`.
         stmt.reset_parameters()?;
         unsafe {
-            stmt.set_paramset_size(paramset_size)?;
+            stmt.set_paramset_size(parameter_set_size)?;
             // Bind new parameters passed by caller.
             params.bind_parameters_to(stmt)?;
             if let Some(sql) = query {

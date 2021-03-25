@@ -195,7 +195,7 @@ impl TextRowSet {
         *self.num_rows as usize
     }
 
-    /// Maximum length in bytes of elemenst in a column.
+    /// Maximum length in bytes of elements in a column.
     pub fn max_len(&self, col_index: usize) -> usize {
         self.buffers[col_index].max_len()
     }

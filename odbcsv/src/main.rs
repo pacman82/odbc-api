@@ -33,7 +33,7 @@ enum Command {
     /// List available drivers. Useful to find out which exact driver name to specify in the
     /// connections string.
     ListDrivers,
-    /// List preconfigured datasources. Useful to find data source name to connect to database.
+    /// List preconfigured data sources. Useful to find data source name to connect to database.
     ListDataSources,
 }
 
@@ -65,7 +65,7 @@ struct QueryOpt {
     /// but require more memory during execution.
     #[structopt(long, default_value = "5000")]
     batch_size: u32,
-    /// Maximum string length in bytes. If ommitted no limit is applied and the ODBC driver is taken
+    /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
     #[structopt(long, short = "m")]
     max_str_len: Option<usize>,
@@ -90,7 +90,7 @@ struct InsertOpt {
     #[structopt(long, default_value = "5000")]
     batch_size: u32,
     /// Path to the input csv file which is used to fill the database table with values. If
-    /// omitted stdin is used.
+    /// omitted standard input is used.
     #[structopt(long, short = "i")]
     input: Option<PathBuf>,
     /// Name of the table to insert the values into. No precautions against SQL injection are

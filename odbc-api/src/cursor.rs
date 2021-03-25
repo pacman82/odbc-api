@@ -32,7 +32,7 @@ pub trait Cursor {
     ///
     /// # Safety
     ///
-    /// Assinging to this statement handle or binding buffers to it may invalidate the invariants
+    /// Assigning to this statement handle or binding buffers to it may invalidate the invariants
     /// of safe wrapper types (i.e. [`crate::RowSetCursor`]). Some actions like closing the cursor
     /// may just result in ODBC transition errors, others like binding columns may even cause actual
     /// invalid memory access if not used with care.
@@ -58,8 +58,8 @@ pub trait Cursor {
 
     /// Advances the cursor to the next row in the result set.
     ///
-    /// While this method is very convinient due to the fact that the application does not have to
-    /// declare and bind specific buffers it is also in many situations extremly slow. Concrete
+    /// While this method is very convenient due to the fact that the application does not have to
+    /// declare and bind specific buffers it is also in many situations extremely slow. Concrete
     /// performance depends on the ODBC driver in question, but it is likely it performs a roundtrip
     /// to the datasource for each individual row. It is also likely an extra conversion is
     /// performed then requesting individual fields, since the C buffer type is not known to the
@@ -141,7 +141,7 @@ impl<'c, S> CursorRow<'c, S>
 where
     S: Statement,
 {
-    /// Fills a suitable taregt buffer with a field from the current row of the result set. This
+    /// Fills a suitable target buffer with a field from the current row of the result set. This
     /// method drains the data from the field. It can be called repeatedly to if not all the data
     /// fit in the output buffer at once. It should not called repeatedly to fetch the same value
     /// twice. Column index starts at `1`.
@@ -164,7 +164,7 @@ where
         // Utilize all of the allocated buffer. Make sure buffer can at least hold the terminating
         // zero.
         buf.resize(max(1, buf.capacity()), 0);
-        // We repeatedly fetch data and add it to the buffer. The buffer length is therfore the
+        // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
         // accumulated value size. This variable keeps track of the number of bytes we added with
         // the current call to get_data.
         let mut fetch_size: isize = buf.len().try_into().unwrap();
@@ -182,14 +182,14 @@ where
                 // to get_data.
                 NO_TOTAL => {
                     let old_len = buf.len();
-                    // Use an exponantial strategy for increasing buffer size. +1 For handling
+                    // Use an exponential strategy for increasing buffer size. +1 For handling
                     // initial buffer size of 1.
                     buf.resize(old_len * 2, 0);
                     target = VarCharMut::from_buffer(&mut buf[(old_len - 1)..], None);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
-                // We did get the complete value, inculding the terminating zero. Let's resize the
-                // buffer to match the retrieved value exactly (exculding terminating zero).
+                // We did get the complete value, including the terminating zero. Let's resize the
+                // buffer to match the retrieved value exactly (excluding terminating zero).
                 indicator if indicator < fetch_size => {
                     assert!(indicator >= 0);
                     // Since the indicator refers to value length without terminating zero, this

@@ -224,7 +224,7 @@ pub unsafe trait Parameter {
     ///
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
     /// the parameter remains valid while it is bound. If the parameter is bound as an output
-    /// parameter it must also be ensured that it is exclusivly referenced by statement.
+    /// parameter it must also be ensured that it is exclusively referenced by statement.
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
@@ -443,23 +443,23 @@ unsafe impl InputParameter for VarCharRef<'_> {}
 /// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
 /// terminating zero).
 ///
-/// Due to its memory layout this type can be bound either as a single parameter, or as an element
-/// of a rowise output, but not be used in columnar parameter arrays or output buffers.
+/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
+/// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarChar32 = VarChar<[u8; 32]>;
 
 /// A stack allocated VARCHAR type able to hold strings up to a length of 512 bytes (including the
 /// terminating zero).
 ///
-/// Due to its memory layout this type can be bound either as a single parameter, or as an element
-/// of a rowise output, but not be used in columnar parameter arrays or output buffers.
+/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
+/// of a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarChar512 = VarChar<[u8; 512]>;
 
 /// Wraps a slice so it can be used as an output parameter for character data.
 pub type VarCharMut<'a> = VarChar<&'a mut [u8]>;
 
-/// A mutable buffer for character data which can be used as either input parameter or ouput buffer.
-/// It can not be used for columar bulk fetches, but if the buffer type is stack allocated in can
-/// be utilized in row wise bulk fetches.
+/// A mutable buffer for character data which can be used as either input parameter or output
+/// buffer. It can not be used for columnar bulk fetches, but if the buffer type is stack allocated
+/// in can be utilized in row wise bulk fetches.
 ///
 /// This type is very similar to [`self::VarCharRef`] and indeed it can perform many of the same
 /// tasks, since [`self::VarCharRef`] is exclusive used as an input parameter though it must not
@@ -559,7 +559,7 @@ where
     }
 
     /// Read access to the underlying ODBC indicator. After data has been fetched the indicator
-    /// value is set to the length the buffer should have had, excluding the terminating zere. It
+    /// value is set to the length the buffer should have had, excluding the terminating zero. It
     /// may also be `NULL_DATA` to indicate `NULL` or `NO_TOTAL` which tells us the data source
     /// does not know how big the buffer must be to hold the complete value. `NO_TOTAL` implies that
     /// the content of the current buffer is valid up to its maximum capacity.
@@ -631,7 +631,7 @@ unsafe impl InputParameter for VarChar32 {}
 unsafe impl<'a> Output for VarCharMut<'a> {}
 unsafe impl<'a> InputParameter for VarCharMut<'a> {}
 
-// For completness sake. VarCharRef will do the same job slightly better though.
+// For completeness sake. VarCharRef will do the same job slightly better though.
 unsafe impl<'a> InputParameter for VarChar<&'a [u8]> {}
 
 #[cfg(test)]

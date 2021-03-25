@@ -176,7 +176,7 @@ impl<'c> Connection<'c> {
     /// in mind, that even `SELECT` statements can open new transactions. This library will rollback
     /// open transactions if a connection goes out of SCOPE. This however will log an error, since
     /// the transaction state is only discovered during a failed disconnect. It is preferable that
-    /// the appliacation makes sure all transactions are closed if in manual commit mode.
+    /// the application makes sure all transactions are closed if in manual commit mode.
     pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
         self.connection.set_autocommit(enabled)
     }

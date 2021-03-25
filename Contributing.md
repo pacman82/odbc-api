@@ -1,6 +1,6 @@
 # Contributions
 
-Wether they be in code, intersting feature suggestions, design critique or bug reports, all contributions are welocme. Please start an issue, before investing a lot of work. This helps avoid situations there I would feel the need to reject a large body of work, and a lot of your time has been wasted. `odbc-api` is a pet project and a work of love, which implies that I maintain it in my spare time. Please understand that I may not always react immediatly. If you contribute code to fix a Bug, please also contribute the test to fix it. Happy contributing.
+Whether they be in code, interesting feature suggestions, design critique or bug reports, all contributions are welcome. Please start an issue, before investing a lot of work. This helps avoid situations there I would feel the need to reject a large body of work, and a lot of your time has been wasted. `odbc-api` is a pet project and a work of love, which implies that I maintain it in my spare time. Please understand that I may not always react immediately. If you contribute code to fix a Bug, please also contribute the test to fix it. Happy contributing.
 
 ## Local build and test setup
 
@@ -10,7 +10,7 @@ Running local tests currently requires:
 
 ### Visual Studio Code
 
-Should you use Visual Studio Code with the Remote Developmont extension, it will pick up the `.devcontainer` configuration and everything should be setup for you.
+Should you use Visual Studio Code with the Remote Development extension, it will pick up the `.devcontainer` configuration and everything should be setup for you.
 
 ### Not Visual Studio Code
 

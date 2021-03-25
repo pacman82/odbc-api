@@ -53,8 +53,8 @@ impl<'s> StatementImpl<'s> {
 }
 
 /// An ODBC statement handle. In this crate it is implemented by [`self::StatementImpl`]. In ODBC
-/// Statements are used to execute statements and retrieve results. Both paramater and result
-/// buffers are bound to the statemend and dereferenced during statement execution and fetching
+/// Statements are used to execute statements and retrieve results. Both parameter and result
+/// buffers are bound to the statement and dereferenced during statement execution and fetching
 /// results.
 ///
 /// The trait allows us to reason about statements without taking the lifetime of their connection
@@ -813,7 +813,7 @@ impl<'o> Statement for StatementImpl<'o> {
 #[derive(Debug)]
 pub struct ParameterDescription {
     // Todo: rename to nullability.
-    /// Indicates wether the parameter may be NULL not.
+    /// Indicates whether the parameter may be NULL not.
     pub nullable: Nullability,
     /// The SQL Type associated with that parameter.
     pub data_type: DataType,

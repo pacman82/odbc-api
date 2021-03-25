@@ -19,8 +19,8 @@ impl<'o> Prepared<'o> {
     ///
     /// * `params`: Used to bind these parameters before executing the statement. You can use `()`
     ///   to represent no parameters. In regards to binding arrays of parameters: Should `params`
-    ///   specify a paramset size of empty, nothing is executed, and `Ok(None)` is returned. See the
-    ///   [`crate::parameter`] module level documentation for more information on how to pass
+    ///   specify a parameter set size of `0`, nothing is executed, and `Ok(None)` is returned. See
+    ///   the [`crate::parameter`] module level documentation for more information on how to pass
     ///   parameters.
     pub fn execute(
         &mut self,

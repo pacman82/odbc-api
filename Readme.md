@@ -16,9 +16,9 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 ## Features
 
 * [x] Connect using either Data Source names (DSN) or connection strings
-* [x] Provide nice erros and log diagnostic output.
-* [x] Support for columnwise bulk inserts.
-* [x] Support for columnwise bulk queries.
+* [x] Provide nice errors and log diagnostic output.
+* [x] Support for columnar bulk inserts.
+* [x] Support for columnar bulk queries.
 * [ ] Support for rowise bulk inserts.
 * [ ] Support for rowise bulk queries.
 * [x] Support for Output parameters of stored procedures.
@@ -45,7 +45,7 @@ So why `odbc-api`? This is a somewhat less ambitious and more opinionated rewrit
 
 Here are some of the tradeoffs I made in this library to make my life (and hopefully that of the users a bit easier).
 
-### Commiting to one version of the ODBC Api
+### Committing to one version of the ODBC Api
 
 The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however currently fixes the ODBC version to `3.8`.
 

@@ -136,7 +136,7 @@ impl<C> TextColumn<C> {
                 Indicator::NoTotal => {
                     // There is no good choice here in case we are expanding the buffer. Since
                     // NO_TOTAL indicates that we use the entire buffer, but in truth it would now
-                    // be padded with 0. I currently cannot think of any usecase there it would
+                    // be padded with 0. I currently cannot think of any use case there it would
                     // matter.
                     new_value[..max_copy_length].clone_from_slice(&old_value[..max_copy_length]);
                 }
@@ -202,7 +202,7 @@ impl<C> TextColumn<C> {
     ///
     /// # Safety
     ///
-    /// Num rows may not exceed the actualy amount of valid num_rows filled be the ODBC API. The
+    /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
