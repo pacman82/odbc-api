@@ -237,8 +237,20 @@ use crate::{
     DataType, Error,
 };
 
+
+/// Use implementations of this type as arguments to SQL Statements.
+/// 
+/// # Safety
+///
+/// Considerations for implementers
+///
 /// Extend the [`crate::handles::HasDataType`] trait with the guarantee, that the bound parameter buffer
 /// contains at least one element.
+///
+/// Since the indicator provided by implementation is used to indicate the length of the value in
+/// the buffer, care must be taken to prevent out of bounds access in case the implementation also
+/// is used as an output parameter, an contains truncated values (i.e. the indicator is longer than
+/// the buffer and the value within).
 pub unsafe trait InputParameter: HasDataType {}
 
 /// Guarantees that there is space in the output buffer for at least one element.

@@ -538,7 +538,7 @@ impl<'o> Statement for StatementImpl<'o> {
             parameter.value_ptr() as *mut c_void,
             parameter.buffer_length(),
             // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut Len,
+            parameter.indicator_ptr() as *mut isize,
         )
         .into_result(self)
     }
@@ -569,7 +569,7 @@ impl<'o> Statement for StatementImpl<'o> {
             parameter_type.decimal_digits(),
             parameter.value_ptr() as *mut c_void,
             parameter.buffer_length(),
-            parameter.indicator_ptr() as *mut Len,
+            parameter.mut_indicator_ptr(),
         )
         .into_result(self)
     }
