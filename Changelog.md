@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.6
+
+* `Box<dyn InputParameter>` now implements `InputParameter`.
+
 ## 0.19.5
 
 * Fix: `BinColumnWriter::append` erroneously inserted a terminating zero at the end of the value.
