@@ -1184,10 +1184,7 @@ fn heterogenous_parameters_in_array(connection_string: &str) {
     conn.execute(&insert_sql, ()).unwrap();
 
     // Execute test
-    let query = format!(
-        "SELECT a,b FROM {} where  a > ? AND b = ?;",
-        table_name
-    );
+    let query = format!("SELECT a,b FROM {} where  a > ? AND b = ?;", table_name);
     let params: [Box<dyn InputParameter>; 2] = [Box::new(2), Box::new("Hello".into_parameter())];
     let cursor = conn.execute(&query, &params[..]).unwrap().unwrap();
     let actual = cursor_to_string(cursor);

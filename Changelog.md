@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.0
+
+* Replaced `VarCharRef` with `VarCharSlice`.
+
 ## 0.19.6
 
 * `Box<dyn InputParameter>` now implements `InputParameter`.

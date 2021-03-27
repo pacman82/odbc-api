@@ -1,8 +1,15 @@
-use std::{borrow::{Borrow, BorrowMut}, convert::TryInto, ffi::c_void};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    convert::TryInto,
+    ffi::c_void,
+};
 
-use odbc_sys::{CDataType, NULL_DATA, NO_TOTAL};
+use odbc_sys::{CDataType, NO_TOTAL, NULL_DATA};
 
-use crate::{DataType, InputParameter, Output, handles::{CData, CDataMut, HasDataType}};
+use crate::{
+    handles::{CData, CDataMut, HasDataType},
+    DataType, InputParameter, Output,
+};
 
 /// Binds a byte array as a VarChar input parameter.
 ///
@@ -30,16 +37,16 @@ use crate::{DataType, InputParameter, Output, handles::{CData, CDataMut, HasData
 /// };
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
-pub struct VarCharRef<'a> {
+pub struct VarCharSlice<'a> {
     bytes: &'a [u8],
     /// Will be set to value.len() by constructor.
     length: isize,
 }
 
-impl<'a> VarCharRef<'a> {
+impl<'a> VarCharSlice<'a> {
     /// Constructs a new VarChar containing the text in the specified buffer.
     pub fn new(value: &'a [u8]) -> Self {
-        VarCharRef {
+        VarCharSlice {
             bytes: value,
             length: value.len().try_into().unwrap(),
         }
@@ -47,14 +54,14 @@ impl<'a> VarCharRef<'a> {
 
     /// Constructs a new VarChar representing the NULL value.
     pub fn null() -> Self {
-        VarCharRef {
+        VarCharSlice {
             bytes: &[],
             length: NULL_DATA,
         }
     }
 }
 
-unsafe impl CData for VarCharRef<'_> {
+unsafe impl CData for VarCharSlice<'_> {
     fn cdata_type(&self) -> CDataType {
         CDataType::Char
     }
@@ -72,7 +79,7 @@ unsafe impl CData for VarCharRef<'_> {
     }
 }
 
-unsafe impl HasDataType for VarCharRef<'_> {
+unsafe impl HasDataType for VarCharSlice<'_> {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.bytes.len(),
@@ -80,7 +87,7 @@ unsafe impl HasDataType for VarCharRef<'_> {
     }
 }
 
-unsafe impl InputParameter for VarCharRef<'_> {}
+unsafe impl InputParameter for VarCharSlice<'_> {}
 
 /// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
 /// terminating zero).

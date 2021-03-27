@@ -122,14 +122,14 @@
 //! converting the text input into something more suitable.
 //!
 //! ```
-//! use odbc_api::{Connection, IntoParameter, Error, parameter::VarCharRef};
+//! use odbc_api::{Connection, IntoParameter, Error, parameter::VarCharSlice};
 //!
 //! fn execute_arbitrary_command(connection: &Connection, query: &str, parameters: &[&str])
 //!     -> Result<(), Error>
 //! {
 //!     // Convert the input strings into parameters suitable to for use with ODBC. Type argument
-//!     // `VarCharRef` could have been omitted but is left in this example for clarity.
-//!     let params: Vec<VarCharRef> = parameters
+//!     // `VarCharSlice` could have been omitted but is left in this example for clarity.
+//!     let params: Vec<VarCharSlice> = parameters
 //!         .iter()
 //!         .map(|param| param.into_parameter())
 //!         .collect();
@@ -225,7 +225,7 @@
 //! types.
 mod varchar;
 
-pub use self::varchar::{VarChar, VarChar32, VarChar512, VarCharMut, VarCharRef};
+pub use self::varchar::{VarChar, VarChar32, VarChar512, VarCharMut, VarCharSlice};
 
 use std::ffi::c_void;
 
