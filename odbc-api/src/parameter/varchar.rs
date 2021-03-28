@@ -155,7 +155,7 @@ where
     B: Borrow<[u8]>,
 {
     /// Call this method to reset the indicator to a value which matches the length returned by the
-    /// [`Self::bytes`] method. This is useful if you want to insert values into the database
+    /// [`Self::as_bytes`] method. This is useful if you want to insert values into the database
     /// despite the fact, that they might have been truncated. Otherwise the behaviour of databases
     /// in this situation is driver specific. Some drivers insert up to the terminating zero, others
     /// detect the truncation and throw an error.
