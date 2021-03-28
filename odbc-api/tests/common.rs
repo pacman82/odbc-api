@@ -36,6 +36,14 @@ pub fn setup_empty_table(
     Ok(())
 }
 
+/// Query the table and prints it contents to a string
+pub fn table_to_string(conn: &Connection, table_name: &str, column_names: &[&str]) -> String {
+    let cols = column_names.join(", ");
+    let query = format!("SELECT {} FROM {}", cols, table_name);
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    cursor_to_string(cursor)
+}
+
 pub fn cursor_to_string(cursor: impl Cursor) -> String {
     let batch_size = 20;
     let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor, None).unwrap();

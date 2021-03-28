@@ -3,14 +3,14 @@ mod common;
 use odbc_sys::{SqlDataType, Timestamp};
 use test_case::test_case;
 
-use common::{cursor_to_string, setup_empty_table, SingleColumnRowSetBuffer, ENV};
+use common::{cursor_to_string, setup_empty_table, table_to_string, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
     },
-    parameter::VarChar32,
+    parameter::VarCharArray,
     ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -932,6 +932,25 @@ fn bind_integer_parameter() {
     assert_eq!("2001: A Space Odyssey", title);
 }
 
+/// Learning test. Insert a string ending with \0. Not a terminating zero, but the payload ending
+/// itself having zero as the last element.
+#[test]
+fn insert_string_ending_with_nul() {
+    let table_name = "InsertStringEndingWithNul";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let sql = format!("INSERT INTO {} (a) VALUES(?)", table_name);
+    let param = "Hell\0";
+    let result = conn.execute(&sql, &param.into_parameter());
+    assert!(result.is_err());
+
+    // This actually won't work as MSSQL is going to suspect that the values have been truncated.
+    // While MSSQL is actually ok with interier nuls, but this value is indistinguishable from a
+    // Hello, which would have been truncated due to buffer size.
+
+    // let actual = table_to_string(&conn, table_name);
+    // assert_eq!("Hell\0", actual);
+}
+
 #[test]
 fn prepared_statement() {
     // Prepare the statement once
@@ -1349,9 +1368,9 @@ fn parameter_varchar_512(connection_string: &str) {
     let sql = "INSERT INTO ParameterVarchar512 (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
 
-    prepared.execute(&VarChar32::copy_from_bytes(None)).unwrap();
+    prepared.execute(&VarCharArray::<32>::NULL).unwrap();
     prepared
-        .execute(&VarChar32::copy_from_bytes(Some(b"Bernd")))
+        .execute(&VarCharArray::<32>::new(b"Bernd"))
         .unwrap();
 
     let cursor = conn
@@ -1589,7 +1608,7 @@ fn get_data_string(connection_string: &str) {
         .unwrap();
 
     let mut row = cursor.next_row().unwrap().unwrap();
-    let mut actual = VarChar32::copy_from_bytes(None);
+    let mut actual = VarCharArray::<32>::NULL;
 
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(Some(&b"Hello, World!"[..]), actual.as_bytes());
@@ -1627,7 +1646,7 @@ fn large_strings(connection_string: &str) {
         .unwrap();
 
     let mut row = cursor.next_row().unwrap().unwrap();
-    let mut buf = VarChar32::copy_from_bytes(None);
+    let mut buf = VarCharArray::<32>::NULL;
     let mut actual = String::new();
 
     loop {
@@ -1736,6 +1755,43 @@ fn capped_text_buffer(connection_string: &str) {
     assert_eq!(Indicator::Length(13), batch.indicator_at(0, 0));
     // Assert that maximum length is reported correctly.
     assert_eq!(5, batch.max_len(0));
+}
+
+/// Use a truncated varchar output as input.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn use_truncated_output_as_input(connection_string: &str) {
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    let table_name = "UseTruncatedOutputAsInput";
+
+    // Prepare table content
+    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
+        (),
+    )
+    .unwrap();
+
+    // Query 'Hello, World!' From the DB in a buffer with size 5. This should give us a Hello minus
+    // the letter 'o' since we also need space for a terminating zero. => 'Hell'.
+    let mut buf = VarCharArray::<5>::NULL;
+    let query = format!("SELECT a FROM {}", table_name);
+    let mut cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let mut row = cursor.next_row().unwrap().unwrap();
+    row.get_data(1, &mut buf).unwrap();
+    assert_eq!(b"Hell", buf.as_bytes().unwrap());
+    assert_eq!(buf.is_complete(), false);
+    drop(row);
+    drop(cursor);
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    buf.hide_truncation();
+    conn.execute(&insert, &buf).unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    assert_eq!("Hello, World!\nHell", actual);
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
