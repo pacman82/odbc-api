@@ -34,7 +34,7 @@ impl Indicator {
         match self {
             Indicator::Null => NULL_DATA,
             Indicator::NoTotal => NO_TOTAL,
-            Indicator::Length(len) => len.try_into().unwrap()
+            Indicator::Length(len) => len.try_into().unwrap(),
         }
     }
 }

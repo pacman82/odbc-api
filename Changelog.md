@@ -3,6 +3,7 @@
 ## 0.20.0
 
 * Required at least Rust 1.51.0 to compile.
+* `IntoParameter` has been implement for `String`. This is the most likely thing to break your code as calling `.into_parameter()` would have worked on `String` before, but would have invoked the implementation on `str`. Should you want the old behaviour just call `my_string.as_str().into_parameter()`.
 * Replaced `VarCharRef` with `VarCharSlice`.
 * Replaced `VarChar32` and `VarChar512` with `VarCharArray<LENGTH>`.
 * Replaced `VarCharMut` with `VarCharSliceMut`.

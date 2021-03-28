@@ -1,4 +1,8 @@
-use crate::{fixed_sized::Pod, parameter::VarCharSlice, InputParameter, Nullable};
+use crate::{
+    fixed_sized::Pod,
+    parameter::{VarCharBox, VarCharSlice},
+    InputParameter, Nullable,
+};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -40,6 +44,25 @@ impl<'a> IntoParameter for Option<&'a str> {
         match self {
             Some(str) => str.into_parameter(),
             None => VarCharSlice::NULL,
+        }
+    }
+}
+
+impl IntoParameter for String {
+    type Parameter = VarCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarCharBox::from_string(self)
+    }
+}
+
+impl<'a> IntoParameter for Option<String> {
+    type Parameter = VarCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarCharBox::null(),
         }
     }
 }
