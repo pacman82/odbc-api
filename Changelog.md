@@ -10,6 +10,7 @@
 * `VarChar::copy_from_bytes` has been removed. Try constructing with `new`, `from_buffer` or using `NULL` instead.
 * `VarChar::indicator()` now returns an `Indicator` instead of an `isize`.
 * Replaced `VarCharRef::null()` with `VarCharSlice::NULL`.
+* `CString` and `CStr` as input parameters.
 
 ## 0.19.6
 

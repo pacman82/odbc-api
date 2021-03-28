@@ -113,10 +113,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! ## Passing an input parameters with dynamic type
-//!
-//! Should you have an input parameters whose type you only know at runtime, it comes in handy to
-//! know that `Box<dyn InputParameter>` implements [`crate::parameter::InputParameter`].
+//! ## Passing an input parameters parsed from the command line
 //!
 //! In case you want to read paramaters from the command line you can also let ODBC do the work of
 //! converting the text input into something more suitable.
@@ -127,9 +124,9 @@
 //! fn execute_arbitrary_command(connection: &Connection, query: &str, parameters: &[&str])
 //!     -> Result<(), Error>
 //! {
-//!     // Convert the input strings into parameters suitable to for use with ODBC. Type argument
-//!     // `VarCharSlice` could have been omitted but is left in this example for clarity.
-//!     let params: Vec<VarCharSlice> = parameters
+//!     // Convert all strings to `VarCharSlice` and bind them as `VarChar`. Let ODBC convert them
+//!     // into something better matching the types required be the query.
+//!     let params: Vec<_> = parameters
 //!         .iter()
 //!         .map(|param| param.into_parameter())
 //!         .collect();
@@ -140,6 +137,9 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! Should you have more type information the type available, but only at runtime can also bind an
+//! array of `[Box<dyn InputParameter]`.
 //!
 //! ## Output and Input/Output parameters
 //!
@@ -223,6 +223,7 @@
 //! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can usually be
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
+mod c_string;
 mod varchar;
 
 pub use self::varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut};
@@ -273,7 +274,7 @@ pub unsafe trait Parameter {
 }
 
 /// Bind immutable references as input parameters.
-unsafe impl<T> Parameter for &T
+unsafe impl<T: ?Sized> Parameter for &T
 where
     T: InputParameter,
 {
