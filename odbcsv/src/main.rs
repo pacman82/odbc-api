@@ -209,7 +209,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     // Convert the input strings into parameters suitable to for use with ODBC.
     let params: Vec<_> = parameters
         .iter()
-        .map(|param| param.into_parameter())
+        .map(|param| param.as_str().into_parameter())
         .collect();
 
     // Execute the query as a one off, and pass the parameters.

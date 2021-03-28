@@ -36,80 +36,28 @@ pub struct VarChar<B> {
     indicator: isize,
 }
 
-/// Binds a byte array as a VarChar input parameter.
+/// Paramater type for owned, variable sized character data.
 ///
-/// While a byte array can provide us with a pointer to the start of the array and the length of the
-/// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
-/// strings which are not zero terminated we need to store the length in a separate value.
-///
-/// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&str`.
-///
-/// # Example
-///
-/// ```no_run
-/// use odbc_api::{Environment, IntoParameter};
-///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
-///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
-/// if let Some(cursor) = conn.execute(
-///     "SELECT year FROM Birthdays WHERE name=?;",
-///     &"Bernd".into_parameter())?
-/// {
-///     // Use cursor to process query results.
-/// };
-/// # Ok::<(), odbc_api::Error>(())
-/// ```
-pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
+/// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
+/// has the role of telling us how many bytes in the buffer are part of the payload.
+pub type VarCharBox = VarChar<Box<[u8]>>;
 
-impl<'a> VarCharSlice<'a> {
-    /// Indicates missing data
-    pub const NULL: Self = Self {
-        buffer: &[],
-        indicator: NULL_DATA,
-    };
-
-    /// Constructs a new VarChar containing the text in the specified buffer.
-    ///
-    /// Caveat: This constructor is going to create a truncated value in case the input slice ends
-    /// with `nul`. Should you want to insert an actual string those payload ends with `nul` into
-    /// the database you need a buffer one byte longer than the string. You can instantiate such a
-    /// value using [`Self::from_buffer`].
-    pub fn new(value: &'a [u8]) -> Self {
-        Self::from_buffer(value, Indicator::Length(value.len()))
+impl VarCharBox {
+    /// Constucts a 'missing' value.
+    pub fn null() -> Self {
+        Self::from_buffer(Box::new([]), Indicator::Null)
     }
-}
 
-/// Wraps a slice so it can be used as an output parameter for character data.
-pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
+    /// Create an owned parameter containing the character data from the passed string.
+    pub fn from_string(val: String) -> Self {
+        Self::from_vec(val.into_bytes())
+    }
 
-/// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
-/// terminating zero for output strings).
-///
-/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
-/// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
-pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
-
-impl<const LENGTH: usize> VarCharArray<LENGTH> {
-    /// Indicates a missing value.
-    pub const NULL: Self = VarCharArray {
-        buffer: [0; LENGTH],
-        indicator: NULL_DATA,
-    };
-
-    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated and a
-    /// a terminating zero is placed at the end.
-    pub fn new(text: &[u8]) -> Self {
-        let indicator = text.len().try_into().unwrap();
-        let mut buffer = [0u8; LENGTH];
-        if text.len() > LENGTH {
-            buffer.copy_from_slice(&text[..LENGTH]);
-        } else {
-            buffer[..text.len()].copy_from_slice(text);
-        };
-        Self { indicator, buffer }
+    /// Create a VarChar box from a `Vec`.
+    pub fn from_vec(val: Vec<u8>) -> Self {
+        let indicator = Indicator::Length(val.len());
+        let buffer = val.into_boxed_slice();
+        Self::from_buffer(buffer, indicator)
     }
 }
 
@@ -268,6 +216,83 @@ where
     }
 }
 
+/// Binds a byte array as a VarChar input parameter.
+///
+/// While a byte array can provide us with a pointer to the start of the array and the length of the
+/// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
+/// strings which are not zero terminated we need to store the length in a separate value.
+///
+/// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&str`.
+///
+/// # Example
+///
+/// ```no_run
+/// use odbc_api::{Environment, IntoParameter};
+///
+/// let env = unsafe {
+///     Environment::new()?
+/// };
+///
+/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// if let Some(cursor) = conn.execute(
+///     "SELECT year FROM Birthdays WHERE name=?;",
+///     &"Bernd".into_parameter())?
+/// {
+///     // Use cursor to process query results.
+/// };
+/// # Ok::<(), odbc_api::Error>(())
+/// ```
+pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
+
+impl<'a> VarCharSlice<'a> {
+    /// Indicates missing data
+    pub const NULL: Self = Self {
+        buffer: &[],
+        indicator: NULL_DATA,
+    };
+
+    /// Constructs a new VarChar containing the text in the specified buffer.
+    ///
+    /// Caveat: This constructor is going to create a truncated value in case the input slice ends
+    /// with `nul`. Should you want to insert an actual string those payload ends with `nul` into
+    /// the database you need a buffer one byte longer than the string. You can instantiate such a
+    /// value using [`Self::from_buffer`].
+    pub fn new(value: &'a [u8]) -> Self {
+        Self::from_buffer(value, Indicator::Length(value.len()))
+    }
+}
+
+/// Wraps a slice so it can be used as an output parameter for character data.
+pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
+
+/// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
+/// terminating zero for output strings).
+///
+/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
+/// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
+pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
+
+impl<const LENGTH: usize> VarCharArray<LENGTH> {
+    /// Indicates a missing value.
+    pub const NULL: Self = VarCharArray {
+        buffer: [0; LENGTH],
+        indicator: NULL_DATA,
+    };
+
+    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated and a
+    /// a terminating zero is placed at the end.
+    pub fn new(text: &[u8]) -> Self {
+        let indicator = text.len().try_into().unwrap();
+        let mut buffer = [0u8; LENGTH];
+        if text.len() > LENGTH {
+            buffer.copy_from_slice(&text[..LENGTH]);
+        } else {
+            buffer[..text.len()].copy_from_slice(text);
+        };
+        Self { indicator, buffer }
+    }
+}
+
 // We can't go all out and implement these traits for anything implementing Borrow and BorrowMut,
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
@@ -280,3 +305,6 @@ unsafe impl<const LENGTH: usize> InputParameter for VarCharArray<LENGTH> {}
 
 unsafe impl<'a> Output for VarCharSliceMut<'a> {}
 unsafe impl<'a> InputParameter for VarCharSliceMut<'a> {}
+
+unsafe impl<'a> Output for VarCharBox {}
+unsafe impl<'a> InputParameter for VarCharBox {}

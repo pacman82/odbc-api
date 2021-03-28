@@ -1636,7 +1636,7 @@ fn large_strings(connection_string: &str) {
 
     conn.execute(
         "INSERT INTO LargeStrings (a) VALUES (?)",
-        &input.into_parameter(),
+        &input.as_str().into_parameter(),
     )
     .unwrap();
 
@@ -1674,7 +1674,7 @@ fn large_strings_get_text(connection_string: &str) {
 
     conn.execute(
         "INSERT INTO LargeStringsGetText (a) VALUES (?)",
-        &input.into_parameter(),
+        &input.as_str().into_parameter(),
     )
     .unwrap();
 
@@ -1792,6 +1792,27 @@ fn use_truncated_output_as_input(connection_string: &str) {
 
     let actual = table_to_string(&conn, table_name, &["a"]);
     assert_eq!("Hello, World!\nHell", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn arbitrary_input_parameters(connection_string: &str) {
+    let table_name = "ArbitraryInputParameters";
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(20)", "INTEGER"]).unwrap();
+
+    let insert_statement = format!("INSERT INTO {} (a, b) VALUES (?, ?);", table_name);
+    let param_a: Box<dyn InputParameter> = Box::new("Hello, World!".to_string().into_parameter());
+    let param_b: Box<dyn InputParameter> = Box::new(42.into_parameter());
+    let parameters = vec![param_a, param_b];
+
+    conn.execute(&insert_statement, parameters.as_slice())
+        .unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a", "b"]);
+    assert_eq!("Hello, World!,42", actual)
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

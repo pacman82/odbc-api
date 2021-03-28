@@ -284,7 +284,7 @@
 //!     let mut title = String::new();
 //!     stdin().read_line(&mut title)?;
 //!     while !title.is_empty() {
-//!         match prepared.execute(&title.into_parameter()) {
+//!         match prepared.execute(&title.as_str().into_parameter()) {
 //!             Err(e) => println!("{}", e),
 //!             // Most drivers would return a result set even if no Movie with the title is found,
 //!             // the result set would just be empty. Well, most drivers.
