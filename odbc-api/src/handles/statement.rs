@@ -217,7 +217,7 @@ pub trait Statement {
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &impl HasDataType,
+        parameter: &(impl HasDataType + ?Sized),
     ) -> Result<(), Error>;
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
@@ -523,7 +523,7 @@ impl<'o> Statement for StatementImpl<'o> {
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &impl HasDataType,
+        parameter: &(impl HasDataType + ?Sized),
     ) -> Result<(), Error> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(

@@ -14,7 +14,7 @@ use odbc_api::{
     ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
-use std::{iter, thread};
+use std::{ffi::CString, iter, thread};
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -1361,25 +1361,42 @@ fn parameter_option_str(connection_string: &str) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_varchar_512(connection_string: &str) {
+    let table_name = "ParameterVarchar512";
     let conn = ENV
         .connect_with_connection_string(connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ParameterVarchar512", &["VARCHAR(50)"]).unwrap();
-    let sql = "INSERT INTO ParameterVarchar512 (a) VALUES (?);";
-    let mut prepared = conn.prepare(sql).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
 
-    prepared.execute(&VarCharArray::<32>::NULL).unwrap();
+    prepared.execute(&VarCharArray::<512>::NULL).unwrap();
     prepared
-        .execute(&VarCharArray::<32>::new(b"Bernd"))
+        .execute(&VarCharArray::<512>::new(b"Bernd"))
         .unwrap();
 
-    let cursor = conn
-        .execute("SELECT a FROM ParameterVarchar512 ORDER BY id", ())
-        .unwrap()
-        .unwrap();
-
-    let actual = cursor_to_string(cursor);
+    let actual = table_to_string(&conn, table_name, &["a"]);
     let expected = "NULL\nBernd";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn parameter_cstr(connection_string: &str) {
+    let table_name = "ParameterCStr";
+    let conn = ENV
+        .connect_with_connection_string(connection_string)
+        .unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
+
+    let param = CString::new("Hello, World!").unwrap();
+
+    prepared.execute(&param).unwrap();
+    prepared.execute(param.as_c_str()).unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    let expected = "Hello, World!\nHello, World!";
     assert_eq!(expected, actual);
 }
 
