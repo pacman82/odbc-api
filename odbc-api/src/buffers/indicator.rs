@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use odbc_sys::{NO_TOTAL, NULL_DATA};
 
 /// Indicates existence and length of a value.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Indicator {
     /// Field does not exist
     Null,
@@ -26,6 +26,15 @@ impl Indicator {
                     .try_into()
                     .expect("Length indicator must be non-negative."),
             ),
+        }
+    }
+
+    /// Creates an indicator value as required by the ODBC C API.
+    pub fn to_isize(self) -> isize {
+        match self {
+            Indicator::Null => NULL_DATA,
+            Indicator::NoTotal => NO_TOTAL,
+            Indicator::Length(len) => len.try_into().unwrap()
         }
     }
 }

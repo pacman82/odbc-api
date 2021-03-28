@@ -4,12 +4,37 @@ use std::{
     ffi::c_void,
 };
 
-use odbc_sys::{CDataType, NO_TOTAL, NULL_DATA};
+use odbc_sys::{CDataType, NULL_DATA};
 
 use crate::{
+    buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
     DataType, InputParameter, Output,
 };
+
+/// Binds a byte arrary as Variadic sized characater data. It can not be used for columnar bulk
+/// fetches, but if the buffer type is stack allocated it can be utilized in row wise bulk fetches.
+///
+/// Meaningful instantiations of this type are:
+///
+/// * [`self::VarCharSlice`] - immutable borrowed parameter.
+/// * [`self::VarCharSliceMut`] - mutable borrowed input / output parameter
+/// * [`self::VarCharArray`] - stack allocated owned input / output parameter
+/// * [`self::VarCharBox`] - heap allocated owned input /output parameter
+#[derive(Debug, Clone, Copy)]
+pub struct VarChar<B> {
+    /// Contains the value. Characters must be valid up to the index indicated by `indicator`. If
+    /// `indicator` is longer than buffer, the last element in buffer must be a terminating zero,
+    /// which is not regarded as being part of the payload itself.
+    buffer: B,
+    /// Indicates the length of the value stored in `buffer`. Should indicator exceed the buffer
+    /// length the value stored in buffer is truncated, and holds actually `buffer.len() - 1` valid
+    /// characters. The last element of the buffer being the terminating zero. If indicator is
+    /// exactly the buffer length, the value should be considered valid up to the last element,
+    /// unless the value is `\0`. In that case we assume `\0` to be a terminating zero left over
+    /// from truncation, rather than the last character of the string.
+    indicator: isize,
+}
 
 /// Binds a byte array as a VarChar input parameter.
 ///
@@ -37,138 +62,98 @@ use crate::{
 /// };
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
-pub struct VarCharSlice<'a> {
-    bytes: &'a [u8],
-    /// Will be set to value.len() by constructor.
-    length: isize,
-}
+pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
 
 impl<'a> VarCharSlice<'a> {
+    /// Indicates missing data
+    pub const NULL: Self = Self {
+        buffer: &[],
+        indicator: NULL_DATA,
+    };
+
     /// Constructs a new VarChar containing the text in the specified buffer.
+    ///
+    /// Caveat: This constructor is going to create a truncated value in case the input slice ends
+    /// with `nul`. Should you want to insert an actual string those payload ends with `nul` into
+    /// the database you need a buffer one byte longer than the string. You can instantiate such a
+    /// value using [`Self::from_buffer`].
     pub fn new(value: &'a [u8]) -> Self {
-        VarCharSlice {
-            bytes: value,
-            length: value.len().try_into().unwrap(),
-        }
-    }
-
-    /// Constructs a new VarChar representing the NULL value.
-    pub fn null() -> Self {
-        VarCharSlice {
-            bytes: &[],
-            length: NULL_DATA,
-        }
+        Self::from_buffer(value, Indicator::Length(value.len()))
     }
 }
 
-unsafe impl CData for VarCharSlice<'_> {
-    fn cdata_type(&self) -> CDataType {
-        CDataType::Char
-    }
-
-    fn indicator_ptr(&self) -> *const isize {
-        &self.length
-    }
-
-    fn value_ptr(&self) -> *const c_void {
-        self.bytes.as_ptr() as *const c_void
-    }
-
-    fn buffer_length(&self) -> isize {
-        0
-    }
-}
-
-unsafe impl HasDataType for VarCharSlice<'_> {
-    fn data_type(&self) -> DataType {
-        DataType::Varchar {
-            length: self.bytes.len(),
-        }
-    }
-}
-
-unsafe impl InputParameter for VarCharSlice<'_> {}
+/// Wraps a slice so it can be used as an output parameter for character data.
+pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
 
 /// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
-/// terminating zero).
+/// terminating zero for output strings).
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
-pub type VarChar32 = VarChar<[u8; 32]>;
+pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
 
-/// A stack allocated VARCHAR type able to hold strings up to a length of 512 bytes (including the
-/// terminating zero).
-///
-/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
-/// of a row-by-row output, but not be used in columnar parameter arrays or output buffers.
-pub type VarChar512 = VarChar<[u8; 512]>;
+impl<const LENGTH: usize> VarCharArray<LENGTH> {
+    /// Indicates a missing value.
+    pub const NULL: Self = VarCharArray {
+        buffer: [0; LENGTH],
+        indicator: NULL_DATA,
+    };
 
-/// Wraps a slice so it can be used as an output parameter for character data.
-pub type VarCharMut<'a> = VarChar<&'a mut [u8]>;
-
-/// A mutable buffer for character data which can be used as either input parameter or output
-/// buffer. It can not be used for columnar bulk fetches, but if the buffer type is stack allocated
-/// in can be utilized in row wise bulk fetches.
-///
-/// This type is very similar to [`self::VarCharRef`] and indeed it can perform many of the same
-/// tasks, since [`self::VarCharRef`] is exclusive used as an input parameter though it must not
-/// account for a terminating zero at the end of the buffer.
-#[derive(Debug, Clone, Copy)]
-pub struct VarChar<B> {
-    buffer: B,
-    indicator: isize,
+    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated and a
+    /// a terminating zero is placed at the end.
+    pub fn new(text: &[u8]) -> Self {
+        let indicator = text.len().try_into().unwrap();
+        let mut buffer = [0u8; LENGTH];
+        if text.len() > LENGTH {
+            buffer.copy_from_slice(&text[..LENGTH]);
+        } else {
+            buffer[..text.len()].copy_from_slice(text);
+        };
+        Self { indicator, buffer }
+    }
 }
 
 impl<B> VarChar<B>
 where
-    B: BorrowMut<[u8]>,
+    B: Borrow<[u8]>,
 {
-    /// Creates a new instance. It takes ownership of the buffer. The indicator tells us up to which
-    /// position the buffer is filled. Pass `None` for the indicator to create a value representing
-    /// `NULL`. The constructor will write a terminating zero after the end of the valid sequence in
-    /// the buffer.
-    pub fn from_buffer(mut buffer: B, indicator: Option<usize>) -> Self {
-        if let Some(indicator) = indicator {
-            // Insert terminating zero
-            buffer.borrow_mut()[indicator + 1] = 0;
-            let indicator: isize = indicator.try_into().unwrap();
-            VarChar { buffer, indicator }
-        } else {
-            VarChar {
-                buffer,
-                indicator: NULL_DATA,
+    /// Creates a new instance from an existing buffer. Shoud the indicator be `NoTotal` or indicate
+    /// a length longer than buffer, the last element in the buffer must be nul (`\0`).
+    pub fn from_buffer(buffer: B, indicator: Indicator) -> Self {
+        let buf = buffer.borrow();
+        match indicator {
+            Indicator::Null => (),
+            Indicator::NoTotal => {
+                if buf.is_empty() || *buf.last().unwrap() != 0 {
+                    panic!("Truncated value must be terminated with zero.")
+                }
             }
+            Indicator::Length(len) => {
+                if len > buf.len() && (buf.is_empty() || *buf.last().unwrap() != 0) {
+                    panic!("Truncated value must be terminated with zero.")
+                }
+            }
+        };
+        Self {
+            buffer,
+            indicator: indicator.to_isize(),
         }
     }
 
-    /// Construct a new VarChar and copy the value of the slice into the internal buffer. `None`
-    /// indicates `NULL`.
-    pub fn copy_from_bytes(bytes: Option<&[u8]>) -> Self
-    where
-        B: Default,
-    {
-        let mut buffer = B::default();
-        if let Some(bytes) = bytes {
-            let slice = buffer.borrow_mut();
-            if bytes.len() > slice.len() - 1 {
-                panic!("Value is to large to be stored in a VarChar512");
-            }
-            slice[..bytes.len()].copy_from_slice(bytes);
-            Self::from_buffer(buffer, Some(bytes.len()))
-        } else {
-            Self::from_buffer(buffer, None)
-        }
-    }
-
-    /// Returns the binary representation of the string, excluding the terminating zero.
+    /// Returns the binary representation of the string, excluding the terminating zero or `None` in
+    /// case the indicator is `NULL_DATA`.
     pub fn as_bytes(&self) -> Option<&[u8]> {
         let slice = self.buffer.borrow();
-        let max: isize = slice.len().try_into().unwrap();
-        match self.indicator {
-            NULL_DATA => None,
-            complete if complete < max => Some(&slice[..(self.indicator as usize)]),
-            // This case includes both: indicators larger than max and `NO_TOTAL`
-            _ => Some(&slice[..(slice.len() - 1)]),
+        match self.indicator() {
+            Indicator::Null => None,
+            Indicator::NoTotal => Some(&slice[..(slice.len() - 1)]),
+            Indicator::Length(len) => {
+                if self.is_complete() {
+                    Some(&slice[..len])
+                } else {
+                    Some(&slice[..(slice.len() - 1)])
+                }
+            }
         }
     }
 
@@ -177,13 +162,13 @@ where
     /// method is false to read all the data.
     ///
     /// ```
-    /// use odbc_api::{CursorRow, parameter::VarChar512, Error, handles::Statement};
+    /// use odbc_api::{CursorRow, parameter::VarCharArray, Error, handles::Statement};
     ///
     /// fn process_large_text<S: Statement>(
     ///     col_index: u16,
     ///     row: &mut CursorRow<S>
     /// ) -> Result<(), Error>{
-    ///     let mut buf = VarChar512::from_buffer([0;512], None);
+    ///     let mut buf = VarCharArray::<512>::NULL;
     ///     row.get_data(col_index, &mut buf)?;
     ///     while !buf.is_complete() {
     ///         // Process bytes in stream without allocation. We can assume repeated calls to
@@ -197,12 +182,12 @@ where
     ///
     /// ```
     pub fn is_complete(&self) -> bool {
-        match self.indicator {
-            NULL_DATA => true,
-            NO_TOTAL => false,
-            other => {
-                let other: usize = other.try_into().unwrap();
-                other < self.buffer.borrow().len()
+        let slice = self.buffer.borrow();
+        match self.indicator() {
+            Indicator::Null => true,
+            Indicator::NoTotal => false,
+            Indicator::Length(len) => {
+                len < slice.len() || slice.is_empty() || *slice.last().unwrap() != 0
             }
         }
     }
@@ -212,8 +197,24 @@ where
     /// may also be `NULL_DATA` to indicate `NULL` or `NO_TOTAL` which tells us the data source
     /// does not know how big the buffer must be to hold the complete value. `NO_TOTAL` implies that
     /// the content of the current buffer is valid up to its maximum capacity.
-    pub fn indicator(&self) -> isize {
-        self.indicator
+    pub fn indicator(&self) -> Indicator {
+        Indicator::from_isize(self.indicator)
+    }
+}
+
+impl<B> VarChar<B>
+where
+    B: Borrow<[u8]>,
+{
+    /// Call this method to reset the indicator to a value which matches the length returned by the
+    /// [`Self::bytes`] method. This is useful if you want to insert values into the database
+    /// despite the fact, that they might have been truncated. Otherwise the behaviour of databases
+    /// in this situation is driver specific. Some drivers insert up to the terminating zero, others
+    /// detect the truncation and throw an error.
+    pub fn hide_truncation(&mut self) {
+        if !self.is_complete() {
+            self.indicator = (self.buffer.borrow().len() - 1).try_into().unwrap();
+        }
     }
 }
 
@@ -246,9 +247,10 @@ where
     B: Borrow<[u8]>,
 {
     fn data_type(&self) -> DataType {
-        // Buffer length minus 1 for terminating zero
+        // Since we might use as an input buffer, we report the full buffer length in the type and
+        // do not deduct 1 for the terminating zero.
         DataType::Varchar {
-            length: self.buffer.borrow().len() - 1,
+            length: self.buffer.borrow().len(),
         }
     }
 }
@@ -271,25 +273,10 @@ where
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
 
-unsafe impl Output for VarChar512 {}
-unsafe impl InputParameter for VarChar512 {}
+unsafe impl InputParameter for VarCharSlice<'_> {}
 
-unsafe impl Output for VarChar32 {}
-unsafe impl InputParameter for VarChar32 {}
+unsafe impl<const LENGTH: usize> Output for VarCharArray<LENGTH> {}
+unsafe impl<const LENGTH: usize> InputParameter for VarCharArray<LENGTH> {}
 
-unsafe impl<'a> Output for VarCharMut<'a> {}
-unsafe impl<'a> InputParameter for VarCharMut<'a> {}
-
-// For completeness sake. VarCharRef will do the same job slightly better though.
-unsafe impl<'a> InputParameter for VarChar<&'a [u8]> {}
-
-#[cfg(test)]
-mod tests {
-    use super::VarChar;
-
-    #[test]
-    #[should_panic]
-    fn construct_to_large_varchar_512() {
-        VarChar::<[u8; 32]>::copy_from_bytes(Some(&vec![b'a'; 32]));
-    }
-}
+unsafe impl<'a> Output for VarCharSliceMut<'a> {}
+unsafe impl<'a> InputParameter for VarCharSliceMut<'a> {}

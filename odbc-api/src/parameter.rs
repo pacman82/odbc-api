@@ -225,7 +225,7 @@
 //! types.
 mod varchar;
 
-pub use self::varchar::{VarChar, VarChar32, VarChar512, VarCharMut, VarCharSlice};
+pub use self::varchar::{VarChar, VarCharArray, VarCharSliceMut, VarCharSlice};
 
 use std::ffi::c_void;
 

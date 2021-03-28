@@ -39,7 +39,7 @@ impl<'a> IntoParameter for Option<&'a str> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            None => VarCharSlice::null(),
+            None => VarCharSlice::NULL,
         }
     }
 }

@@ -2,7 +2,13 @@
 
 ## 0.20.0
 
+* Required at least Rust 1.51.0 to compile.
 * Replaced `VarCharRef` with `VarCharSlice`.
+* Replaced `VarChar32` and `VarChar512` with `VarCharArray<LENGTH>`.
+* Replaced `VarCharMut` with `VarCharSliceMut`.
+* `VarChar::copy_from_bytes` has been removed. Try constructing with `new`, `from_buffer` or using `NULL` instead.
+* `VarChar::indicator()` now returns an `Indicator` instead of an `isize`.
+* Replaced `VarCharRef::null()` with `VarCharSlice::NULL`.
 
 ## 0.19.6
 
@@ -10,7 +16,7 @@
 
 ## 0.19.5
 
-* Fix: `BinColumnWriter::append` erroneously inserted a terminating zero at the end of the value.
+* Fix: `BinColumnWriter::append` erroneously inse`rted a terminating zero at the end of the value.
 
 ## 0.19.4
 
