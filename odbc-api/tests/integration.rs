@@ -1348,13 +1348,15 @@ fn parameter_option_str(connection_string: &str) {
     let mut prepared = conn.prepare(sql).unwrap();
     prepared.execute(&None::<&str>.into_parameter()).unwrap();
     prepared.execute(&Some("Bernd").into_parameter()).unwrap();
+    prepared.execute(&None::<String>.into_parameter()).unwrap();
+    prepared.execute(&Some("Hello".to_string()).into_parameter()).unwrap();
 
     let cursor = conn
         .execute("SELECT a FROM ParameterOptionStr ORDER BY id", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
-    let expected = "NULL\nBernd";
+    let expected = "NULL\nBernd\nNULL\nHello";
     assert_eq!(expected, actual);
 }
 
