@@ -12,7 +12,7 @@ use odbc_api::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
     },
-    parameter::VarCharArray,
+    parameter::{VarCharArray, VarCharSlice},
     ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -2022,6 +2022,45 @@ fn use_truncated_output_as_input(profile: &Profile) {
 
     let actual = table_to_string(&conn, table_name, &["a"]);
     assert_eq!("Hello, World!\nHell", actual);
+}
+
+/// Verify that the driver does not insert from invalid memory if inserting a truncated value
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn insert_truncated_value(profile: &Profile) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    let table_name = "InsertedTruncatedValue";
+
+    // Prepare table content
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(13)"]).unwrap();
+
+    let memory = "Hello\0INVALID MEMORY\0";
+    // Contains hello plus terminating zero.
+    let valid = &memory.as_bytes()[..6];
+    // Truncated value.
+    let parameter = VarCharSlice::from_buffer(valid, Indicator::Length(memory.len()));
+    let result = conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+        &parameter,
+    );
+
+    match result {
+        Err(e) => {
+            // Failing is fine, especially with an error indicating truncation.
+            eprintln!("{}", e)
+        }
+        Ok(None) => {
+            // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
+            // the database. The better database drivers do not do this, and this could be seen as
+            // wrong, but we are only interessted in unsafe behaviour.
+            let actual = table_to_string(&conn, table_name, &["a"]);
+            assert_eq!("Hello", actual)
+        }
+        _ => panic!("Unexpected cursor")
+    }
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
