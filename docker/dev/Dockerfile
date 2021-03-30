@@ -1,6 +1,8 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.148.0/containers/rust/.devcontainer/base.Dockerfile
+# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.163.1/containers/debian/.devcontainer/base.Dockerfile
 
-FROM mcr.microsoft.com/vscode/devcontainers/rust:0-1
+# [Choice] Debian version: buster, stretch
+ARG VARIANT="buster"
+FROM mcr.microsoft.com/vscode/devcontainers/base:0-${VARIANT}
 
 # Install Microsoft ODBC SQL Drivers (msodbcsql17 package) for Debian 10
 # https://docs.microsoft.com/de-de/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver15
@@ -8,10 +10,22 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
 RUN curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list
 RUN echo msodbcsql17 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections
 
-# [Optional] Uncomment this section to install additional packages.
+# This section to installs additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends unixodbc-dev msodbcsql17 sqlite3 libsqliteodbc
+    && apt-get -y install --no-install-recommends \
+    build-essential \
+    unixodbc-dev \
+    msodbcsql17 \
+    sqlite3 \
+    libsqliteodbc
 
 # Fix SQLite driver paths
 RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
 RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
+
+# Setup cargo and install cargo packages required for tests
+USER vscode
+
+# There is also a rust devcontainer, yet this way we get a toolchain
+# which is updatable with rustup.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
