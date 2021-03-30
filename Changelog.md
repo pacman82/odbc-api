@@ -1,5 +1,10 @@
 # Changelog
 
+## Next
+
+* Test are now also executed against Maria DB
+* Add `BufferDescription::bytes_per_row`.
+
 ## 0.20.0
 
 * Required at least Rust 1.51.0 to compile.

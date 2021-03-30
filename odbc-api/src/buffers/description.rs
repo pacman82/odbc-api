@@ -1,4 +1,8 @@
-use crate::DataType;
+use std::mem::size_of;
+
+use odbc_sys::{Date, Time, Timestamp};
+
+use crate::{Bit, DataType};
 
 /// Used to describe a column of a [`crate::buffers::ColumnarRowSet`].
 ///
@@ -16,6 +20,31 @@ pub struct BufferDescription {
     pub nullable: bool,
     /// The type of CData the buffer will be holding.
     pub kind: BufferKind,
+}
+
+impl BufferDescription {
+    /// Returns the element size of such a buffer if bound as a columnar row. Can be used to
+    /// estimate memory for columnar bindings.
+    pub fn bytes_per_row(&self) -> usize {
+        let indicator = size_of::<isize>();
+        let opt_indicator = if self.nullable { indicator } else { 0 };
+        match self.kind {
+            BufferKind::Binary { length } => length + indicator,
+            BufferKind::Text { max_str_len } => max_str_len + 1 + indicator,
+            BufferKind::WText { max_str_len } => { (max_str_len + 1) * 2 + indicator}
+            BufferKind::F64 => size_of::<f64>() + opt_indicator,
+            BufferKind::F32 => size_of::<f32>() + opt_indicator,
+            BufferKind::Date => size_of::<Date>() + opt_indicator,
+            BufferKind::Time => size_of::<Time>() + opt_indicator,
+            BufferKind::Timestamp => size_of::<Timestamp>() + opt_indicator,
+            BufferKind::I8 => size_of::<i8>() + opt_indicator,
+            BufferKind::I16 => size_of::<i16>() + opt_indicator,
+            BufferKind::I32 => size_of::<i32>() + opt_indicator,
+            BufferKind::I64 => size_of::<i64>() + opt_indicator,
+            BufferKind::U8 => size_of::<u8>() + opt_indicator,
+            BufferKind::Bit => size_of::<Bit>() + opt_indicator,
+        }
+    }
 }
 
 /// This class is used together with [`crate::buffers::BufferDescription`] to specify the layout of
@@ -175,5 +204,38 @@ impl BufferKind {
             | DataType::Time { precision: _ } => BufferKind::Text { max_str_len: data_type.display_size().unwrap() },
         };
         Some(buffer_kind)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    #[cfg(target_pointer_width = "64")] // Indicator size is platform dependend.
+    fn bytes_per_row() {
+
+        let bpr = |kind, nullable| {
+            BufferDescription {
+                kind, nullable
+            }.bytes_per_row()
+        };
+
+        assert_eq!(5 + 8, bpr(BufferKind::Binary {length: 5 }, false));
+        assert_eq!(5 + 1 + 8, bpr(BufferKind::Text { max_str_len: 5 }, false));
+        assert_eq!(10 + 2 + 8, bpr(BufferKind::WText { max_str_len: 5 }, false));
+        assert_eq!(6, bpr(BufferKind::Date, false));
+        assert_eq!(6, bpr(BufferKind::Time, false));
+        assert_eq!(16, bpr(BufferKind::Timestamp, false));
+        assert_eq!(1, bpr(BufferKind::Bit, false));
+        assert_eq!(1 + 8, bpr(BufferKind::Bit, true));
+        assert_eq!(4, bpr(BufferKind::F32, false));
+        assert_eq!(8, bpr(BufferKind::F64, false));
+        assert_eq!(1, bpr(BufferKind::I8, false));
+        assert_eq!(2, bpr(BufferKind::I16, false));
+        assert_eq!(4, bpr(BufferKind::I32, false));
+        assert_eq!(8, bpr(BufferKind::I64, false));
+        assert_eq!(1, bpr(BufferKind::U8, false));
     }
 }
