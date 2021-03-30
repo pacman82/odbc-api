@@ -25,9 +25,7 @@ jobs:
       - name: Start databases in test containers
         run: docker-compose -f docker-compose.ci.yml up -d
       - name: Check running containers
-        run: docker ps -a  
-      - name: Check logs
-        run: docker logs odbc-api_mssql_1
+        run: docker ps -a
       - name: Install ODBC Drivers
         run: |
           curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
@@ -38,6 +36,7 @@ jobs:
           apt-get install -y sqlite3 libsqliteodbc
           sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
           sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
+          apt-get install -y odbc-mariadb
         shell: sudo bash {0}
       - name: Print odbcinst.ini
         run: cat /etc/odbcinst.ini
