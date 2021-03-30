@@ -100,8 +100,10 @@ jobs:
         run: docker-compose -f docker-compose.ci.yml up -d
       - name: Check running containers
         run: docker ps -a  
-      - name: Check logs
+      - name: Check logs MSSQL
         run: docker logs odbc-api_mssql_1
+      - name: Check logs Maria DB
+        run: docker logs odbc-api_mariadb_1
       # We currently test neither against SQLite nor PostgreSQL, but the time will come leave these
       # in for reference
       # - name: Install SQLite Driver
