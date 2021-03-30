@@ -3,7 +3,9 @@ mod common;
 use odbc_sys::{SqlDataType, Timestamp};
 use test_case::test_case;
 
-use common::{cursor_to_string, setup_empty_table, table_to_string, SingleColumnRowSetBuffer, ENV};
+use common::{
+    cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
+};
 
 use odbc_api::{
     buffers::{
@@ -16,13 +18,42 @@ use odbc_api::{
 };
 use std::{ffi::CString, iter, thread};
 
-const MSSQL: &str =
+const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
+const MSSQL: &Profile = &Profile {
+    connection_string: MSSQL_CONNECTION,
+    index_type: "int IDENTITY(1,1)",
+};
+
 #[cfg(target_os = "windows")]
-const SQLITE_3: &str = "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
+const SQLITE_3_CONNECTION: &str = "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
 #[cfg(not(target_os = "windows"))]
-const SQLITE_3: &str = "Driver={SQLite3};Database=sqlite-test.db";
+const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db";
+
+const SQLITE_3: &Profile = &Profile {
+    connection_string: SQLITE_3_CONNECTION,
+    index_type: "int IDENTITY(1,1)",
+};
+
+#[cfg(target_os = "windows")]
+const MARIADB_CONNECTION: &str = "Driver={MariaDB ODBC 3.1 Driver};\
+    Server=localhost;DB=test_db;\
+    UID=root;PWD=my-secret-pw;\
+    Port=3306";
+
+// Use 127.0.0.1 instead of localhost so the system uses the TCP/IP connector instead of the socket
+// connector. Prevents error message: 'Can't connect to local MySQL server through socket'.
+#[cfg(not(target_os = "windows"))]
+const MARIADB_CONNECTION: &str = "Driver={/usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so};\
+    Server=127.0.0.1;DB=test_db;\
+    UID=root;PWD=my-secret-pw;\
+    Port=3306";
+
+const MARIADB: &Profile = &Profile {
+    connection_string: MARIADB_CONNECTION,
+    index_type: "INTEGER AUTO_INCREMENT PRIMARY KEY",
+};
 
 /// Verify writer panics if too large elements are inserted into a binary column of ColumnarRowSet
 /// buffer.
@@ -66,14 +97,19 @@ fn bogus_connection_string() {
 
 #[test]
 fn connect_to_movies_db() {
-    let _conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let _conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
 }
 
 #[test]
 fn describe_columns() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
     setup_empty_table(
         &conn,
+        MSSQL.index_type,
         "DescribeColumns",
         &[
             "VARCHAR(255) NOT NULL",
@@ -158,7 +194,9 @@ fn describe_columns() {
 #[test]
 fn text_buffer() {
     let query = "SELECT title, year FROM Movies ORDER BY year;";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let cursor = conn.execute(query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
@@ -167,7 +205,9 @@ fn text_buffer() {
 
 #[test]
 fn column_attributes() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -185,7 +225,9 @@ fn column_attributes() {
 
 #[test]
 fn prices() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
@@ -223,14 +265,16 @@ fn prices() {
     assert_eq!(&[1, 2, 3], row_set_cursor.fetch().unwrap().unwrap().get());
 }
 
+/// Bind a CHAR column to a character buffer.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bind_char(connection_string: &str) {
+fn bind_char(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "BindChar";
-    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -244,14 +288,16 @@ fn bind_char(connection_string: &str) {
     assert_eq!(Some(&b"Hello"[..]), buf.value_at(0));
 }
 
+/// Bind a CHAR column to a wchar buffer
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bind_char_to_wchar(connection_string: &str) {
+fn bind_char_to_wchar(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "BindCharToWChar";
-    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -268,13 +314,14 @@ fn bind_char_to_wchar(connection_string: &str) {
 /// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
 /// `NO_TOTAL` on MSSQL.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn truncate_fixed_sized(connection_string: &str) {
+fn truncate_fixed_sized(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "TruncateFixedSized";
-    setup_empty_table(&conn, table_name, &["CHAR(5)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -288,14 +335,16 @@ fn truncate_fixed_sized(connection_string: &str) {
     assert_eq!(Some(&b"Hel"[..]), buf.value_at(0));
 }
 
+/// Bind a VARCHAR column to a char buffer.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bind_varchar(connection_string: &str) {
+fn bind_varchar(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "BindVarchar";
-    setup_empty_table(&conn, table_name, &["VARCHAR(100)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(100)"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -309,14 +358,16 @@ fn bind_varchar(connection_string: &str) {
     assert_eq!(Some(&b"Hello, World!"[..]), buf.value_at(0));
 }
 
+/// Bind a VARCHAR column to a wchar buffer
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bind_varchar_to_wchar(connection_string: &str) {
+fn bind_varchar_to_wchar(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "BindVarcharToWChar";
-    setup_empty_table(&conn, table_name, &["VARCHAR(100)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(100)"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -333,11 +384,21 @@ fn bind_varchar_to_wchar(connection_string: &str) {
     );
 }
 
-#[test]
-fn bind_numeric_to_float() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT my_numeric FROM AllTheTypes;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_numeric_to_float(profile: &Profile) {
+    // Setup table
+    let table_name = "BindNumericToFloat";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["NUMERIC(3,2)"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    conn.execute(&insert_sql, &1.23).unwrap();
+
+    let sql = format!("SELECT a FROM {}", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let buf = SingleColumnRowSetBuffer::new(1);
     let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
 
@@ -345,19 +406,24 @@ fn bind_numeric_to_float() {
 }
 
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
-#[test]
-fn columnar_fetch_varbinary() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] // Convert syntax is different
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_fetch_varbinary(profile: &Profile) {
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "ColumnarFetchVarbinary", &["VARBINARY(10)"]).unwrap();
-    conn.execute(
-        "INSERT INTO ColumnarFetchVarbinary (a) Values \
+    let table_name = "ColumnarFetchVarbinary";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARBINARY(10)"]).unwrap();
+    let insert_sql = format!(
+        "INSERT INTO {} (a) Values \
         (CONVERT(Varbinary(10), 'Hello')),\
         (CONVERT(Varbinary(10), 'World')),\
         (NULL)",
-        (),
-    )
-    .unwrap();
+        table_name
+    );
+    conn.execute(&insert_sql, ()).unwrap();
 
     // Retrieve values
     let cursor = conn
@@ -388,11 +454,21 @@ fn columnar_fetch_varbinary() {
 }
 
 /// Bind a columnar buffer to a BINARY(5) column and fetch data.
-#[test]
-fn columnar_fetch_binary() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] // different convert syntax
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_fetch_binary(profile: &Profile) {
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "ColumnarFetchBinary", &["BINARY(5)"]).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "ColumnarFetchBinary",
+        &["BINARY(5)"],
+    )
+    .unwrap();
     conn.execute(
         "INSERT INTO ColumnarFetchBinary (a) Values \
         (CONVERT(Binary(5), 'Hello')),\
@@ -432,14 +508,15 @@ fn columnar_fetch_binary() {
 
 /// Bind a columnar buffer to a DATETIME2 column and fetch data.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 #[test_case(SQLITE_3; "SQLite 3")]
-fn columnar_fetch_timestamp(connection_string: &str) {
+fn columnar_fetch_timestamp(profile: &Profile) {
     let table_name = "ColumnarFetchTimestamp";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2(3)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["DATETIME2(3)"]).unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {} (a) Values \
@@ -516,12 +593,16 @@ fn columnar_fetch_timestamp(connection_string: &str) {
 }
 
 /// Insert values into a DATETIME2 column using a columnar buffer
-#[test]
-fn columnar_insert_timestamp() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
+// #[test_case(SQLITE_3; "SQLite 3")] default precision of 3 instead 7
+fn columnar_insert_timestamp(profile: &Profile) {
     let table_name = "ColumnarInsertTimestamp";
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2"]).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["DATETIME2"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -569,11 +650,7 @@ fn columnar_insert_timestamp() {
     .unwrap();
 
     // Query values and compare with expectation
-    let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table_to_string(&conn, table_name, &["a"]);
     let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
     assert_eq!(expected, actual);
 }
@@ -581,14 +658,15 @@ fn columnar_insert_timestamp() {
 /// Insert values into a DATETIME2(3) column using a columnar buffer. Milliseconds precision is
 /// different from the default precision 7 (100ns).
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 #[test_case(SQLITE_3; "SQLite 3")]
-fn columnar_insert_timestamp_ms(connection_string: &str) {
+fn columnar_insert_timestamp_ms(profile: &Profile) {
     let table_name = "ColmunarInsertTimestampMs";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["DATETIME2(3)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["DATETIME2(3)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -646,11 +724,21 @@ fn columnar_insert_timestamp_ms(connection_string: &str) {
 }
 
 /// Insert values into a varbinary column using a columnar buffer
-#[test]
-fn columnar_insert_varbinary() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] different binary text representation
+// #[test_case(SQLITE_3; "SQLite 3")] different binary text representation
+fn columnar_insert_varbinary(profile: &Profile) {
     // Setup
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "ColumnarInsertVarbinary", &["VARBINARY(13)"]).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "ColumnarInsertVarbinary",
+        &["VARBINARY(13)"],
+    )
+    .unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -696,14 +784,15 @@ fn columnar_insert_varbinary() {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn columnar_insert_varchar(connection_string: &str) {
+fn columnar_insert_varchar(profile: &Profile) {
     let table_name = "ColumnarInsertVarchar";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -751,14 +840,15 @@ fn columnar_insert_varchar(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn adaptive_columnar_insert_varchar(connection_string: &str) {
+fn adaptive_columnar_insert_varchar(profile: &Profile) {
     let table_name = "AdaptiveColumnarInsertVarchar";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -807,13 +897,13 @@ fn adaptive_columnar_insert_varchar(connection_string: &str) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(SQLITE_3; "SQLite 3")]
-fn adaptive_columnar_insert_varbin(connection_string: &str) {
+fn adaptive_columnar_insert_varbin(profile: &Profile) {
     let table_name = "AdaptiveColumnarInsertVarbin";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARBINARY(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARBINARY(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -861,14 +951,15 @@ fn adaptive_columnar_insert_varbin(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn columnar_insert_wide_varchar(connection_string: &str) {
+fn columnar_insert_wide_varchar(profile: &Profile) {
     let table_name = "ColumnarInsertWideVarchar";
     // Setup
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["NVARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["NVARCHAR(13)"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -920,7 +1011,9 @@ fn columnar_insert_wide_varchar(connection_string: &str) {
 
 #[test]
 fn bind_integer_parameter() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn.execute(sql, &1968).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
@@ -934,53 +1027,73 @@ fn bind_integer_parameter() {
 
 /// Learning test. Insert a string ending with \0. Not a terminating zero, but the payload ending
 /// itself having zero as the last element.
-#[test]
-fn insert_string_ending_with_nul() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] SQLite only cares for terminating zero, not the indicator
+fn insert_string_ending_with_nul(profile: &Profile) {
     let table_name = "InsertStringEndingWithNul";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(10)"]).unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES(?)", table_name);
     let param = "Hell\0";
-    let result = conn.execute(&sql, &param.into_parameter());
-    assert!(result.is_err());
+    conn.execute(&sql, &param.into_parameter()).unwrap();
 
-    // This actually won't work as MSSQL is going to suspect that the values have been truncated.
-    // While MSSQL is actually ok with interier nuls, but this value is indistinguishable from a
-    // Hello, which would have been truncated due to buffer size.
-
-    // let actual = table_to_string(&conn, table_name);
-    // assert_eq!("Hell\0", actual);
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    assert_eq!("Hell\0", actual);
 }
 
-#[test]
-fn prepared_statement() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn prepared_statement(profile: &Profile) {
+    // Setup
+    let table_name = "PreparedStatement";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["VARCHAR(13)", "INTEGER"],
+    )
+    .unwrap();
+    let insert = format!(
+        "INSERT INTO {} (a,b) VALUES ('First', 1), ('Second', 2);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
     // Prepare the statement once
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    let sql = "SELECT title FROM Movies where year=?;";
-    let mut prepared = conn.prepare(sql).unwrap();
+    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
 
     // Execute it two times with different parameters
     {
-        let cursor = prepared.execute(&1968).unwrap().unwrap();
+        let cursor = prepared.execute(&1).unwrap().unwrap();
         let title = cursor_to_string(cursor);
-        assert_eq!("2001: A Space Odyssey", title);
+        assert_eq!("First", title);
     }
 
     {
-        let cursor = prepared.execute(&1993).unwrap().unwrap();
+        let cursor = prepared.execute(&2).unwrap().unwrap();
         let title = cursor_to_string(cursor);
-        assert_eq!("Jurassic Park", title);
+        assert_eq!("Second", title);
     }
 }
 
 /// Reuse a preallocated handle, two times in a row.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn preallocated(connection_string: &str) {
+fn preallocated(profile: &Profile) {
     // Prepare the statement once
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "Preallocated", &["VARCHAR(10)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, "Preallocated", &["VARCHAR(10)"]).unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
     // Execute it two statements in a row. One INSERT, one SELECT.
@@ -1005,13 +1118,20 @@ fn preallocated(connection_string: &str) {
 /// Reuse a preallocated handle. Verify that columns bound to the statement during a previous
 /// execution are not dereferenced during a second one.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn preallocation_soundness(connection_string: &str) {
+fn preallocation_soundness(profile: &Profile) {
     // Prepare the statement once
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "PreallocationSoundness", &["VARCHAR(10)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "PreallocationSoundness",
+        &["VARCHAR(10)"],
+    )
+    .unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
     {
@@ -1049,7 +1169,9 @@ fn preallocation_soundness(connection_string: &str) {
 
 #[test]
 fn integer_parameter_as_string() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
         .execute(sql, &"1968".into_parameter())
@@ -1066,7 +1188,9 @@ fn integer_parameter_as_string() {
 
 #[test]
 fn parameter_option_integer_some() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
         .execute(sql, &Some(1968).into_parameter())
@@ -1083,7 +1207,9 @@ fn parameter_option_integer_some() {
 
 #[test]
 fn parameter_option_integer_none() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
         .execute(sql, &None::<i32>.into_parameter())
@@ -1096,15 +1222,16 @@ fn parameter_option_integer_none() {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite will work only if increasing length to VARCHAR(2).
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
-fn char(connection_string: &str) {
+fn non_ascii_char(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    let table_name = "Char";
+    let table_name = "NonAsciiChar";
 
-    setup_empty_table(&conn, table_name, &["VARCHAR(1)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(1)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
@@ -1119,14 +1246,15 @@ fn char(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn wchar(connection_string: &str) {
+fn wchar(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "WChar";
 
-    setup_empty_table(&conn, table_name, &["NVARCHAR(1)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["NVARCHAR(1)"]).unwrap();
 
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
@@ -1158,10 +1286,12 @@ fn wchar(connection_string: &str) {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn wchar_as_char() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
     // NVARCHAR(2) <- NVARCHAR(1) would be enough to held the character, but we de not allocate
     // enough memory on the client side to hold the entire string.
-    setup_empty_table(&conn, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
+    setup_empty_table(&conn, MSSQL.index_type, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
 
     conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ())
         .unwrap();
@@ -1174,7 +1304,9 @@ fn wchar_as_char() {
 
 #[test]
 fn two_parameters_in_tuple() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
     let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
     let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
@@ -1187,15 +1319,22 @@ fn two_parameters_in_tuple() {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn heterogenous_parameters_in_array(connection_string: &str) {
+fn heterogenous_parameters_in_array(profile: &Profile) {
     let table_name = "heterogenous_parameters_in_array";
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
 
     // Setup table
-    setup_empty_table(&conn, table_name, &["INTEGER", "VARCHAR(13)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["INTEGER", "VARCHAR(13)"],
+    )
+    .unwrap();
     let insert_sql = format!(
         "INSERT INTO {} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')",
         table_name
@@ -1213,7 +1352,9 @@ fn heterogenous_parameters_in_array(connection_string: &str) {
 
 #[test]
 fn column_names_iterator() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     let sql = "SELECT title, year FROM Movies;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
@@ -1226,12 +1367,19 @@ fn column_names_iterator() {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bulk_insert_with_text_buffer(connection_string: &str) {
+fn bulk_insert_with_text_buffer(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "BulkInsertWithTextBuffer", &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "BulkInsertWithTextBuffer",
+        &["VARCHAR(50)"],
+    )
+    .unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
@@ -1257,13 +1405,15 @@ fn bulk_insert_with_text_buffer(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn bulk_insert_with_columnar_buffer(connection_string: &str) {
+fn bulk_insert_with_columnar_buffer(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     setup_empty_table(
         &conn,
+        profile.index_type,
         "BulkInsertWithColumnarBuffer",
         &["VARCHAR(50)", "INTEGER"],
     )
@@ -1323,33 +1473,50 @@ fn bulk_insert_with_columnar_buffer(connection_string: &str) {
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn send_connection() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn send_connection(profile: &Profile) {
+    let table_name = "SendConnection";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["INTEGER"]).unwrap();
+
+    // Insert in one thread, query in another, using the same connection.
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (1),(2),(3)", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
     let conn = unsafe { conn.promote_to_send() };
 
-    let handle = thread::spawn(move || {
-        conn.execute("SELECT title FROM Movies ORDER BY year", ())
-            .unwrap()
-            .unwrap();
-    });
+    let handle = thread::spawn(move || table_to_string(&conn, table_name, &["a"]));
 
-    handle.join().unwrap();
+    let actual = handle.join().unwrap();
+    assert_eq!("1\n2\n3", actual)
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn parameter_option_str(connection_string: &str) {
+fn parameter_option_str(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ParameterOptionStr", &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "ParameterOptionStr",
+        &["VARCHAR(50)"],
+    )
+    .unwrap();
     let sql = "INSERT INTO ParameterOptionStr (a) VALUES (?);";
     let mut prepared = conn.prepare(sql).unwrap();
     prepared.execute(&None::<&str>.into_parameter()).unwrap();
     prepared.execute(&Some("Bernd").into_parameter()).unwrap();
     prepared.execute(&None::<String>.into_parameter()).unwrap();
-    prepared.execute(&Some("Hello".to_string()).into_parameter()).unwrap();
+    prepared
+        .execute(&Some("Hello".to_string()).into_parameter())
+        .unwrap();
 
     let cursor = conn
         .execute("SELECT a FROM ParameterOptionStr ORDER BY id", ())
@@ -1361,13 +1528,14 @@ fn parameter_option_str(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn parameter_varchar_512(connection_string: &str) {
+fn parameter_varchar_512(profile: &Profile) {
     let table_name = "ParameterVarchar512";
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(50)"]).unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
 
@@ -1382,13 +1550,14 @@ fn parameter_varchar_512(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn parameter_cstr(connection_string: &str) {
+fn parameter_cstr(profile: &Profile) {
     let table_name = "ParameterCStr";
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(50)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(50)"]).unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
 
@@ -1403,12 +1572,19 @@ fn parameter_cstr(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn read_into_columnar_buffer(connection_string: &str) {
+fn read_into_columnar_buffer(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ReadIntoColumnarBuffer", &["INTEGER", "VARCHAR(20)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "ReadIntoColumnarBuffer",
+        &["INTEGER", "VARCHAR(20)"],
+    )
+    .unwrap();
     conn.execute(
         "INSERT INTO ReadIntoColumnarBuffer (a, b) VALUES (42, 'Hello, World!')",
         (),
@@ -1453,13 +1629,15 @@ fn read_into_columnar_buffer(connection_string: &str) {
 /// In use cases there the user supplies the query it may be necessary to ignore one column then
 /// binding the buffers. This test constructs a result set with 3 columns and ignores the second
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn ignore_output_column(connection_string: &str) {
+fn ignore_output_column(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     setup_empty_table(
         &conn,
+        profile.index_type,
         "IgnoreOutputColumn",
         &["INTEGER", "INTEGER", "INTEGER"],
     )
@@ -1487,7 +1665,9 @@ fn output_parameter() {
     let mut ret = Nullable::<i32>::null();
     let mut param = Nullable::<i32>::new(7);
 
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     conn.execute("{? = call TestParam(?)}", (Out(&mut ret), &mut param))
         .unwrap();
 
@@ -1497,12 +1677,13 @@ fn output_parameter() {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn manual_commit_mode(connection_string: &str) {
+fn manual_commit_mode(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ManualCommitMode", &["INTEGER"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, "ManualCommitMode", &["INTEGER"]).unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
     conn.set_autocommit(false).unwrap();
@@ -1544,12 +1725,19 @@ fn manual_commit_mode(connection_string: &str) {
 /// This test checks the behaviour if a connections goes out of scope with a transaction still
 /// open.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn unfinished_transaction(connection_string: &str) {
+fn unfinished_transaction(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "UnfinishedTransaction", &["INTEGER"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "UnfinishedTransaction",
+        &["INTEGER"],
+    )
+    .unwrap();
 
     // Manual commit mode needs to be explicitly enabled, since autocommit mode is default.
     conn.set_autocommit(false).unwrap();
@@ -1560,10 +1748,14 @@ fn unfinished_transaction(connection_string: &str) {
 }
 
 /// Test behavior of strings with interior nul
-#[test]
-fn interior_nul() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    setup_empty_table(&conn, "InteriorNul", &["VARCHAR(10)"]).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn interior_nul(profile: &Profile) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, "InteriorNul", &["VARCHAR(10)"]).unwrap();
 
     conn.execute(
         "INSERT INTO InteriorNul (a) VALUES (?);",
@@ -1581,12 +1773,13 @@ fn interior_nul() {
 
 /// Use get_data to retrieve an integer
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn get_data_int(connection_string: &str) {
+fn get_data_int(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "GetDataInt", &["INTEGER"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, "GetDataInt", &["INTEGER"]).unwrap();
 
     conn.execute("INSERT INTO GetDataInt (a) VALUES (42)", ())
         .unwrap();
@@ -1608,12 +1801,13 @@ fn get_data_int(connection_string: &str) {
 
 /// Use get_data to retrieve a string
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn get_data_string(connection_string: &str) {
+fn get_data_string(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "GetDataString", &["Varchar(50)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, "GetDataString", &["Varchar(50)"]).unwrap();
 
     conn.execute(
         "INSERT INTO GetDataString (a) VALUES ('Hello, World!'), (NULL)",
@@ -1644,12 +1838,13 @@ fn get_data_string(connection_string: &str) {
 /// Test insertion and retrieving of large string values using get_data. Try to provoke
 /// `SQL_NO_TOTAL` as a return value in the indicator buffer.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
 // #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
-fn large_strings(connection_string: &str) {
+fn large_strings(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "LargeStrings", &["Varchar(max)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, "LargeStrings", &["Varchar(max)"]).unwrap();
 
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
 
@@ -1679,15 +1874,22 @@ fn large_strings(connection_string: &str) {
     assert_eq!(input, actual);
 }
 
-/// Test insertion and retrieving of large string values using get_data. Try to provoke
+/// Test insertion and retrieving of large string values using get_text. Try to provoke
 /// `SQL_NO_TOTAL` as a return value in the indicator buffer.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
 // #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
-fn large_strings_get_text(connection_string: &str) {
+fn large_strings_get_text(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "LargeStringsGetText", &["Varchar(max)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "LargeStringsGetText",
+        &["Varchar(max)"],
+    )
+    .unwrap();
 
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
 
@@ -1714,12 +1916,19 @@ fn large_strings_get_text(connection_string: &str) {
 /// shorten the vectors length if the capacity of the originally passed in vector had been larger
 /// than the retrieved string.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn short_strings_get_text(connection_string: &str) {
+fn short_strings_get_text(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, "ShortStringsGetText", &["Varchar(15)"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        "ShortStringsGetText",
+        &["Varchar(15)"],
+    )
+    .unwrap();
 
     conn.execute(
         "INSERT INTO ShortStringsGetText (a) VALUES ('Hello, World!')",
@@ -1744,15 +1953,16 @@ fn short_strings_get_text(connection_string: &str) {
 
 /// Demonstrates applying an upper limit to a text buffer and detecting truncation.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn capped_text_buffer(connection_string: &str) {
+fn capped_text_buffer(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "CappedTextBuffer";
 
     // Prepare table content
-    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(13)"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
         (),
@@ -1778,15 +1988,16 @@ fn capped_text_buffer(connection_string: &str) {
 
 /// Use a truncated varchar output as input.
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn use_truncated_output_as_input(connection_string: &str) {
+fn use_truncated_output_as_input(profile: &Profile) {
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
     let table_name = "UseTruncatedOutputAsInput";
 
     // Prepare table content
-    setup_empty_table(&conn, table_name, &["VARCHAR(13)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(13)"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
         (),
@@ -1814,13 +2025,20 @@ fn use_truncated_output_as_input(connection_string: &str) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn arbitrary_input_parameters(connection_string: &str) {
+fn arbitrary_input_parameters(profile: &Profile) {
     let table_name = "ArbitraryInputParameters";
     let conn = ENV
-        .connect_with_connection_string(connection_string)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(20)", "INTEGER"]).unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["VARCHAR(20)", "INTEGER"],
+    )
+    .unwrap();
 
     let insert_statement = format!("INSERT INTO {} (a, b) VALUES (?, ?);", table_name);
     let param_a: Box<dyn InputParameter> = Box::new("Hello, World!".to_string().into_parameter());
@@ -1839,11 +2057,14 @@ fn arbitrary_input_parameters(connection_string: &str) {
 #[test]
 #[ignore = "Runs for a very long time"]
 fn many_diagnostic_messages() {
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let table_name = "ManyDiagnosticMessages";
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
     // In order to generate a lot of diagnostic messages with one function call, we try a bulk
     // insert for which each row generates a warning.
     // Setup table
-    setup_empty_table(&conn, "ManyDiagnosticMessages", &["VARCHAR(2)"]).unwrap();
+    setup_empty_table(&conn, MSSQL.index_type, table_name, &["VARCHAR(2)"]).unwrap();
 
     // Incidentally our batch size is too large to be hold in an `i16`.
     let batch_size = 2 << 15;
@@ -1855,14 +2076,12 @@ fn many_diagnostic_messages() {
         buffer.append([Some(&b"ab"[..])].iter().cloned());
     }
 
-    conn.execute("INSERT INTO ManyDiagnosticMessages (a) VALUES (?)", &buffer)
-        .unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert_sql, &buffer).unwrap();
 
+    let query_sql = format!("SELECT a FROM {}", table_name);
     buffer = TextRowSet::new(batch_size, iter::once(1));
-    let cursor = conn
-        .execute("SELECT a FROM ManyDiagnosticMessages", ())
-        .unwrap()
-        .unwrap();
+    let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
 
     // This should cause the string to be truncated, since they are 2 letters wide, but there is

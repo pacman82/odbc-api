@@ -20,13 +20,13 @@ With docker and the SQL Driver installed run:
 docker-compose up
 ```
 
-This starts two containers called `odbc-api_dev` and `odbc-api_mssql`. You can use the `dev` container to build your code and execute tests in case you do not want to install the required ODBC drivers and/or Rust toolchain on your local machine.
+This starts containers called `odbc-api_dev`, `odbc-api_mssql` and `odbc-api_mariadb`. You can use the `dev` container to build your code and execute tests in case you do not want to install the required ODBC drivers and/or Rust toolchain on your local machine.
 
 Otherwise you can install these requirements from here:
 
 * Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
 * [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
-* <https://rustup.rs/>
+* Maria DB ODBC Connectior
 
 The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
 
