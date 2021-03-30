@@ -11,9 +11,19 @@ lazy_static! {
     pub static ref ENV: Environment = unsafe { Environment::new().unwrap() };
 }
 
+/// Used to adapt test behaviour to different drivers and datasources
+#[derive(Clone, Copy, Debug)]
+pub struct Profile {
+    /// Connection string used to connect with the data source
+    pub connection_string: &'static str,
+    /// Type of the identity autoincrementing column, used to index the test tables.
+    pub index_type: &'static str,
+}
+
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
 pub fn setup_empty_table(
     conn: &Connection,
+    index_type: &str,
     table_name: &str,
     column_types: &[&str],
 ) -> Result<(), odbc_api::Error> {
@@ -28,8 +38,8 @@ pub fn setup_empty_table(
         .join(", ");
 
     let create_table = format!(
-        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
-        table_name, cols
+        "CREATE TABLE {} (id {},{});",
+        table_name, index_type, cols
     );
     conn.execute(&drop_table, ())?;
     conn.execute(&create_table, ())?;

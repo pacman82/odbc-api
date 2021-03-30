@@ -1,5 +1,13 @@
 services:
 
+  mariadb:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: my-secret-pw
+      MYSQL_DATABASE: test_db
+    ports:
+      - 3306:3306
+
   mssql:
     build: docker/mssql
     ports:
