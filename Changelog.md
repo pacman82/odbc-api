@@ -4,6 +4,7 @@
 
 * Test are now also executed against Maria DB
 * Add `BufferDescription::bytes_per_row`.
+* Add function `escape_attribute_value`.
 
 ## 0.20.0
 

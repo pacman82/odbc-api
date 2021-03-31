@@ -21,7 +21,7 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
-    connection::Connection,
+    connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverInfo, Environment},
     fixed_sized::Bit,

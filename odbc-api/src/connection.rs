@@ -4,7 +4,7 @@ use crate::{
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Preallocated, Prepared,
 };
-use std::thread::panicking;
+use std::{borrow::Cow, thread::panicking};
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
@@ -245,5 +245,54 @@ impl<'c> Connection<'c> {
     /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
     pub unsafe fn promote_to_send(self) -> force_send_sync::Send<Self> {
         force_send_sync::Send::new(self)
+    }
+}
+
+/// You can use this method to escape a password so it is suitable to be apended to an ODBC
+/// connection string as the value for the `PWD` attribute. This method is only of interest for
+/// need to create their own connection strings.
+///
+/// See: <https://stackoverflow.com/questions/22398212/escape-semicolon-in-odbc-connection-string-in-app-config-file>
+///
+/// # Example
+///
+/// ```
+/// use odbc_api::escape_attribute_value;
+///
+/// let password = "abc;123}";
+/// let user = "SA";
+/// let mut connection_string_without_credentials =
+///     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+///
+/// let connection_string = format!(
+///     "{}UID={};PWD={};",
+///     connection_string_without_credentials,
+///     user,
+///     escape_attribute_value(password)
+/// );
+///
+/// assert_eq!(
+///     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD={abc;123}}};",
+///     connection_string
+/// );
+/// ```
+///
+/// ```
+/// use odbc_api::escape_attribute_value;
+/// assert_eq!("abc", escape_attribute_value("abc"));
+/// assert_eq!("ab}c", escape_attribute_value("ab}c"));
+/// assert_eq!("{ab;c}", escape_attribute_value("ab;c"));
+/// assert_eq!("{a}}b;c}", escape_attribute_value("a}b;c"));
+/// ```
+pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
+    // Search the string for semicolon (';') if we do not find any, nothing is to do and we can work
+    // without an extra allocation.
+    if unescaped.contains(';') {
+        // Souround the string with curly braces ('{','}') and escape every closing curly brace by
+        // repeating it.
+        let escaped = unescaped.replace("}", "}}");
+        Cow::Owned(format!("{{{}}}", escaped))
+    } else {
+        Cow::Borrowed(unescaped)
     }
 }
