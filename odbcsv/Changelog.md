@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.24
+
+* Command line parameters `user` and `password` will no longer be ignored then passed toegther with a connection string. Instead their values will be appended as `UID` and `PWD` attributes at the end.
+
 ## 0.3.23
 
 * Update dependencies

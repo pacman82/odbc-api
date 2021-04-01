@@ -27,6 +27,19 @@ odbcsv query \
 "SELECT title, year from Movies"
 ```
 
+### Specify user and password independently
+
+```shell
+odbcsv query \
+--output query.csv \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;" \
+--user "SA" \
+--password "<YourStrong@Passw0rd>" \
+"SELECT title, year from Movies"
+```
+
+Alternatively you may also specify the `ODBC_USER` and `ODBC_PASSWORD` environment variabl.
+
 ### Query using data source name
 
 ```bash

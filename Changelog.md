@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.20.1
 
 * Test are now also executed against Maria DB
 * Add `BufferDescription::bytes_per_row`.

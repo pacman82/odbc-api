@@ -1,6 +1,6 @@
 use anyhow::{bail, Error};
 use log::info;
-use odbc_api::{buffers::TextRowSet, Connection, Cursor, Environment, IntoParameter};
+use odbc_api::{Connection, Cursor, Environment, IntoParameter, buffers::TextRowSet, escape_attribute_value};
 use std::{
     fs::File,
     io::{stdin, stdout, Read, Write},
@@ -48,11 +48,14 @@ struct ConnectOpts {
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
     #[structopt(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
-    /// User used to access the datasource specified in dsn.
+    /// User used to access the datasource specified in dsn. Should you specify a connection string
+    /// instead of a Data Source Name the user name is going to be appended at the end of it as the
+    /// `UID` attribute.
     #[structopt(long, short = "u", env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
-    /// connection string.
+    /// connection string. Should you specify a Connection string instead of a Data Source Name the
+    /// password is going to be appended at the end of it as the `PWD` attribute.
     #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
@@ -175,11 +178,21 @@ fn open_connection<'e>(
             opt.password.as_deref().unwrap_or(""),
         )
     } else {
-        environment.connect_with_connection_string(
-            opt.connection_string
-                .as_deref()
-                .expect("Connection string must be specified, if dsn is not."),
-        )
+        let connection_string = opt
+            .connection_string
+            .as_deref()
+            .expect("Connection string must be specified, if dsn is not.");
+
+        // Append user and or password to connecction string
+        let mut cs = connection_string.to_owned();
+        if let Some(uid) = opt.user.as_deref() {
+            cs = format!("{}UID={};",cs, &escape_attribute_value(uid));
+        }
+        if let Some(pwd) = opt.password.as_deref() {
+            cs = format!("{}PWD={};",cs, &escape_attribute_value(pwd));
+        }
+
+        environment.connect_with_connection_string(&cs)
     }
 }
 

@@ -67,6 +67,37 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
         .stdout(csv)
 }
 
+/// Query MSSQL database, yet do not specify username and password in the connection string, but
+/// pass them as seperate command line options.
+#[test]
+fn append_user_and_password_to_connection_string() {
+    // Connection string without user name and password.
+    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+
+    let csv = "title,year\n\
+        Jurassic Park,1993\n\
+        2001: A Space Odyssey,1968\n\
+        Interstellar,\n\
+    ";
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--connection-string",
+            connection_string,
+            "--user",
+            "SA",
+            "--password",
+            "<YourStrong@Passw0rd>",
+            "SELECT title, year from Movies",
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
+
 #[test]
 fn query_mssql() {
     let csv = "title,year\n\
