@@ -27,7 +27,7 @@ macro_rules! impl_parameters_for_tuple{
                 1
             }
 
-            unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl) -> Result<(), Error> {
+            unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
                 let ($($t,)*) = self;
                 impl_bind_parameters!(0, stmt $($t)*)
             }

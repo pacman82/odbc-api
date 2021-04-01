@@ -2,7 +2,7 @@ use std::{collections::HashSet, ffi::c_void};
 
 use crate::{
     fixed_sized::Bit,
-    handles::{CData, CDataMut, HasDataType, Statement},
+    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
     Cursor, DataType, Error, ParameterCollection, RowSetBuffer,
 };
 
@@ -306,7 +306,7 @@ impl AnyColumnBuffer {
         }
     }
 
-    pub unsafe fn view(&self, num_rows: usize) -> AnyColumnView {
+    pub unsafe fn view(&self, num_rows: usize) -> AnyColumnView<'_> {
         match self {
             AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.iter(num_rows)),
             AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.iter(num_rows)),
@@ -338,7 +338,7 @@ impl AnyColumnBuffer {
         }
     }
 
-    pub unsafe fn view_mut(&mut self, num_rows: usize) -> AnyColumnViewMut {
+    pub unsafe fn view_mut(&mut self, num_rows: usize) -> AnyColumnViewMut<'_> {
         match self {
             AnyColumnBuffer::Text(col) => AnyColumnViewMut::Text(col.writer_n(num_rows)),
             AnyColumnBuffer::WText(col) => AnyColumnViewMut::WText(col.writer_n(num_rows)),
@@ -594,7 +594,7 @@ impl ColumnarRowSet {
     ///     Ok(())
     /// }
     /// ```
-    pub fn column_mut(&mut self, buffer_index: usize) -> AnyColumnViewMut {
+    pub fn column_mut(&mut self, buffer_index: usize) -> AnyColumnViewMut<'_> {
         unsafe { self.columns[buffer_index].1.view_mut(*self.num_rows) }
     }
 
@@ -648,10 +648,7 @@ unsafe impl ParameterCollection for &ColumnarRowSet {
         *self.num_rows as u32
     }
 
-    unsafe fn bind_parameters_to(
-        self,
-        stmt: &mut crate::handles::StatementImpl,
-    ) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         for &(parameter_number, ref buffer) in &self.columns {
             stmt.bind_input_parameter(parameter_number, buffer)?;
         }

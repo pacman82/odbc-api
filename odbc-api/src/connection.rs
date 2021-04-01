@@ -60,7 +60,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &U16Str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<StatementImpl>>, Error> {
+    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
         let lazy_statement = move || self.connection.allocate_statement();
         execute_with_parameters(lazy_statement, Some(query), params)
     }
@@ -102,7 +102,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<StatementImpl>>, Error> {
+    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }
@@ -114,7 +114,7 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
-    pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared, Error> {
+    pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared<'_>, Error> {
         let mut stmt = self.connection.allocate_statement()?;
         stmt.prepare(query)?;
         Ok(Prepared::new(stmt))
@@ -127,7 +127,7 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
-    pub fn prepare(&self, query: &str) -> Result<Prepared, Error> {
+    pub fn prepare(&self, query: &str) -> Result<Prepared<'_>, Error> {
         let query = U16String::from_str(query);
         self.prepare_utf16(&query)
     }
@@ -162,7 +162,7 @@ impl<'c> Connection<'c> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn preallocate(&self) -> Result<Preallocated, Error> {
+    pub fn preallocate(&self) -> Result<Preallocated<'_>, Error> {
         let stmt = self.connection.allocate_statement()?;
         Ok(Preallocated::new(stmt))
     }

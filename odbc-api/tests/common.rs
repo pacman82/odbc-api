@@ -22,7 +22,7 @@ pub struct Profile {
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
 pub fn setup_empty_table(
-    conn: &Connection,
+    conn: &Connection<'_>,
     index_type: &str,
     table_name: &str,
     column_types: &[&str],
@@ -44,7 +44,7 @@ pub fn setup_empty_table(
 }
 
 /// Query the table and prints it contents to a string
-pub fn table_to_string(conn: &Connection, table_name: &str, column_names: &[&str]) -> String {
+pub fn table_to_string(conn: &Connection<'_>, table_name: &str, column_names: &[&str]) -> String {
     let cols = column_names.join(", ");
     let query = format!("SELECT {} FROM {}", cols, table_name);
     let cursor = conn.execute(&query, ()).unwrap().unwrap();

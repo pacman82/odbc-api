@@ -97,7 +97,7 @@ impl Environment {
     }
 
     /// Allocate a new connection handle. The `Connection` must not outlive the `Environment`.
-    pub fn allocate_connection(&self) -> Result<Connection, Error> {
+    pub fn allocate_connection(&self) -> Result<Connection<'_>, Error> {
         let mut handle = null_mut();
         unsafe {
             SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).into_result(self)?;

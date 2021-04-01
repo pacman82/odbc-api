@@ -156,7 +156,7 @@ impl Record {
 }
 
 impl fmt::Display for Record {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let state = U16CStr::from_slice_with_nul(&self.state);
 
         let message = U16Str::from_slice(&self.message);

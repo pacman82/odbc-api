@@ -207,7 +207,7 @@ impl<C> TextColumn<C> {
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt<C> {
+    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt<'_, C> {
         TextColumnIt {
             pos: 0,
             num_rows,

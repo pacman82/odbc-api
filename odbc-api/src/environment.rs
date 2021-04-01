@@ -72,7 +72,7 @@ impl Environment {
         data_source_name: &str,
         user: &str,
         pwd: &str,
-    ) -> Result<Connection, Error> {
+    ) -> Result<Connection<'_>, Error> {
         let data_source_name = U16String::from_str(data_source_name);
         let user = U16String::from_str(user);
         let pwd = U16String::from_str(pwd);
@@ -98,7 +98,7 @@ impl Environment {
         data_source_name: &U16Str,
         user: &U16Str,
         pwd: &U16Str,
-    ) -> Result<Connection, Error> {
+    ) -> Result<Connection<'_>, Error> {
         let mut connection = self.environment.allocate_connection()?;
         connection.connect(data_source_name, user, pwd)?;
         Ok(Connection::new(connection))
@@ -136,7 +136,7 @@ impl Environment {
     pub fn connect_with_connection_string(
         &self,
         connection_string: &str,
-    ) -> Result<Connection, Error> {
+    ) -> Result<Connection<'_>, Error> {
         let connection_string = U16String::from_str(connection_string);
         self.connect_with_connection_string_utf16(&connection_string)
     }
@@ -151,7 +151,7 @@ impl Environment {
     pub fn connect_with_connection_string_utf16(
         &self,
         connection_string: &U16Str,
-    ) -> Result<Connection, Error> {
+    ) -> Result<Connection<'_>, Error> {
         let mut connection = self.environment.allocate_connection()?;
         connection.connect_with_connection_string(connection_string)?;
         Ok(Connection::new(connection))

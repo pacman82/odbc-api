@@ -269,7 +269,7 @@ pub unsafe trait Parameter {
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut StatementImpl,
+        stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error>;
 }
 
@@ -281,7 +281,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut StatementImpl,
+        stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_input_parameter(parameter_number, self)
     }
@@ -295,7 +295,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut StatementImpl,
+        stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self)
     }
@@ -334,7 +334,7 @@ where
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut StatementImpl,
+        stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
     }

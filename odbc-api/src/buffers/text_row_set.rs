@@ -1,5 +1,8 @@
 use super::{text_column::TextColumn, Indicator};
-use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
+use crate::{
+    handles::{Statement, StatementImpl},
+    Cursor, Error, ParameterCollection, RowSetBuffer,
+};
 use std::{
     cmp::min,
     str::{from_utf8, Utf8Error},
@@ -255,10 +258,7 @@ unsafe impl ParameterCollection for &TextRowSet {
         *self.num_rows as u32
     }
 
-    unsafe fn bind_parameters_to(
-        self,
-        stmt: &mut crate::handles::StatementImpl,
-    ) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
             stmt.bind_input_parameter(parameter_number, column)?;

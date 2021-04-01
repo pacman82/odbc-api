@@ -80,7 +80,7 @@ pub unsafe trait ParameterCollection {
     /// Implementers should take care that the values bound by this method to the statement live at
     /// least for the Duration of `self`. The most straight forward way of achieving this is of
     /// course, to bind members.
-    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl) -> Result<(), Error>;
+    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error>;
 }
 
 unsafe impl<T> ParameterCollection for T
@@ -91,7 +91,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         self.bind_parameter(1, stmt)
     }
 }
@@ -104,7 +104,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
             stmt.bind_input_parameter(index as u16 + 1, parameter)?;
         }
