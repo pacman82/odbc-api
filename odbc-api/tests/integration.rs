@@ -2059,7 +2059,7 @@ fn insert_truncated_value(profile: &Profile) {
             let actual = table_to_string(&conn, table_name, &["a"]);
             assert_eq!("Hello", actual)
         }
-        _ => panic!("Unexpected cursor")
+        _ => panic!("Unexpected cursor"),
     }
 }
 

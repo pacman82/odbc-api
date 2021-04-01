@@ -31,7 +31,7 @@ impl BufferDescription {
         match self.kind {
             BufferKind::Binary { length } => length + indicator,
             BufferKind::Text { max_str_len } => max_str_len + 1 + indicator,
-            BufferKind::WText { max_str_len } => { (max_str_len + 1) * 2 + indicator}
+            BufferKind::WText { max_str_len } => (max_str_len + 1) * 2 + indicator,
             BufferKind::F64 => size_of::<f64>() + opt_indicator,
             BufferKind::F32 => size_of::<f32>() + opt_indicator,
             BufferKind::Date => size_of::<Date>() + opt_indicator,
@@ -215,14 +215,9 @@ mod tests {
     #[test]
     #[cfg(target_pointer_width = "64")] // Indicator size is platform dependend.
     fn bytes_per_row() {
+        let bpr = |kind, nullable| BufferDescription { kind, nullable }.bytes_per_row();
 
-        let bpr = |kind, nullable| {
-            BufferDescription {
-                kind, nullable
-            }.bytes_per_row()
-        };
-
-        assert_eq!(5 + 8, bpr(BufferKind::Binary {length: 5 }, false));
+        assert_eq!(5 + 8, bpr(BufferKind::Binary { length: 5 }, false));
         assert_eq!(5 + 1 + 8, bpr(BufferKind::Text { max_str_len: 5 }, false));
         assert_eq!(10 + 2 + 8, bpr(BufferKind::WText { max_str_len: 5 }, false));
         assert_eq!(6, bpr(BufferKind::Date, false));

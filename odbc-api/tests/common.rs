@@ -37,10 +37,7 @@ pub fn setup_empty_table(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let create_table = format!(
-        "CREATE TABLE {} (id {},{});",
-        table_name, index_type, cols
-    );
+    let create_table = format!("CREATE TABLE {} (id {},{});", table_name, index_type, cols);
     conn.execute(&drop_table, ())?;
     conn.execute(&create_table, ())?;
     Ok(())

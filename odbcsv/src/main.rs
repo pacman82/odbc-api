@@ -1,6 +1,8 @@
 use anyhow::{bail, Error};
 use log::info;
-use odbc_api::{Connection, Cursor, Environment, IntoParameter, buffers::TextRowSet, escape_attribute_value};
+use odbc_api::{
+    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, Environment, IntoParameter,
+};
 use std::{
     fs::File,
     io::{stdin, stdout, Read, Write},
@@ -186,10 +188,10 @@ fn open_connection<'e>(
         // Append user and or password to connecction string
         let mut cs = connection_string.to_owned();
         if let Some(uid) = opt.user.as_deref() {
-            cs = format!("{}UID={};",cs, &escape_attribute_value(uid));
+            cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
         }
         if let Some(pwd) = opt.password.as_deref() {
-            cs = format!("{}PWD={};",cs, &escape_attribute_value(pwd));
+            cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
         }
 
         environment.connect_with_connection_string(&cs)
