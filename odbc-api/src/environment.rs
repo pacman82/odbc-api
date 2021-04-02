@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap};
+use std::{cmp::max, collections::HashMap, sync::Mutex};
 
 use crate::{handles, Connection, Error};
 use odbc_sys::{AttrOdbcVersion, FetchOrientation};
@@ -17,6 +17,8 @@ use widestring::{U16CStr, U16Str, U16String};
 /// manager. There must only be one environment in the entire process.
 pub struct Environment {
     environment: handles::Environment,
+    /// Used to synchronize access to the iterator over driver and data source information.
+    drivers_lock: Mutex<()>,
 }
 
 impl Environment {
@@ -35,7 +37,7 @@ impl Environment {
     pub unsafe fn new() -> Result<Self, Error> {
         let environment = crate::handles::Environment::new()?;
         environment.declare_version(AttrOdbcVersion::Odbc3_80)?;
-        Ok(Self { environment })
+        Ok(Self { environment, drivers_lock: Mutex::new(()) })
     }
 
     /// Allocates a connection handle and establishes connections to a driver and a data source.
@@ -172,8 +174,10 @@ impl Environment {
     ///
     /// # Ok::<_, odbc_api::Error>(())
     /// ```
-    pub fn drivers(&mut self) -> Result<Vec<DriverInfo>, Error> {
+    pub fn drivers(&self) -> Result<Vec<DriverInfo>, Error> {
         // Find required buffer size to avoid truncation.
+
+        let _lock = self.drivers_lock.lock().unwrap();
 
         // Start with first so we are independent of state
         let (mut desc_len, mut attr_len) = if let Some(v) = self
@@ -235,7 +239,7 @@ impl Environment {
     ///
     /// # Ok::<_, odbc_api::Error>(())
     /// ```
-    pub fn data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+    pub fn data_sources(&self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::First)
     }
 
@@ -253,7 +257,7 @@ impl Environment {
     ///
     /// # Ok::<_, odbc_api::Error>(())
     /// ```
-    pub fn system_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+    pub fn system_data_sources(&self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::FirstSystem)
     }
 
@@ -271,15 +275,17 @@ impl Environment {
     ///
     /// # Ok::<_, odbc_api::Error>(())
     /// ```
-    pub fn user_data_sources(&mut self) -> Result<Vec<DataSourceInfo>, Error> {
+    pub fn user_data_sources(&self) -> Result<Vec<DataSourceInfo>, Error> {
         self.data_sources_impl(FetchOrientation::FirstUser)
     }
 
     fn data_sources_impl(
-        &mut self,
+        &self,
         direction: FetchOrientation,
     ) -> Result<Vec<DataSourceInfo>, Error> {
         // Find required buffer size to avoid truncation.
+
+        let _lock = self.drivers_lock.lock().unwrap();
 
         // Start with first so we are independent of state
         let (mut server_name_len, mut driver_len) =
