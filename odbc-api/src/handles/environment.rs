@@ -112,6 +112,10 @@ impl Environment {
 
     /// List drivers descriptions and driver attribute keywords.
     ///
+    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
+    /// should be safe here.
+    /// this function.
+    ///
     /// # Parameters
     ///
     /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
@@ -128,7 +132,7 @@ impl Environment {
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
     pub fn drivers_buffer_fill(
-        &mut self,
+        &self,
         direction: FetchOrientation,
         buffer_description: &mut Vec<u16>,
         buffer_attributes: &mut Vec<u16>,
@@ -160,6 +164,9 @@ impl Environment {
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and driver attribute
     /// keywords.
     ///
+    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
+    /// should be safe here.
+    ///
     /// # Parameters
     ///
     /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
@@ -175,7 +182,7 @@ impl Environment {
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
     pub fn drivers_buffer_len(
-        &mut self,
+        &self,
         direction: FetchOrientation,
     ) -> Result<Option<(i16, i16)>, Error> {
         // Lengths in characters minus terminating zero
@@ -203,6 +210,9 @@ impl Environment {
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
     /// driver attribute keywords.
     ///
+    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
+    /// should be safe here.
+    ///
     /// # Parameters
     ///
     /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
@@ -214,7 +224,7 @@ impl Environment {
     ///
     /// `(server name length,  description length)`. Length is in characters minus terminating zero.
     pub fn data_source_buffer_len(
-        &mut self,
+        &self,
         direction: FetchOrientation,
     ) -> Result<Option<(i16, i16)>, Error> {
         // Lengths in characters minus terminating zero
@@ -241,6 +251,9 @@ impl Environment {
 
     /// List drivers descriptions and driver attribute keywords.
     ///
+    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
+    /// should be safe here.
+    ///
     /// # Parameters
     ///
     /// * `direction`: Determines whether the Driver Manager fetches the next driver in the list
@@ -254,7 +267,7 @@ impl Environment {
     ///
     ///  Use [`Environment::data_source_buffer_len`] to determine buffer lengths.
     pub fn data_source_buffer_fill(
-        &mut self,
+        &self,
         direction: FetchOrientation,
         buffer_name: &mut Vec<u16>,
         buffer_description: &mut Vec<u16>,
