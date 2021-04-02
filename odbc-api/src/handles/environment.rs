@@ -112,9 +112,12 @@ impl Environment {
 
     /// List drivers descriptions and driver attribute keywords.
     ///
-    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
-    /// should be safe here.
-    /// this function.
+    /// # Safety
+    ///
+    /// Callers need to make sure only one thread is iterating over driver information at a time.
+    /// Method changes environment state. This method would be safe to call via an exclusive `&mut`
+    /// reference, yet that would restrict usecases. E.g. requesting information would only be
+    /// possible before connections borrow a reference.
     ///
     /// # Parameters
     ///
@@ -131,7 +134,7 @@ impl Environment {
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
-    pub fn drivers_buffer_fill(
+    pub unsafe fn drivers_buffer_fill(
         &self,
         direction: FetchOrientation,
         buffer_description: &mut Vec<u16>,
@@ -141,22 +144,20 @@ impl Environment {
         buffer_description.resize(buffer_description.capacity(), 0);
         buffer_attributes.resize(buffer_attributes.capacity(), 0);
 
-        unsafe {
-            match SQLDriversW(
-                self.handle,
-                direction,
-                buffer_description.as_mut_ptr(),
-                buffer_description.len().try_into().unwrap(),
-                null_mut(),
-                buffer_attributes.as_mut_ptr(),
-                buffer_attributes.len().try_into().unwrap(),
-                null_mut(),
-            ) {
-                SqlReturn::NO_DATA => Ok(false),
-                other => {
-                    other.into_result(self)?;
-                    Ok(true)
-                }
+        match SQLDriversW(
+            self.handle,
+            direction,
+            buffer_description.as_mut_ptr(),
+            buffer_description.len().try_into().unwrap(),
+            null_mut(),
+            buffer_attributes.as_mut_ptr(),
+            buffer_attributes.len().try_into().unwrap(),
+            null_mut(),
+        ) {
+            SqlReturn::NO_DATA => Ok(false),
+            other => {
+                other.into_result(self)?;
+                Ok(true)
             }
         }
     }
@@ -164,8 +165,12 @@ impl Environment {
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and driver attribute
     /// keywords.
     ///
-    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
-    /// should be safe here.
+    /// # Safety
+    ///
+    /// Callers need to make sure only one thread is iterating over driver information at a time.
+    /// Method changes environment state. This method would be safe to call via an exclusive `&mut`
+    /// reference, yet that would restrict usecases. E.g. requesting information would only be
+    /// possible before connections borrow a reference.
     ///
     /// # Parameters
     ///
@@ -181,37 +186,39 @@ impl Environment {
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
-    pub fn drivers_buffer_len(
+    pub unsafe fn drivers_buffer_len(
         &self,
         direction: FetchOrientation,
     ) -> Result<Option<(i16, i16)>, Error> {
         // Lengths in characters minus terminating zero
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
-        unsafe {
-            // Determine required buffer size
-            match SQLDriversW(
-                self.handle,
-                direction,
-                null_mut(),
-                0,
-                &mut length_description,
-                null_mut(),
-                0,
-                &mut length_attributes,
-            ) {
-                SqlReturn::NO_DATA => return Ok(None),
-                other => other.into_result(self)?,
-            }
-            Ok(Some((length_description, length_attributes)))
+        // Determine required buffer size
+        match SQLDriversW(
+            self.handle,
+            direction,
+            null_mut(),
+            0,
+            &mut length_description,
+            null_mut(),
+            0,
+            &mut length_attributes,
+        ) {
+            SqlReturn::NO_DATA => return Ok(None),
+            other => other.into_result(self)?,
         }
+        Ok(Some((length_description, length_attributes)))
     }
 
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
     /// driver attribute keywords.
     ///
-    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
-    /// should be safe here.
+    /// # Safety
+    ///
+    /// Callers need to make sure only one thread is iterating over data source information at a
+    /// time. Method changes environment state. This method would be safe to call via an exclusive
+    /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
+    /// be possible before connections borrow a reference.
     ///
     /// # Parameters
     ///
@@ -223,36 +230,38 @@ impl Environment {
     /// # Return
     ///
     /// `(server name length,  description length)`. Length is in characters minus terminating zero.
-    pub fn data_source_buffer_len(
+    pub unsafe fn data_source_buffer_len(
         &self,
         direction: FetchOrientation,
     ) -> Result<Option<(i16, i16)>, Error> {
         // Lengths in characters minus terminating zero
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
-        unsafe {
-            // Determine required buffer size
-            match odbc_sys::SQLDataSourcesW(
-                self.handle,
-                direction,
-                null_mut(),
-                0,
-                &mut length_name,
-                null_mut(),
-                0,
-                &mut length_description,
-            ) {
-                SqlReturn::NO_DATA => return Ok(None),
-                other => other.into_result(self)?,
-            }
-            Ok(Some((length_name, length_description)))
+        // Determine required buffer size
+        match odbc_sys::SQLDataSourcesW(
+            self.handle,
+            direction,
+            null_mut(),
+            0,
+            &mut length_name,
+            null_mut(),
+            0,
+            &mut length_description,
+        ) {
+            SqlReturn::NO_DATA => return Ok(None),
+            other => other.into_result(self)?,
         }
+        Ok(Some((length_name, length_description)))
     }
 
     /// List drivers descriptions and driver attribute keywords.
     ///
-    /// Note: access to driver information should be synchronized by hte driver manager, so `&mut`
-    /// should be safe here.
+    /// # Safety
+    ///
+    /// Callers need to make sure only one thread is iterating over data source information at a
+    /// time. Method changes environment state. This method would be safe to call via an exclusive
+    /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
+    /// be possible before connections borrow a reference.
     ///
     /// # Parameters
     ///
@@ -266,7 +275,7 @@ impl Environment {
     ///   of the datasource (i.e. Driver name).
     ///
     ///  Use [`Environment::data_source_buffer_len`] to determine buffer lengths.
-    pub fn data_source_buffer_fill(
+    pub unsafe fn data_source_buffer_fill(
         &self,
         direction: FetchOrientation,
         buffer_name: &mut Vec<u16>,
@@ -276,22 +285,20 @@ impl Environment {
         buffer_name.resize(buffer_name.capacity(), 0);
         buffer_description.resize(buffer_description.capacity(), 0);
 
-        unsafe {
-            match SQLDataSourcesW(
-                self.handle,
-                direction,
-                buffer_name.as_mut_ptr(),
-                buffer_name.len().try_into().unwrap(),
-                null_mut(),
-                buffer_description.as_mut_ptr(),
-                buffer_description.len().try_into().unwrap(),
-                null_mut(),
-            ) {
-                SqlReturn::NO_DATA => Ok(false),
-                other => {
-                    other.into_result(self)?;
-                    Ok(true)
-                }
+        match SQLDataSourcesW(
+            self.handle,
+            direction,
+            buffer_name.as_mut_ptr(),
+            buffer_name.len().try_into().unwrap(),
+            null_mut(),
+            buffer_description.as_mut_ptr(),
+            buffer_description.len().try_into().unwrap(),
+            null_mut(),
+        ) {
+            SqlReturn::NO_DATA => Ok(false),
+            other => {
+                other.into_result(self)?;
+                Ok(true)
             }
         }
     }

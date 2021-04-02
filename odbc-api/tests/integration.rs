@@ -2149,9 +2149,9 @@ fn synchronized_access_to_driver_and_data_source_info() {
 
             thread::spawn(move || {
                 let drivers = ENV.drivers().unwrap();
-                assert_eq!(expected_drivers.clone(), drivers);
+                assert_eq!(expected_drivers, drivers);
                 let data_sources_for_thread = ENV.data_sources().unwrap();
-                assert_eq!(expected_data_sources.clone(), data_sources_for_thread);
+                assert_eq!(expected_data_sources, data_sources_for_thread);
             })
         })
         .collect::<Vec<_>>();

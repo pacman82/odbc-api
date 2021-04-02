@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.21.0
+
+* `Environment::drivers` now takes `&self` instead of `&mut self`.
+* `Environment::data_sources` now takes `&self` instead of `&mut self`.
+* `Environment::user_data_sources` now takes `&self` instead of `&mut self`.
+* `Environment::system_data_sources` now takes `&self` instead of `&mut self`.
+* `handles::Environment::drivers_buffer_len` now is `unsafe` and takes `&self` instead of `&mut self`.
+* `handles::Environment::drivers_buffer_fill` now is `unsafe` and takes `&self` instead of `&mut self`.
+* `handles::Environment::data_source_buffer_len` now is `unsafe` and takes `&self` instead of `&mut self`.
+* `handles::Environment::data_source_buffer_fill` now is `unsafe` and takes `&self` instead of `&mut self`.
+
+Thanks to @grovesNL for the contribution.
+
 ## 0.20.1
 
 * Test are now also executed against Maria DB

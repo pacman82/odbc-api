@@ -17,8 +17,12 @@ use widestring::{U16CStr, U16Str, U16String};
 /// manager. There must only be one environment in the entire process.
 pub struct Environment {
     environment: handles::Environment,
-    /// Used to synchronize access to the iterator over driver and data source information.
-    drivers_lock: Mutex<()>,
+    /// ODBC environments use interior mutability to maintain iterator state then iterating over
+    /// driver and / or data source information. The environment is otherwise protected by interior
+    /// synchronization mechanism, yet in order to be able to access to iterate over information
+    /// using a shared reference we need to protect the interior iteraton state with a mutex of its
+    /// own.
+    info_iterator_state: Mutex<()>,
 }
 
 impl Environment {
@@ -37,7 +41,10 @@ impl Environment {
     pub unsafe fn new() -> Result<Self, Error> {
         let environment = crate::handles::Environment::new()?;
         environment.declare_version(AttrOdbcVersion::Odbc3_80)?;
-        Ok(Self { environment, drivers_lock: Mutex::new(()) })
+        Ok(Self {
+            environment,
+            info_iterator_state: Mutex::new(()),
+        })
     }
 
     /// Allocates a connection handle and establishes connections to a driver and a data source.
@@ -167,7 +174,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let mut env = unsafe { Environment::new () }?;
+    /// let env = unsafe { Environment::new () }?;
     /// for driver_info in env.drivers()? {
     ///     println!("{:#?}", driver_info);
     /// }
@@ -175,51 +182,55 @@ impl Environment {
     /// # Ok::<_, odbc_api::Error>(())
     /// ```
     pub fn drivers(&self) -> Result<Vec<DriverInfo>, Error> {
-        // Find required buffer size to avoid truncation.
-
-        let _lock = self.drivers_lock.lock().unwrap();
-
-        // Start with first so we are independent of state
-        let (mut desc_len, mut attr_len) = if let Some(v) = self
-            .environment
-            .drivers_buffer_len(FetchOrientation::First)?
-        {
-            v
-        } else {
-            // No drivers present
-            return Ok(Vec::new());
-        };
-
-        // If there are let's loop over the rest
-        while let Some((candidate_desc_len, candidate_attr_len)) = self
-            .environment
-            .drivers_buffer_len(FetchOrientation::Next)?
-        {
-            desc_len = max(candidate_desc_len, desc_len);
-            attr_len = max(candidate_attr_len, attr_len);
-        }
-
-        // Allocate +1 character extra for terminating zero
-        let mut desc_buf = vec![0; desc_len as usize + 1];
-        let mut attr_buf = vec![0; attr_len as usize + 1];
-
         let mut driver_info = Vec::new();
-        while self.environment.drivers_buffer_fill(
-            FetchOrientation::Next,
-            &mut desc_buf,
-            &mut attr_buf,
-        )? {
-            let description = U16CStr::from_slice_with_nul(&desc_buf).unwrap();
-            let attributes = U16CStr::from_slice_with_nul(&attr_buf).unwrap();
 
-            let description = description.to_string().unwrap();
-            let attributes = attributes.to_string().unwrap();
-            let attributes = attributes_iter(&attributes).collect();
+        // Since we have exclusive ownership of the environment handle and we take the lock, we can
+        // guarantee that this method is currently the only one changing the state of the internal
+        // iterators of the environment.
+        let _lock = self.info_iterator_state.lock().unwrap();
+        unsafe {
+            // Find required buffer size to avoid truncation.
+            let (mut desc_len, mut attr_len) = if let Some(v) = self
+                .environment
+                // Start with first so we are independent of state
+                .drivers_buffer_len(FetchOrientation::First)?
+            {
+                v
+            } else {
+                // No drivers present
+                return Ok(Vec::new());
+            };
 
-            driver_info.push(DriverInfo {
-                description,
-                attributes,
-            });
+            // If there are let's loop over the rest
+            while let Some((candidate_desc_len, candidate_attr_len)) = self
+                .environment
+                .drivers_buffer_len(FetchOrientation::Next)?
+            {
+                desc_len = max(candidate_desc_len, desc_len);
+                attr_len = max(candidate_attr_len, attr_len);
+            }
+
+            // Allocate +1 character extra for terminating zero
+            let mut desc_buf = vec![0; desc_len as usize + 1];
+            let mut attr_buf = vec![0; attr_len as usize + 1];
+
+            while self.environment.drivers_buffer_fill(
+                FetchOrientation::Next,
+                &mut desc_buf,
+                &mut attr_buf,
+            )? {
+                let description = U16CStr::from_slice_with_nul(&desc_buf).unwrap();
+                let attributes = U16CStr::from_slice_with_nul(&attr_buf).unwrap();
+
+                let description = description.to_string().unwrap();
+                let attributes = attributes.to_string().unwrap();
+                let attributes = attributes_iter(&attributes).collect();
+
+                driver_info.push(DriverInfo {
+                    description,
+                    attributes,
+                });
+            }
         }
 
         Ok(driver_info)
@@ -232,7 +243,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let mut env = unsafe { Environment::new () }?;
+    /// let env = unsafe { Environment::new () }?;
     /// for data_source in env.data_sources()? {
     ///     println!("{:#?}", data_source);
     /// }
@@ -250,7 +261,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let mut env = unsafe { Environment::new () }?;
+    /// let env = unsafe { Environment::new () }?;
     /// for data_source in env.system_data_sources()? {
     ///     println!("{:#?}", data_source);
     /// }
@@ -279,58 +290,58 @@ impl Environment {
         self.data_sources_impl(FetchOrientation::FirstUser)
     }
 
-    fn data_sources_impl(
-        &self,
-        direction: FetchOrientation,
-    ) -> Result<Vec<DataSourceInfo>, Error> {
-        // Find required buffer size to avoid truncation.
-
-        let _lock = self.drivers_lock.lock().unwrap();
-
-        // Start with first so we are independent of state
-        let (mut server_name_len, mut driver_len) =
-            if let Some(v) = self.environment.data_source_buffer_len(direction)? {
-                v
-            } else {
-                // No drivers present
-                return Ok(Vec::new());
-            };
-
-        // If there are let's loop over the rest
-        while let Some((candidate_name_len, candidate_decs_len)) = self
-            .environment
-            .drivers_buffer_len(FetchOrientation::Next)?
-        {
-            server_name_len = max(candidate_name_len, server_name_len);
-            driver_len = max(candidate_decs_len, driver_len);
-        }
-
-        // Allocate +1 character extra for terminating zero
-        let mut server_name_buf = vec![0; server_name_len as usize + 1];
-        let mut driver_buf = vec![0; driver_len as usize + 1];
-
+    fn data_sources_impl(&self, direction: FetchOrientation) -> Result<Vec<DataSourceInfo>, Error> {
         let mut data_source_info = Vec::new();
-        let mut not_empty = self.environment.data_source_buffer_fill(
-            direction,
-            &mut server_name_buf,
-            &mut driver_buf,
-        )?;
-        while not_empty {
-            let server_name = U16CStr::from_slice_with_nul(&server_name_buf).unwrap();
-            let driver = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
 
-            let server_name = server_name.to_string().unwrap();
-            let driver = driver.to_string().unwrap();
+        // Since we have exclusive ownership of the environment handle and we take the lock, we can
+        // guarantee that this method is currently the only one changing the state of the internal
+        // iterators of the environment.
+        let _lock = self.info_iterator_state.lock().unwrap();
+        unsafe {
+            // Find required buffer size to avoid truncation.
+            let (mut server_name_len, mut driver_len) =
+                if let Some(v) = self.environment.data_source_buffer_len(direction)? {
+                    v
+                } else {
+                    // No drivers present
+                    return Ok(Vec::new());
+                };
 
-            data_source_info.push(DataSourceInfo {
-                server_name,
-                driver,
-            });
-            not_empty = self.environment.data_source_buffer_fill(
-                FetchOrientation::Next,
+            // If there are let's loop over the rest
+            while let Some((candidate_name_len, candidate_decs_len)) = self
+                .environment
+                .drivers_buffer_len(FetchOrientation::Next)?
+            {
+                server_name_len = max(candidate_name_len, server_name_len);
+                driver_len = max(candidate_decs_len, driver_len);
+            }
+
+            // Allocate +1 character extra for terminating zero
+            let mut server_name_buf = vec![0; server_name_len as usize + 1];
+            let mut driver_buf = vec![0; driver_len as usize + 1];
+
+            let mut not_empty = self.environment.data_source_buffer_fill(
+                direction,
                 &mut server_name_buf,
                 &mut driver_buf,
             )?;
+            while not_empty {
+                let server_name = U16CStr::from_slice_with_nul(&server_name_buf).unwrap();
+                let driver = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
+
+                let server_name = server_name.to_string().unwrap();
+                let driver = driver.to_string().unwrap();
+
+                data_source_info.push(DataSourceInfo {
+                    server_name,
+                    driver,
+                });
+                not_empty = self.environment.data_source_buffer_fill(
+                    FetchOrientation::Next,
+                    &mut server_name_buf,
+                    &mut driver_buf,
+                )?;
+            }
         }
 
         Ok(data_source_info)
