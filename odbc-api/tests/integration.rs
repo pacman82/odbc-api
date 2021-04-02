@@ -2129,3 +2129,34 @@ fn many_diagnostic_messages() {
 
     // We do not have an explicit assertion, we are just happy if no integer addition overflows.
 }
+
+/// Ensures access to driver and data source info is synchronized correctly when multiple threads
+/// attempt to query it at the same time. First, we query the list of the known drivers and data
+/// sources on the main thread. Then we spawn multiple threads that attempt to query these lists in
+/// parallel. Finally we compare the lists to ensure they match the list we found on the main
+/// thread.
+#[test]
+fn synchronized_access_to_driver_and_data_source_info() {
+    let expected_drivers = ENV.drivers().unwrap();
+    let expected_data_sources = ENV.data_sources().unwrap();
+
+    const NUM_THREADS: usize = 5;
+    let threads = iter::repeat(())
+        .take(NUM_THREADS)
+        .map(|_| {
+            let expected_drivers = expected_drivers.clone();
+            let expected_data_sources = expected_data_sources.clone();
+
+            thread::spawn(move || {
+                let drivers = ENV.drivers().unwrap();
+                assert_eq!(expected_drivers.clone(), drivers);
+                let data_sources_for_thread = ENV.data_sources().unwrap();
+                assert_eq!(expected_data_sources.clone(), data_sources_for_thread);
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in threads {
+        handle.join().unwrap();
+    }
+}
