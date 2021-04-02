@@ -233,7 +233,7 @@ impl<C> TextColumn<C> {
     /// slice and instead provides direct access to the underlying buffer.
     ///
     /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
-    /// be more convinient. This method is very useful if you want to `write!` a string value to the
+    /// be more convenient. This method is very useful if you want to `write!` a string value to the
     /// buffer and the binary (**!**) length of the formatted string is known upfront.
     ///
     /// # Example: Write timestamp to text column.
@@ -415,9 +415,9 @@ where
 
     /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum string
     /// length should the text be larger than the maximum allowed string size. The number of rows
-    /// the column buffer can hold stays constant, but during rebind only values befor `index` would
+    /// the column buffer can hold stays constant, but during rebind only values before `index` would
     /// be copied to the new memory location. Therefore this method is intended to be used to fill
-    /// the buffer elementwise and in order. Hence the name `append`.
+    /// the buffer element-wise and in order. Hence the name `append`.
     ///
     /// # Parameters
     ///
@@ -467,7 +467,7 @@ where
     /// slice and instead provides direct access to the underlying buffer.
     ///
     /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
-    /// be more convinient. This method is very useful if you want to `write!` a string value to the
+    /// be more convenient. This method is very useful if you want to `write!` a string value to the
     /// buffer and the binary (**!**) length of the formatted string is known upfront.
     ///
     /// # Example: Write timestamp to text column.

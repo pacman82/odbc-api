@@ -285,9 +285,9 @@ impl<'a> BinColumnWriter<'a> {
 
     /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum element
     /// length should the value be larger than the maximum allowed element length. The number of
-    /// rows the column buffer can hold stays constant, but during rebind only values befor `index`
+    /// rows the column buffer can hold stays constant, but during rebind only values before `index`
     /// would be copied to the new memory location. Therefore this method is intended to be used to
-    /// fill the buffer elementwise and in order. Hence the name `append`.
+    /// fill the buffer element-wise and in order. Hence the name `append`.
     ///
     /// # Parameters
     ///

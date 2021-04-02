@@ -238,8 +238,8 @@ impl<'c> Connection<'c> {
     /// default (hopefully).
     ///
     /// Note to users of `unixodbc`: You may configure the threading level to make unixodbc
-    /// synchronize access to the driver (and therby making them thread safe if they are not
-    /// thread safe by themself. This may however hurt your performancy if the driver would actually
+    /// synchronize access to the driver (and thereby making them thread safe if they are not
+    /// thread safe by themself. This may however hurt your performance if the driver would actually
     /// be able to perform operations in parallel.
     ///
     /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
@@ -248,7 +248,7 @@ impl<'c> Connection<'c> {
     }
 }
 
-/// You can use this method to escape a password so it is suitable to be apended to an ODBC
+/// You can use this method to escape a password so it is suitable to be appended to an ODBC
 /// connection string as the value for the `PWD` attribute. This method is only of interest for
 /// need to create their own connection strings.
 ///
@@ -288,7 +288,7 @@ pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
     // Search the string for semicolon (';') if we do not find any, nothing is to do and we can work
     // without an extra allocation.
     if unescaped.contains(';') {
-        // Souround the string with curly braces ('{','}') and escape every closing curly brace by
+        // Surround the string with curly braces ('{','}') and escape every closing curly brace by
         // repeating it.
         let escaped = unescaped.replace("}", "}}");
         Cow::Owned(format!("{{{}}}", escaped))

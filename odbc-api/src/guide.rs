@@ -97,7 +97,7 @@
 //! for windows users, as driver managers (and possibly drivers) may both exist at the same time
 //! in the same system.
 //!
-//! In any case, depending on the platform part of your target tripple either 32 Bit or 64 Bit
+//! In any case, depending on the platform part of your target triple either 32 Bit or 64 Bit
 //! drivers are going to work, but not both. On a private windows machine (even on a modern 64 Bit
 //! Windows) it is not unusual to find lots of 32 Bit drivers installed on the system, but none for
 //! 64 Bits. So for windows users it is worth thinking about not using the default toolchain which
@@ -173,7 +173,7 @@
 //! ### Connect using a Data Source Name (DSN)
 //!
 //! Should a data source be known by the driver manager we can access it using its name and
-//! credentials. This is more convinient for the user or application developer, but requires a
+//! credentials. This is more convenient for the user or application developer, but requires a
 //! configuration of the ODBC driver manager. Think of it as shifting work from users to
 //! administrators.
 //!
@@ -319,7 +319,7 @@
 //! Fetching data without binding buffers, may imply lots of roundtrips to the data source (one by
 //! row, or even by field). Also the driver has no upfront knowledge what C-Type your value should
 //! be represented as, preventing further optimizations. Usually it is the slowest possible way to
-//! siphon data out of a data source. That being said, it is a convinient programming model, as the
+//! siphon data out of a data source. That being said, it is a convenient programming model, as the
 //! developer does not need to prepare and allocate the buffers beforehand. It is also a good way to
 //! retrieve really large single values out of a data source (like one large text file).
 //!

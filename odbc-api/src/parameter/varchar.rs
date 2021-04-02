@@ -12,7 +12,7 @@ use crate::{
     DataType, InputParameter, Output,
 };
 
-/// Binds a byte arrary as Variadic sized characater data. It can not be used for columnar bulk
+/// Binds a byte array as Variadic sized character data. It can not be used for columnar bulk
 /// fetches, but if the buffer type is stack allocated it can be utilized in row wise bulk fetches.
 ///
 /// Meaningful instantiations of this type are:
@@ -36,14 +36,14 @@ pub struct VarChar<B> {
     indicator: isize,
 }
 
-/// Paramater type for owned, variable sized character data.
+/// Parameter type for owned, variable sized character data.
 ///
 /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
 /// has the role of telling us how many bytes in the buffer are part of the payload.
 pub type VarCharBox = VarChar<Box<[u8]>>;
 
 impl VarCharBox {
-    /// Constucts a 'missing' value.
+    /// Constructs a 'missing' value.
     pub fn null() -> Self {
         Self::from_buffer(Box::new([]), Indicator::Null)
     }
@@ -65,7 +65,7 @@ impl<B> VarChar<B>
 where
     B: Borrow<[u8]>,
 {
-    /// Creates a new instance from an existing buffer. Shoud the indicator be `NoTotal` or indicate
+    /// Creates a new instance from an existing buffer. Should the indicator be `NoTotal` or indicate
     /// a length longer than buffer, the last element in the buffer must be nul (`\0`).
     pub fn from_buffer(buffer: B, indicator: Indicator) -> Self {
         let buf = buffer.borrow();

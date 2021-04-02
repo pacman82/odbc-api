@@ -60,11 +60,11 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! In that case it is likely that the driver manager converts our anotated year into a string which
+//! In that case it is likely that the driver manager converts our annotated year into a string which
 //! is most likely being converted back into an integer by the driver. All this converting can be
 //! confusing, but it is helpful if we do not know what types the parameters actually have (i.e. the
 //! query could have been entered by the user on the command line.). There is also an option to
-//! query the parameter types beforhand, but my advice is not trust the information blindly if you
+//! query the parameter types beforehand, but my advice is not trust the information blindly if you
 //! cannot test this with your driver beforehand.
 //!
 //! ## Passing a fixed number of parameters
@@ -90,7 +90,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! ## Passing an abitrary number of parameters
+//! ## Passing an arbitrary number of parameters
 //!
 //! Not always do we know the number of required parameters at compile time. This might be the case
 //! if the query itself is generated from user input. Luckily slices of parameters are supported, too.
@@ -115,7 +115,7 @@
 //!
 //! ## Passing an input parameters parsed from the command line
 //!
-//! In case you want to read paramaters from the command line you can also let ODBC do the work of
+//! In case you want to read parameters from the command line you can also let ODBC do the work of
 //! converting the text input into something more suitable.
 //!
 //! ```
@@ -181,7 +181,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! ## Passing the type you absolutly think should work, but does not.
+//! ## Passing the type you absolutely think should work, but does not.
 //!
 //! Sadly not every type can be safely bound as something the ODBC C-API understands. Most prominent
 //! among those is a Rust string slice (`&str`).
@@ -219,7 +219,7 @@
 //! ```
 //!
 //! Conversion for `&str` is not too expensive either. Just an integer more on the stack. Wait, the
-//! type you wanted to use, but that I have conviniently not chosen in this example still does not
+//! type you wanted to use, but that I have conveniently not chosen in this example still does not
 //! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can usually be
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.

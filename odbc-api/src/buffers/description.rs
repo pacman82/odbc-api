@@ -213,7 +213,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(target_pointer_width = "64")] // Indicator size is platform dependend.
+    #[cfg(target_pointer_width = "64")] // Indicator size is platform dependent.
     fn bytes_per_row() {
         let bpr = |kind, nullable| BufferDescription { kind, nullable }.bytes_per_row();
 
