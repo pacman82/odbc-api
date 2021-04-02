@@ -185,7 +185,7 @@ fn open_connection<'e>(
             .as_deref()
             .expect("Connection string must be specified, if dsn is not.");
 
-        // Append user and or password to connecction string
+        // Append user and or password to connection string
         let mut cs = connection_string.to_owned();
         if let Some(uid) = opt.user.as_deref() {
             cs = format!("{}UID={};", cs, &escape_attribute_value(uid));

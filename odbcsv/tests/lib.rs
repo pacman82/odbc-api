@@ -68,7 +68,7 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
 }
 
 /// Query MSSQL database, yet do not specify username and password in the connection string, but
-/// pass them as seperate command line options.
+/// pass them as separate command line options.
 #[test]
 fn append_user_and_password_to_connection_string() {
     // Connection string without user name and password.

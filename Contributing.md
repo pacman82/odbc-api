@@ -26,7 +26,7 @@ Otherwise you can install these requirements from here:
 
 * Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
 * [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
-* Maria DB ODBC Connectior
+* Maria DB ODBC Connector
 
 The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
 

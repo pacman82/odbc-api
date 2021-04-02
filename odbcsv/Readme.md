@@ -38,7 +38,7 @@ odbcsv query \
 "SELECT title, year from Movies"
 ```
 
-Alternatively you may also specify the `ODBC_USER` and `ODBC_PASSWORD` environment variabl.
+Alternatively you may also specify the `ODBC_USER` and `ODBC_PASSWORD` environment variable.
 
 ### Query using data source name
 

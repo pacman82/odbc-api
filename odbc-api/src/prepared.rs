@@ -31,7 +31,7 @@ impl<'o> Prepared<'o> {
 
     /// Describes parameter marker associated with a prepared SQL statement.
     ///
-    /// # Paramters
+    /// # Parameters
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.

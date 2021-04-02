@@ -24,7 +24,7 @@
 
 ## 0.19.5
 
-* Fix: `BinColumnWriter::append` erroneously inse`rted a terminating zero at the end of the value.
+* Fix: `BinColumnWriter::append` erroneously inserted a terminating zero at the end of the value.
 
 ## 0.19.4
 
@@ -83,7 +83,7 @@ Support for directly writing formatted text with fixed length to the underlying 
 ## 0.16.0
 
 * `Cursor::fetch` is now safe.
-* Introduced `Connection::preallocate` to allow for efficient prealloaction of statement handles in interactive clients.
+* Introduced `Connection::preallocate` to allow for efficient preallocation of statement handles in interactive clients.
 * Renamed `Connection::exec_direct_utf16` into `Connection::execute_utf16`.
 
 ## 0.15.0
@@ -161,7 +161,7 @@ Support for directly writing formatted text with fixed length to the underlying 
 
 ## 0.10.0
 
-* Adds method `Perpared::describe_param()`.
+* Adds method `Prepared::describe_param()`.
 * `handle::Statement::bind_parameter` changes into `handle::Statement::bind_input_parameter`, in order take a `* const`.
 * `VarCharParam` renamed into `VarChar`.
 * `TextRowSet::new` renamed into `TextRowSet::for_cursor`.
@@ -251,7 +251,7 @@ Adds `buffers::TextRowSet`.
 ## 0.1.1
 
 * Adds convenience methods, which take UTF-8 in public interface.
-* Adds `ColmunDescription::could_be_null`.
+* Adds `ColumnDescription::could_be_null`.
 * Adds `Cursor::is_unsigned`.
 
 ## 0.1.0
