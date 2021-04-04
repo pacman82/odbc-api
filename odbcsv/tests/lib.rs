@@ -74,12 +74,6 @@ fn append_user_and_password_to_connection_string() {
     // Connection string without user name and password.
     let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
 
-    let csv = "title,year\n\
-        Jurassic Park,1993\n\
-        2001: A Space Odyssey,1968\n\
-        Interstellar,\n\
-    ";
-
     Command::cargo_bin("odbcsv")
         .unwrap()
         .args(&[
@@ -94,8 +88,7 @@ fn append_user_and_password_to_connection_string() {
             "SELECT title, year from Movies",
         ])
         .assert()
-        .success()
-        .stdout(csv);
+        .success();
 }
 
 #[test]

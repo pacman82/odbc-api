@@ -42,8 +42,8 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
-    /// The connection string used to connect to the ODBC data source. Alternatively you may
-    /// specify the ODBC dsn.
+    /// The connection string used to connect to the ODBC data source. Alternatively you may specify
+    /// the ODBC dsn.
     #[structopt(long, short = "c")]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
