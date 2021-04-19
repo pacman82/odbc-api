@@ -15,6 +15,8 @@ pub enum Error {
     /// SQL Error had been returned by a low level ODBC function call. A Diagnostic record is
     /// obtained and associated with this error.
     Diagnostics(DiagnosticRecord),
+    #[error("No data was returned.")]
+    NoData,
 }
 
 pub trait IntoResult {
@@ -40,6 +42,7 @@ impl IntoResult for SqlReturn {
                     Err(Error::NoDiagnostics)
                 }
             }
+            SqlReturn::NO_DATA => Err(Error::NoData),
             r => panic!("Unexpected odbc function result: {:?}", r),
         }
     }
