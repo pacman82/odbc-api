@@ -3,6 +3,7 @@ use std::{cmp::max, collections::HashMap, sync::Mutex};
 use crate::{handles, Connection, Error};
 use odbc_sys::{AttrOdbcVersion, FetchOrientation};
 use widestring::{U16CStr, U16Str, U16String};
+use raw_window_handle::HasRawWindowHandle;
 
 /// An ODBC 3.8 environment.
 ///
@@ -20,7 +21,7 @@ pub struct Environment {
     /// ODBC environments use interior mutability to maintain iterator state then iterating over
     /// driver and / or data source information. The environment is otherwise protected by interior
     /// synchronization mechanism, yet in order to be able to access to iterate over information
-    /// using a shared reference we need to protect the interior iteraton state with a mutex of its
+    /// using a shared reference we need to protect the interior iteration state with a mutex of its
     /// own.
     info_iterator_state: Mutex<()>,
 }
@@ -164,6 +165,90 @@ impl Environment {
         let mut connection = self.environment.allocate_connection()?;
         connection.connect_with_connection_string(connection_string)?;
         Ok(Connection::new(connection))
+    }
+
+    /// Allocates a connection handle and establishes connections to a driver and a data source.
+    ///
+    /// An alternative to `connect` and `connect_with_connection_string`. It supports data sources
+    /// or connection strings that may require more information from the user in order to connect.
+    /// If any additional information is required, the driver manager/driver will attempt to create
+    /// a prompt to allow the user to provide the additional information.
+    ///
+    /// If the connection is successful, the complete connection string (including any information
+    /// provided by the user through a prompt) is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `connection_string` - Connection string.
+    /// * `window` - A parent window handle to use for any prompts. If the window handle is
+    ///   invalid or unsupported on the current platform, the prompt won't be displayed and `Error`
+    ///   will be returned.
+    /// * `max_complete_connection_string_len` - The maximum allowed length for the returned
+    ///   complete connection string. This is recommended to be at least 1024. If the complete
+    ///   connection string is longer than this length, `Error` will be returned.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # if cfg!(target_os = "windows") {
+    /// # struct Window;
+    /// # unsafe impl raw_window_handle::HasRawWindowHandle for Window {
+    /// #     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
+    /// #         raw_window_handle::RawWindowHandle::Windows(raw_window_handle::windows::WindowsHandle::empty())
+    /// #     }
+    /// # }
+    /// # let window = Window;
+    /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
+    /// // thus making this call safe.
+    /// let env = unsafe {
+    ///     odbc_api::Environment::new()?
+    /// };
+    ///
+    /// // In this case, we intentionally provide a blank connection string so the user will be
+    /// // prompted to select a data source to use.
+    /// let empty = String::new();
+    /// let (connection, connection_string) =
+    ///     env.connect_with_complete_prompt(&empty, Some(&window), 1024)?;
+    ///
+    /// // Now `connection_string` will contain the data source selected by the user.
+    ///
+    /// // In this case, we specify a DSN that requires login credentials, but the DSN doesn't
+    /// // provide those credentials. Instead, the user will be prompted for a UID and PWD. The
+    /// // returned `connection_string` will contain the `UID` and `PWD` provided by the user.
+    /// let without_uid_or_pwd = "DSN=SomeSharedDatabase;";
+    /// let (connection, connection_string) =
+    ///     env.connect_with_complete_prompt(&without_uid_or_pwd, Some(&window), 1024)?;
+    ///
+    /// // Now `connection_string` might be something like
+    /// // `DSN=SomeSharedDatabase;UID=SA;PWD=<YourStrong@Passw0rd>;`
+    ///
+    /// // In this case, we use a DSN that's already complete and doesn't require a prompt. Because
+    /// // a prompt isn't needed, `window` isn't required. The returned `connection_string` will be
+    /// // mostly the same as `already_complete` but the driver may append some extra attributes.
+    /// // )
+    /// let already_complete = "DSN=MicrosoftAccessFile;";
+    /// let (connection, connection_string) =
+    ///     env.connect_with_complete_prompt(&already_complete, Some(&window), 1024)?;
+    ///
+    /// // Now `connection_string` might be something like
+    /// // `DSN=MicrosoftAccessFile;DBQ=C:\Db\Example.accdb;DriverId=25;FIL=MS Access;MaxBufferSize=2048;`
+    /// # }
+    /// # Ok::<(), odbc_api::Error>(())
+    /// ```
+    pub fn connect_with_complete_prompt(
+        &self,
+        connection_string: &str,
+        window: Option<&impl HasRawWindowHandle>,
+        max_complete_connection_string_len: usize,
+    ) -> Result<(Connection<'_>, String), Error> {
+        let mut connection = self.environment.allocate_connection()?;
+        let connection_string = U16String::from_str(connection_string);
+        let out_connection_string = connection.connect_with_complete_prompt(
+            &connection_string,
+            window,
+            max_complete_connection_string_len,
+        )?;
+        Ok((Connection::new(connection), out_connection_string))
     }
 
     /// Get information about available drivers. Only 32 or 64 Bit drivers will be listed, depending

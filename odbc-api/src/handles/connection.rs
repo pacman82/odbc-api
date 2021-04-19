@@ -8,7 +8,8 @@ use odbc_sys::{
     SQLSetConnectAttrW,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
-use widestring::U16Str;
+use widestring::{U16Str, U16CStr};
+use raw_window_handle::{RawWindowHandle, HasRawWindowHandle};
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
@@ -104,6 +105,43 @@ impl<'c> Connection<'c> {
             )
             .into_result(self)?;
             Ok(())
+        }
+    }
+
+    /// An alternative to `connect` and `connect_with_connection_string` that allows the user to be
+    /// prompted for any additional required information (`UID`, `PWD`, etc.).
+    pub fn connect_with_complete_prompt(
+        &mut self,
+        connection_string: &U16Str,
+        window: Option<&impl HasRawWindowHandle>,
+        max_complete_connection_string_len: usize,
+    ) -> Result<String, Error> {
+        let window_handle = match window.map(HasRawWindowHandle::raw_window_handle) {
+            #[cfg(target_os = "windows")]
+            Some(RawWindowHandle::Windows(handle)) => handle.hwnd,
+            _ => null_mut(),
+        };
+
+        let mut out_connection_string_buffer = vec![0; max_complete_connection_string_len + 1];
+
+        unsafe {
+            let out_connection_string_len = null_mut();
+            SQLDriverConnectW(
+                self.handle,
+                window_handle,
+                buf_ptr(connection_string.as_slice()),
+                connection_string.len().try_into().unwrap(),
+                out_connection_string_buffer.as_mut_ptr(),
+                out_connection_string_buffer.len().try_into().unwrap(),
+                out_connection_string_len,
+                DriverConnectOption::Complete,
+            )
+            .into_result(self)?;
+
+            let out_connection_string_raw = U16CStr::from_slice_with_nul(&out_connection_string_buffer).unwrap();
+            let out_connection_string = out_connection_string_raw.to_string().unwrap();
+
+            Ok(out_connection_string)
         }
     }
 
