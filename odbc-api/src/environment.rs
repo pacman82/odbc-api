@@ -177,27 +177,20 @@ impl Environment {
     /// If the connection is successful, the complete connection string (including any information
     /// provided by the user through a prompt) is returned.
     ///
-    /// # Arguments
+    /// # Parameters
     ///
-    /// * `connection_string` - Connection string.
-    /// * `window` - A parent window handle to use for any prompts. If the window handle is
+    /// * `connection_string`: Connection string.
+    /// * `window`: A parent window handle to use for any prompts. If the window handle is
     ///   invalid or unsupported on the current platform, the prompt won't be displayed and `Error`
     ///   will be returned.
-    /// * `max_complete_connection_string_len` - The maximum allowed length for the returned
+    /// * `max_complete_connection_string_len`: The maximum allowed length for the returned
     ///   complete connection string. This is recommended to be at least 1024. If the complete
     ///   connection string is longer than this length, `Error` will be returned.
     ///
     /// # Example
     ///
     /// ```no_run
-    /// # if cfg!(target_os = "windows") {
-    /// # struct Window;
-    /// # unsafe impl raw_window_handle::HasRawWindowHandle for Window {
-    /// #     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
-    /// #         raw_window_handle::RawWindowHandle::Windows(raw_window_handle::windows::WindowsHandle::empty())
-    /// #     }
-    /// # }
-    /// # let window = Window;
+    /// # fn f(window: impl raw_window_handle::HasRawWindowHandle) -> Result<(), odbc_api::Error> {
     /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
     /// // thus making this call safe.
     /// let env = unsafe {
@@ -232,8 +225,7 @@ impl Environment {
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=MicrosoftAccessFile;DBQ=C:\Db\Example.accdb;DriverId=25;FIL=MS Access;MaxBufferSize=2048;`
-    /// # }
-    /// # Ok::<(), odbc_api::Error>(())
+    /// # Ok(()) }
     /// ```
     pub fn connect_with_complete_prompt(
         &self,
