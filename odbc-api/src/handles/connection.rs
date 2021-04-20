@@ -1,5 +1,9 @@
 use super::{
-    as_handle::AsHandle, buffer::buf_ptr, drop_handle, error::Error, error::IntoResult,
+    as_handle::AsHandle,
+    buffer::{buf_ptr, OutputStringBuffer},
+    drop_handle,
+    error::Error,
+    error::IntoResult,
     statement::StatementImpl,
 };
 use odbc_sys::{
@@ -7,12 +11,12 @@ use odbc_sys::{
     HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
     SQLSetConnectAttrW,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
-use widestring::{U16Str, U16CStr};
 use raw_window_handle::HasRawWindowHandle;
+use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
+use widestring::U16Str;
 
 // Currently only windows driver manager supports prompt.
-#[cfg(target_os="windows")]
+#[cfg(target_os = "windows")]
 use raw_window_handle::RawWindowHandle;
 
 /// The connection handle references storage of all information about the connection to the data
@@ -118,34 +122,34 @@ impl<'c> Connection<'c> {
         &mut self,
         connection_string: &U16Str,
         window: Option<&impl HasRawWindowHandle>,
-        max_complete_connection_string_len: usize,
-    ) -> Result<String, Error> {
+        mut completed_connection_string: Option<&mut OutputStringBuffer>,
+        driver_completion: DriverConnectOption,
+    ) -> Result<(), Error> {
         let window_handle = match window.map(HasRawWindowHandle::raw_window_handle) {
             #[cfg(target_os = "windows")]
             Some(RawWindowHandle::Windows(handle)) => handle.hwnd,
             _ => null_mut(),
         };
 
-        let mut out_connection_string_buffer = vec![0; max_complete_connection_string_len + 1];
+        let (out_connection_string, out_buf_len, actual_len_ptr) = completed_connection_string
+            .as_mut()
+            .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
+            .unwrap_or((null_mut(), 0, null_mut()));
 
         unsafe {
-            let out_connection_string_len = null_mut();
             SQLDriverConnectW(
                 self.handle,
                 window_handle,
                 buf_ptr(connection_string.as_slice()),
                 connection_string.len().try_into().unwrap(),
-                out_connection_string_buffer.as_mut_ptr(),
-                out_connection_string_buffer.len().try_into().unwrap(),
-                out_connection_string_len,
-                DriverConnectOption::Complete,
+                out_connection_string,
+                out_buf_len,
+                actual_len_ptr,
+                driver_completion,
             )
             .into_result(self)?;
 
-            let out_connection_string_raw = U16CStr::from_slice_with_nul(&out_connection_string_buffer).unwrap();
-            let out_connection_string = out_connection_string_raw.to_string().unwrap();
-
-            Ok(out_connection_string)
+            Ok(())
         }
     }
 

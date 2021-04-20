@@ -1,9 +1,9 @@
 use std::{cmp::max, collections::HashMap, sync::Mutex};
 
-use crate::{handles, Connection, Error};
-use odbc_sys::{AttrOdbcVersion, FetchOrientation};
-use widestring::{U16CStr, U16Str, U16String};
+use crate::{Connection, Error, handles::{self, OutputStringBuffer}};
+use odbc_sys::{AttrOdbcVersion, DriverConnectOption, FetchOrientation};
 use raw_window_handle::HasRawWindowHandle;
+use widestring::{U16CStr, U16Str, U16String};
 
 /// An ODBC 3.8 environment.
 ///
@@ -191,26 +191,39 @@ impl Environment {
     ///
     /// ```no_run
     /// # fn f(window: impl raw_window_handle::HasRawWindowHandle) -> Result<(), odbc_api::Error> {
+    /// use odbc_api::{Environment, handles::OutputStringBuffer};
+    /// 
     /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
     /// // thus making this call safe.
     /// let env = unsafe {
-    ///     odbc_api::Environment::new()?
+    ///     Environment::new()?
     /// };
     ///
     /// // In this case, we intentionally provide a blank connection string so the user will be
     /// // prompted to select a data source to use.
-    /// let empty = String::new();
-    /// let (connection, connection_string) =
-    ///     env.connect_with_complete_prompt(&empty, Some(&window), 1024)?;
+    /// let mut output_buffer = OutputStringBuffer::with_buffer_size(1024);
+    /// let connection = env.connect_with_complete_prompt(
+    ///     "",
+    ///     Some(&window),
+    ///     Some(&mut output_buffer)
+    /// )?;
+    ///
+    /// // Check that the output buffer has been large enough to hold the entire connection string.
+    /// assert!(!output_buffer.is_truncated());
     ///
     /// // Now `connection_string` will contain the data source selected by the user.
+    /// let connection_string = output_buffer.to_string();
     ///
     /// // In this case, we specify a DSN that requires login credentials, but the DSN doesn't
     /// // provide those credentials. Instead, the user will be prompted for a UID and PWD. The
     /// // returned `connection_string` will contain the `UID` and `PWD` provided by the user.
     /// let without_uid_or_pwd = "DSN=SomeSharedDatabase;";
-    /// let (connection, connection_string) =
-    ///     env.connect_with_complete_prompt(&without_uid_or_pwd, Some(&window), 1024)?;
+    /// let connection = env.connect_with_complete_prompt(
+    ///     &without_uid_or_pwd,
+    ///     Some(&window),
+    ///     Some(&mut output_buffer)
+    /// )?;
+    /// let connection_string = output_buffer.to_string();
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=SomeSharedDatabase;UID=SA;PWD=<YourStrong@Passw0rd>;`
@@ -220,8 +233,12 @@ impl Environment {
     /// // mostly the same as `already_complete` but the driver may append some extra attributes.
     /// // )
     /// let already_complete = "DSN=MicrosoftAccessFile;";
-    /// let (connection, connection_string) =
-    ///     env.connect_with_complete_prompt(&already_complete, Some(&window), 1024)?;
+    /// let connection = env.connect_with_complete_prompt(
+    ///    &already_complete,
+    ///    Some(&window),
+    ///    Some(&mut output_buffer),
+    /// )?;
+    /// let connection_string = output_buffer.to_string();
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=MicrosoftAccessFile;DBQ=C:\Db\Example.accdb;DriverId=25;FIL=MS Access;MaxBufferSize=2048;`
@@ -231,16 +248,17 @@ impl Environment {
         &self,
         connection_string: &str,
         window: Option<&impl HasRawWindowHandle>,
-        max_complete_connection_string_len: usize,
-    ) -> Result<(Connection<'_>, String), Error> {
+        completed_connection_string: Option<&mut OutputStringBuffer>,
+    ) -> Result<Connection<'_>, Error> {
         let mut connection = self.environment.allocate_connection()?;
         let connection_string = U16String::from_str(connection_string);
-        let out_connection_string = connection.connect_with_complete_prompt(
+        connection.connect_with_complete_prompt(
             &connection_string,
             window,
-            max_complete_connection_string_len,
+            completed_connection_string,
+            DriverConnectOption::Complete
         )?;
-        Ok((Connection::new(connection), out_connection_string))
+        Ok(Connection::new(connection))
     }
 
     /// Get information about available drivers. Only 32 or 64 Bit drivers will be listed, depending

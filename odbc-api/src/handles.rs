@@ -27,6 +27,7 @@ pub use {
     environment::Environment,
     error::Error,
     statement::{ParameterDescription, Statement, StatementImpl},
+    buffer::OutputStringBuffer,
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
