@@ -9,7 +9,11 @@ use odbc_sys::{
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::{U16Str, U16CStr};
-use raw_window_handle::{RawWindowHandle, HasRawWindowHandle};
+use raw_window_handle::HasRawWindowHandle;
+
+// Currently only windows driver manager supports prompt.
+#[cfg(target_os="windows")]
+use raw_window_handle::RawWindowHandle;
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
