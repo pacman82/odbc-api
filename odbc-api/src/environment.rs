@@ -215,7 +215,7 @@ impl Environment {
     /// assert!(!output_buffer.is_truncated());
     ///
     /// // Now `connection_string` will contain the data source selected by the user.
-    /// let connection_string = output_buffer.to_string();
+    /// let connection_string = output_buffer.to_utf8();
     ///
     /// // In this case, we specify a DSN that requires login credentials, but the DSN doesn't
     /// // provide those credentials. Instead, the user will be prompted for a UID and PWD. The
@@ -226,7 +226,7 @@ impl Environment {
     ///     Some(&window),
     ///     Some(&mut output_buffer)
     /// )?;
-    /// let connection_string = output_buffer.to_string();
+    /// let connection_string = output_buffer.to_utf8();
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=SomeSharedDatabase;UID=SA;PWD=<YourStrong@Passw0rd>;`
@@ -241,7 +241,7 @@ impl Environment {
     ///    Some(&window),
     ///    Some(&mut output_buffer),
     /// )?;
-    /// let connection_string = output_buffer.to_string();
+    /// let connection_string = output_buffer.to_utf8();
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=MicrosoftAccessFile;DBQ=C:\Db\Example.accdb;DriverId=25;FIL=MS Access;MaxBufferSize=2048;`

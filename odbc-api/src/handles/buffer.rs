@@ -76,7 +76,7 @@ impl OutputStringBuffer {
     }
 
     /// Call this method to extract string from buffer after ODBC has filled it.
-    pub fn to_string(&self) -> String {
+    pub fn to_utf8(&self) -> String {
         self.as_ucstr().to_string().unwrap()
     }
 
