@@ -1,6 +1,9 @@
 use std::{cmp::max, collections::HashMap, sync::Mutex};
 
-use crate::{Connection, Error, handles::{self, OutputStringBuffer}};
+use crate::{
+    handles::{self, OutputStringBuffer},
+    Connection, Error,
+};
 use odbc_sys::{AttrOdbcVersion, DriverConnectOption, FetchOrientation};
 use raw_window_handle::HasRawWindowHandle;
 use widestring::{U16CStr, U16Str, U16String};
@@ -192,7 +195,7 @@ impl Environment {
     /// ```no_run
     /// # fn f(window: impl raw_window_handle::HasRawWindowHandle) -> Result<(), odbc_api::Error> {
     /// use odbc_api::{Environment, handles::OutputStringBuffer};
-    /// 
+    ///
     /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
     /// // thus making this call safe.
     /// let env = unsafe {
@@ -256,7 +259,7 @@ impl Environment {
             &connection_string,
             window,
             completed_connection_string,
-            DriverConnectOption::Complete
+            DriverConnectOption::Complete,
         )?;
         Ok(Connection::new(connection))
     }

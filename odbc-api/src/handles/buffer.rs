@@ -1,4 +1,8 @@
-use std::{cmp::min, convert::TryInto, ptr::{null, null_mut}};
+use std::{
+    cmp::min,
+    convert::TryInto,
+    ptr::{null, null_mut},
+};
 
 use widestring::U16CStr;
 
@@ -38,7 +42,6 @@ pub struct OutputStringBuffer {
 }
 
 impl OutputStringBuffer {
-
     /// Creates a new instance of an output string buffer which can hold strings up to a size of
     /// `max_str_len` characters.
     pub fn with_buffer_size(max_str_len: usize) -> Self {
@@ -49,7 +52,7 @@ impl OutputStringBuffer {
     }
 
     /// Ptr to the internal buffer. Used by ODBC API calls to fill the buffer.
-    pub fn mut_buf_ptr(&mut self) -> *mut u16{
+    pub fn mut_buf_ptr(&mut self) -> *mut u16 {
         mut_buf_ptr(&mut self.buffer)
     }
 
@@ -63,8 +66,8 @@ impl OutputStringBuffer {
     }
 
     /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
-    pub fn mut_actual_len_ptr(&mut self) -> * mut i16 {
-        &mut self.actual_length as * mut i16
+    pub fn mut_actual_len_ptr(&mut self) -> *mut i16 {
+        &mut self.actual_length as *mut i16
     }
 
     /// Interpret buffer as UTF16 string. Panics if no terminating zero present.

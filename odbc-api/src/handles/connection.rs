@@ -9,7 +9,7 @@ use super::{
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
     HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
-    SQLSetConnectAttrW,
+    SQLSetConnectAttrW, SqlReturn,
 };
 use raw_window_handle::HasRawWindowHandle;
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
@@ -136,7 +136,7 @@ impl<'c> Connection<'c> {
             .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
             .unwrap_or((null_mut(), 0, null_mut()));
 
-        unsafe {
+        let ret = unsafe {
             SQLDriverConnectW(
                 self.handle,
                 window_handle,
@@ -147,9 +147,12 @@ impl<'c> Connection<'c> {
                 actual_len_ptr,
                 driver_completion,
             )
-            .into_result(self)?;
+        };
 
-            Ok(())
+        if ret == SqlReturn::NO_DATA {
+            Err(Error::AbortedConnectionStringCompletion)
+        } else {
+            ret.into_result(self)
         }
     }
 

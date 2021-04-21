@@ -20,6 +20,7 @@ mod statement;
 pub use {
     as_handle::AsHandle,
     bind::{CData, CDataMut, HasDataType},
+    buffer::OutputStringBuffer,
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
@@ -27,7 +28,6 @@ pub use {
     environment::Environment,
     error::Error,
     statement::{ParameterDescription, Statement, StatementImpl},
-    buffer::OutputStringBuffer,
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
