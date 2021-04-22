@@ -121,7 +121,7 @@ impl<'c> Connection<'c> {
     pub fn connect_with_complete_prompt(
         &mut self,
         connection_string: &U16Str,
-        window: Option<&impl HasRawWindowHandle>,
+        window: Option<&dyn HasRawWindowHandle>,
         mut completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverConnectOption,
     ) -> Result<(), Error> {

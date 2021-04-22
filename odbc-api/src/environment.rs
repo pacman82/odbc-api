@@ -172,10 +172,10 @@ impl Environment {
 
     /// Allocates a connection handle and establishes connections to a driver and a data source.
     ///
-    /// An alternative to `connect` and `connect_with_connection_string`. It supports data sources
-    /// or connection strings that may require more information from the user in order to connect.
-    /// If any additional information is required, the driver manager/driver will attempt to create
-    /// a prompt to allow the user to provide the additional information.
+    /// An alternative to `connect` and `connect_with_connection_string`. This method can be
+    /// provided with an incomplete or even empty connection string. If any additional information
+    /// is required, the driver manager/driver will attempt to create a prompt to allow the user to
+    /// provide the additional information.
     ///
     /// If the connection is successful, the complete connection string (including any information
     /// provided by the user through a prompt) is returned.
@@ -186,15 +186,19 @@ impl Environment {
     /// * `window`: A parent window handle to use for any prompts. If the window handle is
     ///   invalid or unsupported on the current platform, the prompt won't be displayed and `Error`
     ///   will be returned.
-    /// * `max_complete_connection_string_len`: The maximum allowed length for the returned
-    ///   complete connection string. This is recommended to be at least 1024. If the complete
-    ///   connection string is longer than this length, `Error` will be returned.
+    /// * `completed_connection_string`: Output buffer with the complete connection string. It is
+    ///   recommended to choose a buffer with at least `1024` bytes length.
+    /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete
+    ///   the provided connection string. 
     ///
-    /// # Example
+    /// # Examples
+    ///
+    /// In this case, we intentionally provide a blank connection string so the user will be
+    /// prompted to select a data source to use.
     ///
     /// ```no_run
     /// # fn f(window: impl raw_window_handle::HasRawWindowHandle) -> Result<(), odbc_api::Error> {
-    /// use odbc_api::{Environment, handles::OutputStringBuffer};
+    /// use odbc_api::{Environment, handles::OutputStringBuffer, sys::DriverConnectOption};
     ///
     /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
     /// // thus making this call safe.
@@ -202,13 +206,12 @@ impl Environment {
     ///     Environment::new()?
     /// };
     ///
-    /// // In this case, we intentionally provide a blank connection string so the user will be
-    /// // prompted to select a data source to use.
     /// let mut output_buffer = OutputStringBuffer::with_buffer_size(1024);
-    /// let connection = env.connect_with_complete_prompt(
+    /// let connection = env.driver_connect(
     ///     "",
     ///     Some(&window),
-    ///     Some(&mut output_buffer)
+    ///     Some(&mut output_buffer),
+    ///     DriverConnectOption::Prompt,
     /// )?;
     ///
     /// // Check that the output buffer has been large enough to hold the entire connection string.
@@ -216,30 +219,50 @@ impl Environment {
     ///
     /// // Now `connection_string` will contain the data source selected by the user.
     /// let connection_string = output_buffer.to_utf8();
+    /// # Ok(()) }
+    /// ```
     ///
-    /// // In this case, we specify a DSN that requires login credentials, but the DSN doesn't
-    /// // provide those credentials. Instead, the user will be prompted for a UID and PWD. The
-    /// // returned `connection_string` will contain the `UID` and `PWD` provided by the user.
+    /// In this case, we specify a DSN that requires login credentials, but the DSN does not provide
+    /// those credentials. Instead, the user will be prompted for a UID and PWD. The returned
+    /// `connection_string` will contain the `UID` and `PWD` provided by the user.
+    ///
+    /// ```
+    /// # use odbc_api::sys::DriverConnectOption;
+    /// # fn f(
+    /// #    window: impl raw_window_handle::HasRawWindowHandle,
+    /// #    mut output_buffer: odbc_api::handles::OutputStringBuffer,
+    /// #    env: odbc_api::Environment,
+    /// # ) -> Result<(), odbc_api::Error> {
     /// let without_uid_or_pwd = "DSN=SomeSharedDatabase;";
-    /// let connection = env.connect_with_complete_prompt(
+    /// let connection = env.driver_connect(
     ///     &without_uid_or_pwd,
     ///     Some(&window),
-    ///     Some(&mut output_buffer)
+    ///     Some(&mut output_buffer),
+    ///     DriverConnectOption::Complete,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
     ///
     /// // Now `connection_string` might be something like
     /// // `DSN=SomeSharedDatabase;UID=SA;PWD=<YourStrong@Passw0rd>;`
+    /// # Ok(()) }
+    /// ```
     ///
-    /// // In this case, we use a DSN that's already complete and doesn't require a prompt. Because
-    /// // a prompt isn't needed, `window` isn't required. The returned `connection_string` will be
-    /// // mostly the same as `already_complete` but the driver may append some extra attributes.
-    /// // )
+    /// In this case, we use a DSN that is already complete and does not require a prompt. Because a
+    /// prompt is not needed, `window` is also not required. The returned `connection_string` will
+    /// be mostly the same as `already_complete` but the driver may append some extra attributes.
+    ///
+    /// ```
+    /// # use odbc_api::sys::DriverConnectOption;
+    /// # fn f(
+    /// #    mut output_buffer: odbc_api::handles::OutputStringBuffer,
+    /// #    env: odbc_api::Environment,
+    /// # ) -> Result<(), odbc_api::Error> {
     /// let already_complete = "DSN=MicrosoftAccessFile;";
-    /// let connection = env.connect_with_complete_prompt(
+    /// let connection = env.driver_connect(
     ///    &already_complete,
-    ///    Some(&window),
+    ///    None,
     ///    Some(&mut output_buffer),
+    ///    DriverConnectOption::Complete,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
     ///
@@ -247,11 +270,12 @@ impl Environment {
     /// // `DSN=MicrosoftAccessFile;DBQ=C:\Db\Example.accdb;DriverId=25;FIL=MS Access;MaxBufferSize=2048;`
     /// # Ok(()) }
     /// ```
-    pub fn connect_with_complete_prompt(
+    pub fn driver_connect(
         &self,
         connection_string: &str,
-        window: Option<&impl HasRawWindowHandle>,
+        window: Option<&dyn HasRawWindowHandle>,
         completed_connection_string: Option<&mut OutputStringBuffer>,
+        driver_completion: DriverConnectOption,
     ) -> Result<Connection<'_>, Error> {
         let mut connection = self.environment.allocate_connection()?;
         let connection_string = U16String::from_str(connection_string);
@@ -259,7 +283,7 @@ impl Environment {
             &connection_string,
             window,
             completed_connection_string,
-            DriverConnectOption::Complete,
+            driver_completion,
         )?;
         Ok(Connection::new(connection))
     }
