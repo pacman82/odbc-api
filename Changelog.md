@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+
+* Add `Environment::driver_connect` which forwards more functionality from `SqlDriverConnect`. In particular it is now possible (on windows systems) to complete connection strings via the dialog provided by the ODBC driver and driver manager.
+* `Error` has new variant: `Error::AbortedConnectionStringCompletion`. Which occurs if the GUI for completion is closed before returning any data.
+
+Thanks to @grovesNL for the contribution.
+
 ## 0.21.0
 
 * `Environment::drivers` now takes `&self` instead of `&mut self`.
