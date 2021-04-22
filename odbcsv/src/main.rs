@@ -1,14 +1,17 @@
 use anyhow::{bail, Error};
 use log::info;
-use odbc_api::{
-    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, Environment, IntoParameter,
-};
+use odbc_api::{Connection, Cursor, Environment, IntoParameter, buffers::TextRowSet, escape_attribute_value};
 use std::{
     fs::File,
     io::{stdin, stdout, Read, Write},
     path::PathBuf,
 };
-use structopt::{clap::ArgGroup, StructOpt};
+use structopt::StructOpt;
+
+#[cfg(target_os = "windows")]
+use winit::{event_loop::EventLoop, window::{Window, WindowBuilder}};
+#[cfg(target_os = "windows")]
+use odbc_api::sys::DriverConnectOption;
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt)]
@@ -42,6 +45,10 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
+    #[cfg(target_os = "windows")]
+    #[structopt(long)]
+    /// Prompts the user for missing information from the connection string.
+    prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
     #[structopt(long, short = "c")]
@@ -104,12 +111,6 @@ struct InsertOpt {
 }
 
 fn main() -> Result<(), Error> {
-    // Verify that either `dsn` or `connection-string` is specified.
-    Cli::clap().group(
-        ArgGroup::with_name("source")
-            .required(true)
-            .args(&["dsn", "connection-string"]),
-    );
     // Parse arguments from command line interface
     let opt = Cli::from_args();
 
@@ -173,6 +174,17 @@ fn open_connection<'e>(
     environment: &'e Environment,
     opt: &ConnectOpts,
 ) -> Result<Connection<'e>, odbc_api::Error> {
+    #[cfg(target_os = "windows")]
+    if opt.prompt {
+        let window = message_only_window().unwrap();
+        return environment.driver_connect(
+            opt.connection_string.as_deref().unwrap_or_default(),
+            Some(&window),
+            None,
+            DriverConnectOption::Complete,
+        );
+    } 
+    
     if let Some(dsn) = opt.dsn.as_deref() {
         environment.connect(
             dsn,
@@ -196,6 +208,12 @@ fn open_connection<'e>(
 
         environment.connect_with_connection_string(&cs)
     }
+}
+
+#[cfg(target_os = "windows")]
+fn message_only_window() -> Result<Window, Error> {
+    let window = WindowBuilder::new().with_visible(false).build(&EventLoop::new())?;
+    Ok(window)
 }
 
 /// Execute a query and writes the result to csv.

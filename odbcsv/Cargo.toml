@@ -1,6 +1,6 @@
 [package]
 name = "odbcsv"
-version = "0.3.25"
+version = "0.3.26"
 authors = ["Markus Klein <markus-klein@live.de>"]
 edition = "2018"
 license = "MIT"
@@ -29,12 +29,13 @@ readme = "Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = { version = "0.21.0", path = "../odbc-api" }
+odbc-api = { version = "0.22.0", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.40"
 stderrlog = "0.5.1"
 structopt = "0.3.21"
 log = "0.4.14"
+winit = "0.24.0"
 
 [dev-dependencies]
 assert_cmd = "1.0.3"
