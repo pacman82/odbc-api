@@ -1,12 +1,15 @@
-use std::{cmp::max, collections::HashMap, sync::Mutex};
+use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
     handles::{self, OutputStringBuffer},
     Connection, Error,
 };
-use odbc_sys::{AttrOdbcVersion, DriverConnectOption, FetchOrientation};
-use raw_window_handle::HasRawWindowHandle;
+use odbc_sys::{AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
+
+// Currently only windows driver manager supports prompt.
+#[cfg(target_os = "windows")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// An ODBC 3.8 environment.
 ///
@@ -183,22 +186,22 @@ impl Environment {
     /// # Parameters
     ///
     /// * `connection_string`: Connection string.
-    /// * `window`: A parent window handle to use for any prompts. If the window handle is
-    ///   invalid or unsupported on the current platform, the prompt won't be displayed and `Error`
-    ///   will be returned.
     /// * `completed_connection_string`: Output buffer with the complete connection string. It is
     ///   recommended to choose a buffer with at least `1024` bytes length.
     /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete
-    ///   the provided connection string. 
+    ///   the provided connection string.
     ///
     /// # Examples
     ///
-    /// In this case, we intentionally provide a blank connection string so the user will be
-    /// prompted to select a data source to use.
+    /// In the first example, we intentionally provide a blank connection string so the user will be
+    /// prompted to select a data source to use. Note that this functionality is only available on
+    /// windows.
     ///
     /// ```no_run
-    /// # fn f(window: impl raw_window_handle::HasRawWindowHandle) -> Result<(), odbc_api::Error> {
-    /// use odbc_api::{Environment, handles::OutputStringBuffer, sys::DriverConnectOption};
+    /// # #[cfg(target_os = "widows")]
+    /// # fn f(parent_window: impl raw_window_handle::HasRawWindowHandle)
+    /// #   -> Result<(), odbc_api::Error> {
+    /// use odbc_api::{Environment, handles::OutputStringBuffer, DriverCompleteOption};
     ///
     /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
     /// // thus making this call safe.
@@ -209,9 +212,8 @@ impl Environment {
     /// let mut output_buffer = OutputStringBuffer::with_buffer_size(1024);
     /// let connection = env.driver_connect(
     ///     "",
-    ///     Some(&window),
     ///     Some(&mut output_buffer),
-    ///     DriverConnectOption::Prompt,
+    ///     DriverCompleteOption::Prompt(&parent_window),
     /// )?;
     ///
     /// // Check that the output buffer has been large enough to hold the entire connection string.
@@ -222,23 +224,24 @@ impl Environment {
     /// # Ok(()) }
     /// ```
     ///
-    /// In this case, we specify a DSN that requires login credentials, but the DSN does not provide
-    /// those credentials. Instead, the user will be prompted for a UID and PWD. The returned
-    /// `connection_string` will contain the `UID` and `PWD` provided by the user.
+    /// In the following examples we specify a DSN that requires login credentials, but the DSN does
+    /// not provide those credentials. Instead, the user will be prompted for a UID and PWD. The
+    /// returned `connection_string` will contain the `UID` and `PWD` provided by the user. Note
+    /// that this functionality is currently only available on windows targets.
     ///
     /// ```
-    /// # use odbc_api::sys::DriverConnectOption;
+    /// # use odbc_api::DriverCompleteOption;
+    /// # #[cfg(target_os = "windows")]
     /// # fn f(
-    /// #    window: impl raw_window_handle::HasRawWindowHandle,
+    /// #    parent_window: impl raw_window_handle::HasRawWindowHandle,
     /// #    mut output_buffer: odbc_api::handles::OutputStringBuffer,
     /// #    env: odbc_api::Environment,
     /// # ) -> Result<(), odbc_api::Error> {
     /// let without_uid_or_pwd = "DSN=SomeSharedDatabase;";
     /// let connection = env.driver_connect(
     ///     &without_uid_or_pwd,
-    ///     Some(&window),
     ///     Some(&mut output_buffer),
-    ///     DriverConnectOption::Complete,
+    ///     DriverCompleteOption::Complete(&parent_window),
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
     ///
@@ -247,22 +250,21 @@ impl Environment {
     /// # Ok(()) }
     /// ```
     ///
-    /// In this case, we use a DSN that is already complete and does not require a prompt. Because a
-    /// prompt is not needed, `window` is also not required. The returned `connection_string` will
-    /// be mostly the same as `already_complete` but the driver may append some extra attributes.
+    /// In this case, we use a DSN that is already sufficient and does not require a prompt. Because
+    /// a prompt is not needed, `window` is also not required. The returned `connection_string` will
+    /// be mostly the same as `already_sufficient` but the driver may append some extra attributes.
     ///
     /// ```
-    /// # use odbc_api::sys::DriverConnectOption;
+    /// # use odbc_api::DriverCompleteOption;
     /// # fn f(
     /// #    mut output_buffer: odbc_api::handles::OutputStringBuffer,
     /// #    env: odbc_api::Environment,
     /// # ) -> Result<(), odbc_api::Error> {
-    /// let already_complete = "DSN=MicrosoftAccessFile;";
+    /// let already_sufficient = "DSN=MicrosoftAccessFile;";
     /// let connection = env.driver_connect(
-    ///    &already_complete,
-    ///    None,
+    ///    &already_sufficient,
     ///    Some(&mut output_buffer),
-    ///    DriverConnectOption::Complete,
+    ///    DriverCompleteOption::NoPrompt,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
     ///
@@ -273,18 +275,20 @@ impl Environment {
     pub fn driver_connect(
         &self,
         connection_string: &str,
-        window: Option<&dyn HasRawWindowHandle>,
         completed_connection_string: Option<&mut OutputStringBuffer>,
-        driver_completion: DriverConnectOption,
+        driver_completion: DriverCompleteOption<'_>,
     ) -> Result<Connection<'_>, Error> {
         let mut connection = self.environment.allocate_connection()?;
         let connection_string = U16String::from_str(connection_string);
-        connection.connect_with_complete_prompt(
-            &connection_string,
-            window,
-            completed_connection_string,
-            driver_completion,
-        )?;
+
+        unsafe {
+            connection.driver_connect(
+                &connection_string,
+                driver_completion.parent_window(),
+                completed_connection_string,
+                driver_completion.as_sys(),
+            )?;
+        }
         Ok(Connection::new(connection))
     }
 
@@ -467,6 +471,76 @@ impl Environment {
         }
 
         Ok(data_source_info)
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[doc(hidden)]
+pub struct NonExhaustive<'a>(std::marker::PhantomData<&'a i32>);
+
+/// Specifies how the driver and driver manager complete the incoming connection string. See
+/// [`Environment::driver_connect`].
+pub enum DriverCompleteOption<'a> {
+    /// Do not show a prompt to the user. This implies that the connection string, must already
+    /// provide all information needed to Connect to the data source, otherwise the operation fails.
+    /// This is the only variant on non windows platforms
+    NoPrompt,
+    /// Always show a prompt to the user.
+    #[cfg(target_os = "windows")]
+    Prompt(&'a dyn HasRawWindowHandle),
+    /// Only show a prompt to the user if the information in the connection string is not sufficient
+    /// to connect to the data source.
+    #[cfg(target_os = "windows")]
+    Complete(&'a dyn HasRawWindowHandle),
+    /// Like complete, but the user may not change any information already provided within the
+    /// connection string.
+    #[cfg(target_os = "windows")]
+    CompleteRequired(&'a dyn HasRawWindowHandle),
+    // Solves two problems for us.
+    //
+    // 1. We do not need a breaking change if we decide to add prompt support for non windows
+    //    platforms
+    // 2. Provides us with a place for the 'a lifetime so the borrow checker won't complain.
+    #[cfg(not(target_os = "windows"))]
+    #[doc(hidden)]
+    __NonExhaustive(NonExhaustive<'a>),
+}
+
+impl<'a> DriverCompleteOption<'a> {
+    #[cfg(target_os = "windows")]
+    pub fn parent_window(&self) -> HWnd {
+        let has_raw_window_handle = match self {
+            DriverCompleteOption::NoPrompt => return null_mut(),
+            DriverCompleteOption::Prompt(hrwh)
+            | DriverCompleteOption::Complete(hrwh)
+            | DriverCompleteOption::CompleteRequired(hrwh) => hrwh,
+        };
+        match has_raw_window_handle.raw_window_handle() {
+            RawWindowHandle::Windows(handle) => handle.hwnd,
+            _ => null_mut(),
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn parent_window(&self) -> HWnd {
+        null_mut()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn as_sys(&self) -> odbc_sys::DriverConnectOption {
+        match self {
+            DriverCompleteOption::NoPrompt => odbc_sys::DriverConnectOption::NoPrompt,
+            DriverCompleteOption::Prompt(_) => odbc_sys::DriverConnectOption::Prompt,
+            DriverCompleteOption::Complete(_) => odbc_sys::DriverConnectOption::Complete,
+            DriverCompleteOption::CompleteRequired(_) => {
+                odbc_sys::DriverConnectOption::CompleteRequired
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn as_sys(&self) -> odbc_sys::DriverConnectOption {
+        odbc_sys::DriverConnectOption::NoPrompt
     }
 }
 

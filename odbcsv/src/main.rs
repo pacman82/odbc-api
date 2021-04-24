@@ -1,6 +1,9 @@
 use anyhow::{bail, Error};
 use log::info;
-use odbc_api::{Connection, Cursor, Environment, IntoParameter, buffers::TextRowSet, escape_attribute_value};
+use odbc_api::{
+    buffers::TextRowSet, escape_attribute_value, Connection, Cursor,
+    Environment, IntoParameter,
+};
 use std::{
     fs::File,
     io::{stdin, stdout, Read, Write},
@@ -9,9 +12,12 @@ use std::{
 use structopt::StructOpt;
 
 #[cfg(target_os = "windows")]
-use winit::{event_loop::EventLoop, window::{Window, WindowBuilder}};
+use winit::{
+    event_loop::EventLoop,
+    window::{Window, WindowBuilder},
+};
 #[cfg(target_os = "windows")]
-use odbc_api::sys::DriverConnectOption;
+use odbc_api::DriverCompleteOption;
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt)]
@@ -45,9 +51,9 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
-    #[cfg(target_os = "windows")]
     #[structopt(long)]
-    /// Prompts the user for missing information from the connection string.
+    /// Prompts the user for missing information from the connection string. Only supported on
+    /// windows platform.
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
@@ -174,45 +180,53 @@ fn open_connection<'e>(
     environment: &'e Environment,
     opt: &ConnectOpts,
 ) -> Result<Connection<'e>, odbc_api::Error> {
+
+    if let Some(dsn) = opt.dsn.as_deref() {
+        return environment.connect(
+            dsn,
+            opt.user.as_deref().unwrap_or(""),
+            opt.password.as_deref().unwrap_or(""),
+        );
+    }
+
+    // Append user and or password to connection string
+    let mut cs = opt.connection_string.clone().unwrap_or_default();
+    if let Some(uid) = opt.user.as_deref() {
+        cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
+    }
+    if let Some(pwd) = opt.password.as_deref() {
+        cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
+    }
+
     #[cfg(target_os = "windows")]
     if opt.prompt {
         let window = message_only_window().unwrap();
         return environment.driver_connect(
-            opt.connection_string.as_deref().unwrap_or_default(),
-            Some(&window),
+            &cs,
             None,
-            DriverConnectOption::Complete,
+            DriverCompleteOption::Complete(&window),
         );
-    } 
-    
-    if let Some(dsn) = opt.dsn.as_deref() {
-        environment.connect(
-            dsn,
-            opt.user.as_deref().unwrap_or(""),
-            opt.password.as_deref().unwrap_or(""),
-        )
-    } else {
-        let connection_string = opt
-            .connection_string
-            .as_deref()
-            .expect("Connection string must be specified, if dsn is not.");
-
-        // Append user and or password to connection string
-        let mut cs = connection_string.to_owned();
-        if let Some(uid) = opt.user.as_deref() {
-            cs = format!("{}UID={};", cs, &escape_attribute_value(uid));
-        }
-        if let Some(pwd) = opt.password.as_deref() {
-            cs = format!("{}PWD={};", cs, &escape_attribute_value(pwd));
-        }
-
-        environment.connect_with_connection_string(&cs)
     }
+
+    // Would rather use conditional compilation on the flag itself. While this works fine, it does
+    // mess with rust analyzer, so I keep it and panic here to keep development experience smooth.
+    #[cfg(not(target_os = "windows"))]
+    if opt.prompt {
+        panic!("--prompt is only supported on windows.")
+    }
+
+    if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
+        panic!("Either DSN, connection string or prompt must be specified.")
+    }
+
+    environment.connect_with_connection_string(&cs)
 }
 
 #[cfg(target_os = "windows")]
 fn message_only_window() -> Result<Window, Error> {
-    let window = WindowBuilder::new().with_visible(false).build(&EventLoop::new())?;
+    let window = WindowBuilder::new()
+        .with_visible(false)
+        .build(&EventLoop::new())?;
     Ok(window)
 }
 

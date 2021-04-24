@@ -7,17 +7,12 @@ use super::{
     statement::StatementImpl,
 };
 use odbc_sys::{
-    CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, Handle,
+    CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
     HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
     SQLSetConnectAttrW, SqlReturn,
 };
-use raw_window_handle::HasRawWindowHandle;
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
-
-// Currently only windows driver manager supports prompt.
-#[cfg(target_os = "windows")]
-use raw_window_handle::RawWindowHandle;
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
@@ -98,56 +93,46 @@ impl<'c> Connection<'c> {
         connection_string: &U16Str,
     ) -> Result<(), Error> {
         unsafe {
-            let window_handle = null_mut();
-            let out_connection_string = null_mut();
-            let out_connection_string_len = null_mut();
-            SQLDriverConnectW(
-                self.handle,
-                window_handle,
-                buf_ptr(connection_string.as_slice()),
-                connection_string.len().try_into().unwrap(),
-                out_connection_string,
-                0,
-                out_connection_string_len,
+            let parent_window = null_mut();
+            let completed_connection_string = None;
+
+            self.driver_connect(
+                connection_string,
+                parent_window,
+                completed_connection_string,
                 DriverConnectOption::NoPrompt,
             )
-            .into_result(self)?;
-            Ok(())
         }
     }
 
-    /// An alternative to `connect` and `connect_with_connection_string` that allows the user to be
-    /// prompted for any additional required information (`UID`, `PWD`, etc.).
-    pub fn connect_with_complete_prompt(
+    /// An alternative to `connect` for connecting with a connection string. Allows for completing
+    /// a connection string with a GUI prompt on windows.
+    ///
+    /// # Safety
+    ///
+    /// `parent_window` must either be a valid window handle or `NULL`.
+    pub unsafe fn driver_connect(
         &mut self,
         connection_string: &U16Str,
-        window: Option<&dyn HasRawWindowHandle>,
+        parent_window: HWnd,
         mut completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverConnectOption,
     ) -> Result<(), Error> {
-        let window_handle = match window.map(HasRawWindowHandle::raw_window_handle) {
-            #[cfg(target_os = "windows")]
-            Some(RawWindowHandle::Windows(handle)) => handle.hwnd,
-            _ => null_mut(),
-        };
-
         let (out_connection_string, out_buf_len, actual_len_ptr) = completed_connection_string
             .as_mut()
             .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
             .unwrap_or((null_mut(), 0, null_mut()));
 
-        let ret = unsafe {
-            SQLDriverConnectW(
-                self.handle,
-                window_handle,
-                buf_ptr(connection_string.as_slice()),
-                connection_string.len().try_into().unwrap(),
-                out_connection_string,
-                out_buf_len,
-                actual_len_ptr,
-                driver_completion,
-            )
-        };
+        let ret = SQLDriverConnectW(
+            self.handle,
+            parent_window,
+            buf_ptr(connection_string.as_slice()),
+            connection_string.len().try_into().unwrap(),
+            out_connection_string,
+            out_buf_len,
+            actual_len_ptr,
+            driver_completion,
+        );
 
         if ret == SqlReturn::NO_DATA {
             Err(Error::AbortedConnectionStringCompletion)
