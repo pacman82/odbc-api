@@ -23,7 +23,7 @@ pub mod parameter;
 pub use self::{
     connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
-    environment::{DataSourceInfo, DriverInfo, Environment},
+    environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Error, Nullability},
     into_parameter::IntoParameter,
