@@ -51,7 +51,7 @@ enum Command {
 /// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
-    #[structopt(long)]
+    #[structopt(long, conflicts_with = "dsn")]
     /// Prompts the user for missing information from the connection string. Only supported on
     /// windows platform.
     prompt: bool,
