@@ -225,8 +225,12 @@
 //! types.
 mod c_string;
 mod varchar;
+mod varbin;
 
-pub use self::varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut};
+pub use self::{
+    varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
+    varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut}
+};
 
 use std::ffi::c_void;
 

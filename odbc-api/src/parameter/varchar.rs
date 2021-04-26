@@ -265,8 +265,7 @@ impl<'a> VarCharSlice<'a> {
 /// Wraps a slice so it can be used as an output parameter for character data.
 pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
 
-/// A stack allocated VARCHAR type able to hold strings up to a length of 32 bytes (including the
-/// terminating zero for output strings).
+/// A stack allocated VARCHAR type.
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
@@ -279,13 +278,13 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
         indicator: NULL_DATA,
     };
 
-    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated and a
-    /// a terminating zero is placed at the end.
+    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated.
     pub fn new(text: &[u8]) -> Self {
         let indicator = text.len().try_into().unwrap();
         let mut buffer = [0u8; LENGTH];
         if text.len() > LENGTH {
             buffer.copy_from_slice(&text[..LENGTH]);
+            // *buffer.last_mut().unwrap() = 0;
         } else {
             buffer[..text.len()].copy_from_slice(text);
         };

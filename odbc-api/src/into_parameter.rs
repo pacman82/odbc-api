@@ -1,8 +1,4 @@
-use crate::{
-    fixed_sized::Pod,
-    parameter::{VarCharBox, VarCharSlice},
-    InputParameter, Nullable,
-};
+use crate::{InputParameter, Nullable, fixed_sized::Pod, parameter::{VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice}};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -63,6 +59,44 @@ impl<'a> IntoParameter for Option<String> {
         match self {
             Some(str) => str.into_parameter(),
             None => VarCharBox::null(),
+        }
+    }
+}
+
+impl<'a> IntoParameter for &'a [u8] {
+    type Parameter = VarBinarySlice<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarBinarySlice::new(self)
+    }
+}
+
+impl<'a> IntoParameter for Option<&'a [u8]> {
+    type Parameter = VarBinarySlice<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarBinarySlice::NULL,
+        }
+    }
+}
+
+impl IntoParameter for Vec<u8> {
+    type Parameter = VarBinaryBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarBinaryBox::from_vec(self)
+    }
+}
+
+impl<'a> IntoParameter for Option<Vec<u8>> {
+    type Parameter = VarBinaryBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarBinaryBox::null(),
         }
     }
 }
