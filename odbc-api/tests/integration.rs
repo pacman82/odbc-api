@@ -12,7 +12,7 @@ use odbc_api::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
     },
-    parameter::{VarCharArray, VarCharSlice},
+    parameter::{VarCharArray, VarCharSlice, VarBinaryArray},
     ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -95,10 +95,12 @@ fn bogus_connection_string() {
     assert!(matches!(conn, Err(_)));
 }
 
-#[test]
-fn connect_to_movies_db() {
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn connect_to_db(profile: &Profile) {
     let _conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
 }
 
@@ -1528,6 +1530,39 @@ fn parameter_option_str(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
+// #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
+fn parameter_option_byte_slice(profile: &Profile) {
+    let table_name = "ParameterOptionByteSlice";
+
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARBINARY(50)"]).unwrap();
+    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
+    prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
+    prepared
+        .execute(&Some(&[1,2,3][..]).into_parameter())
+        .unwrap();
+    prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
+    prepared
+        .execute(&Some(vec![1,2,3]).into_parameter())
+        .unwrap();
+
+    let cursor = conn
+        .execute(
+            &format!("SELECT a FROM {} ORDER BY id", table_name),
+            (),
+        )
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "NULL\n010203\nNULL\n010203";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_varchar_512(profile: &Profile) {
@@ -1546,6 +1581,28 @@ fn parameter_varchar_512(profile: &Profile) {
 
     let actual = table_to_string(&conn, table_name, &["a"]);
     let expected = "NULL\nBernd";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
+// #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
+fn parameter_varbinary_512(profile: &Profile) {
+    let table_name = "ParameterVarbinary512";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARBINARY(50)"]).unwrap();
+    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
+
+    prepared.execute(&VarBinaryArray::<512>::NULL).unwrap();
+    prepared
+        .execute(&VarBinaryArray::<512>::new(&[1,2,3]))
+        .unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    let expected = "NULL\n010203";
     assert_eq!(expected, actual);
 }
 
@@ -1804,19 +1861,21 @@ fn get_data_int(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_string(profile: &Profile) {
+    let table_name = "GetDataString";
+
     let conn = ENV
         .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    setup_empty_table(&conn, profile.index_type, "GetDataString", &["Varchar(50)"]).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Varchar(50)"]).unwrap();
 
     conn.execute(
-        "INSERT INTO GetDataString (a) VALUES ('Hello, World!'), (NULL)",
+        &format!("INSERT INTO {} (a) VALUES ('Hello, World!'), (NULL)", table_name),
         (),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute("SELECT a FROM GetDataString ORDER BY id", ())
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
         .unwrap()
         .unwrap();
 
@@ -1825,6 +1884,44 @@ fn get_data_string(profile: &Profile) {
 
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(Some(&b"Hello, World!"[..]), actual.as_bytes());
+
+    // second row
+    row = cursor.next_row().unwrap().unwrap();
+    row.get_data(1, &mut actual).unwrap();
+    assert!(actual.as_bytes().is_none());
+
+    // Cursor has reached its end
+    assert!(cursor.next_row().unwrap().is_none())
+}
+
+/// Use get_data to retrieve a binary data
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn get_data_binary(profile: &Profile) {
+    let table_name = "GetDataBinary";
+
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Varbinary(50)"]).unwrap();
+
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?), (NULL)", table_name),
+        &[1u8, 2, 3].into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = VarBinaryArray::<32>::NULL;
+
+    row.get_data(1, &mut actual).unwrap();
+    assert_eq!(Some(&[1u8,2,3][..]), actual.as_bytes());
 
     // second row
     row = cursor.next_row().unwrap().unwrap();
@@ -2062,6 +2159,44 @@ fn insert_truncated_value(profile: &Profile) {
         _ => panic!("Unexpected cursor"),
     }
 }
+
+// #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")]
+// fn insert_truncated_var_char_array(profile: &Profile) {
+//     let conn = ENV
+//         .connect_with_connection_string(profile.connection_string)
+//         .unwrap();
+//     let table_name = "InsertedTruncatedVarCharArray";
+
+//     // Prepare table content
+//     setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(50)"]).unwrap();
+
+//     let memory = "Hello, World!INVALID MEMORY\0";
+//     // Contains hello world.
+//     let valid = &memory.as_bytes()[..13];
+//     // Truncated value. Buffer can only hold 'Hello'
+//     let parameter = VarCharArray::<5>::new(&valid);
+//     let result = conn.execute(
+//         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
+//         &parameter,
+//     );
+
+//     match result {
+//         Err(e) => {
+//             // Failing is fine, especially with an error indicating truncation.
+//             eprintln!("{}", e)
+//         }
+//         Ok(None) => {
+//             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
+//             // the database. The better database drivers do not do this, and this could be seen as
+//             // wrong, but we are only interessted in unsafe behaviour.
+//             let actual = table_to_string(&conn, table_name, &["a"]);
+//             assert_eq!("Hello", actual)
+//         }
+//         _ => panic!("Unexpected cursor"),
+//     }
+// }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
