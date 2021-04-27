@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.27
+
+* Update dependencies
+
 ## 0.3.26
 
 * Windows version only: Add `--prompt` flag to allow for completion of connection string via GUI.
