@@ -12,7 +12,7 @@ use odbc_api::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
     },
-    parameter::{VarCharArray, VarCharSlice, VarBinaryArray},
+    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
     ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -1543,18 +1543,15 @@ fn parameter_option_byte_slice(profile: &Profile) {
     let mut prepared = conn.prepare(&sql).unwrap();
     prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
     prepared
-        .execute(&Some(&[1,2,3][..]).into_parameter())
+        .execute(&Some(&[1, 2, 3][..]).into_parameter())
         .unwrap();
     prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
     prepared
-        .execute(&Some(vec![1,2,3]).into_parameter())
+        .execute(&Some(vec![1, 2, 3]).into_parameter())
         .unwrap();
 
     let cursor = conn
-        .execute(
-            &format!("SELECT a FROM {} ORDER BY id", table_name),
-            (),
-        )
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -1598,7 +1595,7 @@ fn parameter_varbinary_512(profile: &Profile) {
 
     prepared.execute(&VarBinaryArray::<512>::NULL).unwrap();
     prepared
-        .execute(&VarBinaryArray::<512>::new(&[1,2,3]))
+        .execute(&VarBinaryArray::<512>::new(&[1, 2, 3]))
         .unwrap();
 
     let actual = table_to_string(&conn, table_name, &["a"]);
@@ -1869,7 +1866,10 @@ fn get_data_string(profile: &Profile) {
     setup_empty_table(&conn, profile.index_type, table_name, &["Varchar(50)"]).unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES ('Hello, World!'), (NULL)", table_name),
+        &format!(
+            "INSERT INTO {} (a) VALUES ('Hello, World!'), (NULL)",
+            table_name
+        ),
         (),
     )
     .unwrap();
@@ -1921,7 +1921,7 @@ fn get_data_binary(profile: &Profile) {
     let mut actual = VarBinaryArray::<32>::NULL;
 
     row.get_data(1, &mut actual).unwrap();
-    assert_eq!(Some(&[1u8,2,3][..]), actual.as_bytes());
+    assert_eq!(Some(&[1u8, 2, 3][..]), actual.as_bytes());
 
     // second row
     row = cursor.next_row().unwrap().unwrap();
@@ -2046,6 +2046,73 @@ fn short_strings_get_text(profile: &Profile) {
     row.get_text(1, &mut actual).unwrap();
 
     assert_eq!("Hello, World!", std::str::from_utf8(&actual).unwrap());
+}
+
+/// Retrieving of short binary values using get_data. This also helps to assert that we correctly
+/// shorten the vectors length if the capacity of the originally passed in vector had been larger
+/// than the retrieved payload.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn short_get_binary(profile: &Profile) {
+    let table_name = "ShortGetBinary";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Varbinary(15)"]).unwrap();
+
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &[1u8, 2, 3].into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+
+    // Make initial buffer larger than the string we want to fetch.
+    let mut actual = Vec::with_capacity(100);
+
+    row.get_binary(1, &mut actual).unwrap();
+
+    assert_eq!(&[1u8, 2, 3][..], &actual);
+}
+
+/// Test insertion and retrieving of values larger than the initially provided buffer using
+/// get_binary.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
+// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+fn large_get_binary(profile: &Profile) {
+    let table_name = "LargeGetBinary";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Varbinary(max)"]).unwrap();
+
+    let input = vec![42; 2000];
+
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &input.as_slice().into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = Vec::new();
+
+    row.get_binary(1, &mut actual).unwrap();
+
+    assert_eq!(input, actual);
 }
 
 /// Demonstrates applying an upper limit to a text buffer and detecting truncation.

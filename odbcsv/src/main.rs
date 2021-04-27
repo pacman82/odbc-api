@@ -1,8 +1,7 @@
 use anyhow::{bail, Error};
 use log::info;
 use odbc_api::{
-    buffers::TextRowSet, escape_attribute_value, Connection, Cursor,
-    Environment, IntoParameter,
+    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, Environment, IntoParameter,
 };
 use std::{
     fs::File,
@@ -12,12 +11,12 @@ use std::{
 use structopt::StructOpt;
 
 #[cfg(target_os = "windows")]
+use odbc_api::DriverCompleteOption;
+#[cfg(target_os = "windows")]
 use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
 };
-#[cfg(target_os = "windows")]
-use odbc_api::DriverCompleteOption;
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt)]
@@ -180,7 +179,6 @@ fn open_connection<'e>(
     environment: &'e Environment,
     opt: &ConnectOpts,
 ) -> Result<Connection<'e>, odbc_api::Error> {
-
     if let Some(dsn) = opt.dsn.as_deref() {
         return environment.connect(
             dsn,
@@ -201,11 +199,7 @@ fn open_connection<'e>(
     #[cfg(target_os = "windows")]
     if opt.prompt {
         let window = message_only_window().unwrap();
-        return environment.driver_connect(
-            &cs,
-            None,
-            DriverCompleteOption::Complete(&window),
-        );
+        return environment.driver_connect(&cs, None, DriverCompleteOption::Complete(&window));
     }
 
     // Would rather use conditional compilation on the flag itself. While this works fine, it does

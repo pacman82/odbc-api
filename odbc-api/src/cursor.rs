@@ -1,7 +1,7 @@
 use crate::{
     buffers::Indicator,
     handles::{Statement, StatementImpl},
-    parameter::VarCharSliceMut,
+    parameter::{VarBinarySliceMut, VarCharSliceMut},
     ColumnDescription, DataType, Error, Output,
 };
 
@@ -206,6 +206,61 @@ where
                     buf.resize(old_len + still_missing, 0);
                     target =
                         VarCharSliceMut::from_buffer(&mut buf[(old_len - 1)..], Indicator::Null);
+                    self.get_data(col_or_param_num, &mut target)?;
+                }
+            }
+        };
+        Ok(not_null)
+    }
+
+    /// Retrieves arbitrary large binary data from the row and stores it in the buffer. Column index
+    /// starts at `1`.
+    ///
+    /// # Return
+    ///
+    /// `true` indicates that the value has not been `NULL` and the value has been placed in `buf`.
+    /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
+    pub fn get_binary(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<bool, Error> {
+        // Utilize all of the allocated buffer. Make sure buffer can at least hold one element.
+        buf.resize(max(1, buf.capacity()), 0);
+        // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
+        // accumulated value size. This variable keeps track of the number of bytes we added with
+        // the current call to get_data.
+        let mut fetch_size = buf.len();
+        let mut target = VarBinarySliceMut::from_buffer(buf.as_mut_slice(), Indicator::Null);
+        // Fetch binary data into buffer.
+        self.get_data(col_or_param_num, &mut target)?;
+        let not_null = loop {
+            match target.indicator() {
+                // Value is `NULL`. We are done here.
+                Indicator::Null => {
+                    buf.clear();
+                    break false;
+                }
+                // We do not know how large the value is. Let's fetch the data with repeated calls
+                // to get_data.
+                Indicator::NoTotal => {
+                    let old_len = buf.len();
+                    // Use an exponential strategy for increasing buffer size.
+                    buf.resize(old_len * 2, 0);
+                    target = VarBinarySliceMut::from_buffer(&mut buf[old_len..], Indicator::Null);
+                    self.get_data(col_or_param_num, &mut target)?;
+                }
+                // We did get the complete value, including the terminating zero. Let's resize the
+                // buffer to match the retrieved value exactly (excluding terminating zero).
+                Indicator::Length(len) if len <= fetch_size => {
+                    let shrink_by = fetch_size - len;
+                    buf.resize(buf.len() - shrink_by, 0);
+                    break true;
+                }
+                // We did not get all of the value in one go, but the data source has been friendly
+                // enough to tell us how much is missing.
+                Indicator::Length(len) => {
+                    let still_missing = len - fetch_size;
+                    fetch_size = still_missing;
+                    let old_len = buf.len();
+                    buf.resize(old_len + still_missing, 0);
+                    target = VarBinarySliceMut::from_buffer(&mut buf[old_len..], Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
             }
