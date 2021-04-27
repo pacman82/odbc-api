@@ -1,4 +1,8 @@
-use crate::{InputParameter, Nullable, fixed_sized::Pod, parameter::{VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice}};
+use crate::{
+    fixed_sized::Pod,
+    parameter::{VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice},
+    InputParameter, Nullable,
+};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.

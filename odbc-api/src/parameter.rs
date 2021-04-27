@@ -224,12 +224,12 @@
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
 mod c_string;
-mod varchar;
 mod varbin;
+mod varchar;
 
 pub use self::{
     varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
-    varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut}
+    varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
 };
 
 use std::ffi::c_void;
