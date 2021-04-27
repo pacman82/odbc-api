@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.1
+
+* Support for passing binary data as parameter.
+  * `VarBinarySlice` - immutable borrowed parameter.
+  * `VarBinarySliceMut`] - mutable borrowed input / output parameter
+  * `VarBinaryArray` - stack allocated owned input / output parameter
+  * `VarBinaryBox` - heap allocated owned input / output parameter
+  * `&[u8]` now implements `IntoParameter`.
+  * `Vec<u8>` now implements `IntoParameter`.
+
 ## 0.22.0
 
 * Add `Environment::driver_connect` which forwards more functionality from `SqlDriverConnect`. In particular it is now possible (on windows systems) to complete connection strings via the dialog provided by the ODBC driver and driver manager.
