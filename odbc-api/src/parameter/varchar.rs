@@ -278,13 +278,14 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
         indicator: NULL_DATA,
     };
 
-    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated.
+    /// Construct from a slice. If value is longer than `LENGTH` it will be truncated. In that case
+    /// the last byte will be set to `0`.
     pub fn new(text: &[u8]) -> Self {
         let indicator = text.len().try_into().unwrap();
         let mut buffer = [0u8; LENGTH];
         if text.len() > LENGTH {
             buffer.copy_from_slice(&text[..LENGTH]);
-            // *buffer.last_mut().unwrap() = 0;
+            *buffer.last_mut().unwrap() = 0;
         } else {
             buffer[..text.len()].copy_from_slice(text);
         };
