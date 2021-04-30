@@ -10,6 +10,8 @@
   * `&[u8]` now implements `IntoParameter`.
   * `Vec<u8>` now implements `IntoParameter`.
 
+* Fix: `VarCharArray::new` is now placing a terminating zero at the end in case of truncation. As statet in the documentation.
+
 ## 0.22.0
 
 * Add `Environment::driver_connect` which forwards more functionality from `SqlDriverConnect`. In particular it is now possible (on windows systems) to complete connection strings via the dialog provided by the ODBC driver and driver manager.

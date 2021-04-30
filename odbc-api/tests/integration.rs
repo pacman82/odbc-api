@@ -2227,44 +2227,6 @@ fn insert_truncated_value(profile: &Profile) {
     }
 }
 
-// #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")]
-// fn insert_truncated_var_char_array(profile: &Profile) {
-//     let conn = ENV
-//         .connect_with_connection_string(profile.connection_string)
-//         .unwrap();
-//     let table_name = "InsertedTruncatedVarCharArray";
-
-//     // Prepare table content
-//     setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(50)"]).unwrap();
-
-//     let memory = "Hello, World!INVALID MEMORY\0";
-//     // Contains hello world.
-//     let valid = &memory.as_bytes()[..13];
-//     // Truncated value. Buffer can only hold 'Hello'
-//     let parameter = VarCharArray::<5>::new(&valid);
-//     let result = conn.execute(
-//         &format!("INSERT INTO {} (a) VALUES (?);", table_name),
-//         &parameter,
-//     );
-
-//     match result {
-//         Err(e) => {
-//             // Failing is fine, especially with an error indicating truncation.
-//             eprintln!("{}", e)
-//         }
-//         Ok(None) => {
-//             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
-//             // the database. The better database drivers do not do this, and this could be seen as
-//             // wrong, but we are only interessted in unsafe behaviour.
-//             let actual = table_to_string(&conn, table_name, &["a"]);
-//             assert_eq!("Hello", actual)
-//         }
-//         _ => panic!("Unexpected cursor"),
-//     }
-// }
-
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
