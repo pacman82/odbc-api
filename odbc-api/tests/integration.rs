@@ -2286,6 +2286,28 @@ fn synchronized_access_to_driver_and_data_source_info() {
     }
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn insert_large_texts(profile: &Profile) {
+    let table_name = "InsertLargeTexts";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Text"]).unwrap();
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+
+    // Large data with 8000 characters.
+    let data = String::from_utf8(vec![b'a'; 8000]).unwrap();
+
+    conn.execute(&insert, &data.as_str().into_parameter())
+        .unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    assert_eq!(data, actual);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
