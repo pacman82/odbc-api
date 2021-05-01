@@ -27,8 +27,8 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 * [x] Pass parameters to queries
 * [ ] Support for async
 * [x] Support for Multithreading
-* [ ] Support for streaming binary data
-* [x] Support for streaming text data
+* [ ] Support for inserting arbitrary large binary / text data in stream
+* [x] Support for fetching arbitrary large text / binary data in stream
 * [ ] Support for driver aware connection pooling
 
 ## Motivation
