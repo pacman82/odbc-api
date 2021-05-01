@@ -47,7 +47,7 @@ Here are some of the tradeoffs I made in this library to make my life (and hopef
 
 ### Committing to one version of the ODBC Api
 
-The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however currently fixes the ODBC version to `3.8`.
+The underlying `odbc-sys` crate does not limit you to a specific ODBC version. This crate however currently fixes the ODBC version to `3.80`.
 
 ### Use of the Wide ODBC methods returning UTF-16
 
