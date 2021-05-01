@@ -1500,7 +1500,7 @@ fn send_connection(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn parameter_option_str(profile: &Profile) {
+fn parameter_option_strings(profile: &Profile) {
     let conn = ENV
         .connect_with_connection_string(profile.connection_string)
         .unwrap();
@@ -1532,7 +1532,7 @@ fn parameter_option_str(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
-fn parameter_option_byte_slice(profile: &Profile) {
+fn parameter_option_bytes(profile: &Profile) {
     let table_name = "ParameterOptionByteSlice";
 
     let conn = ENV
@@ -1545,7 +1545,7 @@ fn parameter_option_byte_slice(profile: &Profile) {
     prepared
         .execute(&Some(&[1, 2, 3][..]).into_parameter())
         .unwrap();
-    prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
+    prepared.execute(&None::<Vec<u8>>.into_parameter()).unwrap();
     prepared
         .execute(&Some(vec![1, 2, 3]).into_parameter())
         .unwrap();
@@ -2255,6 +2255,37 @@ fn arbitrary_input_parameters(profile: &Profile) {
     assert_eq!("Hello, World!,42", actual)
 }
 
+/// Ensures access to driver and data source info is synchronized correctly when multiple threads
+/// attempt to query it at the same time. First, we query the list of the known drivers and data
+/// sources on the main thread. Then we spawn multiple threads that attempt to query these lists in
+/// parallel. Finally we compare the lists to ensure they match the list we found on the main
+/// thread.
+#[test]
+fn synchronized_access_to_driver_and_data_source_info() {
+    let expected_drivers = ENV.drivers().unwrap();
+    let expected_data_sources = ENV.data_sources().unwrap();
+
+    const NUM_THREADS: usize = 5;
+    let threads = iter::repeat(())
+        .take(NUM_THREADS)
+        .map(|_| {
+            let expected_drivers = expected_drivers.clone();
+            let expected_data_sources = expected_data_sources.clone();
+
+            thread::spawn(move || {
+                let drivers = ENV.drivers().unwrap();
+                assert_eq!(expected_drivers, drivers);
+                let data_sources_for_thread = ENV.data_sources().unwrap();
+                assert_eq!(expected_data_sources, data_sources_for_thread);
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for handle in threads {
+        handle.join().unwrap();
+    }
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
@@ -2292,35 +2323,4 @@ fn many_diagnostic_messages() {
     let _ = row_set_cursor.fetch();
 
     // We do not have an explicit assertion, we are just happy if no integer addition overflows.
-}
-
-/// Ensures access to driver and data source info is synchronized correctly when multiple threads
-/// attempt to query it at the same time. First, we query the list of the known drivers and data
-/// sources on the main thread. Then we spawn multiple threads that attempt to query these lists in
-/// parallel. Finally we compare the lists to ensure they match the list we found on the main
-/// thread.
-#[test]
-fn synchronized_access_to_driver_and_data_source_info() {
-    let expected_drivers = ENV.drivers().unwrap();
-    let expected_data_sources = ENV.data_sources().unwrap();
-
-    const NUM_THREADS: usize = 5;
-    let threads = iter::repeat(())
-        .take(NUM_THREADS)
-        .map(|_| {
-            let expected_drivers = expected_drivers.clone();
-            let expected_data_sources = expected_data_sources.clone();
-
-            thread::spawn(move || {
-                let drivers = ENV.drivers().unwrap();
-                assert_eq!(expected_drivers, drivers);
-                let data_sources_for_thread = ENV.data_sources().unwrap();
-                assert_eq!(expected_data_sources, data_sources_for_thread);
-            })
-        })
-        .collect::<Vec<_>>();
-
-    for handle in threads {
-        handle.join().unwrap();
-    }
 }

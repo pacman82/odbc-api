@@ -9,6 +9,7 @@
   * `VarBinaryBox` - heap allocated owned input / output parameter
   * `&[u8]` now implements `IntoParameter`.
   * `Vec<u8>` now implements `IntoParameter`.
+* Introduced `CursorRow::get_binary` to fetch arbitrary large blobs into a `Vec<u8>`.
 
 * Fix: `VarCharArray::new` is now placing a terminating zero at the end in case of truncation. As statet in the documentation.
 
