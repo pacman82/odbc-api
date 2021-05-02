@@ -13,7 +13,7 @@ use odbc_sys::{
     SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLPrepareW,
     SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
-use std::{convert::TryInto, ffi::c_void, marker::PhantomData, ptr::null_mut};
+use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -49,6 +49,18 @@ impl<'s> StatementImpl<'s> {
             handle,
             parent: PhantomData,
         }
+    }
+
+    /// Transfer ownership of this statement to a raw system handle. It is the users responsibility
+    /// to call [`crate::sys::SQLFreeHandle`].
+    pub fn into_sys(self) -> HStmt {
+        // We do not want to run the drop handler, but transfer ownership instead.
+        ManuallyDrop::new(self).handle
+    }
+
+    /// Gain access to the underlying statement handle without transfering owenership to it.
+    pub fn as_sys(&self) -> HStmt {
+        self.handle
     }
 }
 

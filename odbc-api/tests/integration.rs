@@ -1,22 +1,18 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
+use sys::SQLFreeHandle;
 use test_case::test_case;
 
 use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{
-    buffers::{
+use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    },
-    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
-    ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
-    U16String,
-};
-use std::{ffi::CString, iter, thread};
+    }, handles::Statement, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+use std::{convert::TryInto, ffi::CString, iter, thread};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -2306,6 +2302,38 @@ fn insert_large_texts(profile: &Profile) {
 
     let actual = table_to_string(&conn, table_name, &["a"]);
     assert_eq!(data, actual);
+}
+
+/// Demonstrate how to strip abstractions and access raw functionality as exposed by `odbc-sys`.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn escape_hatch(profile: &Profile) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    let preallocated = conn.preallocate().unwrap();
+    let mut statement = preallocated.into_statement();
+
+    statement.reset_parameters().unwrap();
+
+    unsafe {
+        // TableName does not exist, but we won't execute the query anyway
+        let select = U16String::from_str("SELECT * FROM Movies");
+        let ret = sys::SQLPrepareW(
+            statement.as_sys(),
+            select.as_ptr(),
+            select.len().try_into().unwrap(),
+        );
+        assert_eq!(ret, sys::SqlReturn::SUCCESS);
+    }
+
+    // If we use `.into_sys` we need to drop the handle manually
+    let hstmt = statement.into_sys();
+    unsafe {
+        let ret = SQLFreeHandle(sys::HandleType::Stmt, hstmt as sys::Handle);
+        assert_eq!(ret, sys::SqlReturn::SUCCESS);
+    }
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

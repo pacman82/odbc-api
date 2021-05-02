@@ -1,5 +1,12 @@
 # Changelog
 
+## Next Version
+
+* Support access to raw `odbc-sys` functionality:
+  * Add `preallocated::into_statement`.
+  * Add `StatementImpl::into_sys`.
+  * Add `StatementImpl::as_sys`.
+
 ## 0.22.1
 
 * Support for passing binary data as parameter.

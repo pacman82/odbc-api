@@ -97,4 +97,16 @@ impl<'o> Preallocated<'o> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }
+
+    /// Transfer ownership to the underlying statemet handle.
+    ///
+    /// The resulting type is one level of indirection away from the raw pointer of the ODBC API. It
+    /// no longer has any guarantees about bound buffers, but is still guaranteed to be a valid
+    /// allocated statement handle. This serves together with
+    /// [`crate::handles::StatementImpl::into_sys`] or [`crate::handles::StatementImpl::as_sys`]
+    /// this serves as an escape hatch to access the functionality provided by `crate::sys` not yet
+    /// accessible through safe abstractions.
+    pub fn into_statement(self) -> StatementImpl<'o> {
+        self.statement
+    }
 }
