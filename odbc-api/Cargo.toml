@@ -29,14 +29,14 @@ readme = "../Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-sys = "0.18.0"
+odbc-sys = "0.18.2"
 thiserror = "1.0.24"
 log = "0.4.14"
 widestring = "0.4.3"
 force-send-sync = "1.0.0"
 
 [target.'cfg(windows)'.dependencies]
-raw-window-handle = "0.3"
+raw-window-handle = "0.3.3"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
