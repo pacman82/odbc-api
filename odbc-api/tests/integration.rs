@@ -2286,7 +2286,7 @@ fn synchronized_access_to_driver_and_data_source_info() {
     }
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MSSQL; "Microsoft SQL Server")] Linux driver allocates 42 GiB
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_large_texts(profile: &Profile) {
