@@ -2336,6 +2336,22 @@ fn escape_hatch(profile: &Profile) {
     }
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn varchar_null(profile: &Profile) {
+    let table_name = "VarcharNull";
+    let conn = ENV.connect_with_connection_string(profile.connection_string).unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(10)"]).unwrap();
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+
+    conn.execute(&insert, &VarCharSlice::NULL).unwrap();
+
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    assert_eq!("NULL", actual)
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
