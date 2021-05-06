@@ -230,17 +230,16 @@ impl<'c> Connection<'c> {
     /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
     ///
     /// This function may be removed in future versions of this crate and connections would be
-    /// `Send` and `Sync` out of the Box. This will require sufficient testing in which a wide
-    /// variety of database drivers prove to be thread safe. For now this API tries to error on the
-    /// side of caution, and leaves the amount of trust you want to put in the driver implementation
-    /// to the user. I have seen this go wrong in the past, but time certainly improved the
-    /// situation. At one point this will be cargo cult and Connection can be `Send` and `Sync` by
-    /// default (hopefully).
+    /// `Send` out of the Box. This will require sufficient testing in which a wide variety of
+    /// database drivers prove to be thread safe. For now this API tries to error on the side of
+    /// caution, and leaves the amount of trust you want to put in the driver implementation to the
+    /// user. I have seen this go wrong in the past, but time certainly improved the situation. At
+    /// one point this will be cargo cult and Connection can be `Send` by default (hopefully).
     ///
     /// Note to users of `unixodbc`: You may configure the threading level to make unixodbc
-    /// synchronize access to the driver (and thereby making them thread safe if they are not
-    /// thread safe by themself. This may however hurt your performance if the driver would actually
-    /// be able to perform operations in parallel.
+    /// synchronize access to the driver (and thereby making them thread safe if they are not thread
+    /// safe by themself. This may however hurt your performance if the driver would actually be
+    /// able to perform operations in parallel.
     ///
     /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
     pub unsafe fn promote_to_send(self) -> force_send_sync::Send<Self> {
