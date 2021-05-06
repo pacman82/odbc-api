@@ -250,7 +250,7 @@ impl<'c> Connection<'c> {
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
 /// connection string as the value for the `PWD` attribute. This method is only of interest for
-/// need to create their own connection strings.
+/// application in need to create their own connection strings.
 ///
 /// See: <https://stackoverflow.com/questions/22398212/escape-semicolon-in-odbc-connection-string-in-app-config-file>
 ///
