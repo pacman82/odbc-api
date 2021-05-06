@@ -1,17 +1,23 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
-use sys::SQLFreeHandle;
+use sys::{Pointer, SQLPutData};
 use test_case::test_case;
 
 use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
+use odbc_api::{
+    buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    }, handles::Statement, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+    },
+    handles::Statement,
+    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
+    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    U16String,
+};
 use std::{convert::TryInto, ffi::CString, iter, thread};
 
 const MSSQL_CONNECTION: &str =
@@ -20,6 +26,7 @@ const MSSQL_CONNECTION: &str =
 const MSSQL: &Profile = &Profile {
     connection_string: MSSQL_CONNECTION,
     index_type: "int IDENTITY(1,1)",
+    blob_type: "VARBINARY(max)",
 };
 
 #[cfg(target_os = "windows")]
@@ -30,6 +37,7 @@ const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db";
 const SQLITE_3: &Profile = &Profile {
     connection_string: SQLITE_3_CONNECTION,
     index_type: "int IDENTITY(1,1)",
+    blob_type: "BLOB",
 };
 
 #[cfg(target_os = "windows")]
@@ -49,6 +57,7 @@ const MARIADB_CONNECTION: &str = "Driver={/usr/lib/x86_64-linux-gnu/odbc/libmaod
 const MARIADB: &Profile = &Profile {
     connection_string: MARIADB_CONNECTION,
     index_type: "INTEGER AUTO_INCREMENT PRIMARY KEY",
+    blob_type: "BLOB",
 };
 
 /// Verify writer panics if too large elements are inserted into a binary column of ColumnarRowSet
@@ -2301,7 +2310,84 @@ fn insert_large_texts(profile: &Profile) {
         .unwrap();
 
     let actual = table_to_string(&conn, table_name, &["a"]);
-    assert_eq!(data, actual);
+    assert_eq!(data.len(), actual.len());
+    assert!(data == actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn insert_text_blob_in_stream(profile: &Profile) {
+    let table_name = "InsertLargeTextInStream";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["text"]).unwrap();
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = U16String::from_str(&insert);
+
+    let mut statement = conn.preallocate().unwrap().into_statement();
+    let text_size = 12000;
+
+    let batch = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyz";
+
+    unsafe {
+        let indicator = sys::len_data_at_exec(text_size.try_into().unwrap());
+        let ret = sys::SQLBindParameter(
+            statement.as_sys(),
+            1,
+            sys::ParamType::Input,
+            sys::CDataType::Char,
+            sys::SqlDataType::EXT_LONG_VARCHAR,
+            text_size,
+            0,
+            1 as sys::Pointer,
+            0,
+            &indicator as *const isize as *mut isize,
+        );
+        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+
+        let ret = sys::SQLExecDirectW(
+            statement.as_sys(),
+            insert.as_ptr(),
+            insert.len().try_into().unwrap(),
+        );
+        assert_eq!(sys::SqlReturn::NEED_DATA, ret);
+
+        let need_data = statement.param_data().unwrap();
+        assert_eq!(Some(1 as Pointer), need_data);
+
+        let mut bytes_left = text_size;
+        while bytes_left > batch.len() {
+            let ret = SQLPutData(
+                statement.as_sys(),
+                batch.as_ptr() as Pointer,
+                batch.len().try_into().unwrap(),
+            );
+            assert_eq!(sys::SqlReturn::SUCCESS, ret);
+            bytes_left -= batch.len();
+        }
+        // Put final batch
+        let ret = SQLPutData(
+            statement.as_sys(),
+            batch.as_ptr() as Pointer,
+            bytes_left.try_into().unwrap(),
+        );
+        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+
+        let need_data = statement.param_data().unwrap();
+        assert_eq!(None, need_data);
+    }
 }
 
 /// Demonstrate how to strip abstractions and access raw functionality as exposed by `odbc-sys`.
@@ -2331,7 +2417,7 @@ fn escape_hatch(profile: &Profile) {
     // If we use `.into_sys` we need to drop the handle manually
     let hstmt = statement.into_sys();
     unsafe {
-        let ret = SQLFreeHandle(sys::HandleType::Stmt, hstmt as sys::Handle);
+        let ret = sys::SQLFreeHandle(sys::HandleType::Stmt, hstmt as sys::Handle);
         assert_eq!(ret, sys::SqlReturn::SUCCESS);
     }
 }

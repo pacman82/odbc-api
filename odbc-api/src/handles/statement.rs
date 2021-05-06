@@ -10,8 +10,8 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLDescribeParam,
-    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLPrepareW,
-    SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData,
+    SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use widestring::U16Str;
@@ -316,6 +316,13 @@ pub trait Statement {
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
     fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error>;
+
+    /// Use to check if which additional parameters need data. Should be called after binding
+    /// parameters with an indicator set to [`crate::sys::DATA_AT_EXEC`] or a value created with
+    /// [`crate::sys::len_data_at_exec`].
+    ///
+    /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
+    fn param_data(&mut self) -> Result<Option<Pointer>, Error>;
 }
 
 impl<'o> Statement for StatementImpl<'o> {
@@ -817,6 +824,22 @@ impl<'o> Statement for StatementImpl<'o> {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
             nullable: Nullability::new(nullable),
         })
+    }
+
+    /// Use to check if which additional parameters need data. Should be called after binding
+    /// parameters with an indicator set to [`crate::sys::DATA_AT_EXEC`] or a value created with
+    /// [`crate::sys::len_data_at_exec`].
+    ///
+    /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
+    fn param_data(&mut self) -> Result<Option<Pointer>, Error> {
+        unsafe {
+            let mut param_id: Pointer = null_mut();
+            // Use cases for `PARAM_DATA_AVAILABLE` and `NO_DATA` not implemented yet.
+            match SQLParamData(self.handle, &mut param_id as *mut Pointer) {
+                SqlReturn::NEED_DATA => Ok(Some(param_id)),
+                other => other.into_result(self).map(|()| None),
+            }
+        }
     }
 }
 

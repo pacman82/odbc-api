@@ -18,6 +18,7 @@ pub struct Profile {
     pub connection_string: &'static str,
     /// Type of the identity autoincrementing column, used to index the test tables.
     pub index_type: &'static str,
+    pub blob_type: &'static str,
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
