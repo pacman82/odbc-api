@@ -1,11 +1,16 @@
 # Changelog
 
-## Next Version
+## 0.22.2
 
-* Support access to raw `odbc-sys` functionality:
+* Fix: `VarcharSlice::NULL` had been bound as `VARCHAR(0)`. This caused an error with
+  Access and older versions of Microsoft SQL Server ODBC Driver. To fix this `VarCharSlice::NULL` is
+  now bound as `VARCHAR(1)`. Thanks to @grovesNL for finding and investigating the issue.
+* Support access to raw `odbc-sys` functionality. This is done to support use cases for which a safe
+  abstraction is not yet available (like streaming large values into the database).
   * Add `preallocated::into_statement`.
   * Add `StatementImpl::into_sys`.
   * Add `StatementImpl::as_sys`.
+  * Add `Statement::param_data`
 
 ## 0.22.1
 

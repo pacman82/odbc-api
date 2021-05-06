@@ -247,7 +247,10 @@ pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
 impl<'a> VarCharSlice<'a> {
     /// Indicates missing data
     pub const NULL: Self = Self {
-        buffer: &[],
+        // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
+        // which caused errors with Microsoft Access and older versions of the Microsoft SQL Server
+        // ODBC driver.
+        buffer: &[0],
         indicator: NULL_DATA,
     };
 
