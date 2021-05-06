@@ -1,10 +1,21 @@
 # Changelog
 
+## 0.22.3
+
+* Fix: `VarCharBox::null()` had been bound as `VARCHAR(0)`. This caused an error with Access and
+  older versions of Microsoft SQL Server ODBC Driver. To fix this `VarCharBox::null()` is now bound
+  as `VARCHAR(1)`. Thanks to @grovesNL for finding and investigating the issue.
+
+  Analoge issues also fixed for:
+
+  * `VarBinarySlice::NULL`
+  * `VarBinaryBox::null()`
+
 ## 0.22.2
 
-* Fix: `VarcharSlice::NULL` had been bound as `VARCHAR(0)`. This caused an error with
-  Access and older versions of Microsoft SQL Server ODBC Driver. To fix this `VarCharSlice::NULL` is
-  now bound as `VARCHAR(1)`. Thanks to @grovesNL for finding and investigating the issue.
+* Fix: `VarCharSlice::NULL` had been bound as `VARCHAR(0)`. This caused an error with Access and
+  older versions of Microsoft SQL Server ODBC Driver. To fix this `VarCharSlice::NULL` is now bound
+  as `VARCHAR(1)`. Thanks to @grovesNL for finding and investigating the issue.
 * Support access to raw `odbc-sys` functionality. This is done to support use cases for which a safe
   abstraction is not yet available (like streaming large values into the database).
   * Add `preallocated::into_statement`.

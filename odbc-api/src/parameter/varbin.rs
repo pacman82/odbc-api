@@ -42,7 +42,8 @@ pub type VarBinaryBox = VarBinary<Box<[u8]>>;
 impl VarBinaryBox {
     /// Constructs a 'missing' value.
     pub fn null() -> Self {
-        Self::from_buffer(Box::new([]), Indicator::Null)
+        // Insert 0 in buffer to avoid binding as VARBINARY(0)
+        Self::from_buffer(Box::new([0]), Indicator::Null)
     }
 
     /// Create an instance from a `Vec`.
@@ -200,7 +201,8 @@ pub type VarBinarySlice<'a> = VarBinary<&'a [u8]>;
 impl<'a> VarBinarySlice<'a> {
     /// Indicates missing data
     pub const NULL: Self = Self {
-        buffer: &[],
+        // Insert 0 in buffer to avoid binding as VARBINARY(0)
+        buffer: &[0],
         indicator: NULL_DATA,
     };
 

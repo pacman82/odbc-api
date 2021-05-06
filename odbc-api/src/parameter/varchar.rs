@@ -45,7 +45,10 @@ pub type VarCharBox = VarChar<Box<[u8]>>;
 impl VarCharBox {
     /// Constructs a 'missing' value.
     pub fn null() -> Self {
-        Self::from_buffer(Box::new([]), Indicator::Null)
+        // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
+        // which caused errors with Microsoft Access and older versions of the Microsoft SQL Server
+        // ODBC driver.
+        Self::from_buffer(Box::new([0]), Indicator::Null)
     }
 
     /// Create an owned parameter containing the character data from the passed string.
