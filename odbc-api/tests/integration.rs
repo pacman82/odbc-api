@@ -8,16 +8,10 @@ use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{
-    buffers::{
+use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    },
-    handles::Statement,
-    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
-    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
-    U16String,
-};
+    }, handles::{OutputStringBuffer, Statement}, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
 use std::{convert::TryInto, ffi::CString, iter, thread};
 
 const MSSQL_CONNECTION: &str =
@@ -2427,7 +2421,9 @@ fn escape_hatch(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn varchar_null(profile: &Profile) {
     let table_name = "VarcharNull";
-    let conn = ENV.connect_with_connection_string(profile.connection_string).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
     setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(10)"]).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
@@ -2436,6 +2432,26 @@ fn varchar_null(profile: &Profile) {
 
     let actual = table_to_string(&conn, table_name, &["a"]);
     assert_eq!("NULL", actual)
+}
+
+/// Connect to database with connection string, and check the output connection string with
+/// attributes complemented by the driver.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn get_full_connection_string(profile: &Profile) {
+    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1023);
+    ENV.driver_connect(
+        profile.connection_string,
+        Some(&mut completed_connection_string),
+        odbc_api::DriverCompleteOption::NoPrompt,
+    )
+    .unwrap();
+    
+    let completed_connection_string = completed_connection_string.to_utf8();
+
+    // Additional attributes should make the string larger.
+    assert!(profile.connection_string.len() <= completed_connection_string.len());
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
