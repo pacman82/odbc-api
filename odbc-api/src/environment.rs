@@ -187,7 +187,11 @@ impl Environment {
     ///
     /// * `connection_string`: Connection string.
     /// * `completed_connection_string`: Output buffer with the complete connection string. It is
-    ///   recommended to choose a buffer with at least `1024` bytes length.
+    ///   recommended to choose a buffer with at least `1024` bytes length. **Note**: Some driver
+    ///   implementation have poor error handling in case the provided buffer is too small. At the
+    ///   time of this writing:
+    ///   * Maria DB crashes with STATUS_TACK_BUFFER_OVERRUN
+    ///   * SQLite does not change the output buffer at all and does not indicate truncation.
     /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete
     ///   the provided connection string.
     ///
