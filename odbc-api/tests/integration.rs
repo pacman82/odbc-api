@@ -8,10 +8,16 @@ use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
+use odbc_api::{
+    buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    }, handles::{OutputStringBuffer, Statement}, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+    },
+    handles::{OutputStringBuffer, Statement},
+    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
+    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    U16String,
+};
 use std::{convert::TryInto, ffi::CString, iter, thread};
 
 const MSSQL_CONNECTION: &str =
@@ -2447,11 +2453,30 @@ fn get_full_connection_string(profile: &Profile) {
         odbc_api::DriverCompleteOption::NoPrompt,
     )
     .unwrap();
-    
+
+    assert!(!completed_connection_string.is_truncated());
+
     let completed_connection_string = completed_connection_string.to_utf8();
 
     // Additional attributes should make the string larger.
     assert!(profile.connection_string.len() <= completed_connection_string.len());
+}
+
+/// We must be able to detect truncation in case we provide a buffer too small to hold the output
+/// connection string
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn get_full_connection_string_truncated(profile: &Profile) {
+    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1);
+    ENV.driver_connect(
+        profile.connection_string,
+        Some(&mut completed_connection_string),
+        odbc_api::DriverCompleteOption::NoPrompt,
+    )
+    .unwrap();
+
+    assert!(completed_connection_string.is_truncated());
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
