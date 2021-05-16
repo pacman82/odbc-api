@@ -8,7 +8,10 @@ use odbc_api::{
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
-    pub static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    pub static ref ENV: Environment = unsafe {
+        let _ = env_logger::builder().is_test(true).try_init();
+        Environment::new().unwrap()
+    };
 }
 
 /// Used to adapt test behaviour to different drivers and datasources
