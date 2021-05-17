@@ -129,4 +129,6 @@ jobs:
       - name: Copy test expectations
         run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
       - name: Test
-        run: cargo test --release
+        run: |
+          export RUST_LOG="DEBUG"
+          cargo test --release
