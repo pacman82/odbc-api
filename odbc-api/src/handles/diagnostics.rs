@@ -4,10 +4,32 @@ use super::{
 };
 use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZE};
 use std::{convert::TryInto, fmt};
-use widestring::{U16CStr, U16Str};
+use widestring::U16Str;
 
-/// A buffer large enough to hold an `SOLState` for diagnostics and a terminating zero.
-pub type State = [u16; SQLSTATE_SIZE + 1];
+/// A buffer large enough to hold an `SOLState` for diagnostics
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct State(pub [u8; SQLSTATE_SIZE]);
+
+impl State {
+    pub const INVALID_STATE_TRANSACTION: State = State(*b"25000");
+    pub const INVALID_ATTRIBUTE_VALUE: State = State(*b"HY024");
+
+    /// `SQLGetDiagRecW` returns ODBC state as wide characters. This constructor converts the wide
+    /// characters to narrow and drops the terminating zero.
+    pub fn from_wide_chars_with_nul(code: &[u16; SQLSTATE_SIZE + 1]) -> Self {
+        let mut ascii = [0; SQLSTATE_SIZE];
+        for (index, letter) in code[..SQLSTATE_SIZE].iter().copied().enumerate() {
+            ascii[index] = letter as u8;
+        }
+        State(ascii)
+    }
+
+    /// View status code as string slice for displaying. Must always succeed as ODBC status code
+    /// always consist of ASCII characters.
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.0).unwrap()
+    }
+}
 
 /// Result of `diagnostics`.
 #[derive(Debug, Clone, Copy)]
@@ -78,7 +100,7 @@ pub fn diagnostics(
         )
     };
     let result = DiagnosticResult {
-        state,
+        state: State::from_wide_chars_with_nul(&state),
         native_error,
     };
     let mut text_length: usize = text_length.try_into().unwrap();
@@ -148,25 +170,16 @@ impl Record {
             None => false,
         }
     }
-
-    /// True if state is 25000 invalid state transaction.
-    pub fn is_invalid_state_transaction(&self) -> bool {
-        self.state == [50, 53, 48, 48, 48, 0]
-    }
 }
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let state = U16CStr::from_slice_with_nul(&self.state);
-
         let message = U16Str::from_slice(&self.message);
 
         write!(
             f,
             "State: {}, Native error: {}, Message: {}",
-            state
-                .map(U16CStr::to_string_lossy)
-                .unwrap_or_else(|e| format!("Error decoding state: {}", e)),
+            self.state.as_str(),
             self.native_error,
             message.to_string_lossy(),
         )
@@ -182,6 +195,8 @@ impl fmt::Debug for Record {
 #[cfg(test)]
 mod test {
 
+    use crate::handles::diagnostics::State;
+
     use super::Record;
 
     #[test]
@@ -192,9 +207,7 @@ mod test {
             .collect();
         let mut rec = Record::default();
 
-        for (index, letter) in "HY010".encode_utf16().enumerate() {
-            rec.state[index] = letter;
-        }
+        rec.state = State(*b"HY010");
         rec.message = message;
 
         // test formatting

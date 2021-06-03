@@ -1,7 +1,4 @@
-use super::{
-    as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics, Connection,
-    Error,
-};
+use super::{Connection, Error, State, as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics};
 use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
@@ -86,13 +83,27 @@ impl Environment {
     /// be done with any ODBC environment.
     pub fn declare_version(&self, version: AttrOdbcVersion) -> Result<(), Error> {
         unsafe {
-            SQLSetEnvAttr(
+            let result = SQLSetEnvAttr(
                 self.handle,
                 EnvironmentAttribute::OdbcVersion,
                 version.into(),
                 0,
             )
-            .into_result(self)
+            .into_result(self);
+
+            // Translate invalid attribute into a more meaningful error, provided the additional
+            // context that we know we tried to set version number.
+            result.map_err(|error| {
+                if let Error::Diagnostics(record) = error {
+                    if record.state == State::INVALID_STATE_TRANSACTION {
+                        Error::OdbcApiVersionUnsupported(record)
+                    } else {
+                        Error::Diagnostics(record)
+                    }
+                } else {
+                    error
+                }
+            })
         }
     }
 

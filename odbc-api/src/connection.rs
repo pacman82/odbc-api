@@ -1,9 +1,4 @@
-use crate::{
-    execute::execute_with_parameters,
-    handles::{self, Statement, StatementImpl},
-    parameter_collection::ParameterCollection,
-    CursorImpl, Error, Preallocated, Prepared,
-};
+use crate::{CursorImpl, Error, Preallocated, Prepared, execute::execute_with_parameters, handles::{self, State, Statement, StatementImpl}, parameter_collection::ParameterCollection};
 use std::{borrow::Cow, thread::panicking};
 use widestring::{U16Str, U16String};
 
@@ -11,7 +6,7 @@ impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
         match self.connection.disconnect() {
             Ok(()) => (),
-            Err(Error::Diagnostics(record)) if record.is_invalid_state_transaction() => {
+            Err(Error::Diagnostics(record)) if record.state == State::INVALID_STATE_TRANSACTION => {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
                 if let Err(e) = self.connection.rollback() {
                     // Avoid panicking, if we already have a panic. We don't want to mask the original

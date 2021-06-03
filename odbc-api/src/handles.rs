@@ -24,7 +24,7 @@ pub use {
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
-    diagnostics::Record,
+    diagnostics::{State, Record},
     environment::Environment,
     error::Error,
     statement::{ParameterDescription, Statement, StatementImpl},

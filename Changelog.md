@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.0
+
+* Better error message in case ODBC Api version is set on older version of unixODBC.
+  * Introduced `OdbcApiVersionUnsupported` variant to Error type.
+  * Changed ODBC state representation in diagnostic to narrow ASCII characters.
+
 ## 0.22.3
 
 * Fix: `VarCharBox::null()` had been bound as `VARCHAR(0)`. This caused an error with Access and
