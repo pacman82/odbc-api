@@ -11,7 +11,9 @@ use widestring::U16Str;
 pub struct State(pub [u8; SQLSTATE_SIZE]);
 
 impl State {
+    /// Can be returned from SQLDisconnect
     pub const INVALID_STATE_TRANSACTION: State = State(*b"25000");
+    /// Given the specified Attribute value, an invalid value was specified in ValuePtr.
     pub const INVALID_ATTRIBUTE_VALUE: State = State(*b"HY024");
 
     /// `SQLGetDiagRecW` returns ODBC state as wide characters. This constructor converts the wide
