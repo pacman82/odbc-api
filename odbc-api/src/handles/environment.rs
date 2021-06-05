@@ -1,4 +1,7 @@
-use super::{Connection, Error, State, as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics};
+use super::{
+    as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics, Connection,
+    Error, State,
+};
 use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
@@ -44,6 +47,26 @@ impl Drop for Environment {
 }
 
 impl Environment {
+    /// See:
+    /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-manager-connection-pooling>
+    pub unsafe fn set_connection_pooling(
+        cp_mode: odbc_sys::AttrConnectionPooling,
+    ) -> Result<(), Error> {
+        match SQLSetEnvAttr(
+            null_mut(),
+            odbc_sys::EnvironmentAttribute::ConnectionPooling,
+            cp_mode.into(),
+            0,
+        ) {
+            SqlReturn::ERROR => return Err(Error::NoDiagnostics),
+            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
+            other => panic!(
+                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
+                pooling to {:?}", other, cp_mode
+            ),
+        }
+    }
+
     /// An allocated ODBC Environment handle
     ///
     /// # Safety
