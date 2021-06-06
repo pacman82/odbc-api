@@ -191,6 +191,12 @@ impl<'c> Connection<'c> {
         self.connection.rollback()
     }
 
+    /// Indicates the state of the connection. If `true` the connection has been lost. If `false`,
+    /// the connection is still active.
+    pub fn is_dead(&self) -> Result<bool, Error> {
+        self.connection.is_dead()
+    }
+
     /// Allows sending this connection to different threads. This Connection will still be only be
     /// used by one thread at a time, but it may be a different thread each time.
     ///

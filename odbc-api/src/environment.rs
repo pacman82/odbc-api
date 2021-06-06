@@ -33,6 +33,12 @@ pub struct Environment {
 }
 
 impl Environment {
+    pub unsafe fn set_connection_pooling(
+        cp_mode: odbc_sys::AttrConnectionPooling,
+    ) -> Result<(), Error> {
+        handles::Environment::set_connection_pooling(cp_mode)
+    }
+
     /// Entry point into this API. Allocates a new ODBC Environment and declares to the driver
     /// manager that the Application wants to use ODBC version 3.8.
     ///

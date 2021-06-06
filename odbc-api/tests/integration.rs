@@ -104,9 +104,10 @@ fn bogus_connection_string() {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn connect_to_db(profile: &Profile) {
-    let _conn = ENV
+    let conn = ENV
         .connect_with_connection_string(profile.connection_string)
         .unwrap();
+    assert!(!conn.is_dead().unwrap())
 }
 
 #[test]
