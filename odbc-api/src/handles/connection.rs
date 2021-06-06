@@ -11,7 +11,7 @@ use odbc_sys::{
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
     SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
 };
-use std::{convert::TryInto, marker::PhantomData, mem::size_of, ptr::null_mut};
+use std::{convert::TryInto, marker::PhantomData, mem::size_of, ptr::null_mut, ffi::c_void};
 use widestring::U16Str;
 
 /// The connection handle references storage of all information about the connection to the data
@@ -298,5 +298,33 @@ impl<'c> Connection<'c> {
         }
 
         Ok(())
+    }
+    
+    /// Indicates the state of the connection. If `true` the connection has been lost. If `false`,
+    /// the connection is still active.
+    pub fn is_dead(&self) -> Result<bool, Error> {
+        unsafe {
+            match self.numeric_attribute(ConnectionAttribute::ConnectionDead)? {
+                0 => Ok(false),
+                1 => Ok(true),
+                other => panic!("Unexpected return value from SQLGetConnectAttrW: {}", other)
+            }
+        }
+    }
+
+    /// # Safety
+    ///
+    /// Caller must ensure connection attribute is numeric.
+    unsafe fn numeric_attribute(&self, attribute: ConnectionAttribute) -> Result<usize, Error> {
+        let mut out: usize = 0;
+        SQLGetConnectAttrW(
+            self.handle,
+            attribute,
+            &mut out as *mut usize as *mut c_void,
+            0,
+            null_mut(),
+        )
+        .into_result(self)?;
+        Ok(out)
     }
 }

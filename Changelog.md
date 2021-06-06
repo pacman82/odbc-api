@@ -1,5 +1,10 @@
 # Changelog
 
+## next
+
+* Add `Connection::is_dead`.
+* Add `Environment::set_connection_pooling`.
+
 ## 0.23.0
 
 * Better error message in case ODBC Api version is set on older version of unixODBC.
