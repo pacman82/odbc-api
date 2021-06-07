@@ -47,7 +47,8 @@ impl Drop for Environment {
 }
 
 impl Environment {
-    /// Call this method to enable connection pooling for ODBC before creating the ODBC environment.
+    /// Enable or disable (default) connection pooling for ODBC connections. Call this function
+    /// before creating the ODBC environment for which you want to enable connection pooling.
     ///
     /// See:
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-manager-connection-pooling>
@@ -73,6 +74,27 @@ impl Environment {
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
                 pooling to {:?}", other, cp_mode
             ),
+        }
+    }
+
+    pub fn set_connection_pooling_matching(
+        &mut self,
+        matching: odbc_sys::AttrCpMatch,
+    ) -> Result<(), Error> {
+        unsafe {
+            match SQLSetEnvAttr(
+                self.handle,
+                odbc_sys::EnvironmentAttribute::CpMatch,
+                matching.into(),
+                0,
+            ) {
+                SqlReturn::ERROR => return Err(Error::NoDiagnostics),
+                SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
+                other => panic!(
+                    "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set \
+                    connection pooling maching to {:?}", other, matching
+                ),
+            }
         }
     }
 

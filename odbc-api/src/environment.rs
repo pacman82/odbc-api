@@ -33,10 +33,43 @@ pub struct Environment {
 }
 
 impl Environment {
+    /// Enable or disable (default) connection pooling for ODBC connections. Call this function
+    /// before creating the ODBC environment for which you want to enable connection pooling.
+    ///
+    /// See:
+    /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-manager-connection-pooling>
+    ///
+    /// # Safety
+    ///
+    /// > An ODBC driver must be fully thread-safe, and connections must not have thread affinity to
+    /// > support connection pooling. This means the driver is able to handle a call on any thread
+    /// > at any time and is able to connect on one thread, to use the connection on another thread,
+    /// > and to disconnect on a third thread.
     pub unsafe fn set_connection_pooling(
         cp_mode: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
         handles::Environment::set_connection_pooling(cp_mode)
+    }
+
+    /// Determines how a connection is chosen from a connection pool. When [`connect`],
+    /// [`connect_with_connection_string`] or [`driver_connect`] is called, the Driver Manager
+    /// determines which connection is reused from the pool. The Driver Manager tries to match the
+    /// connection options in the call and the connection attributes set by the application to the
+    /// keywords and connection attributes of the connections in the pool. The value of this
+    /// attribute determines the level of precision of the matching criteria.
+    ///
+    /// The following values are used to set the value of this attribute:
+    ///
+    /// * [`crate::sys::AttrCpMatch::Strict`] = Only connections that exactly match the connection
+    /// options in the call and the connection attributes set by the application are reused. This is
+    /// the default.
+    /// * [`crate::sys::AttrCpMatch::Relaxed`] = Connections with matching connection string \
+    /// keywords can be used. Keywords must match, but not all connection attributes must match.
+    pub fn set_connection_pooling_matching(
+        &mut self,
+        matching: odbc_sys::AttrCpMatch,
+    ) -> Result<(), Error> {
+        self.environment.set_connection_pooling_matching(matching)
     }
 
     /// Entry point into this API. Allocates a new ODBC Environment and declares to the driver
