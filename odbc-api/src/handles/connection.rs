@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    buffer::{buf_ptr, OutputStringBuffer},
+    buffer::{buf_ptr, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
     error::Error,
     error::IntoResult,
@@ -8,8 +8,8 @@ use super::{
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
-    SQLSetConnectAttrW, SqlReturn,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
+    SQLEndTran, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
 };
 use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
 use widestring::U16Str;
@@ -185,5 +185,42 @@ impl<'c> Connection<'c> {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback)
                 .into_result(self)
         }
+    }
+
+    /// Fetch the name of the database management system used by the connection and store it into
+    /// the provided `buf`.
+    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
+        // String length in bytes, not characters. Terminating zero is excluded.
+        let mut string_length_in_bytes: i16 = 0;
+        // Let's utilize all of `buf`s capacity.
+        buf.resize(buf.capacity(), 0);
+
+        unsafe {
+            SQLGetInfoW(
+                self.handle,
+                InfoType::DbmsName,
+                mut_buf_ptr(buf) as Pointer,
+                (buf.len() * 2).try_into().unwrap(),
+                &mut string_length_in_bytes as *mut i16,
+            )
+            .into_result(self)?;
+
+            if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
+                buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
+                SQLGetInfoW(
+                    self.handle,
+                    InfoType::DbmsName,
+                    mut_buf_ptr(buf) as Pointer,
+                    (buf.len() * 2).try_into().unwrap(),
+                    &mut string_length_in_bytes as *mut i16,
+                )
+                .into_result(self)?;
+            }
+
+            // Resize buffer to exact string length without terminal zero
+            buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+        }
+
+        Ok(())
     }
 }

@@ -2519,3 +2519,14 @@ fn many_diagnostic_messages() {
 
     // We do not have an explicit assertion, we are just happy if no integer addition overflows.
 }
+
+#[test_case(MSSQL, "Microsoft SQL Server"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "MariaDB"; "Maria DB")]
+#[test_case(SQLITE_3, "SQLite"; "SQLite 3")]
+fn database_management_system_name(profile: &Profile, expected_name: &'static str) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+    let actual_name = conn.database_management_system_name().unwrap();
+    assert_eq!(expected_name, actual_name);
+}
