@@ -1,4 +1,9 @@
-use crate::{CursorImpl, Error, Preallocated, Prepared, execute::execute_with_parameters, handles::{self, State, Statement, StatementImpl}, parameter_collection::ParameterCollection};
+use crate::{
+    execute::execute_with_parameters,
+    handles::{self, State, Statement, StatementImpl},
+    parameter_collection::ParameterCollection,
+    CursorImpl, Error, Preallocated, Prepared,
+};
 use std::{borrow::Cow, thread::panicking};
 use widestring::{U16Str, U16String};
 
@@ -239,6 +244,20 @@ impl<'c> Connection<'c> {
     /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
     pub unsafe fn promote_to_send(self) -> force_send_sync::Send<Self> {
         force_send_sync::Send::new(self)
+    }
+
+    /// Fetch the name of the database management system used by the connection and store it into
+    /// the provided `buf`.
+    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
+        self.connection.fetch_database_management_system_name(buf)
+    }
+
+    /// Get the name of the database management system used by the connection.
+    pub fn database_management_system_name(&self) -> Result<String, Error> {
+        let mut buf = Vec::new();
+        self.fetch_database_management_system_name(&mut buf)?;
+        let name = U16String::from_vec(buf);
+        Ok(name.to_string().unwrap())
     }
 }
 
