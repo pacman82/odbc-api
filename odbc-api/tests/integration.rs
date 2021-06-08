@@ -2476,7 +2476,10 @@ fn get_full_connection_string_truncated(profile: &Profile) {
     )
     .unwrap();
 
-    eprintln!("Output connection string: {}", completed_connection_string.to_utf8());
+    eprintln!(
+        "Output connection string: {}",
+        completed_connection_string.to_utf8()
+    );
 
     assert!(completed_connection_string.is_truncated());
 }
@@ -2529,4 +2532,37 @@ fn database_management_system_name(profile: &Profile, expected_name: &'static st
         .unwrap();
     let actual_name = conn.database_management_system_name().unwrap();
     assert_eq!(expected_name, actual_name);
+}
+
+// Check the max name length for the catalogs, schemas, tables, and columns.
+#[test_case(MSSQL, 128, 128, 128, 128; "Microsoft SQL Server")]
+#[test_case(MARIADB, 256, 0, 256, 255; "Maria DB")]
+#[test_case(SQLITE_3, 255, 255, 255, 255; "SQLite 3")]
+fn name_limits(
+    profile: &Profile,
+    expected_max_catalog_name_len: usize,
+    expected_max_schema_name_len: usize,
+    expected_max_table_name_len: usize,
+    expected_max_column_name_len: usize,
+) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+
+    assert_eq!(
+        conn.max_catalog_name_len().unwrap(),
+        expected_max_catalog_name_len
+    );
+    assert_eq!(
+        conn.max_schema_name_len().unwrap(),
+        expected_max_schema_name_len
+    );
+    assert_eq!(
+        conn.max_table_name_len().unwrap(),
+        expected_max_table_name_len
+    );
+    assert_eq!(
+        conn.max_column_name_len().unwrap(),
+        expected_max_column_name_len
+    );
 }
