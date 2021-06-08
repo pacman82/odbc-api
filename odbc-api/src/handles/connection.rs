@@ -11,7 +11,7 @@ use odbc_sys::{
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
     SQLEndTran, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
 };
-use std::{convert::TryInto, marker::PhantomData, ptr::null_mut};
+use std::{convert::TryInto, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
 
 /// The connection handle references storage of all information about the connection to the data
@@ -231,7 +231,11 @@ impl<'c> Connection<'c> {
                 self.handle,
                 info_type,
                 &mut value as *mut u16 as Pointer,
-                0,
+                // Buffer length should not be required in this case, according to the ODBC
+                // documentation at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetinfo-function?view=sql-server-ver15#arguments
+                // However, in practice some drivers (such as Microsoft Access) require it to be
+                // specified explicitly here, otherwise they return an error without diagnostics.
+                size_of::<*mut u16>() as i16,
                 null_mut(),
             )
             .into_result(self)?;
