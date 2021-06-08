@@ -223,4 +223,39 @@ impl<'c> Connection<'c> {
 
         Ok(())
     }
+
+    fn get_info_u16(&self, info_type: InfoType) -> Result<u16, Error> {
+        unsafe {
+            let mut value = 0u16;
+            SQLGetInfoW(
+                self.handle,
+                info_type,
+                &mut value as *mut u16 as Pointer,
+                0,
+                null_mut(),
+            )
+            .into_result(self)?;
+            Ok(value)
+        }
+    }
+
+    /// Maximum length of catalog names in bytes.
+    pub fn max_catalog_name_len(&self) -> Result<u16, Error> {
+        self.get_info_u16(InfoType::MaxCatalogNameLen)
+    }
+
+    /// Maximum length of schema names in bytes.
+    pub fn max_schema_name_len(&self) -> Result<u16, Error> {
+        self.get_info_u16(InfoType::MaxSchemaNameLen)
+    }
+
+    /// Maximum length of table names in bytes.
+    pub fn max_table_name_len(&self) -> Result<u16, Error> {
+        self.get_info_u16(InfoType::MaxTableNameLen)
+    }
+
+    /// Maximum length of column names in bytes.
+    pub fn max_column_name_len(&self) -> Result<u16, Error> {
+        self.get_info_u16(InfoType::MaxColumnNameLen)
+    }
 }

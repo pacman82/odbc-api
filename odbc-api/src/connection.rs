@@ -259,6 +259,26 @@ impl<'c> Connection<'c> {
         let name = U16String::from_vec(buf);
         Ok(name.to_string().unwrap())
     }
+
+    /// Maximum length of catalog names in bytes.
+    pub fn max_catalog_name_len(&self) -> Result<usize, Error> {
+        self.connection.max_catalog_name_len().map(|v| v as usize)
+    }
+
+    /// Maximum length of schema names in bytes.
+    pub fn max_schema_name_len(&self) -> Result<usize, Error> {
+        self.connection.max_schema_name_len().map(|v| v as usize)
+    }
+
+    /// Maximum length of table names in bytes.
+    pub fn max_table_name_len(&self) -> Result<usize, Error> {
+        self.connection.max_table_name_len().map(|v| v as usize)
+    }
+
+    /// Maximum length of column names in bytes.
+    pub fn max_column_name_len(&self) -> Result<usize, Error> {
+        self.connection.max_column_name_len().map(|v| v as usize)
+    }
 }
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
