@@ -2578,3 +2578,18 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
 
     assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
 }
+
+#[test]
+fn list_extended_column_detail() {
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
+
+    let columns = conn
+        .columns(&conn.current_catalog().unwrap(), "dbo", "Movies", "")
+        .unwrap();
+    assert_eq!(columns.len(), 2);
+
+    let title_col = columns.iter().find(|c| c.column_name == "title").unwrap();
+    assert_eq!(title_col.data_type, DataType::Varchar { length: 255 })
+}
