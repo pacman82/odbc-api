@@ -279,6 +279,20 @@ impl<'c> Connection<'c> {
     pub fn max_column_name_len(&self) -> Result<usize, Error> {
         self.connection.max_column_name_len().map(|v| v as usize)
     }
+
+    /// Fetch the name of the current catalog being used by the connection and store it into the
+    /// provided `buf`.
+    pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
+        self.connection.fetch_current_catalog(buf)
+    }
+
+    /// Get the name of the current catalog being used by the connection.
+    pub fn current_catalog(&self) -> Result<String, Error> {
+        let mut buf = Vec::new();
+        self.fetch_current_catalog(&mut buf)?;
+        let name = U16String::from_vec(buf);
+        Ok(name.to_string().unwrap())
+    }
 }
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
