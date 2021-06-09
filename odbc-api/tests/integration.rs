@@ -2566,3 +2566,15 @@ fn name_limits(
         expected_max_column_name_len
     );
 }
+
+// Check the current catalog being used by the connection.
+#[test_case(MSSQL, "master"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "test_db"; "Maria DB")]
+#[test_case(SQLITE_3, ""; "SQLite 3")]
+fn current_catalog(profile: &Profile, expected_catalog: &str) {
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+
+    assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
+}
