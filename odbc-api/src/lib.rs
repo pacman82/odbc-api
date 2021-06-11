@@ -25,7 +25,7 @@ pub use self::{
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
     fixed_sized::Bit,
-    handles::{ColumnDescription, DataType, Error, Nullability},
+    handles::{ColumnDescription, DataType, Error, ExtendedColumnDescription, Nullability},
     into_parameter::IntoParameter,
     nullable::Nullable,
     parameter::{InputParameter, Out, Output, Parameter},

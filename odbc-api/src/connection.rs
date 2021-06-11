@@ -1,10 +1,13 @@
 use crate::{
+    buffers::{AnyColumnView, BufferDescription, BufferKind, ColumnarRowSet, TextColumnIt},
     execute::execute_with_parameters,
     handles::{self, State, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
-    CursorImpl, Error, Preallocated, Prepared,
+    Cursor, CursorImpl, DataType, Error, ExtendedColumnDescription, Nullability, Preallocated,
+    Prepared,
 };
-use std::{borrow::Cow, thread::panicking};
+use odbc_sys::SqlDataType;
+use std::{array::IntoIter, borrow::Cow, str, thread::panicking};
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
@@ -292,6 +295,231 @@ impl<'c> Connection<'c> {
         self.fetch_current_catalog(&mut buf)?;
         let name = U16String::from_vec(buf);
         Ok(name.to_string().unwrap())
+    }
+
+    /// Get extended column detail for columns that match the provided catalog name, schema
+    /// pattern, table pattern, and column pattern.
+    ///
+    /// # Parameters
+    ///
+    /// * `catalog_name`: The name of the catalog. An empty string can be used to indicate tables
+    ///   without catalogs.
+    /// * `schema_name`: A search pattern for schema names. An empty string can be used to indicate
+    ///   tables without schemas.
+    /// * `table_name`: A search pattern for table names.
+    /// * `column_name`: A search pattern for column names.
+    ///
+    /// # Return
+    ///
+    /// Details about each column that matched the search criteria.
+    pub fn columns(
+        &self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<Vec<ExtendedColumnDescription>, Error> {
+        let null_i16 = BufferDescription {
+            kind: BufferKind::I16,
+            nullable: true,
+        };
+
+        let not_null_i16 = BufferDescription {
+            kind: BufferKind::I16,
+            nullable: false,
+        };
+
+        let null_i32 = BufferDescription {
+            kind: BufferKind::I32,
+            nullable: true,
+        };
+        // The definitions for these descriptions are taken from the documentation of `SQLColumns`
+        // located at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
+        let catalog_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_catalog_name_len()?,
+            },
+            nullable: true,
+        };
+
+        let schema_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_schema_name_len()?,
+            },
+            nullable: true,
+        };
+
+        let table_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_table_name_len()?,
+            },
+            nullable: false,
+        };
+
+        let column_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_column_name_len()?,
+            },
+            nullable: false,
+        };
+
+        let data_type_desc = not_null_i16;
+
+        const MAX_EXPECTED_TYPE_NAME_LEN: usize = 255;
+        let type_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: MAX_EXPECTED_TYPE_NAME_LEN,
+            },
+            nullable: false,
+        };
+
+        let column_size_desc = null_i32;
+        let buffer_len_desc = null_i32;
+        let decimal_digits_desc = null_i16;
+        let precision_radix_desc = null_i16;
+        let nullable_desc = not_null_i16;
+
+        const MAX_EXPECTED_REMARKS_LEN: usize = 255;
+        let remarks_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: MAX_EXPECTED_REMARKS_LEN,
+            },
+            nullable: true,
+        };
+
+        const MAX_EXPECTED_COLUMN_DEFAULT_LEN: usize = 255;
+        let column_default_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: MAX_EXPECTED_COLUMN_DEFAULT_LEN,
+            },
+            nullable: true,
+        };
+
+        let sql_data_type_desc = not_null_i16;
+        let sql_datetime_sub_desc = null_i16;
+        let char_octet_len_desc = null_i32;
+        let ordinal_pos_desc = BufferDescription {
+            kind: BufferKind::I32,
+            nullable: false,
+        };
+
+        const MAX_EXPECTED_IS_NULLABLE_LEN: usize = 10;
+        let is_nullable_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: MAX_EXPECTED_IS_NULLABLE_LEN,
+            },
+            nullable: true,
+        };
+
+        let buffer_descs = [
+            catalog_name_desc,
+            schema_name_desc,
+            table_name_desc,
+            column_name_desc,
+            data_type_desc, // Currently unused
+            type_name_desc,
+            column_size_desc,
+            buffer_len_desc,
+            decimal_digits_desc,
+            precision_radix_desc,
+            nullable_desc,
+            remarks_desc,
+            column_default_desc,
+            sql_data_type_desc,
+            sql_datetime_sub_desc, // Currently unused
+            char_octet_len_desc,
+            ordinal_pos_desc,
+            is_nullable_desc, // Currently unused
+        ];
+
+        const ROWS_PER_BATCH: u32 = 10;
+        let row_set_buffer = ColumnarRowSet::new(ROWS_PER_BATCH, IntoIter::new(buffer_descs));
+
+        let cursor = self.connection.load_columns_detail(
+            self.connection.allocate_statement()?,
+            &U16String::from_str(catalog_name),
+            &U16String::from_str(schema_name),
+            &U16String::from_str(table_name),
+            &U16String::from_str(column_name),
+        )?;
+
+        let mut cursor = cursor.bind_buffer(row_set_buffer)?;
+
+        let mut columns = Vec::new();
+
+        while let Some(batch) = cursor.fetch()? {
+            let unexpected_type = "Unexpected column type";
+            let expect_text_col = |buffer_index| match batch.column(buffer_index) {
+                AnyColumnView::Text(col) => col,
+                _ => panic!("{}", unexpected_type),
+            };
+            let expect_nullable_i32_col = |buffer_index| match batch.column(buffer_index) {
+                AnyColumnView::NullableI32(col) => col,
+                _ => panic!("{}", unexpected_type),
+            };
+            let expect_nullable_i16_col = |buffer_index| match batch.column(buffer_index) {
+                AnyColumnView::NullableI16(col) => col,
+                _ => panic!("{}", unexpected_type),
+            };
+            let expect_i16_col = |buffer_index| match batch.column(buffer_index) {
+                AnyColumnView::I16(col) => col,
+                _ => panic!("{}", unexpected_type),
+            };
+
+            let mut catalog_names = expect_text_col(0);
+            let mut schema_names = expect_text_col(1);
+            let mut table_names = expect_text_col(2);
+            let mut column_names = expect_text_col(3);
+            let mut type_names = expect_text_col(5);
+            let mut column_sizes = expect_nullable_i32_col(6);
+            let mut buffer_lengths = expect_nullable_i32_col(7);
+            let mut decimal_digits = expect_nullable_i16_col(8);
+            let mut precision_radices = expect_nullable_i16_col(9);
+            let nullables = expect_i16_col(10);
+            let mut remarks = expect_text_col(11);
+            let mut column_defaults = expect_text_col(12);
+            let sql_data_types = expect_i16_col(13);
+            let mut char_octet_lengths = expect_nullable_i32_col(15);
+            let ordinal_positions = match batch.column(16) {
+                AnyColumnView::I32(col) => col,
+                _ => panic!("{}", unexpected_type),
+            };
+
+            // All iterators should be the same length (`num_rows`), so we can just iterate through
+            // each row and `unwrap` each iterator
+            for row_idx in 0..batch.num_rows() {
+                let next_as_string = |iterator: &mut TextColumnIt<u8>| {
+                    iterator
+                        .next()
+                        .unwrap()
+                        .and_then(|r| str::from_utf8(r).ok())
+                        .unwrap_or("")
+                        .to_string()
+                };
+
+                columns.push(ExtendedColumnDescription {
+                    catalog_name: next_as_string(&mut catalog_names),
+                    schema_name: next_as_string(&mut schema_names),
+                    table_name: next_as_string(&mut table_names),
+                    column_name: next_as_string(&mut column_names),
+                    data_type: DataType::new(
+                        SqlDataType(sql_data_types[row_idx]),
+                        column_sizes.next().unwrap().copied().unwrap_or(0) as usize,
+                        decimal_digits.next().unwrap().copied().unwrap_or(0),
+                    ),
+                    type_name: next_as_string(&mut type_names),
+                    buffer_length: buffer_lengths.next().unwrap().copied(),
+                    precision_radix: precision_radices.next().unwrap().copied(),
+                    nullability: Nullability::new(odbc_sys::Nullability(nullables[row_idx])),
+                    remarks: next_as_string(&mut remarks),
+                    column_default: next_as_string(&mut column_defaults),
+                    char_octet_length: char_octet_lengths.next().unwrap().copied(),
+                    ordinal_position: ordinal_positions[row_idx],
+                });
+            }
+        }
+
+        Ok(columns)
     }
 }
 

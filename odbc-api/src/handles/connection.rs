@@ -1,4 +1,5 @@
 use super::{
+    super::CursorImpl,
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
@@ -8,8 +9,9 @@ use super::{
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
-    SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLColumnsW, SQLConnectW, SQLDisconnect,
+    SQLDriverConnectW, SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
+    Stmt,
 };
 use std::{convert::TryInto, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
@@ -298,5 +300,33 @@ impl<'c> Connection<'c> {
         }
 
         Ok(())
+    }
+
+    /// Load the details for all columns that match the catalog, schema, table, and column
+    /// provided.
+    pub fn load_columns_detail<'o>(
+        &self,
+        statement: StatementImpl<'o>,
+        catalog_name: &U16Str,
+        schema_name: &U16Str,
+        table_name: &U16Str,
+        column_name: &U16Str,
+    ) -> Result<CursorImpl<'o, StatementImpl<'o>>, Error> {
+        unsafe {
+            SQLColumnsW(
+                statement.as_handle() as *mut Stmt,
+                buf_ptr(catalog_name.as_slice()),
+                catalog_name.len().try_into().unwrap(),
+                buf_ptr(schema_name.as_slice()),
+                schema_name.len().try_into().unwrap(),
+                buf_ptr(table_name.as_slice()),
+                table_name.len().try_into().unwrap(),
+                buf_ptr(column_name.as_slice()),
+                column_name.len().try_into().unwrap(),
+            )
+            .into_result(self)?
+        }
+
+        Ok(CursorImpl::new(statement))
     }
 }

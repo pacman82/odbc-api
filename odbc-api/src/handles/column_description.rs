@@ -57,3 +57,20 @@ impl ColumnDescription {
         }
     }
 }
+
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
+pub struct ExtendedColumnDescription {
+    pub catalog_name: String,
+    pub schema_name: String,
+    pub table_name: String,
+    pub column_name: String,
+    pub data_type: DataType,
+    pub type_name: String,
+    pub buffer_length: Option<i32>,
+    pub precision_radix: Option<i16>,
+    pub nullability: Nullability,
+    pub remarks: String,
+    pub column_default: String,
+    pub char_octet_length: Option<i32>,
+    pub ordinal_position: i32,
+}
