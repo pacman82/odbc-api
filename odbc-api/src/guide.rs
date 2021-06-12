@@ -195,12 +195,41 @@
 //!
 //! > You can list the available data sources using [`crate::Environment::data_sources`].
 //!
-//! ### Lifetime considerations for Connections
+//! ### Connection pooling
 //!
-//! An ODBC connection MUST NOT outlive the ODBC environment. This is modeled as the connection
-//! borrowing the environment. It is a shared borrow, to allow for more than one connection per
-//! environment. This way the compiler will catch programming errors early. The most popular among
-//! them seems to be returning a `Connection` from a function which also creates the environment.
+//! ODBC specifies an interface to enable the driver manager to enable connection pooling for your
+//! application. It is of by default, but if you use ODBC to connect to your data source instead of
+//! implementing it in your application, or importing a library you may simply enable it in ODBC
+//! instead.
+//! Connection Pooling is governed by two attributes. The most important one is the connection
+//! pooling scheme which is `Off` by default. It must be set even before you create your ODBC
+//! environment. It is global mutable state on the process level. Setting it in Rust is therefore
+//! unsafe.
+//!
+//! The other one is changed via [`crate::Environment::set_connection_pooling_matching`]. It governs
+//! how a connection is choosen from the pool. It defaults to strict which means the `Connection`
+//! you get from the pool will have exactly the attributes specified in the connection string.
+//!
+//! Here is an example of how to create an ODBC enviroment with connection pooling.
+//!
+//! ```
+//! use lazy_static::lazy_static;
+//! use odbc_api::{Environment, sys::{AttrConnectionPooling, AttrCpMatch}};
+//!
+//! lazy_static! {
+//!     pub static ref ENV: Environment = unsafe {
+//!         // Enable connection pooling. Let driver decide wether the attributes of two connection
+//!         // are similar enough to change the attributes of a pooled one, to fit the requested
+//!         // connection, or if it is cheaper to create a new Connection from scratch.
+//!         // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
+//!         Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+//!         let mut env = Environment::new().unwrap();
+//!         // Strict is the default, and is set here to be explicit about it.
+//!         env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
+//!         env
+//!     };
+//! }
+//! ```
 //!
 //! ## Executing SQL statments
 //!
