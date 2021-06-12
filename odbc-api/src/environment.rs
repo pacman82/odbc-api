@@ -36,8 +36,42 @@ impl Environment {
     /// Enable or disable (default) connection pooling for ODBC connections. Call this function
     /// before creating the ODBC environment for which you want to enable connection pooling.
     ///
+    /// ODBC specifies an interface to enable the driver manager to enable connection pooling for
+    /// your application. It is of by default, but if you use ODBC to connect to your data source
+    /// instead of implementing it in your application, or importing a library you may simply enable
+    /// it in ODBC instead.
+    /// Connection Pooling is governed by two attributes. The most important one is the connection
+    /// pooling scheme which is `Off` by default. It must be set even before you create your ODBC
+    /// environment. It is global mutable state on the process level. Setting it in Rust is therefore
+    /// unsafe.
+    ///
+    /// The other one is changed via [`Self::set_connection_pooling_matching`]. It governs how a
+    /// connection is choosen from the pool. It defaults to strict which means the `Connection` you
+    /// get from the pool will have exactly the attributes specified in the connection string.
+    ///
     /// See:
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-manager-connection-pooling>
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lazy_static::lazy_static;
+    /// use odbc_api::{Environment, sys::{AttrConnectionPooling, AttrCpMatch}};
+    ///
+    /// lazy_static! {
+    ///     pub static ref ENV: Environment = unsafe {
+    ///         // Enable connection pooling. Let driver decide wether the attributes of two connection
+    ///         // are similar enough to change the attributes of a pooled one, to fit the requested
+    ///         // connection, or if it is cheaper to create a new Connection from scratch.
+    ///         // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
+    ///         Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+    ///         let mut env = Environment::new().unwrap();
+    ///         // Strict is the default, and is set here to be explicit about it.
+    ///         env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
+    ///         env
+    ///     };
+    /// }
+    /// ```
     ///
     /// # Safety
     ///
@@ -46,17 +80,17 @@ impl Environment {
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
     pub unsafe fn set_connection_pooling(
-        cp_mode: odbc_sys::AttrConnectionPooling,
+        scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
-        handles::Environment::set_connection_pooling(cp_mode)
+        handles::Environment::set_connection_pooling(scheme)
     }
 
-    /// Determines how a connection is chosen from a connection pool. When [`connect`],
-    /// [`connect_with_connection_string`] or [`driver_connect`] is called, the Driver Manager
-    /// determines which connection is reused from the pool. The Driver Manager tries to match the
-    /// connection options in the call and the connection attributes set by the application to the
-    /// keywords and connection attributes of the connections in the pool. The value of this
-    /// attribute determines the level of precision of the matching criteria.
+    /// Determines how a connection is chosen from a connection pool. When [`Self::connect`],
+    /// [`Self::connect_with_connection_string`] or [`Self::driver_connect`] is called, the Driver
+    /// Manager determines which connection is reused from the pool. The Driver Manager tries to
+    /// match the connection options in the call and the connection attributes set by the
+    /// application to the keywords and connection attributes of the connections in the pool. The
+    /// value of this attribute determines the level of precision of the matching criteria.
     ///
     /// The following values are used to set the value of this attribute:
     ///

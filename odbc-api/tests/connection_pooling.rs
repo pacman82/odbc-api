@@ -21,9 +21,13 @@ lazy_static! {
 
 #[test]
 fn connect() {
-    let conn = ENV.connect_with_connection_string(MSSQL_CONNECTION).unwrap();
-    assert!(!conn.is_dead().unwrap());
+    // First connection should be created on demand
+    {
+        let conn = ENV.connect_with_connection_string(MSSQL_CONNECTION).unwrap();
+        assert!(!conn.is_dead().unwrap());
+    }
 
+    // Second connection should be from the pool
     let conn = ENV.connect_with_connection_string(MSSQL_CONNECTION).unwrap();
     assert!(!conn.is_dead().unwrap());
 }

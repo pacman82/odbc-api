@@ -60,19 +60,19 @@ impl Environment {
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
     pub unsafe fn set_connection_pooling(
-        cp_mode: odbc_sys::AttrConnectionPooling,
+        scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
         match SQLSetEnvAttr(
             null_mut(),
             odbc_sys::EnvironmentAttribute::ConnectionPooling,
-            cp_mode.into(),
+            scheme.into(),
             0,
         ) {
             SqlReturn::ERROR => return Err(Error::NoDiagnostics),
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
             other => panic!(
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
-                pooling to {:?}", other, cp_mode
+                pooling to {:?}", other, scheme
             ),
         }
     }
