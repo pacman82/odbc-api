@@ -1,9 +1,9 @@
 # Changelog
 
-## next
+## 0.23.1
 
-* Add `Connection::is_dead`.
-* Add `Environment::set_connection_pooling`.
+* Add support for Connection Pooling
+* Add methods for exposing metadata to SQLColumns based queries (Thanks again to @grovesNL).
 
 ## 0.23.0
 
