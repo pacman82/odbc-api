@@ -1,8 +1,9 @@
 use widestring::{U16Str, U16String};
 
 use crate::{
-    execute::execute_with_parameters, handles::StatementImpl, CursorImpl, Error,
-    ParameterCollection,
+    execute::{columns, execute_with_parameters},
+    handles::StatementImpl,
+    CursorImpl, Error, ParameterCollection,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -98,7 +99,7 @@ impl<'o> Preallocated<'o> {
         self.execute_utf16(&query, params)
     }
 
-    /// Transfer ownership to the underlying statemet handle.
+    /// Transfer ownership to the underlying statement handle.
     ///
     /// The resulting type is one level of indirection away from the raw pointer of the ODBC API. It
     /// no longer has any guarantees about bound buffers, but is still guaranteed to be a valid
@@ -108,5 +109,23 @@ impl<'o> Preallocated<'o> {
     /// accessible through safe abstractions.
     pub fn into_statement(self) -> StatementImpl<'o> {
         self.statement
+    }
+
+    /// Query all columns that match the provided catalog name, schema pattern, table pattern, and
+    /// column pattern.
+    pub fn columns(
+        &mut self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
+        columns(
+            &mut self.statement,
+            &U16String::from_str(catalog_name),
+            &U16String::from_str(schema_name),
+            &U16String::from_str(table_name),
+            &U16String::from_str(column_name),
+        )
     }
 }

@@ -9,9 +9,10 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLDescribeColW, SQLDescribeParam,
-    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData,
-    SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW,
+    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
+    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn,
+    StatementAttribute, ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use widestring::U16Str;
@@ -58,7 +59,7 @@ impl<'s> StatementImpl<'s> {
         ManuallyDrop::new(self).handle
     }
 
-    /// Gain access to the underlying statement handle without transfering owenership to it.
+    /// Gain access to the underlying statement handle without transferring ownership to it.
     pub fn as_sys(&self) -> HStmt {
         self.handle
     }
@@ -323,6 +324,15 @@ pub trait Statement {
     ///
     /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
     fn param_data(&mut self) -> Result<Option<Pointer>, Error>;
+
+    /// Executes a columns query using this statement handle.
+    fn columns(
+        &mut self,
+        catalog_name: &U16Str,
+        schema_name: &U16Str,
+        table_name: &U16Str,
+        column_name: &U16Str,
+    ) -> Result<(), Error>;
 }
 
 impl<'o> Statement for StatementImpl<'o> {
@@ -839,6 +849,30 @@ impl<'o> Statement for StatementImpl<'o> {
                 SqlReturn::NEED_DATA => Ok(Some(param_id)),
                 other => other.into_result(self).map(|()| None),
             }
+        }
+    }
+
+    /// Executes a columns query using this statement handle.
+    fn columns(
+        &mut self,
+        catalog_name: &U16Str,
+        schema_name: &U16Str,
+        table_name: &U16Str,
+        column_name: &U16Str,
+    ) -> Result<(), Error> {
+        unsafe {
+            SQLColumnsW(
+                self.handle,
+                buf_ptr(catalog_name.as_slice()),
+                catalog_name.len().try_into().unwrap(),
+                buf_ptr(schema_name.as_slice()),
+                schema_name.len().try_into().unwrap(),
+                buf_ptr(table_name.as_slice()),
+                table_name.len().try_into().unwrap(),
+                buf_ptr(column_name.as_slice()),
+                column_name.len().try_into().unwrap(),
+            )
+            .into_result(self)
         }
     }
 }
