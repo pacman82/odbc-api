@@ -54,3 +54,27 @@ where
         }
     }
 }
+
+/// Shared implementation for executing a columns query between [`Connection`] and
+/// [`Preallocated`].
+pub fn columns<'o, S>(
+    mut statement: S,
+    catalog_name: &U16Str,
+    schema_name: &U16Str,
+    table_name: &U16Str,
+    column_name: &U16Str,
+) -> Result<Option<CursorImpl<'o, S>>, Error>
+where
+    S: BorrowMut<StatementImpl<'o>>,
+{
+    let stmt = statement.borrow_mut();
+
+    stmt.columns(catalog_name, schema_name, table_name, column_name)?;
+
+    // Check if a result set has been created.
+    if stmt.num_result_cols()? == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(CursorImpl::new(statement)))
+    }
+}

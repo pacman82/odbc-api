@@ -1,10 +1,11 @@
 use crate::{
+    buffers::BufferDescription,
     execute::execute_with_parameters,
     handles::{self, State, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Preallocated, Prepared,
 };
-use std::{borrow::Cow, thread::panicking};
+use std::{borrow::Cow, str, thread::panicking};
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
@@ -298,6 +299,48 @@ impl<'c> Connection<'c> {
         self.fetch_current_catalog(&mut buf)?;
         let name = U16String::from_vec(buf);
         Ok(name.to_string().unwrap())
+    }
+
+    /// Query all columns that match the provided catalog name, schema pattern, table pattern, and
+    /// column pattern.
+    pub fn columns(
+        &self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
+        self.connection.columns(
+            self.connection.allocate_statement()?,
+            &U16String::from_str(catalog_name),
+            &U16String::from_str(schema_name),
+            &U16String::from_str(table_name),
+            &U16String::from_str(column_name),
+        )
+    }
+
+    /// The buffer descriptions for all standard buffers (not including extensions) returned in the
+    /// columns query (e.g. [`Connection::columns`]).
+
+    /// The buffer descriptions for all standard buffers (not including extensions) returned in the
+    /// columns query (e.g. [`Connection::columns`]).
+    ///
+    /// # Arguments
+    ///
+    /// * `type_name_max_len` - The maximum expected length of type names.
+    /// * `remarks_max_len` - The maximum expected length of remarks.
+    /// * `column_default_max_len` - The maximum expected length of column defaults.
+    pub fn columns_buffer_description(
+        &self,
+        type_name_max_len: usize,
+        remarks_max_len: usize,
+        column_default_max_len: usize,
+    ) -> Result<Vec<BufferDescription>, Error> {
+        self.connection.columns_buffer_description(
+            type_name_max_len,
+            remarks_max_len,
+            column_default_max_len,
+        )
     }
 }
 

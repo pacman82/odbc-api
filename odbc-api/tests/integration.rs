@@ -18,7 +18,7 @@ use odbc_api::{
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
-use std::{convert::TryInto, ffi::CString, iter, thread};
+use std::{convert::TryInto, ffi::CString, iter, str, thread};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -2578,4 +2578,42 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
         .unwrap();
 
     assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
+}
+
+#[test]
+fn columns_query() {
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
+
+    let row_set_buffer = ColumnarRowSet::new(
+        2,
+        conn.columns_buffer_description(255, 255, 255)
+            .unwrap()
+            .into_iter(),
+    );
+    let columns = conn
+        .columns(&conn.current_catalog().unwrap(), "dbo", "Movies", "")
+        .unwrap()
+        .unwrap();
+    let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+
+    const COLUMN_NAME_INDEX: usize = 3;
+    let column_names = match batch.column(COLUMN_NAME_INDEX) {
+        AnyColumnView::Text(col) => col,
+        _ => panic!("expected text"),
+    };
+
+    const COLUMN_SIZE_INDEX: usize = 6;
+    let column_sizes = match batch.column(COLUMN_SIZE_INDEX) {
+        AnyColumnView::NullableI32(col) => col,
+        _ => panic!("expected nullable i32"),
+    };
+
+    let has_title_col_with_expected_size = column_names.zip(column_sizes).any(|(name, size)| {
+        str::from_utf8(name.unwrap()).unwrap() == "title" && *size.unwrap() == 255
+    });
+
+    assert!(has_title_col_with_expected_size);
 }
