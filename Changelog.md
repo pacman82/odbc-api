@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.23.2
+
+* Adds `Connection::columns`
+* Adds `Connection::columns_buffer_description`
+
+These wrap the ODBC `SqlColumns` function and represent anoter way to obtain schema information.
+
+Thanks to @grovesNL for the contribution.
+
 ## 0.23.1
 
 * Add support for Connection Pooling

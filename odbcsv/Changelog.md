@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.32
+
+* Updated dependencies
+
 ## 0.3.31
 
 * Updated dependencies
