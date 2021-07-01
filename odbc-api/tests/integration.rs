@@ -2485,45 +2485,6 @@ fn get_full_connection_string_truncated(profile: &Profile) {
     assert!(completed_connection_string.is_truncated());
 }
 
-/// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
-/// messages.
-#[test]
-#[ignore = "Runs for a very long time"]
-fn many_diagnostic_messages() {
-    let table_name = "ManyDiagnosticMessages";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL.connection_string)
-        .unwrap();
-    // In order to generate a lot of diagnostic messages with one function call, we try a bulk
-    // insert for which each row generates a warning.
-    // Setup table
-    setup_empty_table(&conn, MSSQL.index_type, table_name, &["VARCHAR(2)"]).unwrap();
-
-    // Incidentally our batch size is too large to be hold in an `i16`.
-    let batch_size = 2 << 15;
-
-    // Fill each row in the buffer with two letters.
-    let mut buffer = TextRowSet::new(batch_size, iter::once(2));
-
-    for _ in 0..batch_size {
-        buffer.append([Some(&b"ab"[..])].iter().cloned());
-    }
-
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (?)", table_name);
-    conn.execute(&insert_sql, &buffer).unwrap();
-
-    let query_sql = format!("SELECT a FROM {}", table_name);
-    buffer = TextRowSet::new(batch_size, iter::once(1));
-    let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-
-    // This should cause the string to be truncated, since they are 2 letters wide, but there is
-    // space for one. This should cause at least one warning per row.
-    let _ = row_set_cursor.fetch();
-
-    // We do not have an explicit assertion, we are just happy if no integer addition overflows.
-}
-
 #[test_case(MSSQL, "Microsoft SQL Server"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "MariaDB"; "Maria DB")]
 #[test_case(SQLITE_3, "SQLite"; "SQLite 3")]
@@ -2616,4 +2577,113 @@ fn columns_query() {
     });
 
     assert!(has_title_col_with_expected_size);
+}
+
+/// Demonstrating how to fill a vector of rows using this crate.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn fill_vec_of_rows(profile: &Profile) {
+    let table_name = "FillVecOfRows";
+    let conn = ENV
+        .connect_with_connection_string(profile.connection_string)
+        .unwrap();
+
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["VARCHAR(50)", "INTEGER"],
+    )
+    .unwrap();
+    let insert_sql = format!("INSERT INTO {} (a,b) VALUES ('A', 1), ('B',2)", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    // Now that the table is created and filled with some values lets query it and put its contents
+    // into a `Vec`
+
+    let query_sql = format!("SELECT a,b FROM {}", table_name);
+    let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
+    let buf_desc = [
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::Text { max_str_len: 50 },
+        },
+        BufferDescription {
+            nullable: false,
+            kind: BufferKind::I32,
+        },
+    ];
+
+    let buffer = ColumnarRowSet::new(1, buf_desc.iter().copied());
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+
+    let mut actual = Vec::new();
+
+    while let Some(batch) = cursor.fetch().unwrap() {
+        // Extract first column known to contain text
+        let mut col_a = match batch.column(0) {
+            AnyColumnView::Text(col) => col,
+            _ => panic!("First column is supposed to be text"),
+        };
+
+        // Extract second column known to contain non nullable i32
+        let col_b = match batch.column(1) {
+            AnyColumnView::I32(col) => col,
+            _ => panic!("Secord column is supposed to be an i32"),
+        };
+
+        for row in 0..batch.num_rows() {
+            let a = col_a
+                .next()
+                .unwrap()
+                .map(|bytes| str::from_utf8(bytes).unwrap().to_owned());
+            let b = col_b[row];
+            actual.push((a, b))
+        }
+    }
+
+    assert_eq!(
+        actual,
+        [(Some("A".to_string()), 1), (Some("B".to_string()), 2)]
+    )
+}
+
+/// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
+/// messages.
+#[test]
+#[ignore = "Runs for a very long time"]
+fn many_diagnostic_messages() {
+    let table_name = "ManyDiagnosticMessages";
+    let conn = ENV
+        .connect_with_connection_string(MSSQL.connection_string)
+        .unwrap();
+    // In order to generate a lot of diagnostic messages with one function call, we try a bulk
+    // insert for which each row generates a warning.
+    // Setup table
+    setup_empty_table(&conn, MSSQL.index_type, table_name, &["VARCHAR(2)"]).unwrap();
+
+    // Incidentally our batch size is too large to be hold in an `i16`.
+    let batch_size = 2 << 15;
+
+    // Fill each row in the buffer with two letters.
+    let mut buffer = TextRowSet::new(batch_size, iter::once(2));
+
+    for _ in 0..batch_size {
+        buffer.append([Some(&b"ab"[..])].iter().cloned());
+    }
+
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert_sql, &buffer).unwrap();
+
+    let query_sql = format!("SELECT a FROM {}", table_name);
+    buffer = TextRowSet::new(batch_size, iter::once(1));
+    let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+
+    // This should cause the string to be truncated, since they are 2 letters wide, but there is
+    // space for one. This should cause at least one warning per row.
+    let _ = row_set_cursor.fetch();
+
+    // We do not have an explicit assertion, we are just happy if no integer addition overflows.
 }
