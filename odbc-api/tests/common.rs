@@ -1,10 +1,5 @@
 use lazy_static::lazy_static;
-use odbc_api::{
-    buffers,
-    buffers::TextColumn,
-    handles::{CDataMut, Statement},
-    Connection, Cursor, Environment, RowSetBuffer, U16Str,
-};
+use odbc_api::{Connection, Cursor, Environment, Error, RowSetBuffer, U16Str, buffers, buffers::TextColumn, handles::{CDataMut, Statement}};
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
@@ -22,6 +17,14 @@ pub struct Profile {
     /// Type of the identity autoincrementing column, used to index the test tables.
     pub index_type: &'static str,
     pub blob_type: &'static str,
+}
+
+impl Profile {
+
+    /// Open a new connection using the connection string of the profile
+    pub fn connection(&self) -> Result<Connection<'static>, Error> {
+        ENV.connect_with_connection_string(self.connection_string)
+    }
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
