@@ -1190,7 +1190,7 @@ fn parameter_option_integer_none() {
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite will work only if increasing length to VARCHAR(2).
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn non_ascii_char(profile: &Profile) {
-    let conn = profile.connection.unwrap();
+    let conn = profile.connection().unwrap();
     let table_name = "NonAsciiChar";
 
     setup_empty_table(&conn, profile.index_type, table_name, &["VARCHAR(1)"]).unwrap();
