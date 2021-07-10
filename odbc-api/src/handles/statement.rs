@@ -7,13 +7,7 @@ use super::{
     drop_handle,
     error::{Error, IntoResult},
 };
-use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW,
-    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
-    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SqlDataType,
-    SqlReturn, StatementAttribute, ULen,
-};
+use odbc_sys::{CDataType, Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW, SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SqlDataType, SqlReturn, StatementAttribute, ULen};
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use widestring::U16Str;
 
@@ -337,6 +331,24 @@ pub trait Statement {
     ///
     /// Panics if batch is empty.
     fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error>;
+
+    /// Binds an input parameter whose data is send to the data source during statement execution
+    /// time. This is typically used to send long data to the data source. For other input
+    /// parameters see [`Statement::bind_input_parameter`].
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    unsafe fn bind_input_blob(
+        &mut self,
+        parameter_number: u16,
+        stream_id: *mut c_void,
+        parameter_type: DataType,
+        indicator: &isize,
+    ) -> Result<(), Error>;
 }
 
 impl<'o> Statement for StatementImpl<'o> {
@@ -612,6 +624,38 @@ impl<'o> Statement for StatementImpl<'o> {
         .into_result(self)
     }
 
+    /// Binds an input parameter whose data is send to the data source during statement execution
+    /// time. This is typically used to send long data to the data source. For other input
+    /// parameters see [`Statement::bind_input_parameter`].
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    unsafe fn bind_input_blob(
+        &mut self,
+        parameter_number: u16,
+        stream_id: *mut c_void,
+        parameter_type: DataType,
+        indicator: &isize,
+    ) -> Result<(), Error> {
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            ParamType::Input,
+            CDataType::Char,
+            parameter_type.data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            stream_id,
+            0,
+            indicator as * const isize as * mut isize,
+        )
+        .into_result(self)
+    }
+
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
     ///
@@ -659,6 +703,9 @@ impl<'o> Statement for StatementImpl<'o> {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },
             SqlDataType::CHAR => DataType::Char {
@@ -890,7 +937,6 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// Panics if batch is empty.
     fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error> {
-
         // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
         // Still strikes me as a programming error. Maybe we could also do nothing instead.
         if batch.is_empty() {
@@ -919,11 +965,4 @@ pub struct ParameterDescription {
     pub nullable: Nullability,
     /// The SQL Type associated with that parameter.
     pub data_type: DataType,
-}
-
-/// Can stream a sequence of binary batches. Use this to put large data.
-pub trait BlobInputStream {
-    /// Fetches the next batch from the stream. The batch may not be valid once the next call to
-    /// `next` (as enforced by the signature).
-    fn next(&mut self) -> Option<&[u8]>;
 }

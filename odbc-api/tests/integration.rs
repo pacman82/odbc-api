@@ -14,7 +14,7 @@ use odbc_api::{
         TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
-    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
+    parameter::{BlobInputStream, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -124,13 +124,14 @@ fn describe_columns() {
             "NUMERIC(3,2)",
             "DATETIME2",
             "TIME",
+            "text"
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e,f,g,h FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f,g,h,i FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 8);
+    assert_eq!(cursor.num_result_cols().unwrap(), 9);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -193,6 +194,12 @@ fn describe_columns() {
     cursor.describe_col(8, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
+
+    let kind = DataType::LongVarchar{ length: 2147483647 };
+    let expected = desc("i", kind, Nullability::Nullable);
+    cursor.describe_col(9, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(9).unwrap());
 }
 
 #[test]
@@ -2225,18 +2232,50 @@ fn insert_text_blob_in_stream(profile: &Profile) {
     let insert = U16String::from_str(&insert);
 
     let mut statement = conn.preallocate().unwrap().into_statement();
-    let text_size = 12000;
 
-    let batch = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyz";
+    struct LongInputBlob {
+        text_size: usize,
+    }
+
+    unsafe impl BlobInputStream for LongInputBlob {
+        fn next(&mut self) -> Option<&[u8]> {
+            let batch = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+                abcdefghijklmnopqrstuvwxyz";
+
+            if self.text_size == 0 {
+                return None;
+            }
+
+            // Last batch might be shorter
+            let batch_size = if self.text_size < batch.len() {
+                self.text_size
+            } else {
+                batch.len()
+            };
+
+            self.text_size -= batch_size;
+            Some(&batch.as_bytes()[..batch_size])
+        }
+
+        fn len(&self) -> Option<usize> {
+            Some(self.text_size)
+        }
+
+        fn data_type(&self) -> DataType {
+            DataType::LongVarchar { length: self.text_size }
+        }
+    }
+
+    let text_size = 12000;
+    let mut blob = LongInputBlob { text_size };
 
     unsafe {
         let indicator = sys::len_data_at_exec(text_size.try_into().unwrap());
@@ -2264,17 +2303,10 @@ fn insert_text_blob_in_stream(profile: &Profile) {
         let need_data = statement.param_data().unwrap();
         assert_eq!(Some(1 as Pointer), need_data);
 
-        let mut bytes_left = text_size;
-        while bytes_left > batch.len() {
-            let need_data = statement.put_binary_batch(batch.as_bytes()).unwrap();
+        while let Some(batch) = blob.next() {
+            let need_data = statement.put_binary_batch(batch).unwrap();
             assert!(!need_data);
-            bytes_left -= batch.len();
         }
-        // Put final batch
-        let need_data = statement
-            .put_binary_batch(&batch.as_bytes()[..bytes_left])
-            .unwrap();
-        assert!(!need_data);
 
         let need_data = statement.param_data().unwrap();
         assert_eq!(None, need_data);

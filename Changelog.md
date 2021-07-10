@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+
+* Add `DataType::LongVarchar`.
+* `BufferKind::from_data_type` now suggests a TextBuffer for columns with data type `LongVarchar`.
+
 ## 0.23.2
 
 * Adds `Connection::columns`

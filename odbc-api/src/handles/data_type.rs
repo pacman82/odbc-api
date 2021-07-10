@@ -89,6 +89,8 @@ pub enum DataType {
     Varbinary { length: usize },
     /// `BINARY(n)`. Type for fixed sized binary data.
     Binary { length: usize },
+    /// `text`. Type for long text.
+    LongVarchar { length: usize },
     /// The driver returned a type, but it is not among the other types of these enumeration. This
     /// is a catchall, in case the library is incomplete, or the data source supports custom or
     /// non-standard types.
@@ -150,6 +152,9 @@ impl DataType {
             SqlDataType::EXT_W_CHAR => DataType::WChar {
                 length: column_size,
             },
+            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
+                length: column_size
+            },
             other => DataType::Other {
                 data_type: other,
                 column_size,
@@ -181,6 +186,7 @@ impl DataType {
             DataType::Bit => SqlDataType::EXT_BIT,
             DataType::WVarchar { .. } => SqlDataType::EXT_W_VARCHAR,
             DataType::WChar { .. } => SqlDataType::EXT_W_CHAR,
+            DataType::LongVarchar { .. } => SqlDataType::EXT_LONG_VARCHAR,
             DataType::Other { data_type, .. } => *data_type,
         }
     }
@@ -206,7 +212,8 @@ impl DataType {
             | DataType::Varbinary { length }
             | DataType::Binary { length }
             | DataType::WChar { length }
-            | DataType::WVarchar { length } => *length,
+            | DataType::WVarchar { length }
+            | DataType::LongVarchar { length }=> *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
         }
@@ -225,6 +232,7 @@ impl DataType {
             | DataType::Varchar { .. }
             | DataType::WVarchar { .. }
             | DataType::WChar { .. }
+            | DataType::LongVarchar { .. }
             | DataType::Varbinary { .. }
             | DataType::Binary { .. }
             | DataType::Date
@@ -255,7 +263,8 @@ impl DataType {
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => Some(*length),
+            | DataType::Char { length }
+            | DataType::LongVarchar { length }=> Some(*length),
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
             DataType::Numeric {

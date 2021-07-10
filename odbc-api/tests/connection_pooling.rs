@@ -14,7 +14,8 @@ lazy_static! {
         let _ = env_logger::builder().is_test(true).try_init();
         Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
         let mut env = Environment::new().unwrap();
-        env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
+        env.set_connection_pooling_matching(AttrCpMatch::Strict)
+            .unwrap();
         env
     };
 }
@@ -23,11 +24,15 @@ lazy_static! {
 fn connect() {
     // First connection should be created on demand
     {
-        let conn = ENV.connect_with_connection_string(MSSQL_CONNECTION).unwrap();
+        let conn = ENV
+            .connect_with_connection_string(MSSQL_CONNECTION)
+            .unwrap();
         assert!(!conn.is_dead().unwrap());
     }
 
     // Second connection should be from the pool
-    let conn = ENV.connect_with_connection_string(MSSQL_CONNECTION).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL_CONNECTION)
+        .unwrap();
     assert!(!conn.is_dead().unwrap());
 }

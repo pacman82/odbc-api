@@ -1,5 +1,10 @@
 use lazy_static::lazy_static;
-use odbc_api::{Connection, Cursor, Environment, Error, RowSetBuffer, U16Str, buffers, buffers::TextColumn, handles::{CDataMut, Statement}};
+use odbc_api::{
+    buffers,
+    buffers::TextColumn,
+    handles::{CDataMut, Statement},
+    Connection, Cursor, Environment, Error, RowSetBuffer, U16Str,
+};
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
@@ -20,7 +25,6 @@ pub struct Profile {
 }
 
 impl Profile {
-
     /// Open a new connection using the connection string of the profile
     pub fn connection(&self) -> Result<Connection<'static>, Error> {
         ENV.connect_with_connection_string(self.connection_string)
@@ -36,7 +40,7 @@ pub fn setup_empty_table(
 ) -> Result<(), odbc_api::Error> {
     let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
 
-    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h"];
+    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i"];
     let cols = column_types
         .iter()
         .zip(column_names)
