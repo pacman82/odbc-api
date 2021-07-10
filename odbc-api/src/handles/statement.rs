@@ -11,8 +11,8 @@ use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW,
     SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
-    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLSetStmtAttrW, SqlDataType, SqlReturn,
-    StatementAttribute, ULen,
+    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SqlDataType,
+    SqlReturn, StatementAttribute, ULen,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use widestring::U16Str;
@@ -58,11 +58,6 @@ impl<'s> StatementImpl<'s> {
         // We do not want to run the drop handler, but transfer ownership instead.
         ManuallyDrop::new(self).handle
     }
-
-    /// Gain access to the underlying statement handle without transferring ownership to it.
-    pub fn as_sys(&self) -> HStmt {
-        self.handle
-    }
 }
 
 /// An ODBC statement handle. In this crate it is implemented by [`self::StatementImpl`]. In ODBC
@@ -74,6 +69,9 @@ impl<'s> StatementImpl<'s> {
 /// into account. It also allows for the trait to be implemented by a handle taking ownership of
 /// both, the statement and the connection.
 pub trait Statement {
+    /// Gain access to the underlying statement handle without transferring ownership to it.
+    fn as_sys(&self) -> HStmt;
+
     /// Binds application data buffers to columns in the result set.
     ///
     /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
@@ -333,9 +331,20 @@ pub trait Statement {
         table_name: &U16Str,
         column_name: &U16Str,
     ) -> Result<(), Error>;
+
+    /// To put a batch of binary data into the data source at statement execution time. Returns true
+    /// if the `NEED_DATA` is returned by the driver.
+    ///
+    /// Panics if batch is empty.
+    fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error>;
 }
 
 impl<'o> Statement for StatementImpl<'o> {
+    /// Gain access to the underlying statement handle without transferring ownership to it.
+    fn as_sys(&self) -> HStmt {
+        self.handle
+    }
+
     unsafe fn bind_col(
         &mut self,
         column_number: u16,
@@ -875,6 +884,30 @@ impl<'o> Statement for StatementImpl<'o> {
             .into_result(self)
         }
     }
+
+    /// To put a batch of binary data into the data source at statement execution time. Returns true
+    /// if the `NEED_DATA` is returned by the driver.
+    ///
+    /// Panics if batch is empty.
+    fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error> {
+
+        // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
+        // Still strikes me as a programming error. Maybe we could also do nothing instead.
+        if batch.is_empty() {
+            panic!("Attempt to put empty batch into data source.")
+        }
+
+        unsafe {
+            match SQLPutData(
+                self.handle,
+                batch.as_ptr() as Pointer,
+                batch.len().try_into().unwrap(),
+            ) {
+                SqlReturn::NEED_DATA => Ok(true),
+                other => other.into_result(self).map(|()| false),
+            }
+        }
+    }
 }
 
 /// Description of a parameter associated with a parameter marker in a prepared statement. Returned
@@ -886,4 +919,11 @@ pub struct ParameterDescription {
     pub nullable: Nullability,
     /// The SQL Type associated with that parameter.
     pub data_type: DataType,
+}
+
+/// Can stream a sequence of binary batches. Use this to put large data.
+pub trait BlobInputStream {
+    /// Fetches the next batch from the stream. The batch may not be valid once the next call to
+    /// `next` (as enforced by the signature).
+    fn next(&mut self) -> Option<&[u8]>;
 }

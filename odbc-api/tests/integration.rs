@@ -1,7 +1,7 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
-use sys::{Pointer, SQLPutData};
+use sys::Pointer;
 use test_case::test_case;
 
 use common::{
@@ -2266,21 +2266,15 @@ fn insert_text_blob_in_stream(profile: &Profile) {
 
         let mut bytes_left = text_size;
         while bytes_left > batch.len() {
-            let ret = SQLPutData(
-                statement.as_sys(),
-                batch.as_ptr() as Pointer,
-                batch.len().try_into().unwrap(),
-            );
-            assert_eq!(sys::SqlReturn::SUCCESS, ret);
+            let need_data = statement.put_binary_batch(batch.as_bytes()).unwrap();
+            assert!(!need_data);
             bytes_left -= batch.len();
         }
         // Put final batch
-        let ret = SQLPutData(
-            statement.as_sys(),
-            batch.as_ptr() as Pointer,
-            bytes_left.try_into().unwrap(),
-        );
-        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+        let need_data = statement
+            .put_binary_batch(&batch.as_bytes()[..bytes_left])
+            .unwrap();
+        assert!(!need_data);
 
         let need_data = statement.param_data().unwrap();
         assert_eq!(None, need_data);
