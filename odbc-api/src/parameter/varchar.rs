@@ -295,7 +295,7 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
         } else {
             buffer[..text.len()].copy_from_slice(text);
         };
-        Self { indicator, buffer }
+        Self { buffer, indicator }
     }
 }
 

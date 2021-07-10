@@ -237,7 +237,7 @@ impl<const LENGTH: usize> VarBinaryArray<LENGTH> {
         } else {
             buffer[..bytes.len()].copy_from_slice(bytes);
         };
-        Self { indicator, buffer }
+        Self { buffer, indicator }
     }
 }
 

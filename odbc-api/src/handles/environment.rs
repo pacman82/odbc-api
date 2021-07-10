@@ -68,7 +68,7 @@ impl Environment {
             scheme.into(),
             0,
         ) {
-            SqlReturn::ERROR => return Err(Error::NoDiagnostics),
+            SqlReturn::ERROR => Err(Error::NoDiagnostics),
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
             other => panic!(
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
@@ -88,7 +88,7 @@ impl Environment {
                 matching.into(),
                 0,
             ) {
-                SqlReturn::ERROR => return Err(Error::NoDiagnostics),
+                SqlReturn::ERROR => Err(Error::NoDiagnostics),
                 SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
                 other => panic!(
                     "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set \
