@@ -207,10 +207,11 @@ mod test {
         let message: Vec<_> = "[Microsoft][ODBC Driver Manager] Function sequence error"
             .encode_utf16()
             .collect();
-        let mut rec = Record::default();
-
-        rec.state = State(*b"HY010");
-        rec.message = message;
+        let rec = Record {
+            state: State(*b"HY010"),
+            message,
+            ..Record::default()
+        };
 
         // test formatting
         assert_eq!(

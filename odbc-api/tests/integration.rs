@@ -124,7 +124,7 @@ fn describe_columns() {
             "NUMERIC(3,2)",
             "DATETIME2",
             "TIME",
-            "text"
+            "text",
         ],
     )
     .unwrap();
@@ -195,7 +195,7 @@ fn describe_columns() {
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
 
-    let kind = DataType::LongVarchar{ length: 2147483647 };
+    let kind = DataType::LongVarchar { length: 2147483647 };
     let expected = desc("i", kind, Nullability::Nullable);
     cursor.describe_col(9, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -398,10 +398,12 @@ fn bind_numeric_to_float(profile: &Profile) {
 
     let sql = format!("SELECT a FROM {}", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let buf = SingleColumnRowSetBuffer::new(1);
+    let buf: SingleColumnRowSetBuffer<Vec<f64>> = SingleColumnRowSetBuffer::new(1);
     let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
 
-    assert_eq!(&[1.23], row_set_cursor.fetch().unwrap().unwrap().get());
+    let actual = row_set_cursor.fetch().unwrap().unwrap().get();
+    assert_eq!(1, actual.len());
+    assert!((1.23f64 - actual[0]).abs() < f64::EPSILON);
 }
 
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
@@ -2093,7 +2095,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut buf).unwrap();
     assert_eq!(b"Hell", buf.as_bytes().unwrap());
-    assert_eq!(buf.is_complete(), false);
+    assert!(!buf.is_complete());
     drop(row);
     drop(cursor);
 

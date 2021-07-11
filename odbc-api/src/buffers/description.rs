@@ -216,7 +216,7 @@ mod tests {
     #[test]
     #[cfg(target_pointer_width = "64")] // Indicator size is platform dependent.
     fn bytes_per_row() {
-        let bpr = |kind, nullable| BufferDescription { kind, nullable }.bytes_per_row();
+        let bpr = |kind, nullable| BufferDescription { nullable, kind }.bytes_per_row();
 
         assert_eq!(5 + 8, bpr(BufferKind::Binary { length: 5 }, false));
         assert_eq!(5 + 1 + 8, bpr(BufferKind::Text { max_str_len: 5 }, false));
