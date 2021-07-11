@@ -2520,12 +2520,11 @@ fn fill_vec_of_rows(profile: &Profile) {
             _ => panic!("Secord column is supposed to be an i32"),
         };
 
-        for row in 0..batch.num_rows() {
+        for &b in col_b {
             let a = col_a
                 .next()
                 .unwrap()
                 .map(|bytes| str::from_utf8(bytes).unwrap().to_owned());
-            let b = col_b[row];
             actual.push((a, b))
         }
     }
