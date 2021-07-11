@@ -661,6 +661,9 @@ impl<'o> Statement for StatementImpl<'o> {
             SqlDataType::EXT_W_CHAR => DataType::WChar {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },
+            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap()
+            },
             SqlDataType::CHAR => DataType::Char {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },

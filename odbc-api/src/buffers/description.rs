@@ -197,7 +197,8 @@ impl BufferKind {
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
             | DataType::WChar {length }
-            | DataType::Char { length } => BufferKind::Text { max_str_len : length },
+            | DataType::Char { length }
+            | DataType::LongVarchar { length } => BufferKind::Text { max_str_len : length },
             // Specialized buffers for Numeric and decimal are not yet supported.
             | DataType::Numeric { precision: _, scale: _ }
             | DataType::Decimal { precision: _, scale: _ }

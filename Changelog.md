@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Add `DataType::LongVarChar`.
+
 ## 0.23.2
 
 * Adds `Connection::columns`

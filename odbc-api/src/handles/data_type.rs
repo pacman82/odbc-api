@@ -57,6 +57,12 @@ pub enum DataType {
         /// Maximum length of the character string (excluding terminating zero).
         length: usize,
     },
+    /// `TEXT`. Variable length characeter string for long text objects.
+    LongVarchar {
+        /// Maximum length of the character string (excluding terminating zero). Maximum size
+        /// depends on the capabilities of the driver and datasource. E.g. its 2^31 - 1 for MSSQL.
+        length: usize,
+    },
     /// `Date`. Year, month, and day fields, conforming to the rules of the Gregorian calendar.
     Date,
     /// `Time`. Hour, minute, and second fields, with valid values for hours of 00 to 23, valid
@@ -109,6 +115,9 @@ impl DataType {
     pub fn new(data_type: SqlDataType, column_size: usize, decimal_digits: i16) -> Self {
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
+            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
+                length: column_size,
+            },
             SqlDataType::EXT_BINARY => DataType::Binary {
                 length: column_size,
             },
@@ -173,6 +182,7 @@ impl DataType {
             DataType::Real => SqlDataType::REAL,
             DataType::Double => SqlDataType::DOUBLE,
             DataType::Varchar { .. } => SqlDataType::VARCHAR,
+            DataType::LongVarchar { .. } => SqlDataType::EXT_LONG_VARCHAR,
             DataType::Date => SqlDataType::DATE,
             DataType::Time { .. } => SqlDataType::TIME,
             DataType::Timestamp { .. } => SqlDataType::TIMESTAMP,
@@ -206,7 +216,8 @@ impl DataType {
             | DataType::Varbinary { length }
             | DataType::Binary { length }
             | DataType::WChar { length }
-            | DataType::WVarchar { length } => *length,
+            | DataType::WVarchar { length }
+            | DataType::LongVarchar { length } => *length,
             DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
         }
@@ -227,6 +238,7 @@ impl DataType {
             | DataType::WChar { .. }
             | DataType::Varbinary { .. }
             | DataType::Binary { .. }
+            | DataType::LongVarchar { .. }
             | DataType::Date
             | DataType::BigInt
             | DataType::TinyInt
@@ -255,7 +267,8 @@ impl DataType {
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => Some(*length),
+            | DataType::Char { length }
+            | DataType::LongVarchar { length }=> Some(*length),
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
             DataType::Numeric {

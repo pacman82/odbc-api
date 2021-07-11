@@ -124,13 +124,14 @@ fn describe_columns() {
             "NUMERIC(3,2)",
             "DATETIME2",
             "TIME",
+            "text"
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e,f,g,h FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f,g,h,i FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 8);
+    assert_eq!(cursor.num_result_cols().unwrap(), 9);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -193,6 +194,12 @@ fn describe_columns() {
     cursor.describe_col(8, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
+
+    let kind = DataType::LongVarchar{ length: 2147483647 };
+    let expected = desc("i", kind, Nullability::Nullable);
+    cursor.describe_col(9, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(9).unwrap());
 }
 
 #[test]
