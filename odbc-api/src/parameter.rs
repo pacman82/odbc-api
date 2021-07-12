@@ -60,10 +60,10 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! In that case it is likely that the driver manager converts our annotated year into a string which
-//! is most likely being converted back into an integer by the driver. All this converting can be
-//! confusing, but it is helpful if we do not know what types the parameters actually have (i.e. the
-//! query could have been entered by the user on the command line.). There is also an option to
+//! In that case it is likely that the driver manager converts our annotated year into a string
+//! which is most likely being converted back into an integer by the driver. All this converting can
+//! be confusing, but it is helpful if we do not know what types the parameters actually have (i.e.
+//! the query could have been entered by the user on the command line.). There is also an option to
 //! query the parameter types beforehand, but my advice is not trust the information blindly if you
 //! cannot test this with your driver beforehand.
 //!
@@ -198,8 +198,8 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! Alas, not all is lost. We can still make use of the [`crate::IntoParameter`] trait to convert it into
-//! something that works.
+//! Alas, not all is lost. We can still make use of the [`crate::IntoParameter`] trait to convert it
+//! into something that works.
 //!
 //! ```no_run
 //! use odbc_api::{Environment, IntoParameter};
@@ -247,14 +247,14 @@ use crate::{
 ///
 /// Considerations for implementers
 ///
-/// Extend the [`crate::handles::HasDataType`] trait with the guarantee, that the bound parameter buffer
-/// contains at least one element.
+/// Extend the [`crate::handles::HasDataType`] trait with the guarantee, that the bound parameter
+/// buffer contains at least one element.
 ///
 /// Since the indicator provided by implementation is used to indicate the length of the value in
 /// the buffer, care must be taken to prevent out of bounds access in case the implementation also
 /// is used as an output parameter, an contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
-pub unsafe trait InputParameter: HasDataType {}
+pub unsafe trait InputParameter: HasDataType + CData {}
 
 /// Guarantees that there is space in the output buffer for at least one element.
 pub unsafe trait Output: CDataMut + HasDataType {}

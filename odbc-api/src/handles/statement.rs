@@ -6,6 +6,7 @@ use super::{
     data_type::DataType,
     drop_handle,
     error::{Error, IntoResult},
+    CData,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -228,7 +229,7 @@ pub trait Statement {
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &(impl HasDataType + ?Sized),
+        parameter: &(impl HasDataType + CData + ?Sized),
     ) -> Result<(), Error>;
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
@@ -561,7 +562,7 @@ impl<'o> Statement for StatementImpl<'o> {
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &(impl HasDataType + ?Sized),
+        parameter: &(impl HasDataType + CData + ?Sized),
     ) -> Result<(), Error> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(
@@ -662,7 +663,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap()
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
             },
             SqlDataType::CHAR => DataType::Char {
                 length: self.col_display_size(column_number)?.try_into().unwrap(),
@@ -893,7 +894,6 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// Panics if batch is empty.
     fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error> {
-
         // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
         // Still strikes me as a programming error. Maybe we could also do nothing instead.
         if batch.is_empty() {
@@ -922,11 +922,4 @@ pub struct ParameterDescription {
     pub nullable: Nullability,
     /// The SQL Type associated with that parameter.
     pub data_type: DataType,
-}
-
-/// Can stream a sequence of binary batches. Use this to put large data.
-pub trait BlobInputStream {
-    /// Fetches the next batch from the stream. The batch may not be valid once the next call to
-    /// `next` (as enforced by the signature).
-    fn next(&mut self) -> Option<&[u8]>;
 }
