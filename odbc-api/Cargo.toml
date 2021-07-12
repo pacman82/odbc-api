@@ -41,6 +41,6 @@ raw-window-handle = "0.3.3"
 [dev-dependencies]
 lazy_static = "1.4.0"
 env_logger = "0.8.4"
-anyhow = "1.0.41"
+anyhow = "1.0.42"
 csv = "1.1.6"
 test-case = "1.2.0"
