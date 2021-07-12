@@ -2225,7 +2225,7 @@ fn insert_large_texts(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn insert_text_blob_in_stream(profile: &Profile) {
+fn insert_large_text_in_stream(profile: &Profile) {
     let table_name = "InsertLargeTextInStream";
     let conn = profile.connection().unwrap();
     setup_empty_table(&conn, profile.index_type, table_name, &["text"]).unwrap();
@@ -2282,6 +2282,74 @@ fn insert_text_blob_in_stream(profile: &Profile) {
         // Put final batch
         let need_data = statement
             .put_binary_batch(&batch.as_bytes()[..bytes_left])
+            .unwrap();
+        assert!(!need_data);
+
+        let need_data = statement.param_data().unwrap();
+        assert_eq!(None, need_data);
+    }
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn insert_large_blob_in_stream(profile: &Profile) {
+    let table_name = "InsertLargeBlobInStream";
+    let conn = profile.connection().unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = U16String::from_str(&insert);
+
+    let mut statement = conn.preallocate().unwrap().into_statement();
+    let blob_size = 12000;
+
+    let batch = b"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
+      abcdefghijklmnopqrstuvwxyz";
+
+    unsafe {
+        let indicator = sys::len_data_at_exec(blob_size.try_into().unwrap());
+        let ret = sys::SQLBindParameter(
+            statement.as_sys(),
+            1,
+            sys::ParamType::Input,
+            sys::CDataType::Binary,
+            sys::SqlDataType::EXT_LONG_VAR_BINARY,
+            blob_size,
+            0,
+            1 as sys::Pointer,
+            0,
+            &indicator as *const isize as *mut isize,
+        );
+        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+
+        let ret = sys::SQLExecDirectW(
+            statement.as_sys(),
+            insert.as_ptr(),
+            insert.len().try_into().unwrap(),
+        );
+        assert_eq!(sys::SqlReturn::NEED_DATA, ret);
+
+        let need_data = statement.param_data().unwrap();
+        assert_eq!(Some(1 as Pointer), need_data);
+
+        let mut bytes_left = blob_size;
+        while bytes_left > batch.len() {
+            let need_data = statement.put_binary_batch(batch).unwrap();
+            assert!(!need_data);
+            bytes_left -= batch.len();
+        }
+        // Put final batch
+        let need_data = statement
+            .put_binary_batch(&batch[..bytes_left])
             .unwrap();
         assert!(!need_data);
 
