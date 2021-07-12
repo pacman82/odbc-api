@@ -2293,8 +2293,8 @@ fn insert_large_text_in_stream(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn insert_large_blob_in_stream(profile: &Profile) {
-    let table_name = "InsertLargeBlobInStream";
+fn insert_blob_in_stream(profile: &Profile) {
+    let table_name = "InsertBlobInStream";
     let conn = profile.connection().unwrap();
     setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
 
