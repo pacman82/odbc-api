@@ -192,7 +192,8 @@ impl BufferKind {
             DataType::TinyInt => BufferKind::I8,
             DataType::Bit => BufferKind::Bit,
             DataType::Varbinary { length }
-            | DataType::Binary { length  } => BufferKind::Binary { length },
+            | DataType::Binary { length  }
+            | DataType::LongVarbinary { length } => BufferKind::Binary { length },
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.

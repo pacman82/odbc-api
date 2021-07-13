@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    bind::{CDataMut, HasDataType},
+    bind::{CDataMut, CStream, HasDataType},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
@@ -246,6 +246,22 @@ pub trait Statement {
         parameter_number: u16,
         input_output_type: ParamType,
         parameter: &mut (impl CDataMut + HasDataType),
+    ) -> Result<(), Error>;
+
+    /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
+    /// values at statement execution time. To bind preallocated constant buffers see
+    /// [`Statement::bind_input_parameter`].
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    unsafe fn bind_input_parameter_at_exec(
+        &mut self,
+        parameter_number: u16,
+        parameter: &mut (impl CStream + HasDataType),
     ) -> Result<(), Error>;
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
@@ -613,6 +629,38 @@ impl<'o> Statement for StatementImpl<'o> {
         .into_result(self)
     }
 
+    /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
+    /// values at statement execution time. To bind preallocated constant buffers see
+    /// [`Statement::bind_input_parameter`].
+    ///
+    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
+    ///
+    /// # Safety
+    ///
+    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
+    /// * Calling this function may influence other statements that share the APD.
+    unsafe fn bind_input_parameter_at_exec(
+        &mut self,
+        parameter_number: u16,
+        parameter: &mut (impl CStream + HasDataType),
+    ) -> Result<(), Error> {
+        let paramater_type = parameter.data_type();
+        SQLBindParameter(
+            self.handle,
+            parameter_number,
+            ParamType::Input,
+            parameter.cdata_type(),
+            paramater_type.data_type(),
+            paramater_type.column_size(),
+            paramater_type.decimal_digits(),
+            parameter.stream_ptr(),
+            0,
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut isize,
+        )
+        .into_result(self)
+    }
+
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
     ///
@@ -651,6 +699,9 @@ impl<'o> Statement for StatementImpl<'o> {
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
                 length: self.col_octet_length(column_number)?.try_into().unwrap(),
             },
             SqlDataType::EXT_BINARY => DataType::Binary {

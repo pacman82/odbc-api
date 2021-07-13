@@ -63,6 +63,12 @@ pub enum DataType {
         /// depends on the capabilities of the driver and datasource. E.g. its 2^31 - 1 for MSSQL.
         length: usize,
     },
+    /// `BLOB`. Variable length data for long binary objects.
+    LongVarbinary {
+        /// Maximum length of the binary data. Maximum size depends on the capabilities of the
+        /// driver and datasource.
+        length: usize,
+    },
     /// `Date`. Year, month, and day fields, conforming to the rules of the Gregorian calendar.
     Date,
     /// `Time`. Hour, minute, and second fields, with valid values for hours of 00 to 23, valid
@@ -124,6 +130,9 @@ impl DataType {
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
                 length: column_size,
             },
+            SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
+                length: column_size,
+            },
             SqlDataType::CHAR => DataType::Char {
                 length: column_size,
             },
@@ -173,6 +182,7 @@ impl DataType {
             DataType::Unknown => SqlDataType::UNKNOWN_TYPE,
             DataType::Binary { .. } => SqlDataType::EXT_BINARY,
             DataType::Varbinary { .. } => SqlDataType::EXT_VAR_BINARY,
+            DataType::LongVarbinary { .. } => SqlDataType::EXT_LONG_VAR_BINARY,
             DataType::Char { .. } => SqlDataType::CHAR,
             DataType::Numeric { .. } => SqlDataType::NUMERIC,
             DataType::Decimal { .. } => SqlDataType::DECIMAL,
@@ -214,6 +224,7 @@ impl DataType {
             DataType::Char { length }
             | DataType::Varchar { length }
             | DataType::Varbinary { length }
+            | DataType::LongVarbinary { length }
             | DataType::Binary { length }
             | DataType::WChar { length }
             | DataType::WVarchar { length }
@@ -237,6 +248,7 @@ impl DataType {
             | DataType::WVarchar { .. }
             | DataType::WChar { .. }
             | DataType::Varbinary { .. }
+            | DataType::LongVarbinary { .. }
             | DataType::Binary { .. }
             | DataType::LongVarchar { .. }
             | DataType::Date
@@ -261,14 +273,16 @@ impl DataType {
                 decimal_digits: _,
             } => None,
             // Each binary byte is represented by a 2-digit hexadecimal number.
-            DataType::Varbinary { length } | DataType::Binary { length } => Some(*length * 2),
+            DataType::Varbinary { length }
+            | DataType::Binary { length }
+            | DataType::LongVarbinary { length } => Some(*length * 2),
             // The defined (for fixed types) or maximum (for variable types) number of characters
             // needed to display the data in character form.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
             | DataType::Char { length }
-            | DataType::LongVarchar { length }=> Some(*length),
+            | DataType::LongVarchar { length } => Some(*length),
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
             DataType::Numeric {

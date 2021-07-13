@@ -1,24 +1,18 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
-use sys::Pointer;
+use sys::{CDataType, Pointer};
 use test_case::test_case;
 
 use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{
-    buffers::{
+use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    },
-    handles::{OutputStringBuffer, Statement},
-    parameter::{VarBinaryArray, VarCharArray, VarCharSlice},
-    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
-    U16String,
-};
-use std::{convert::TryInto, ffi::CString, iter, str, thread};
+    }, handles::{CStream, HasDataType, OutputStringBuffer, Statement}, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+use std::{convert::TryInto, ffi::{CString, c_void}, iter, str, thread};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -26,7 +20,7 @@ const MSSQL_CONNECTION: &str =
 const MSSQL: &Profile = &Profile {
     connection_string: MSSQL_CONNECTION,
     index_type: "int IDENTITY(1,1)",
-    blob_type: "VARBINARY(max)",
+    blob_type: "Image",
 };
 
 #[cfg(target_os = "windows")]
@@ -125,13 +119,14 @@ fn describe_columns() {
             "DATETIME2",
             "TIME",
             "text",
+            "Image",
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e,f,g,h,i FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f,g,h,i,j FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 9);
+    assert_eq!(cursor.num_result_cols().unwrap(), 10);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -200,6 +195,12 @@ fn describe_columns() {
     cursor.describe_col(9, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(9).unwrap());
+
+    let kind = DataType::LongVarbinary { length: 2147483647 };
+    let expected = desc("j", kind, Nullability::Nullable);
+    cursor.describe_col(10, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(10).unwrap());
 }
 
 #[test]
@@ -2247,21 +2248,34 @@ fn insert_large_text_in_stream(profile: &Profile) {
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyz";
 
+    struct Blob{
+        indicator: isize,
+    }
+
+    unsafe impl CStream for Blob {
+        fn cdata_type(&self) -> CDataType {
+            CDataType::Char
+        }
+
+        fn indicator_ptr(&self) -> *const isize {
+            &self.indicator as * const isize
+        }
+
+        fn stream_ptr(&mut self) -> *mut c_void {
+            1 as * mut c_void
+        }
+    }
+
+    unsafe impl HasDataType for Blob {
+        fn data_type(&self) -> DataType {
+            DataType::LongVarchar { length: 12000 }
+        }
+    }
+
+    let mut blob = Blob { indicator: sys::len_data_at_exec(12000) };
+
     unsafe {
-        let indicator = sys::len_data_at_exec(text_size.try_into().unwrap());
-        let ret = sys::SQLBindParameter(
-            statement.as_sys(),
-            1,
-            sys::ParamType::Input,
-            sys::CDataType::Char,
-            sys::SqlDataType::EXT_LONG_VARCHAR,
-            text_size,
-            0,
-            1 as sys::Pointer,
-            0,
-            &indicator as *const isize as *mut isize,
-        );
-        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+        statement.bind_input_parameter_at_exec(1, &mut blob).unwrap();
 
         let ret = sys::SQLExecDirectW(
             statement.as_sys(),
@@ -2315,21 +2329,34 @@ fn insert_blob_in_stream(profile: &Profile) {
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyz";
 
+    struct Blob{
+        indicator: isize,
+    }
+
+    unsafe impl CStream for Blob {
+        fn cdata_type(&self) -> CDataType {
+            CDataType::Binary
+        }
+
+        fn indicator_ptr(&self) -> *const isize {
+            &self.indicator as * const isize
+        }
+
+        fn stream_ptr(&mut self) -> *mut c_void {
+            1 as * mut c_void
+        }
+    }
+
+    unsafe impl HasDataType for Blob {
+        fn data_type(&self) -> DataType {
+            DataType::LongVarbinary { length: 12000 }
+        }
+    }
+
+    let mut blob = Blob { indicator: sys::len_data_at_exec(12000) };
+
     unsafe {
-        let indicator = sys::len_data_at_exec(blob_size.try_into().unwrap());
-        let ret = sys::SQLBindParameter(
-            statement.as_sys(),
-            1,
-            sys::ParamType::Input,
-            sys::CDataType::Binary,
-            sys::SqlDataType::EXT_LONG_VAR_BINARY,
-            blob_size,
-            0,
-            1 as sys::Pointer,
-            0,
-            &indicator as *const isize as *mut isize,
-        );
-        assert_eq!(sys::SqlReturn::SUCCESS, ret);
+        statement.bind_input_parameter_at_exec(1, &mut blob).unwrap();
 
         let ret = sys::SQLExecDirectW(
             statement.as_sys(),

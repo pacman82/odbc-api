@@ -1,8 +1,9 @@
 //! Implementation and types required to bind arguments to ODBC parameters.
 
-use crate::DataType;
 use odbc_sys::CDataType;
 use std::ffi::c_void;
+
+use crate::DataType;
 
 /// Provides description of C type layout and pointers to it. Used to bind and buffers to ODBC
 /// statements.
@@ -31,6 +32,19 @@ pub unsafe trait CDataMut: CData {
 
     /// Pointer to a value corresponding to the one described by `cdata_type`.
     fn mut_value_ptr(&mut self) -> *mut c_void;
+}
+
+/// Stream which can be bound as in input parameter to a statement in order to provide the actual
+/// data at statement execution time, rather than preallocated buffers.
+pub unsafe trait CStream {
+    /// Then streaming data to the "data source" the driver converts the data from this type.
+    fn cdata_type(&self) -> CDataType;
+
+    /// Either [`odbc_sys::DATA_AT_EXEC`] or the result of [`odbc_sys::len_data_at_exec`].
+    fn indicator_ptr(&self) -> *const isize;
+
+    /// Pointer to the stream or an application defined value identifying the stream.
+    fn stream_ptr(&mut self) -> *mut c_void;
 }
 
 /// Can be bound to a single placeholder in an SQL statement.
