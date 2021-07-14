@@ -252,7 +252,7 @@ use crate::{
 ///
 /// Since the indicator provided by implementation is used to indicate the length of the value in
 /// the buffer, care must be taken to prevent out of bounds access in case the implementation also
-/// is used as an output parameter, an contains truncated values (i.e. the indicator is longer than
+/// is used as an output parameter, and contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
 pub unsafe trait InputParameter: HasDataType + CData {}
 
