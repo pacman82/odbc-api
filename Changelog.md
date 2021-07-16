@@ -3,6 +3,7 @@
 ## Next
 
 * Add `DataType::LongVarChar`.
+* Add `DataType::LongVarBinary`.
 * trait `HasDataType` no longer implies trait `CData`.
 
 ## 0.23.2

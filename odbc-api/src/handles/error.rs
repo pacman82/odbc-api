@@ -18,9 +18,11 @@ pub enum Error {
     /// A user dialog to complete the connection string has been aborted.
     #[error("The dialog shown to provide or complete the connection string has been aborted.")]
     AbortedConnectionStringCompletion,
-    #[error("ODBC diver manager does not seem to support the required ODBC version 3.80. (Most
+    #[error(
+        "ODBC diver manager does not seem to support the required ODBC version 3.80. (Most
         likely you need to update unixODBC if you run on a Linux. Diagnostic record returned by
-        SQLSetEnvAttr:\n{0}")]
+        SQLSetEnvAttr:\n{0}"
+    )]
     OdbcApiVersionUnsupported(DiagnosticRecord),
 }
 

@@ -36,7 +36,7 @@ pub unsafe trait CDataMut: CData {
 
 /// Stream which can be bound as in input parameter to a statement in order to provide the actual
 /// data at statement execution time, rather than preallocated buffers.
-pub unsafe trait CStream {
+pub unsafe trait DelayedInput {
     /// Then streaming data to the "data source" the driver converts the data from this type.
     fn cdata_type(&self) -> CDataType;
 

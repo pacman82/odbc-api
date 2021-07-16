@@ -223,11 +223,13 @@
 //! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can usually be
 //! implemented entirely in safe code, and is a suitable spot to enable support for your custom
 //! types.
+mod blob;
 mod c_string;
 mod varbin;
 mod varchar;
 
 pub use self::{
+    blob::{Blob, BlobParam},
     varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
     varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
 };

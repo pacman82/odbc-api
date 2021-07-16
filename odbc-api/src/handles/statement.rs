@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    bind::{CDataMut, CStream, HasDataType},
+    bind::{CDataMut, DelayedInput, HasDataType},
     buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
@@ -258,10 +258,10 @@ pub trait Statement {
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.
     /// * Calling this function may influence other statements that share the APD.
-    unsafe fn bind_input_parameter_at_exec(
+    unsafe fn bind_delayed_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &mut (impl CStream + HasDataType),
+        parameter: &mut (impl DelayedInput + HasDataType),
     ) -> Result<(), Error>;
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
@@ -639,10 +639,10 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.
     /// * Calling this function may influence other statements that share the APD.
-    unsafe fn bind_input_parameter_at_exec(
+    unsafe fn bind_delayed_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &mut (impl CStream + HasDataType),
+        parameter: &mut (impl DelayedInput + HasDataType),
     ) -> Result<(), Error> {
         let paramater_type = parameter.data_type();
         SQLBindParameter(

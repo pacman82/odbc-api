@@ -72,7 +72,8 @@ impl Environment {
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
             other => panic!(
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
-                pooling to {:?}", other, scheme
+                pooling to {:?}",
+                other, scheme
             ),
         }
     }
@@ -92,7 +93,8 @@ impl Environment {
                 SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
                 other => panic!(
                     "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set \
-                    connection pooling maching to {:?}", other, matching
+                    connection pooling maching to {:?}",
+                    other, matching
                 ),
             }
         }

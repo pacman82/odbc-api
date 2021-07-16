@@ -19,7 +19,7 @@ mod statement;
 
 pub use {
     as_handle::AsHandle,
-    bind::{CData, CDataMut, CStream, HasDataType},
+    bind::{CData, CDataMut, DelayedInput, HasDataType},
     buffer::OutputStringBuffer,
     column_description::{ColumnDescription, Nullability},
     connection::Connection,

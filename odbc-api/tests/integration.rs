@@ -11,8 +11,14 @@ use common::{
 use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    }, handles::{CStream, HasDataType, OutputStringBuffer, Statement}, parameter::{VarBinaryArray, VarCharArray, VarCharSlice}, sys};
-use std::{convert::TryInto, ffi::{CString, c_void}, iter, str, thread};
+    }, handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement}, parameter::{Blob, BlobParam, VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+use std::{
+    cmp::min,
+    convert::TryInto,
+    ffi::{c_void, CString},
+    intrinsics::transmute,
+    io, iter, str, thread,
+};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -2248,21 +2254,21 @@ fn insert_large_text_in_stream(profile: &Profile) {
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyz";
 
-    struct Blob{
+    struct Blob {
         indicator: isize,
     }
 
-    unsafe impl CStream for Blob {
+    unsafe impl DelayedInput for Blob {
         fn cdata_type(&self) -> CDataType {
             CDataType::Char
         }
 
         fn indicator_ptr(&self) -> *const isize {
-            &self.indicator as * const isize
+            &self.indicator as *const isize
         }
 
         fn stream_ptr(&mut self) -> *mut c_void {
-            1 as * mut c_void
+            1 as *mut c_void
         }
     }
 
@@ -2272,10 +2278,14 @@ fn insert_large_text_in_stream(profile: &Profile) {
         }
     }
 
-    let mut blob = Blob { indicator: sys::len_data_at_exec(12000) };
+    let mut blob = Blob {
+        indicator: sys::len_data_at_exec(12000),
+    };
 
     unsafe {
-        statement.bind_input_parameter_at_exec(1, &mut blob).unwrap();
+        statement
+            .bind_delayed_input_parameter(1, &mut blob)
+            .unwrap();
 
         let ret = sys::SQLExecDirectW(
             statement.as_sys(),
@@ -2329,34 +2339,42 @@ fn insert_blob_in_stream(profile: &Profile) {
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyz";
 
-    struct Blob{
-        indicator: isize,
+    struct Repeater {
+        blob_size: usize,
+        batch: &'static [u8],
     }
 
-    unsafe impl CStream for Blob {
-        fn cdata_type(&self) -> CDataType {
-            CDataType::Binary
+    unsafe impl Blob for Repeater {
+        fn size_hint(&self) -> Option<usize> {
+            Some(self.blob_size)
         }
 
-        fn indicator_ptr(&self) -> *const isize {
-            &self.indicator as * const isize
-        }
-
-        fn stream_ptr(&mut self) -> *mut c_void {
-            1 as * mut c_void
+        fn next_batch(&mut self) -> io::Result<Option<&[u8]>> {
+            if self.blob_size == 0 {
+                Ok(None)
+            } else {
+                let batch_size = min(self.blob_size, self.batch.len());
+                self.blob_size -= batch_size;
+                Ok(Some(&self.batch[..batch_size]))
+            }
         }
     }
 
-    unsafe impl HasDataType for Blob {
+    unsafe impl HasDataType for Repeater {
         fn data_type(&self) -> DataType {
-            DataType::LongVarbinary { length: 12000 }
+            DataType::LongVarbinary {
+                length: self.blob_size,
+            }
         }
     }
 
-    let mut blob = Blob { indicator: sys::len_data_at_exec(12000) };
+    let mut blob = Repeater { blob_size, batch };
+    let mut blob = BlobParam::new(&mut blob);
 
     unsafe {
-        statement.bind_input_parameter_at_exec(1, &mut blob).unwrap();
+        statement
+            .bind_delayed_input_parameter(1, &mut blob)
+            .unwrap();
 
         let ret = sys::SQLExecDirectW(
             statement.as_sys(),
@@ -2365,20 +2383,14 @@ fn insert_blob_in_stream(profile: &Profile) {
         );
         assert_eq!(sys::SqlReturn::NEED_DATA, ret);
 
-        let need_data = statement.param_data().unwrap();
-        assert_eq!(Some(1 as Pointer), need_data);
+        let blob_ptr = statement.param_data().unwrap().unwrap();
+        let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
+        let blob_ref = &mut *blob_ptr;
 
-        let mut bytes_left = blob_size;
-        while bytes_left > batch.len() {
+        while let Some(batch) = blob_ref.next_batch().unwrap() {
             let need_data = statement.put_binary_batch(batch).unwrap();
             assert!(!need_data);
-            bytes_left -= batch.len();
         }
-        // Put final batch
-        let need_data = statement
-            .put_binary_batch(&batch[..bytes_left])
-            .unwrap();
-        assert!(!need_data);
 
         let need_data = statement.param_data().unwrap();
         assert_eq!(None, need_data);
