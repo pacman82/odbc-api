@@ -8,15 +8,20 @@ use common::{
     cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
 };
 
-use odbc_api::{ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable, U16String, buffers::{
+use odbc_api::{
+    buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
-    }, handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement}, parameter::{Blob, BlobParam, VarBinaryArray, VarCharArray, VarCharSlice}, sys};
+    },
+    handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement},
+    parameter::{Blob, BlobParam, VarBinaryArray, VarCharArray, VarCharSlice},
+    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    U16String,
+};
 use std::{
     cmp::min,
     convert::TryInto,
     ffi::{c_void, CString},
-    intrinsics::transmute,
     io, iter, str, thread,
 };
 
@@ -2323,9 +2328,7 @@ fn insert_blob_in_stream(profile: &Profile) {
     setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
-    let insert = U16String::from_str(&insert);
 
-    let mut statement = conn.preallocate().unwrap().into_statement();
     let blob_size = 12000;
 
     let batch = b"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
@@ -2371,30 +2374,7 @@ fn insert_blob_in_stream(profile: &Profile) {
     let mut blob = Repeater { blob_size, batch };
     let mut blob = BlobParam::new(&mut blob);
 
-    unsafe {
-        statement
-            .bind_delayed_input_parameter(1, &mut blob)
-            .unwrap();
-
-        let ret = sys::SQLExecDirectW(
-            statement.as_sys(),
-            insert.as_ptr(),
-            insert.len().try_into().unwrap(),
-        );
-        assert_eq!(sys::SqlReturn::NEED_DATA, ret);
-
-        let blob_ptr = statement.param_data().unwrap().unwrap();
-        let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
-        let blob_ref = &mut *blob_ptr;
-
-        while let Some(batch) = blob_ref.next_batch().unwrap() {
-            let need_data = statement.put_binary_batch(batch).unwrap();
-            assert!(!need_data);
-        }
-
-        let need_data = statement.param_data().unwrap();
-        assert_eq!(None, need_data);
-    }
+    conn.execute(&insert, &mut blob).unwrap();
 }
 
 /// Demonstrate how to strip abstractions and access raw functionality as exposed by `odbc-sys`.

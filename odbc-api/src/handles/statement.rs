@@ -452,14 +452,18 @@ impl<'o> Statement for StatementImpl<'o> {
         }
     }
 
+    /// # Return
+    ///
+    /// Returns `true`, if SQLExecuteDirect return NEED_DATA indicating the need to send data at
+    /// execution.
     unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error> {
         match SQLExecDirectW(
             self.handle,
             buf_ptr(statement_text.as_slice()),
             statement_text.len().try_into().unwrap(),
         ) {
-            SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self).map(|()| true),
+            SqlReturn::NEED_DATA => Ok(true),
+            other => other.into_result(self).map(|()| false),
         }
     }
 
@@ -491,12 +495,12 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// # Return
     ///
-    /// If an update, insert, or delete statement did not affect any rows at the data source `false`
-    /// is returned.
+    /// Returns `true`, if SQLExecute return NEED_DATA indicating the need to send data at
+    /// execution.
     unsafe fn execute(&mut self) -> Result<bool, Error> {
         match SQLExecute(self.handle) {
-            SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self).map(|()| true),
+            SqlReturn::NEED_DATA => Ok(true),
+            other => other.into_result(self).map(|()| false),
         }
     }
 

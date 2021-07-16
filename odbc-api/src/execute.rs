@@ -1,9 +1,10 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, intrinsics::transmute};
 
 use widestring::U16Str;
 
 use crate::{
     handles::{Statement, StatementImpl},
+    parameter::Blob,
     CursorImpl, Error, ParameterCollection,
 };
 
@@ -28,30 +29,47 @@ where
 {
     let parameter_set_size = params.parameter_set_size();
     if parameter_set_size == 0 {
+        return Ok(None);
+    }
+
+    // Only allocate the statement, if we know we are going to execute something.
+    let mut statement = lazy_statement()?;
+    let stmt = statement.borrow_mut();
+    // Reset parameters so we do not dereference stale once by mistake if we call
+    // `exec_direct`.
+    stmt.reset_parameters()?;
+    let need_data = unsafe {
+        stmt.set_paramset_size(parameter_set_size)?;
+        // Bind new parameters passed by caller.
+        params.bind_parameters_to(stmt)?;
+        if let Some(sql) = query {
+            stmt.exec_direct(sql)?
+        } else {
+            stmt.execute()?
+        }
+    };
+
+    if need_data {
+        // Check if any delayed parameters have been bound which stream data to the database at
+        // statement execution time. Loops over each bound stream.
+        while let Some(blob_ptr) = stmt.param_data()? {
+            // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
+            let blob_ref = unsafe {
+                let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
+                &mut *blob_ptr
+            };
+            // Loop over all batches within each blob
+            while let Some(batch) = blob_ref.next_batch().unwrap() {
+                stmt.put_binary_batch(batch)?;
+            }
+        }
+    }
+
+    // Check if a result set has been created.
+    if stmt.num_result_cols()? == 0 {
         Ok(None)
     } else {
-        // Only allocate the statement, if we know we are going to execute something.
-        let mut statement = lazy_statement()?;
-        let stmt = statement.borrow_mut();
-        // Reset parameters so we do not dereference stale once by mistake if we call
-        // `exec_direct`.
-        stmt.reset_parameters()?;
-        unsafe {
-            stmt.set_paramset_size(parameter_set_size)?;
-            // Bind new parameters passed by caller.
-            params.bind_parameters_to(stmt)?;
-            if let Some(sql) = query {
-                stmt.exec_direct(sql)?;
-            } else {
-                stmt.execute()?;
-            }
-        };
-        // Check if a result set has been created.
-        if stmt.num_result_cols()? == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(CursorImpl::new(statement)))
-        }
+        Ok(Some(CursorImpl::new(statement)))
     }
 }
 

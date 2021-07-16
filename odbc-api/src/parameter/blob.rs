@@ -1,8 +1,8 @@
 use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
-    handles::{DelayedInput, HasDataType},
-    DataType,
+    handles::{DelayedInput, HasDataType, Statement, StatementImpl},
+    DataType, Error, Parameter,
 };
 use std::{convert::TryInto, ffi::c_void, io};
 
@@ -68,5 +68,15 @@ unsafe impl DelayedInput for BlobParam<'_> {
 unsafe impl HasDataType for BlobParam<'_> {
     fn data_type(&self) -> DataType {
         self.blob.data_type()
+    }
+}
+
+unsafe impl Parameter for &mut BlobParam<'_> {
+    unsafe fn bind_parameter(
+        self,
+        parameter_number: u16,
+        stmt: &mut StatementImpl<'_>,
+    ) -> Result<(), Error> {
+        stmt.bind_delayed_input_parameter(parameter_number, self)
     }
 }
