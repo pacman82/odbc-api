@@ -2329,8 +2329,6 @@ fn insert_blob_in_stream(profile: &Profile) {
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
 
-    let blob_size = 12000;
-
     let batch = b"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
       abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
@@ -2371,7 +2369,10 @@ fn insert_blob_in_stream(profile: &Profile) {
         }
     }
 
-    let mut blob = Repeater { blob_size, batch };
+    let mut blob = Repeater {
+        blob_size: 12000,
+        batch,
+    };
     let mut blob = BlobParam::new(&mut blob);
 
     conn.execute(&insert, &mut blob).unwrap();

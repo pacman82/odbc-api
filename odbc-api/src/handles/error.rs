@@ -1,3 +1,5 @@
+use std::io;
+
 use super::{
     as_handle::AsHandle, diagnostics::Record as DiagnosticRecord, logging::log_diagnostics,
 };
@@ -24,6 +26,8 @@ pub enum Error {
         SQLSetEnvAttr:\n{0}"
     )]
     OdbcApiVersionUnsupported(DiagnosticRecord),
+    #[error("Sending data to the database at statement execution time failed. IO error:\n{0}")]
+    FailedReadingInput(io::Error),
 }
 
 pub trait IntoResult {

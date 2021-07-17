@@ -59,7 +59,7 @@ where
                 &mut *blob_ptr
             };
             // Loop over all batches within each blob
-            while let Some(batch) = blob_ref.next_batch().unwrap() {
+            while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
                 stmt.put_binary_batch(batch)?;
             }
         }

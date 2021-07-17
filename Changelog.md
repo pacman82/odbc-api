@@ -2,8 +2,9 @@
 
 ## Next
 
-* Add `DataType::LongVarChar`.
-* Add `DataType::LongVarBinary`.
+* Add variant `DataType::LongVarChar`.
+* Add variant `DataType::LongVarBinary`.
+* Add variant `Error::FailedReadingInput`.
 * trait `HasDataType` no longer implies trait `CData`.
 
 ## 0.23.2
