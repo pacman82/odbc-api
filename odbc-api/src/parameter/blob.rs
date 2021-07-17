@@ -23,9 +23,14 @@ pub unsafe trait Blob: HasDataType {
     /// Retrieve the netxt batch of data from the source. Batches may not be empty. `None` indicates
     /// the last batch has been reached.
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>>;
+
+    /// Convinience function. Same as calling [`self::BlobParam::new`].
+    fn as_param(&mut self) -> BlobParam where Self: Sized {
+        BlobParam::new(self)
+    }
 }
 
-/// Parameter type which can be used to bind a [`self::Blob`] as parameten to a statement in order
+/// Parameter type which can be used to bind a [`self::Blob`] as parameter to a statement in order
 /// for its contents to be streamed to the database at statement execution time.
 pub struct BlobParam<'a> {
     /// Should be [`crate::sys::DATA_AT_EXEC`] if no size hint is given, or the result of
@@ -78,5 +83,43 @@ unsafe impl Parameter for &mut BlobParam<'_> {
         stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_delayed_input_parameter(parameter_number, self)
+    }
+}
+
+/// Wraps borrowed bytes with a batch_size and implements [`self::Blob`].
+pub struct BinaryBatches<'a> {
+    /// Maximum number of bytes transferred to the database in one go.
+    pub batch_size: usize,
+    /// Remaining bytes to transfer to the database.
+    pub blob: &'a [u8],
+}
+
+unsafe impl HasDataType for BinaryBatches<'_> {
+    fn data_type(&self) -> DataType {
+        DataType::LongVarbinary {
+            length: self.blob.len(),
+        }
+    }
+}
+
+unsafe impl Blob for BinaryBatches<'_> {
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.blob.len())
+    }
+
+    fn next_batch(&mut self) -> io::Result<Option<&[u8]>> {
+        if self.blob.is_empty() {
+            return Ok(None);
+        }
+
+        if self.blob.len() >= self.batch_size {
+            let (head, tail) = self.blob.split_at(self.batch_size);
+            self.blob = tail;
+            Ok(Some(head))
+        } else {
+            let last_batch = self.blob;
+            self.blob = &[];
+            Ok(Some(last_batch))
+        }
     }
 }

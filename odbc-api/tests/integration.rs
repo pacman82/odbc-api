@@ -14,15 +14,14 @@ use odbc_api::{
         TextRowSet,
     },
     handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement},
-    parameter::{Blob, BlobParam, VarBinaryArray, VarCharArray, VarCharSlice},
+    parameter::{BinaryBatches, Blob, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
 use std::{
-    cmp::min,
     convert::TryInto,
     ffi::{c_void, CString},
-    io, iter, str, thread,
+    iter, str, thread,
 };
 
 const MSSQL_CONNECTION: &str =
@@ -2322,60 +2321,30 @@ fn insert_large_text_in_stream(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn insert_blob_in_stream(profile: &Profile) {
-    let table_name = "InsertBlobInStream";
+fn send_long_data_binary_vec(profile: &Profile) {
+    let table_name = "SendLongDataBinaryVec";
     let conn = profile.connection().unwrap();
     setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    // Large vector with successive numbers. It's too large to send to the database in one go.
+    let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
 
-    let batch = b"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyz";
-
-    struct Repeater {
-        blob_size: usize,
-        batch: &'static [u8],
-    }
-
-    unsafe impl Blob for Repeater {
-        fn size_hint(&self) -> Option<usize> {
-            Some(self.blob_size)
-        }
-
-        fn next_batch(&mut self) -> io::Result<Option<&[u8]>> {
-            if self.blob_size == 0 {
-                Ok(None)
-            } else {
-                let batch_size = min(self.blob_size, self.batch.len());
-                self.blob_size -= batch_size;
-                Ok(Some(&self.batch[..batch_size]))
-            }
-        }
-    }
-
-    unsafe impl HasDataType for Repeater {
-        fn data_type(&self) -> DataType {
-            DataType::LongVarbinary {
-                length: self.blob_size,
-            }
-        }
-    }
-
-    let mut blob = Repeater {
-        blob_size: 12000,
-        batch,
+    let mut blob = BinaryBatches {
+        batch_size: 4000,
+        blob: &input,
     };
-    let mut blob = BlobParam::new(&mut blob);
 
-    conn.execute(&insert, &mut blob).unwrap();
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert, &mut blob.as_param()).unwrap();
+
+    // Query value just streamed into the DB and compare it with the input.
+    let select = format!("SELECT a FROM {}", table_name);
+    let mut result = conn.execute(&select, ()).unwrap().unwrap();
+    let mut row = result.next_row().unwrap().unwrap();
+    let mut output = Vec::new();
+    row.get_binary(1, &mut output).unwrap();
+
+    assert_eq!(input, output);
 }
 
 /// Demonstrate how to strip abstractions and access raw functionality as exposed by `odbc-sys`.
