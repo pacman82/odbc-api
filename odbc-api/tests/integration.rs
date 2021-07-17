@@ -14,7 +14,7 @@ use odbc_api::{
         TextRowSet,
     },
     handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement},
-    parameter::{BinaryBatches, Blob, VarBinaryArray, VarCharArray, VarCharSlice},
+    parameter::{BlobSlice, Blob, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
@@ -2329,13 +2329,10 @@ fn send_long_data_binary_vec(profile: &Profile) {
     // Large vector with successive numbers. It's too large to send to the database in one go.
     let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
 
-    let mut blob = BinaryBatches {
-        batch_size: 4000,
-        blob: &input,
-    };
+    let mut blob = BlobSlice::from_byte_slice(&input);
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
-    conn.execute(&insert, &mut blob.as_param()).unwrap();
+    conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
 
     // Query value just streamed into the DB and compare it with the input.
     let select = format!("SELECT a FROM {}", table_name);
@@ -2343,6 +2340,33 @@ fn send_long_data_binary_vec(profile: &Profile) {
     let mut row = result.next_row().unwrap().unwrap();
     let mut output = Vec::new();
     row.get_binary(1, &mut output).unwrap();
+
+    assert_eq!(input, output);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn send_long_data_string(profile: &Profile) {
+    let table_name = "SendLongDataString";
+    let conn = profile.connection().unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["Text"]).unwrap();
+
+    // Large vector with successive numbers. It's too large to send to the database in one go.
+    let input: String = (0..1200).map(|_| "abcdefghijklmnopqrstuvwxyz").collect();
+
+    let mut blob = BlobSlice::from_text(&input);
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
+
+    // Query value just streamed into the DB and compare it with the input.
+    let select = format!("SELECT a FROM {}", table_name);
+    let mut result = conn.execute(&select, ()).unwrap().unwrap();
+    let mut row = result.next_row().unwrap().unwrap();
+    let mut output = Vec::new();
+    row.get_text(1, &mut output).unwrap();
+    let output = String::from_utf8(output).unwrap();
 
     assert_eq!(input, output);
 }

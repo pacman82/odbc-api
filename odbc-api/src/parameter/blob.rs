@@ -14,6 +14,12 @@ use std::{convert::TryInto, ffi::c_void, io};
 /// If a hint is implemented for `blob_size` it must be accurate before the first call to
 /// `next_batch`.
 pub unsafe trait Blob: HasDataType {
+
+    /// CData type of the binary data returned in the batches. Likely to be either
+    /// [`crate::sys::CDataType::Binary`], [`crate::sys::CDataType::Char`] or
+    /// [`crate::sys::CDataType::WChar`].
+    fn c_data_type(&self) -> CDataType;
+
     /// Hint passed on to the driver regarding the combined size of all the batches. This hint is
     /// passed then the parameter is bound to the statement, so its meaning is only defined before
     /// the first call to `next_batch`. If `None` no hint about the total length of the batches is
@@ -25,7 +31,7 @@ pub unsafe trait Blob: HasDataType {
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>>;
 
     /// Convinience function. Same as calling [`self::BlobParam::new`].
-    fn as_param(&mut self) -> BlobParam where Self: Sized {
+    fn as_blob_param(&mut self) -> BlobParam where Self: Sized {
         BlobParam::new(self)
     }
 }
@@ -53,7 +59,7 @@ impl<'a> BlobParam<'a> {
 
 unsafe impl DelayedInput for BlobParam<'_> {
     fn cdata_type(&self) -> CDataType {
-        CDataType::Binary
+        self.blob.c_data_type()
     }
 
     fn indicator_ptr(&self) -> *const isize {
@@ -86,23 +92,62 @@ unsafe impl Parameter for &mut BlobParam<'_> {
     }
 }
 
-/// Wraps borrowed bytes with a batch_size and implements [`self::Blob`].
-pub struct BinaryBatches<'a> {
-    /// Maximum number of bytes transferred to the database in one go.
+/// Wraps borrowed bytes with a batch_size and implements [`self::Blob`]. Use this type to send long
+/// array of bytes to the database.
+pub struct BlobSlice<'a> {
+    /// If `true` the blob is going to be bound as [`DataType::LongVarbinary`] and the bytes are
+    /// interpreted as [`CDataType::Binary`]. If false the blob is going to be bound as
+    /// [`DataType::LongVarchar`] and the bytes are interpreted as [`CDataType::Char`].
+    pub is_binary: bool,
+    /// Maximum number of bytes transferred to the database in one go. May be largere than the 
+    /// remaining blob size.
     pub batch_size: usize,
     /// Remaining bytes to transfer to the database.
     pub blob: &'a [u8],
 }
 
-unsafe impl HasDataType for BinaryBatches<'_> {
-    fn data_type(&self) -> DataType {
-        DataType::LongVarbinary {
-            length: self.blob.len(),
+impl<'a> BlobSlice<'a> {
+    /// Construct a Blob from a byte slice. The blob is going to be bound as a `LongVarbinary` and
+    /// will be transmitted in one batch.
+    pub fn from_byte_slice(blob: &'a [u8]) -> Self {
+        Self {
+            is_binary: true,
+            batch_size: blob.len(),
+            blob
+        }
+    }
+
+    /// Construct a Blob from a text slice. The blob is going to be bound as a `LongVarchar` and
+    /// will be transmitted in one batch.
+    pub fn from_text(text: &'a str) -> Self {
+        Self {
+            is_binary: false,
+            batch_size: text.len(),
+            blob: text.as_bytes()
         }
     }
 }
 
-unsafe impl Blob for BinaryBatches<'_> {
+unsafe impl HasDataType for BlobSlice<'_> {
+    fn data_type(&self) -> DataType {
+        if self.is_binary {
+            DataType::LongVarbinary { length: self.blob.len() }
+        } else {
+            DataType::LongVarchar { length: self.blob.len() }
+        }
+    }
+}
+
+unsafe impl Blob for BlobSlice<'_> {
+
+    fn c_data_type(&self) -> CDataType {
+        if self.is_binary {
+            CDataType::Binary
+        } else {
+            CDataType::Char
+        }
+    }
+
     fn size_hint(&self) -> Option<usize> {
         Some(self.blob.len())
     }
