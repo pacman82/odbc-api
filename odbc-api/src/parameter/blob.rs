@@ -4,7 +4,13 @@ use crate::{
     handles::{DelayedInput, HasDataType, Statement, StatementImpl},
     DataType, Error, Parameter,
 };
-use std::{convert::TryInto, ffi::c_void, io};
+use std::{
+    convert::TryInto,
+    ffi::c_void,
+    fs::File,
+    io::{self, BufRead, BufReader},
+    path::Path,
+};
 
 /// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
 /// transfer large amounts of data, exceeding the drivers capabilities for normal input parameters.
@@ -14,7 +20,6 @@ use std::{convert::TryInto, ffi::c_void, io};
 /// If a hint is implemented for `blob_size` it must be accurate before the first call to
 /// `next_batch`.
 pub unsafe trait Blob: HasDataType {
-
     /// CData type of the binary data returned in the batches. Likely to be either
     /// [`crate::sys::CDataType::Binary`], [`crate::sys::CDataType::Char`] or
     /// [`crate::sys::CDataType::WChar`].
@@ -31,7 +36,10 @@ pub unsafe trait Blob: HasDataType {
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>>;
 
     /// Convinience function. Same as calling [`self::BlobParam::new`].
-    fn as_blob_param(&mut self) -> BlobParam where Self: Sized {
+    fn as_blob_param(&mut self) -> BlobParam
+    where
+        Self: Sized,
+    {
         BlobParam::new(self)
     }
 }
@@ -99,7 +107,7 @@ pub struct BlobSlice<'a> {
     /// interpreted as [`CDataType::Binary`]. If false the blob is going to be bound as
     /// [`DataType::LongVarchar`] and the bytes are interpreted as [`CDataType::Char`].
     pub is_binary: bool,
-    /// Maximum number of bytes transferred to the database in one go. May be largere than the 
+    /// Maximum number of bytes transferred to the database in one go. May be largere than the
     /// remaining blob size.
     pub batch_size: usize,
     /// Remaining bytes to transfer to the database.
@@ -113,7 +121,7 @@ impl<'a> BlobSlice<'a> {
         Self {
             is_binary: true,
             batch_size: blob.len(),
-            blob
+            blob,
         }
     }
 
@@ -123,7 +131,7 @@ impl<'a> BlobSlice<'a> {
         Self {
             is_binary: false,
             batch_size: text.len(),
-            blob: text.as_bytes()
+            blob: text.as_bytes(),
         }
     }
 }
@@ -131,15 +139,18 @@ impl<'a> BlobSlice<'a> {
 unsafe impl HasDataType for BlobSlice<'_> {
     fn data_type(&self) -> DataType {
         if self.is_binary {
-            DataType::LongVarbinary { length: self.blob.len() }
+            DataType::LongVarbinary {
+                length: self.blob.len(),
+            }
         } else {
-            DataType::LongVarchar { length: self.blob.len() }
+            DataType::LongVarchar {
+                length: self.blob.len(),
+            }
         }
     }
 }
 
 unsafe impl Blob for BlobSlice<'_> {
-
     fn c_data_type(&self) -> CDataType {
         if self.is_binary {
             CDataType::Binary
@@ -165,6 +176,106 @@ unsafe impl Blob for BlobSlice<'_> {
             let last_batch = self.blob;
             self.blob = &[];
             Ok(Some(last_batch))
+        }
+    }
+}
+
+/// Wraps an [`std::io::BufRead`] and implements [`self::Blob`]. Use this to stream contents from an
+/// [`std::io::BufRead`] to the database. The blob implementation is going to directly utilize the
+/// Buffer of the [`std::io::BufRead`] implementation, so the batch size is likely equal to that
+/// capacity.
+pub struct BlobRead<R> {
+    /// `true` if `size` is to interpreted as the exact ammount of bytes contained in the reader, at
+    /// the time of binding it as a parameter. `false` if `size` is to be interpreted as an upper
+    /// bound.
+    exact: bool,
+    size: usize,
+    consume: usize,
+    buf_read: R,
+}
+
+impl<R> BlobRead<R> {
+    /// Construct a blob read from any [`std::io::BufRead`]. The `upper bound` is used in the type
+    /// description then binding the blob as a parameter.
+    pub fn with_upper_bound(buf_read: R, upper_bound: usize) -> Self {
+        Self {
+            exact: false,
+            consume: 0,
+            size: upper_bound,
+            buf_read,
+        }
+    }
+
+    /// Construct a blob read from any [`std::io::BufRead`]. The `upper bound` is used in the type
+    /// description then binding the blob as a parameter and is also passed to indicate the size
+    /// of the actual value to the ODBC driver.
+    ///
+    /// # Safety
+    ///
+    /// The ODBC driver may use the exact size hint to allocate buffers internally. Too short may
+    /// lead to invalid writes and too long may lead to invalid reads, so to be save the hint must
+    /// be exact.
+    pub unsafe fn with_exact_size(buf_read: R, exact_size: usize) -> Self {
+        Self {
+            exact: true,
+            consume: 0,
+            size: exact_size,
+            buf_read,
+        }
+    }
+}
+
+impl BlobRead<BufReader<File>> {
+    /// Construct a blob from a Path. The metadata of the file is used to give the ODBC driver a
+    /// size hint.
+    pub fn from_path(path: &Path) -> io::Result<Self> {
+        let file = File::open(path)?;
+        let size = file.metadata()?.len().try_into().unwrap();
+        let buf_read = BufReader::new(file);
+        Ok(Self {
+            consume: 0,
+            exact: true,
+            size,
+            buf_read,
+        })
+    }
+}
+
+unsafe impl<R> HasDataType for BlobRead<R>
+where
+    R: BufRead,
+{
+    fn data_type(&self) -> DataType {
+        DataType::LongVarbinary { length: self.size }
+    }
+}
+
+unsafe impl<R> Blob for BlobRead<R>
+where
+    R: BufRead,
+{
+    fn c_data_type(&self) -> CDataType {
+        CDataType::Binary
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        if self.exact {
+            Some(self.size)
+        } else {
+            None
+        }
+    }
+
+    fn next_batch(&mut self) -> io::Result<Option<&[u8]>> {
+        if self.consume != 0 {
+            self.buf_read.consume(self.consume);
+        }
+        let batch = self.buf_read.fill_buf()?;
+        self.consume = batch.len();
+        if batch.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(batch))
         }
     }
 }

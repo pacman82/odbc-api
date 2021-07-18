@@ -1,7 +1,6 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
-use sys::{CDataType, Pointer};
 use test_case::test_case;
 
 use common::{
@@ -13,16 +12,12 @@ use odbc_api::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
         TextRowSet,
     },
-    handles::{DelayedInput, HasDataType, OutputStringBuffer, Statement},
-    parameter::{BlobSlice, Blob, VarBinaryArray, VarCharArray, VarCharSlice},
+    handles::{OutputStringBuffer, Statement},
+    parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
-use std::{
-    convert::TryInto,
-    ffi::{c_void, CString},
-    iter, str, thread,
-};
+use std::{convert::TryInto, ffi::CString, io, iter, str, thread};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -2236,91 +2231,6 @@ fn insert_large_texts(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn insert_large_text_in_stream(profile: &Profile) {
-    let table_name = "InsertLargeTextInStream";
-    let conn = profile.connection().unwrap();
-    setup_empty_table(&conn, profile.index_type, table_name, &["text"]).unwrap();
-
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
-    let insert = U16String::from_str(&insert);
-
-    let mut statement = conn.preallocate().unwrap().into_statement();
-    let text_size = 12000;
-
-    let batch = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz\
-      abcdefghijklmnopqrstuvwxyz";
-
-    struct Blob {
-        indicator: isize,
-    }
-
-    unsafe impl DelayedInput for Blob {
-        fn cdata_type(&self) -> CDataType {
-            CDataType::Char
-        }
-
-        fn indicator_ptr(&self) -> *const isize {
-            &self.indicator as *const isize
-        }
-
-        fn stream_ptr(&mut self) -> *mut c_void {
-            1 as *mut c_void
-        }
-    }
-
-    unsafe impl HasDataType for Blob {
-        fn data_type(&self) -> DataType {
-            DataType::LongVarchar { length: 12000 }
-        }
-    }
-
-    let mut blob = Blob {
-        indicator: sys::len_data_at_exec(12000),
-    };
-
-    unsafe {
-        statement
-            .bind_delayed_input_parameter(1, &mut blob)
-            .unwrap();
-
-        let ret = sys::SQLExecDirectW(
-            statement.as_sys(),
-            insert.as_ptr(),
-            insert.len().try_into().unwrap(),
-        );
-        assert_eq!(sys::SqlReturn::NEED_DATA, ret);
-
-        let need_data = statement.param_data().unwrap();
-        assert_eq!(Some(1 as Pointer), need_data);
-
-        let mut bytes_left = text_size;
-        while bytes_left > batch.len() {
-            let need_data = statement.put_binary_batch(batch.as_bytes()).unwrap();
-            assert!(!need_data);
-            bytes_left -= batch.len();
-        }
-        // Put final batch
-        let need_data = statement
-            .put_binary_batch(&batch.as_bytes()[..bytes_left])
-            .unwrap();
-        assert!(!need_data);
-
-        let need_data = statement.param_data().unwrap();
-        assert_eq!(None, need_data);
-    }
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
 fn send_long_data_binary_vec(profile: &Profile) {
     let table_name = "SendLongDataBinaryVec";
     let conn = profile.connection().unwrap();
@@ -2367,6 +2277,34 @@ fn send_long_data_string(profile: &Profile) {
     let mut output = Vec::new();
     row.get_text(1, &mut output).unwrap();
     let output = String::from_utf8(output).unwrap();
+
+    assert_eq!(input, output);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] SQLite does not write anything to the database if there is no
+// size hint given
+fn send_long_data_binary_read(profile: &Profile) {
+    let table_name = "SendLongDataBinaryRead";
+    let conn = profile.connection().unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
+
+    // Large vector with successive numbers. It's too large to send to the database in one go.
+    let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
+    let read = io::Cursor::new(&input);
+
+    let mut blob = BlobRead::with_upper_bound(read, 14000);
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
+
+    // Query value just streamed into the DB and compare it with the input.
+    let select = format!("SELECT a FROM {}", table_name);
+    let mut result = conn.execute(&select, ()).unwrap().unwrap();
+    let mut row = result.next_row().unwrap().unwrap();
+    let mut output = Vec::new();
+    row.get_binary(1, &mut output).unwrap();
 
     assert_eq!(input, output);
 }

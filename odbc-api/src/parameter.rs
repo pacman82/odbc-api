@@ -229,7 +229,7 @@ mod varbin;
 mod varchar;
 
 pub use self::{
-    blob::{Blob, BlobParam, BlobSlice},
+    blob::{Blob, BlobParam, BlobRead, BlobSlice},
     varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
     varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
 };
