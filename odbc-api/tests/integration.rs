@@ -1,6 +1,7 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
+use tempfile::NamedTempFile;
 use test_case::test_case;
 
 use common::{
@@ -17,7 +18,7 @@ use odbc_api::{
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
-use std::{convert::TryInto, ffi::CString, io, iter, str, thread};
+use std::{convert::TryInto, ffi::CString, io::{self, Write}, iter, str, thread};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -2295,6 +2296,37 @@ fn send_long_data_binary_read(profile: &Profile) {
     let read = io::Cursor::new(&input);
 
     let mut blob = BlobRead::with_upper_bound(read, 14000);
+
+    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
+
+    // Query value just streamed into the DB and compare it with the input.
+    let select = format!("SELECT a FROM {}", table_name);
+    let mut result = conn.execute(&select, ()).unwrap().unwrap();
+    let mut row = result.next_row().unwrap().unwrap();
+    let mut output = Vec::new();
+    row.get_binary(1, &mut output).unwrap();
+
+    assert_eq!(input, output);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn send_long_data_binary_file(profile: &Profile) {
+    let table_name = "SendLongDataBinaryFile";
+    let conn = profile.connection().unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &[profile.blob_type]).unwrap();
+
+    // Large vector with successive numbers. It's too large to send to the database in one go.
+    let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
+
+    let mut file = NamedTempFile::new().unwrap();
+    file.write_all(&input).unwrap();
+
+    let path = file.into_temp_path();
+
+    let mut blob = BlobRead::from_path(&path).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
     conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
