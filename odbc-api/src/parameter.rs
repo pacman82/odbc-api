@@ -6,8 +6,9 @@
 //! * `&a` -> Single input parameter
 //! * `&mut a` -> Input Output parameter
 //! * `Out(&mut a)` -> Output parameter
-//! * `(&a,&b,&c)` -> Fixed number of parameters
+//! * `(a,b,c)` -> Fixed number of parameters
 //! * `&[a]` -> Arbitrary number of parameters
+//! * `&mut BlobParam` -> Stream long input parameters.
 //! * `Box<dyn InputParameter>` -> Aribtrary input parameter
 //! * `&[Box<dyn InputParameter>]` -> Aribtrary number of arbitrary input parameters
 //! * `a.into_parameter()` -> Convert idiomatic Rust type into something bindable by ODBC.
@@ -179,6 +180,109 @@
 //! assert_eq!(Some(7 + 5), param.into_opt());
 //!
 //! # Ok::<(), odbc_api::Error>(())
+//! ```
+//!
+//! ## Sending long data
+//!
+//! Many ODBC drivers have size limits of how big parameters can be. Apart from that you may not
+//! want to allocate really large buffers in your application in order to keep a small memory
+//! footprint. Luckily ODBC also supports streaming data to the database batch by batch at statement
+//! execution time. To support this, this crate offers the [`BlobParam`], which can be bound as a
+//! mutable reference. An instance of [`BlobParam`] is usually created by calling
+//! [`Blob::as_blob_param`] from a wrapper implenting [`Blob`].
+//!
+//! ### Inserting long binary data from a file.
+//!
+//! [`BlobRead::from_path`] is the most convinient way to turn a file path into a [`Blob`]
+//! parameter. The following example also demonstrates that the streamed blob parameter can be
+//! combined with reqular input parmeters like `id`.
+//!
+//! ```
+//! use std::{error::Error, path::Path};
+//! use odbc_api::{Connection, parameter::{Blob, BlobRead}, IntoParameter};
+//!
+//! fn insert_image_to_db(
+//!     conn: &Connection<'_>,
+//!     id: &str,
+//!     image_path: &Path) -> Result<(), Box<dyn Error>>
+//! {
+//!     let mut blob = BlobRead::from_path(&image_path)?;
+//!
+//!     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
+//!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
+//!     conn.execute(sql, parameters)?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Inserting long binary data from any `io::BufRead`.
+//!
+//! This is more flexible than inserting just from files. Note however that files provide metadata
+//! about the length of the data, which `io::BufRead` does not. This is not an issue for most
+//! drivers, but some can perform optimization if they know the size in advance. In the tests
+//! SQLite has shown a bug to only insert empty data if no size hint has been provided.
+//!
+//! ```
+//! use std::io::BufRead;
+//! use odbc_api::{Connection, parameter::{Blob, BlobRead}, IntoParameter, Error};
+//!
+//! fn insert_image_to_db(
+//!     conn: &Connection<'_>,
+//!     id: &str,
+//!     image_data: impl BufRead) -> Result<(), Error>
+//! {
+//!     const MAX_IMAGE_SIZE: usize = 4 * 1024 * 1024;
+//!     let mut blob = BlobRead::with_upper_bound(image_data, MAX_IMAGE_SIZE);
+//!
+//!     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
+//!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
+//!     conn.execute(sql, parameters)?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Inserting long strings
+//!
+//! This example insert `title` as a normal input parameter but streams the potentially much longer
+//! `String` in `text` to the database as a large text blob. This allows to circumvent the size
+//! restrictions for `String` arguments of many drivers (usually around 4 or 8 KiB).
+//!
+//! ```
+//! use odbc_api::{Connection, parameter::{Blob, BlobSlice}, IntoParameter, Error};
+//!
+//! fn insert_book(
+//!     conn: &Connection<'_>,
+//!     title: &str,
+//!     text: &str
+//! ) -> Result<(), Error>
+//! {
+//!     let mut blob = BlobSlice::from_text(text);
+//! 
+//!     let insert = "INSERT INTO Books (title, text) VALUES (?,?)";
+//!     let parameters = (title.into_parameter(), &mut blob.as_blob_param());
+//!     conn.execute(&insert, &mut blob.as_blob_param())?;
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ### Inserting long binary data from `&[u8]`.
+//!
+//! ```
+//! use odbc_api::{Connection, parameter::{Blob, BlobSlice}, IntoParameter, Error};
+//!
+//! fn insert_image(
+//!     conn: &Connection<'_>,
+//!     id: &str,
+//!     image_data: &[u8]
+//! ) -> Result<(), Error>
+//! {
+//!     let mut blob = BlobSlice::from_byte_slice(image_data);
+//! 
+//!     let insert = "INSERT INTO Images (id, image_data) VALUES (?,?)";
+//!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
+//!     conn.execute(&insert, &mut blob.as_blob_param())?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ## Passing the type you absolutely think should work, but does not.

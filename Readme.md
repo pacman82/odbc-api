@@ -23,9 +23,10 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 
 ## Features
 
-* [x] Connect using either Data Source names (DSN) or connection strings
+* [x] Connect using either Data Source names (DSN)
+* [x] Connect using connection strings
+* [x] Connect using prompts (windows)
 * [x] Support for logging ODBC diagnostics and warnings (via `log` crate).
-* [x] Provide nice errors and log diagnostic output.
 * [x] Support for columnar bulk inserts.
 * [x] Support for columnar bulk queries.
 * [ ] Support for rowise bulk inserts.
@@ -36,6 +37,6 @@ Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for
 * [x] Pass parameters to queries
 * [ ] Support for async
 * [x] Support for Multithreading
-* [ ] Support for inserting arbitrary large binary / text data in stream
+* [x] Support for inserting large binary / text data in stream
 * [x] Support for fetching arbitrary large text / binary data in stream
 * [x] Support for connection pooling

@@ -1,8 +1,8 @@
 # Changelog
 
-## Next
+## 0.24.0
 
-* Add Support for sending long data from a binary slice.
+* Add Support for sending long data.
 * Add variant `DataType::LongVarChar`.
 * Add variant `DataType::LongVarBinary`.
 * Add variant `Error::FailedReadingInput`.

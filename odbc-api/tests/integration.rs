@@ -18,7 +18,12 @@ use odbc_api::{
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
     U16String,
 };
-use std::{convert::TryInto, ffi::CString, io::{self, Write}, iter, str, thread};
+use std::{
+    convert::TryInto,
+    ffi::CString,
+    io::{self, Write},
+    iter, str, thread,
+};
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";

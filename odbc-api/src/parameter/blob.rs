@@ -117,6 +117,26 @@ pub struct BlobSlice<'a> {
 impl<'a> BlobSlice<'a> {
     /// Construct a Blob from a byte slice. The blob is going to be bound as a `LongVarbinary` and
     /// will be transmitted in one batch.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use odbc_api::{Connection, parameter::{Blob, BlobSlice}, IntoParameter, Error};
+    ///
+    /// fn insert_image(
+    ///     conn: &Connection<'_>,
+    ///     id: &str,
+    ///     image_data: &[u8]
+    /// ) -> Result<(), Error>
+    /// {
+    ///     let mut blob = BlobSlice::from_byte_slice(image_data);
+    /// 
+    ///     let insert = "INSERT INTO Images (id, image_data) VALUES (?,?)";
+    ///     let parameters = (id.into_parameter(), &mut blob.as_blob_param());
+    ///     conn.execute(&insert, &mut blob.as_blob_param())?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn from_byte_slice(blob: &'a [u8]) -> Self {
         Self {
             is_binary: true,
@@ -127,6 +147,30 @@ impl<'a> BlobSlice<'a> {
 
     /// Construct a Blob from a text slice. The blob is going to be bound as a `LongVarchar` and
     /// will be transmitted in one batch.
+    ///
+    /// # Example
+    ///
+    /// This example insert `title` as a normal input parameter but streams the potentially much
+    /// longer `String` in `text` to the database as a large text blob. This allows to circumvent
+    /// the size restrictions for `String` arguments of many drivers (usually around 4 or 8 KiB).
+    ///
+    /// ```
+    /// use odbc_api::{Connection, parameter::{Blob, BlobSlice}, IntoParameter, Error};
+    ///
+    /// fn insert_book(
+    ///     conn: &Connection<'_>,
+    ///     title: &str,
+    ///     text: &str
+    /// ) -> Result<(), Error>
+    /// {
+    ///     let mut blob = BlobSlice::from_text(&text);
+    /// 
+    ///     let insert = "INSERT INTO Books (title, text) VALUES (?,?)";
+    ///     let parameters = (title.into_parameter(), &mut blob.as_blob_param());
+    ///     conn.execute(&insert, &mut blob.as_blob_param())?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn from_text(text: &'a str) -> Self {
         Self {
             is_binary: false,
@@ -197,6 +241,32 @@ pub struct BlobRead<R> {
 impl<R> BlobRead<R> {
     /// Construct a blob read from any [`std::io::BufRead`]. The `upper bound` is used in the type
     /// description then binding the blob as a parameter.
+    ///
+    /// # Examples
+    ///
+    /// This is more flexible than [`Self::from_path`]. Note however that files provide metadata
+    /// about the length of the data, which `io::BufRead` does not. This is not an issue for most
+    /// drivers, but some can perform optimization if they know the size in advance. In the tests
+    /// SQLite has shown a bug to only insert empty data if no size hint has been provided.
+    ///
+    /// ```
+    /// use std::io::BufRead;
+    /// use odbc_api::{Connection, parameter::{Blob, BlobRead}, IntoParameter, Error};
+    ///
+    /// fn insert_image_to_db(
+    ///     conn: &Connection<'_>,
+    ///     id: &str,
+    ///     image_data: impl BufRead) -> Result<(), Error>
+    /// {
+    ///     const MAX_IMAGE_SIZE: usize = 4 * 1024 * 1024;
+    ///     let mut blob = BlobRead::with_upper_bound(image_data, MAX_IMAGE_SIZE);
+    ///
+    ///     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
+    ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
+    ///     conn.execute(sql, parameters)?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn with_upper_bound(buf_read: R, upper_bound: usize) -> Self {
         Self {
             exact: false,
@@ -228,6 +298,30 @@ impl<R> BlobRead<R> {
 impl BlobRead<BufReader<File>> {
     /// Construct a blob from a Path. The metadata of the file is used to give the ODBC driver a
     /// size hint.
+    ///
+    /// # Example
+    ///
+    /// [`BlobRead::from_path`] is the most convinient way to turn a file path into a [`Blob`]
+    /// parameter. The following example also demonstrates that the streamed blob parameter can be
+    /// combined with reqular input parmeters like `id`.
+    ///
+    /// ```
+    /// use std::{error::Error, path::Path};
+    /// use odbc_api::{Connection, parameter::{Blob, BlobRead}, IntoParameter};
+    ///
+    /// fn insert_image_to_db(
+    ///     conn: &Connection<'_>,
+    ///     id: &str,
+    ///     image_path: &Path) -> Result<(), Box<dyn Error>>
+    /// {
+    ///     let mut blob = BlobRead::from_path(&image_path)?;
+    ///
+    ///     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
+    ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
+    ///     conn.execute(sql, parameters)?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn from_path(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
         let size = file.metadata()?.len().try_into().unwrap();
