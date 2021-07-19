@@ -2591,6 +2591,29 @@ fn fill_vec_of_rows(profile: &Profile) {
     )
 }
 
+/// Provoke return of NO_DATA from SQLExecute and SQLDirectExecute by deleting a non existing row.
+/// The bindings most not panic, even though the result is not SQL_SUCCESS
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn no_data(profile: &Profile) {
+    let table_name = "NoData";
+    let conn = profile.connection().unwrap();
+
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["INTEGER"],
+    )
+    .unwrap();
+    let sql = format!("DELETE FROM {} WHERE id=5", table_name);
+    // Assert no panic on direct execution
+    conn.execute(&sql, ()).unwrap();
+    // Assert no panic on prepared execution
+    conn.prepare(&sql).unwrap().execute(()).unwrap();
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

@@ -463,6 +463,9 @@ impl<'o> Statement for StatementImpl<'o> {
             statement_text.len().try_into().unwrap(),
         ) {
             SqlReturn::NEED_DATA => Ok(true),
+            // A searched update or delete statement that does not affect any rows at the data
+            // source.
+            SqlReturn::NO_DATA => Ok(false),
             other => other.into_result(self).map(|()| false),
         }
     }
@@ -500,6 +503,9 @@ impl<'o> Statement for StatementImpl<'o> {
     unsafe fn execute(&mut self) -> Result<bool, Error> {
         match SQLExecute(self.handle) {
             SqlReturn::NEED_DATA => Ok(true),
+            // A searched update or delete statement that does not affect any rows at the data
+            // source.
+            SqlReturn::NO_DATA => Ok(false),
             other => other.into_result(self).map(|()| false),
         }
     }

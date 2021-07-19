@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.1
+
+* Fix: Code example blobs
+* Fix: An issue intruduced in `0.24.0` there a searched update or delete statement that does not affect any rows at the data source could cause a panic.
+
 ## 0.24.0
 
 * Add Support for sending long data.
