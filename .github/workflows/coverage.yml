@@ -42,14 +42,15 @@ jobs:
         run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
 
       # runs cargo with defaults flags, using the default `lcov` output
-      - uses: Swatinem/fucov@v1
+      - name: Generate code coverage
+        uses: Swatinem/fucov@v1
         with:
           # Maria DB stopped working on ubuntu test runner after driver update
           args: -- --skip maria_db
           output-format: lcov
           output-filename: lcov.info
 
-      - name: Push grcov results to Coveralls via GitHub Action
+      - name: Push coverage results to Coveralls
         uses: coverallsapp/github-action@v1.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
