@@ -1,8 +1,8 @@
 # ODBC-API
 
 [![Docs](https://docs.rs/odbc-api/badge.svg)](https://docs.rs/odbc-api/)
-[![MIT licensed](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/pacman82/odbc-api/blob/master/LICENSE)
-[![Published](http://meritbadge.herokuapp.com/odbc-api)](https://crates.io/crates/odbc-api)
+[![Licence](https://img.shields.io/crates/l/odbc-api)](https://github.com/pacman82/odbc-api/blob/master/License)
+[![Crates.io](https://img.shields.io/crates/v/odbc-api)](https://crates.io/crates/odbc-api)
 [![Coverage Status](https://coveralls.io/repos/github/pacman82/odbc-api/badge.svg?branch=master)](https://coveralls.io/github/pacman82/odbc-api?branch=master)
 
 Rust ODBC bindings. ODBC (Open Database Connectivity) is an open standard to connect to a variaty of data sources. Most data sources offer ODBC drivers. This crate is currently tested against:
