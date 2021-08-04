@@ -145,16 +145,16 @@ impl Environment {
                 version.into(),
                 0,
             )
-            .into_result(self);
+            .into_result(self, "SQLSetEnvAttr");
 
             // Translate invalid attribute into a more meaningful error, provided the additional
             // context that we know we tried to set version number.
             result.map_err(|error| {
-                if let Error::Diagnostics { record } = error {
+                if let Error::Diagnostics { record, function } = error {
                     if record.state == State::INVALID_STATE_TRANSACTION {
                         Error::OdbcApiVersionUnsupported(record)
                     } else {
-                        Error::Diagnostics { record }
+                        Error::Diagnostics { record, function }
                     }
                 } else {
                     error
@@ -167,7 +167,8 @@ impl Environment {
     pub fn allocate_connection(&self) -> Result<Connection<'_>, Error> {
         let mut handle = null_mut();
         unsafe {
-            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle).into_result(self)?;
+            SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle)
+                .into_result(self, "SQLAllocHandle")?;
             Ok(Connection::new(handle as HDbc))
         }
     }
@@ -223,7 +224,7 @@ impl Environment {
         ) {
             SqlReturn::NO_DATA => Ok(false),
             other => {
-                other.into_result(self)?;
+                other.into_result(self, "SQLDriversW")?;
                 Ok(true)
             }
         }
@@ -272,7 +273,7 @@ impl Environment {
             &mut length_attributes,
         ) {
             SqlReturn::NO_DATA => return Ok(None),
-            other => other.into_result(self)?,
+            other => other.into_result(self, "SQLDriversW")?,
         }
         Ok(Some((length_description, length_attributes)))
     }
@@ -316,7 +317,7 @@ impl Environment {
             &mut length_description,
         ) {
             SqlReturn::NO_DATA => return Ok(None),
-            other => other.into_result(self)?,
+            other => other.into_result(self, "SQLDataSourceW")?,
         }
         Ok(Some((length_name, length_description)))
     }
@@ -364,7 +365,7 @@ impl Environment {
         ) {
             SqlReturn::NO_DATA => Ok(false),
             other => {
-                other.into_result(self)?;
+                other.into_result(self, "SQLDataSourceW")?;
                 Ok(true)
             }
         }

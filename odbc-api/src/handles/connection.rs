@@ -86,7 +86,7 @@ impl<'c> Connection<'c> {
                 buf_ptr(pwd.as_slice()),
                 pwd.len().try_into().unwrap(),
             )
-            .into_result(self)?;
+            .into_result(self, "SQLConnectW")?;
             Ok(())
         }
     }
@@ -143,20 +143,21 @@ impl<'c> Connection<'c> {
         if ret == SqlReturn::NO_DATA {
             Err(Error::AbortedConnectionStringCompletion)
         } else {
-            ret.into_result(self)
+            ret.into_result(self, "SQLDriverConnectW")
         }
     }
 
     /// Disconnect from an ODBC data source.
     pub fn disconnect(&mut self) -> Result<(), Error> {
-        unsafe { SQLDisconnect(self.handle).into_result(self) }
+        unsafe { SQLDisconnect(self.handle).into_result(self, "SQLDisconnect") }
     }
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
     pub fn allocate_statement(&self) -> Result<StatementImpl<'_>, Error> {
         let mut out = null_mut();
         unsafe {
-            SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out).into_result(self)?;
+            SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out)
+                .into_result(self, "SQLAllocHandle")?;
             Ok(StatementImpl::new(out as HStmt))
         }
     }
@@ -174,14 +175,15 @@ impl<'c> Connection<'c> {
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
             )
-            .into_result(self)
+            .into_result(self, "SQLSetConnectAttrW")
         }
     }
 
     /// To commit a transaction in manual-commit mode.
     pub fn commit(&self) -> Result<(), Error> {
         unsafe {
-            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit).into_result(self)
+            SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit)
+                .into_result(self, "SQLEndTran")
         }
     }
 
@@ -189,7 +191,7 @@ impl<'c> Connection<'c> {
     pub fn rollback(&self) -> Result<(), Error> {
         unsafe {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback)
-                .into_result(self)
+                .into_result(self, "SQLEndTran")
         }
     }
 
@@ -209,7 +211,7 @@ impl<'c> Connection<'c> {
                 (buf.len() * 2).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
             )
-            .into_result(self)?;
+            .into_result(self, "SQLGetInfoW")?;
 
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
@@ -220,7 +222,7 @@ impl<'c> Connection<'c> {
                     (buf.len() * 2).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                 )
-                .into_result(self)?;
+                .into_result(self, "SQLGetInfoW")?;
             }
 
             // Resize buffer to exact string length without terminal zero
@@ -244,7 +246,7 @@ impl<'c> Connection<'c> {
                 size_of::<*mut u16>() as i16,
                 null_mut(),
             )
-            .into_result(self)?;
+            .into_result(self, "SQLGetInfoW")?;
             Ok(value)
         }
     }
@@ -285,7 +287,7 @@ impl<'c> Connection<'c> {
                 (buf.len() * 2).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i32,
             )
-            .into_result(self)?;
+            .into_result(self, "SQLGetConnectAttrW")?;
 
             if clamp_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
@@ -296,7 +298,7 @@ impl<'c> Connection<'c> {
                     (buf.len() * 2).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i32,
                 )
-                .into_result(self)?;
+                .into_result(self, "SQLGetConnectAttrW")?;
             }
 
             // Resize buffer to exact string length without terminal zero
@@ -330,7 +332,7 @@ impl<'c> Connection<'c> {
             0,
             null_mut(),
         )
-        .into_result(self)?;
+        .into_result(self, "SQLGetConnectAttrW")?;
         Ok(out)
     }
 
