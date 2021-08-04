@@ -130,7 +130,7 @@ impl<'a> BlobSlice<'a> {
     /// ) -> Result<(), Error>
     /// {
     ///     let mut blob = BlobSlice::from_byte_slice(image_data);
-    /// 
+    ///
     ///     let insert = "INSERT INTO Images (id, image_data) VALUES (?,?)";
     ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
     ///     conn.execute(&insert, parameters)?;
@@ -164,7 +164,7 @@ impl<'a> BlobSlice<'a> {
     /// ) -> Result<(), Error>
     /// {
     ///     let mut blob = BlobSlice::from_text(&text);
-    /// 
+    ///
     ///     let insert = "INSERT INTO Books (title, text) VALUES (?,?)";
     ///     let parameters = (&title.into_parameter(), &mut blob.as_blob_param());
     ///     conn.execute(&insert, parameters)?;

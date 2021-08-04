@@ -13,10 +13,10 @@ pub enum Error {
     /// itself fails. In that case no object exist to obtain the diagnostic record from.
     #[error("No Diagnostics available.")]
     NoDiagnostics,
-    #[error("{0}")]
     /// SQL Error had been returned by a low level ODBC function call. A Diagnostic record is
     /// obtained and associated with this error.
-    Diagnostics(DiagnosticRecord),
+    #[error("{record}")]
+    Diagnostics { record: DiagnosticRecord },
     /// A user dialog to complete the connection string has been aborted.
     #[error("The dialog shown to provide or complete the connection string has been aborted.")]
     AbortedConnectionStringCompletion,
@@ -45,10 +45,10 @@ impl IntoResult for SqlReturn {
                 Ok(())
             }
             SqlReturn::ERROR => {
-                let mut rec = DiagnosticRecord::default();
-                if rec.fill_from(handle, 1) {
+                let mut record = DiagnosticRecord::default();
+                if record.fill_from(handle, 1) {
                     log_diagnostics(handle);
-                    Err(Error::Diagnostics(rec))
+                    Err(Error::Diagnostics { record })
                 } else {
                     Err(Error::NoDiagnostics)
                 }
