@@ -152,7 +152,7 @@ impl Environment {
             result.map_err(|error| {
                 if let Error::Diagnostics { record, function } = error {
                     if record.state == State::INVALID_STATE_TRANSACTION {
-                        Error::OdbcApiVersionUnsupported(record)
+                        Error::UnsupportedOdbcApiVersion(record)
                     } else {
                         Error::Diagnostics { record, function }
                     }
