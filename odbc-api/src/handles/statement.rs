@@ -202,7 +202,7 @@ pub trait Statement {
     ///
     /// The bound buffers must at least hold the number of elements specified in this call then the
     /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: u32) -> Result<(), Error>;
+    unsafe fn set_paramset_size(&mut self, size: usize) -> Result<(), Error>;
 
     /// Sets the binding type to columnar binding for batch cursors.
     ///
@@ -544,7 +544,7 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// The bound buffers must at least hold the number of elements specified in this call then the
     /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: u32) -> Result<(), Error> {
+    unsafe fn set_paramset_size(&mut self, size: usize) -> Result<(), Error> {
         assert!(size > 0);
         SQLSetStmtAttrW(
             self.handle,

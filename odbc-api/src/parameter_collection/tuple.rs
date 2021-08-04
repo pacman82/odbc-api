@@ -23,7 +23,7 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(non_snake_case)]
         unsafe impl<$($t:Parameter,)*> ParameterCollection for ($($t,)*)
         {
-            fn parameter_set_size(&self) -> u32 {
+            fn parameter_set_size(&self) -> usize {
                 1
             }
 

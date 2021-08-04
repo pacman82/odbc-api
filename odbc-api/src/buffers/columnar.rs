@@ -644,8 +644,8 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
 }
 
 unsafe impl ParameterCollection for &ColumnarRowSet {
-    fn parameter_set_size(&self) -> u32 {
-        *self.num_rows as u32
+    fn parameter_set_size(&self) -> usize {
+        *self.num_rows
     }
 
     unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {

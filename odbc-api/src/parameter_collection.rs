@@ -73,7 +73,7 @@ pub unsafe trait ParameterCollection {
     /// Number of values per parameter in the collection. This can be different from the maximum
     /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
     /// executed.
-    fn parameter_set_size(&self) -> u32;
+    fn parameter_set_size(&self) -> usize;
 
     /// # Safety
     ///
@@ -87,7 +87,7 @@ unsafe impl<T> ParameterCollection for T
 where
     T: Parameter,
 {
-    fn parameter_set_size(&self) -> u32 {
+    fn parameter_set_size(&self) -> usize {
         1
     }
 
@@ -100,7 +100,7 @@ unsafe impl<T> ParameterCollection for &[T]
 where
     T: InputParameter,
 {
-    fn parameter_set_size(&self) -> u32 {
+    fn parameter_set_size(&self) -> usize {
         1
     }
 

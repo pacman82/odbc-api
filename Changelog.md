@@ -4,6 +4,8 @@
 
 * Fix: Row set array size is now specified in `usize` rather than `u32`.
 * Fix: Bind type is now specified in `usize` rather than `u32`.
+* Fix: Parameter set size is now specified in `usize` rather than `u32`.
+
 ## 0.24.1
 
 * Fix: Code example blobs
