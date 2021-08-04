@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Fix: Row set array size is now specified in `usize` rather than `u32`.
+
 ## 0.24.1
 
 * Fix: Code example blobs

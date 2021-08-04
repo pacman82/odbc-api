@@ -192,7 +192,7 @@ pub trait Statement {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: u32) -> Result<(), Error>;
+    unsafe fn set_row_array_size(&mut self, size: usize) -> Result<(), Error>;
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
     /// indicator buffers of the statement point to arrays. The cardinality of each array is equal
@@ -525,7 +525,7 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: u32) -> Result<(), Error> {
+    unsafe fn set_row_array_size(&mut self, size: usize) -> Result<(), Error> {
         assert!(size > 0);
         SQLSetStmtAttrW(
             self.handle,

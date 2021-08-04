@@ -81,7 +81,7 @@ struct QueryOpt {
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
     #[structopt(long, default_value = "5000")]
-    batch_size: u32,
+    batch_size: usize,
     /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
     #[structopt(long, short = "m")]
@@ -105,7 +105,7 @@ struct InsertOpt {
     /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
     #[structopt(long, default_value = "5000")]
-    batch_size: u32,
+    batch_size: usize,
     /// Path to the input csv file which is used to fill the database table with values. If
     /// omitted standard input is used.
     #[structopt(long, short = "i")]

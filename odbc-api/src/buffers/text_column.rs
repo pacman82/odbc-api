@@ -447,7 +447,7 @@ where
     ///     Some(&b"Hello, World!"[..]),
     /// ];
     ///
-    /// let mut buffer = ColumnarRowSet::new(input.len() as u32, iter::once(desc));
+    /// let mut buffer = ColumnarRowSet::new(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {

@@ -449,7 +449,7 @@ pub unsafe trait RowSetBuffer {
     fn bind_type(&self) -> u32;
 
     /// The batch size for bulk cursors, if retrieving many rows at once.
-    fn row_array_size(&self) -> u32;
+    fn row_array_size(&self) -> usize;
 
     /// Mutable reference to the number of fetched rows.
     ///
@@ -473,7 +473,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (**self).bind_type()
     }
 
-    fn row_array_size(&self) -> u32 {
+    fn row_array_size(&self) -> usize {
         (**self).row_array_size()
     }
 

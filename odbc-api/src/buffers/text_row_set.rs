@@ -27,7 +27,7 @@ use std::{
 ///
 /// /// Maximum number of rows fetched with one row set. Fetching batches of rows is usually much
 /// /// faster than fetching individual rows.
-/// const BATCH_SIZE: u32 = 100000;
+/// const BATCH_SIZE: usize = 5000;
 ///
 /// fn main() -> Result<(), Error> {
 ///     // Write csv to standard out
@@ -86,7 +86,7 @@ use std::{
 pub struct TextRowSet {
     // Current implementation is straight forward. We could consider allocating one block of memory
     // in allocation instead.
-    batch_size: u32,
+    batch_size: usize,
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
     /// invalidated, even if the `TextRowSet` instance is moved in memory.
@@ -110,7 +110,7 @@ impl TextRowSet {
     ///   sometimes drivers are just not that good at it. This argument allows you to specify an
     ///   upper bound for the length of character data.
     pub fn for_cursor(
-        batch_size: u32,
+        batch_size: usize,
         cursor: &impl Cursor,
         max_str_len: Option<usize>,
     ) -> Result<TextRowSet, Error> {
@@ -140,7 +140,7 @@ impl TextRowSet {
 
     /// Creates a text buffer large enough to hold `batch_size` rows with one column for each item
     /// `max_str_lengths` of respective size.
-    pub fn new(batch_size: u32, max_str_lengths: impl Iterator<Item = usize>) -> Self {
+    pub fn new(batch_size: usize, max_str_lengths: impl Iterator<Item = usize>) -> Self {
         let buffers = max_str_lengths
             .map(|max_str_len| TextColumn::new(batch_size as usize, max_str_len))
             .collect();
@@ -210,7 +210,7 @@ impl TextRowSet {
     /// This method panics if it is tried to insert elements beyond batch size. It will also panic
     /// if row does not contain at least one item for each internal column buffer.
     pub fn append<'a>(&mut self, mut row: impl Iterator<Item = Option<&'a [u8]>>) {
-        if self.batch_size == *self.num_rows as u32 {
+        if self.batch_size == *self.num_rows {
             panic!("Trying to insert elements into TextRowSet beyond batch size.")
         }
 
@@ -236,7 +236,7 @@ unsafe impl RowSetBuffer for TextRowSet {
         0 // Specify column wise binding.
     }
 
-    fn row_array_size(&self) -> u32 {
+    fn row_array_size(&self) -> usize {
         self.batch_size
     }
 

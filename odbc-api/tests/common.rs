@@ -94,13 +94,13 @@ pub fn cursor_to_string(cursor: impl Cursor) -> String {
 /// A generic implementation of RowSetBuffer for a single column
 pub struct SingleColumnRowSetBuffer<C> {
     num_rows_fetched: Box<usize>,
-    batch_size: u32,
+    batch_size: usize,
     /// invariant column.len() == batch_size
     column: C,
 }
 
 impl SingleColumnRowSetBuffer<TextColumn<u16>> {
-    pub fn with_wide_text_column(batch_size: u32, max_str_len: usize) -> Self {
+    pub fn with_wide_text_column(batch_size: usize, max_str_len: usize) -> Self {
         Self {
             num_rows_fetched: Box::new(0),
             batch_size,
@@ -119,7 +119,7 @@ impl SingleColumnRowSetBuffer<TextColumn<u16>> {
 }
 
 impl SingleColumnRowSetBuffer<TextColumn<u8>> {
-    pub fn with_text_column(batch_size: u32, max_str_len: usize) -> Self {
+    pub fn with_text_column(batch_size: usize, max_str_len: usize) -> Self {
         Self {
             num_rows_fetched: Box::new(0),
             batch_size,
@@ -141,7 +141,7 @@ impl<T> SingleColumnRowSetBuffer<Vec<T>>
 where
     T: Clone + Default,
 {
-    pub fn new(batch_size: u32) -> Self {
+    pub fn new(batch_size: usize) -> Self {
         SingleColumnRowSetBuffer {
             num_rows_fetched: Box::new(0),
             batch_size,
@@ -162,7 +162,7 @@ where
         0 // Columnar binding
     }
 
-    fn row_array_size(&self) -> u32 {
+    fn row_array_size(&self) -> usize {
         self.batch_size
     }
 

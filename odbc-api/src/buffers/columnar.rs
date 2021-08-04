@@ -132,7 +132,7 @@ enum AnyColumnBuffer {
 
 impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
-    pub fn new(max_rows: u32, desc: BufferDescription) -> Self {
+    pub fn new(max_rows: usize, desc: BufferDescription) -> Self {
         match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
                 AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
@@ -462,14 +462,14 @@ pub struct ColumnarRowSet {
     /// Use a box, so it is safe for a cursor to take ownership of this buffer.
     num_rows: Box<usize>,
     /// aka: batch size, row array size
-    max_rows: u32,
+    max_rows: usize,
     /// Column index and bound buffer
     columns: Vec<(u16, AnyColumnBuffer)>,
 }
 
 impl ColumnarRowSet {
     /// Allocates for each buffer description a buffer large enough to hold `max_rows`.
-    pub fn new(max_rows: u32, description: impl Iterator<Item = BufferDescription>) -> Self {
+    pub fn new(max_rows: usize, description: impl Iterator<Item = BufferDescription>) -> Self {
         let mut column_index = 0;
         let columns = description
             .map(move |desc| {
@@ -489,7 +489,7 @@ impl ColumnarRowSet {
     /// result set, by not binding them at all. There is no restriction on the order of column
     /// indices passed, but the function will panic, if the indices are not unique.
     pub fn with_column_indices(
-        max_rows: u32,
+        max_rows: usize,
         description: impl Iterator<Item = (u16, BufferDescription)>,
     ) -> Self {
         let columns: Vec<_> = description
@@ -568,7 +568,7 @@ impl ColumnarRowSet {
     ///         },
     ///     ];
     ///     let mut buffer = ColumnarRowSet::new(
-    ///         names.len() as u32,
+    ///         names.len(),
     ///         buffer_description.iter().copied()
     ///     );
     ///
@@ -627,7 +627,7 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
         0 // Specify columnar binding
     }
 
-    fn row_array_size(&self) -> u32 {
+    fn row_array_size(&self) -> usize {
         self.max_rows
     }
 

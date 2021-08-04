@@ -34,7 +34,7 @@
 //!
 //! /// Maximum number of rows fetched with one row set. Fetching batches of rows is usually much
 //! /// faster than fetching individual rows.
-//! const BATCH_SIZE: u32 = 100000;
+//! const BATCH_SIZE: usize = 5000;
 //!
 //! fn main() -> Result<(), Error> {
 //!     // Write csv to standard out
@@ -508,7 +508,7 @@
 //!         },
 //!     ];
 //!     let mut buffer = ColumnarRowSet::new(
-//!         names.len() as u32,
+//!         names.len(),
 //!         buffer_description.iter().copied()
 //!     );
 //!
