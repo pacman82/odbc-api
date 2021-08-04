@@ -375,13 +375,13 @@ impl<'o> Statement for StatementImpl<'o> {
             target.buffer_length(),
             target.mut_indicator_ptr(),
         )
-        .into_result(self)
+        .into_result(self, "SQLBindCol")
     }
 
     unsafe fn fetch(&mut self) -> Result<bool, Error> {
         match SQLFetch(self.handle) {
             SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self).map(|()| true),
+            other => other.into_result(self, "SQLFetch").map(|()| true),
         }
     }
 
@@ -396,18 +396,19 @@ impl<'o> Statement for StatementImpl<'o> {
                 target.mut_indicator_ptr(),
             )
         }
-        .into_result(self)
+        .into_result(self, "SQLGetData ")
     }
 
     fn unbind_cols(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self)
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self, "SQLFreeStmt")
     }
 
     unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> Result<(), Error> {
         let value = num_rows
             .map(|r| r as *mut ULen as Pointer)
             .unwrap_or_else(null_mut);
-        SQLSetStmtAttrW(self.handle, StatementAttribute::RowsFetchedPtr, value, 0).into_result(self)
+        SQLSetStmtAttrW(self.handle, StatementAttribute::RowsFetchedPtr, value, 0)
+            .into_result(self, "SQLSetStmtAttrW")
     }
 
     fn describe_col(
@@ -436,7 +437,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut decimal_digits,
                 &mut nullable,
             )
-            .into_result(self)?;
+            .into_result(self, "SQLDescribeColW")?;
         }
 
         column_description.nullability = Nullability::new(nullable);
@@ -466,12 +467,12 @@ impl<'o> Statement for StatementImpl<'o> {
             // A searched update or delete statement that does not affect any rows at the data
             // source.
             SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self).map(|()| false),
+            other => other.into_result(self, "SQLExecDirectW").map(|()| false),
         }
     }
 
     fn close_cursor(&mut self) -> Result<(), Error> {
-        unsafe { SQLCloseCursor(self.handle) }.into_result(self)
+        unsafe { SQLCloseCursor(self.handle) }.into_result(self, "SQLCloseCursor")
     }
 
     fn prepare(&mut self, statement_text: &U16Str) -> Result<(), Error> {
@@ -482,7 +483,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 statement_text.len().try_into().unwrap(),
             )
         }
-        .into_result(self)
+        .into_result(self, "SQLPrepareW")
     }
 
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
@@ -506,7 +507,7 @@ impl<'o> Statement for StatementImpl<'o> {
             // A searched update or delete statement that does not affect any rows at the data
             // source.
             SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self).map(|()| false),
+            other => other.into_result(self, "SQLExecute").map(|()| false),
         }
     }
 
@@ -515,7 +516,7 @@ impl<'o> Statement for StatementImpl<'o> {
     /// Can also be used to check, whether or not a result set has been created at all.
     fn num_result_cols(&self) -> Result<i16, Error> {
         let mut out: i16 = 0;
-        unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self)?;
+        unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self, "SQLNumResultCols")?;
         Ok(out)
     }
 
@@ -533,7 +534,7 @@ impl<'o> Statement for StatementImpl<'o> {
             size as Pointer,
             0,
         )
-        .into_result(self)
+        .into_result(self, "SQLSetStmtAttrW")
     }
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
@@ -552,7 +553,7 @@ impl<'o> Statement for StatementImpl<'o> {
             size as Pointer,
             0,
         )
-        .into_result(self)
+        .into_result(self, "SQLSetStmtAttrW")
     }
 
     /// Sets the binding type to columnar binding for batch cursors.
@@ -571,7 +572,7 @@ impl<'o> Statement for StatementImpl<'o> {
             row_size as Pointer,
             0,
         )
-        .into_result(self)
+        .into_result(self, "SQLSetStmtAttrW")
     }
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
@@ -605,7 +606,7 @@ impl<'o> Statement for StatementImpl<'o> {
             // We cast const to mut here, but we specify the input_output_type as input.
             parameter.indicator_ptr() as *mut isize,
         )
-        .into_result(self)
+        .into_result(self, "SQLBindParameter")
     }
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
@@ -636,7 +637,7 @@ impl<'o> Statement for StatementImpl<'o> {
             parameter.buffer_length(),
             parameter.mut_indicator_ptr(),
         )
-        .into_result(self)
+        .into_result(self, "SQLBindParameter")
     }
 
     /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
@@ -668,7 +669,7 @@ impl<'o> Statement for StatementImpl<'o> {
             // We cast const to mut here, but we specify the input_output_type as input.
             parameter.indicator_ptr() as *mut isize,
         )
-        .into_result(self)
+        .into_result(self, "SQLBindParameter")
     }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
@@ -774,7 +775,7 @@ impl<'o> Statement for StatementImpl<'o> {
                         &mut decimal_digits,
                         &mut nullable,
                     )
-                    .into_result(self)?;
+                    .into_result(self, "SQLDescribeColW")?;
                 }
                 DataType::Other {
                     data_type: other,
@@ -833,7 +834,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut string_length_in_bytes as *mut i16,
                 null_mut(),
             )
-            .into_result(self)?;
+            .into_result(self, "SQLColAttributeW")?;
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
                 SQLColAttributeW(
@@ -845,7 +846,7 @@ impl<'o> Statement for StatementImpl<'o> {
                     &mut string_length_in_bytes as *mut i16,
                     null_mut(),
                 )
-                .into_result(self)?;
+                .into_result(self, "SQLColAttributeW")?;
             }
             // Resize buffer to exact string length without terminal zero
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
@@ -871,14 +872,16 @@ impl<'o> Statement for StatementImpl<'o> {
             null_mut(),
             &mut out as *mut Len,
         )
-        .into_result(self)?;
+        .into_result(self, "SQLColAttributeW")?;
         Ok(out)
     }
 
     /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
     /// given StatementHandle.
     fn reset_parameters(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::ResetParams).into_result(self) }
+        unsafe {
+            SQLFreeStmt(self.handle, FreeStmtOption::ResetParams).into_result(self, "SQLFreeStmt")
+        }
     }
 
     /// Describes parameter marker associated with a prepared SQL statement.
@@ -902,7 +905,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut nullable,
             )
         }
-        .into_result(self)?;
+        .into_result(self, "SQLDescribeParam")?;
 
         Ok(ParameterDescription {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
@@ -921,7 +924,7 @@ impl<'o> Statement for StatementImpl<'o> {
             // Use cases for `PARAM_DATA_AVAILABLE` and `NO_DATA` not implemented yet.
             match SQLParamData(self.handle, &mut param_id as *mut Pointer) {
                 SqlReturn::NEED_DATA => Ok(Some(param_id)),
-                other => other.into_result(self).map(|()| None),
+                other => other.into_result(self, "SQLParamData").map(|()| None),
             }
         }
     }
@@ -946,7 +949,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 buf_ptr(column_name.as_slice()),
                 column_name.len().try_into().unwrap(),
             )
-            .into_result(self)
+            .into_result(self, "SQLColumnsW")
         }
     }
 
@@ -968,7 +971,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 batch.len().try_into().unwrap(),
             ) {
                 SqlReturn::NEED_DATA => Ok(true),
-                other => other.into_result(self).map(|()| false),
+                other => other.into_result(self, "SQLPutData").map(|()| false),
             }
         }
     }
