@@ -31,7 +31,7 @@ pub enum Error {
         likely you need to update unixODBC if you run on a Linux. Diagnostic record returned by
         SQLSetEnvAttr:\n{0}"
     )]
-    OdbcApiVersionUnsupported(DiagnosticRecord),
+    UnsupportedOdbcApiVersion(DiagnosticRecord),
     /// An error emitted by an `std::io::ReadBuf` implementation used as an input argument.
     #[error("Sending data to the database at statement execution time failed. IO error:\n{0}")]
     FailedReadingInput(io::Error),
