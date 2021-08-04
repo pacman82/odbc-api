@@ -2600,13 +2600,7 @@ fn no_data(profile: &Profile) {
     let table_name = "NoData";
     let conn = profile.connection().unwrap();
 
-    setup_empty_table(
-        &conn,
-        profile.index_type,
-        table_name,
-        &["INTEGER"],
-    )
-    .unwrap();
+    setup_empty_table(&conn, profile.index_type, table_name, &["INTEGER"]).unwrap();
     let sql = format!("DELETE FROM {} WHERE id=5", table_name);
     // Assert no panic on direct execution
     conn.execute(&sql, ()).unwrap();

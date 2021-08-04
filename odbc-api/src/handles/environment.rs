@@ -150,11 +150,11 @@ impl Environment {
             // Translate invalid attribute into a more meaningful error, provided the additional
             // context that we know we tried to set version number.
             result.map_err(|error| {
-                if let Error::Diagnostics(record) = error {
+                if let Error::Diagnostics { record } = error {
                     if record.state == State::INVALID_STATE_TRANSACTION {
                         Error::OdbcApiVersionUnsupported(record)
                     } else {
-                        Error::Diagnostics(record)
+                        Error::Diagnostics { record }
                     }
                 } else {
                     error

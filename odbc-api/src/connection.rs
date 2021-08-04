@@ -12,7 +12,9 @@ impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
         match self.connection.disconnect() {
             Ok(()) => (),
-            Err(Error::Diagnostics(record)) if record.state == State::INVALID_STATE_TRANSACTION => {
+            Err(Error::Diagnostics { record })
+                if record.state == State::INVALID_STATE_TRANSACTION =>
+            {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
                 if let Err(e) = self.connection.rollback() {
                     // Avoid panicking, if we already have a panic. We don't want to mask the original
