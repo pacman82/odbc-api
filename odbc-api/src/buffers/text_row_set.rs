@@ -232,7 +232,7 @@ impl TextRowSet {
 }
 
 unsafe impl RowSetBuffer for TextRowSet {
-    fn bind_type(&self) -> u32 {
+    fn bind_type(&self) -> usize {
         0 // Specify column wise binding.
     }
 

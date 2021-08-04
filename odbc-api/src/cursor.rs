@@ -446,7 +446,7 @@ where
 pub unsafe trait RowSetBuffer {
     /// Declares the bind type of the Row set buffer. `0` Means a columnar binding is used. Any non
     /// zero number is interpreted as the size of a single row in a row wise binding style.
-    fn bind_type(&self) -> u32;
+    fn bind_type(&self) -> usize;
 
     /// The batch size for bulk cursors, if retrieving many rows at once.
     fn row_array_size(&self) -> usize;
@@ -469,7 +469,7 @@ pub unsafe trait RowSetBuffer {
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
-    fn bind_type(&self) -> u32 {
+    fn bind_type(&self) -> usize {
         (**self).bind_type()
     }
 

@@ -158,7 +158,7 @@ unsafe impl<C> RowSetBuffer for SingleColumnRowSetBuffer<C>
 where
     C: CDataMut,
 {
-    fn bind_type(&self) -> u32 {
+    fn bind_type(&self) -> usize {
         0 // Columnar binding
     }
 

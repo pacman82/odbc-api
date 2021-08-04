@@ -213,7 +213,7 @@ pub trait Statement {
     ///
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error>;
+    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> Result<(), Error>;
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
@@ -564,7 +564,7 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: u32) -> Result<(), Error> {
+    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> Result<(), Error> {
         SQLSetStmtAttrW(
             self.handle,
             StatementAttribute::RowBindType,

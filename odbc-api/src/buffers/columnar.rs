@@ -623,7 +623,7 @@ impl ColumnarRowSet {
 }
 
 unsafe impl RowSetBuffer for ColumnarRowSet {
-    fn bind_type(&self) -> u32 {
+    fn bind_type(&self) -> usize {
         0 // Specify columnar binding
     }
 
