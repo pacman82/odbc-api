@@ -1905,7 +1905,7 @@ fn large_strings(profile: &Profile) {
 
     loop {
         row.get_data(1, &mut buf).unwrap();
-        actual += &std::str::from_utf8(buf.as_bytes().unwrap()).unwrap();
+        actual += std::str::from_utf8(buf.as_bytes().unwrap()).unwrap();
         if buf.is_complete() {
             break;
         }

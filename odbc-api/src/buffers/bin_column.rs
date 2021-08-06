@@ -88,7 +88,7 @@ impl BinColumn {
         BinColumnIt {
             pos: 0,
             num_rows,
-            col: &self,
+            col: self,
         }
     }
 

@@ -72,12 +72,12 @@ where
         let slice = self.buffer.borrow();
         match self.indicator() {
             Indicator::Null => None,
-            Indicator::NoTotal => Some(&slice),
+            Indicator::NoTotal => Some(slice),
             Indicator::Length(len) => {
                 if self.is_complete() {
                     Some(&slice[..len])
                 } else {
-                    Some(&slice)
+                    Some(slice)
                 }
             }
         }
