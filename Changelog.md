@@ -1,7 +1,9 @@
 # Changelog
 
-## Next
+## 0.25.0
 
+* `Error::Diagnostics` is now a struct variant and also contains the name of the ODBC function call which caused the error.
+* Renamed `Error::OdbcApiVersionUnsupported` to `UnsupportedOdbcApiVersion` to achieve consistent word order.
 * Fix: Row set array size is now specified in `usize` rather than `u32`.
 * Fix: Bind type is now specified in `usize` rather than `u32`.
 * Fix: Parameter set size is now specified in `usize` rather than `u32`.
