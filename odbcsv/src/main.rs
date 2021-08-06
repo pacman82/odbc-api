@@ -245,7 +245,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     };
     let mut writer = csv::Writer::from_writer(out);
 
-    let connection = open_connection(&environment, connect_opts)?;
+    let connection = open_connection(environment, connect_opts)?;
 
     // Convert the input strings into parameters suitable to for use with ODBC.
     let params: Vec<_> = parameters
@@ -254,7 +254,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         .collect();
 
     // Execute the query as a one off, and pass the parameters.
-    match connection.execute(&query, params.as_slice())? {
+    match connection.execute(query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
             let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
@@ -304,7 +304,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         Box::new(hold_stdin.lock())
     };
     let mut reader = csv::Reader::from_reader(input);
-    let connection = open_connection(&environment, connect_opts)?;
+    let connection = open_connection(environment, connect_opts)?;
 
     // Generate statement text from table name and headline
     let headline = reader.byte_headers()?;

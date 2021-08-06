@@ -211,7 +211,7 @@ impl<C> TextColumn<C> {
         TextColumnIt {
             pos: 0,
             num_rows,
-            col: &self,
+            col: self,
         }
     }
 
