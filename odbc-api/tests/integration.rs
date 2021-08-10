@@ -2608,6 +2608,28 @@ fn no_data(profile: &Profile) {
     conn.prepare(&sql).unwrap().execute(()).unwrap();
 }
 
+/// Some drivers seem to have trouble binding buffers beyond `u16::MAX`. This has been seen failing
+/// in the wild with SAP anywhere, but that ODBC driver is not part of this test suite.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn row_array_size_66536(profile: &Profile) {
+    let table_name = "RowArraySize66536";
+    let conn = profile.connection().unwrap();
+
+    setup_empty_table(&conn, profile.index_type, table_name, &["BIT"]).unwrap();
+    let sql = format!("SELECT a FROM {}", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let row_set_buffer = ColumnarRowSet::new(
+        u16::MAX as usize + 1,
+        iter::once(BufferDescription {
+            kind: BufferKind::Bit,
+            nullable: false,
+        }),
+    );
+    assert!(cursor.bind_buffer(row_set_buffer).is_ok())
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

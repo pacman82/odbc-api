@@ -6,7 +6,7 @@ use super::{
     data_type::DataType,
     drop_handle,
     error::{Error, IntoResult},
-    CData,
+    CData, State,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -535,6 +535,15 @@ impl<'o> Statement for StatementImpl<'o> {
             0,
         )
         .into_result(self, "SQLSetStmtAttrW")
+        // SAP anywhere has been seen to return with an "invalid attribute" error instead of a
+        // success with "option value changed" info. Let us map invalid attributes during setting
+        // row set array size to something more precise.
+        .map_err(|error| match error {
+            Error::Diagnostics { record, .. } if record.state == State::INVALID_ATTRIBUTE_VALUE => {
+                Error::InvalidRowArraySize { record, size }
+            }
+            error => error,
+        })
     }
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and

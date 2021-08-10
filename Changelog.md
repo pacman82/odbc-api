@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Add `Error::InvalidRowArraySize` which is returned instead of `Error::Diagnostics` if invalid attribute is returned during setting row set array size.
+
 ## 0.25.0
 
 * `Error::Diagnostics` is now a struct variant and also contains the name of the ODBC function call which caused the error.

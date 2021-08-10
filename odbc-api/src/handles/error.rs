@@ -27,14 +27,25 @@ pub enum Error {
     AbortedConnectionStringCompletion,
     /// An error returned if we fail to set the ODBC version
     #[error(
-        "ODBC diver manager does not seem to support the required ODBC version 3.80. (Most
-        likely you need to update unixODBC if you run on a Linux. Diagnostic record returned by
+        "ODBC diver manager does not seem to support the required ODBC version 3.80. (Most \
+        likely you need to update unixODBC if you run on a Linux. Diagnostic record returned by \
         SQLSetEnvAttr:\n{0}"
     )]
     UnsupportedOdbcApiVersion(DiagnosticRecord),
     /// An error emitted by an `std::io::ReadBuf` implementation used as an input argument.
     #[error("Sending data to the database at statement execution time failed. IO error:\n{0}")]
     FailedReadingInput(io::Error),
+    /// Driver returned "invalid attribute" then setting the row array size. Most likely the array
+    /// size is to large. Instead of returing "option value changed (SQLSTATE 01S02)" like suggested
+    /// in <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function> the
+    /// driver returned an error instead.
+    #[error(
+        "An invalid row array size (aka. batch size) has been set. The ODBC drivers should just \
+        emit a warning and emmit smaller batches, but not all do (yours does not at least). Try \
+        fetching data from the database in smaller batches.\nRow array size (aka. batch size): \
+        {size}\n Diagnostic record returned by SQLSetEnvAttr:\n{record}"
+    )]
+    InvalidRowArraySize{record: DiagnosticRecord, size: usize },
 }
 
 pub trait IntoResult {
