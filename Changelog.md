@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.26.0
 
 * Add `Error::InvalidRowArraySize` which is returned instead of `Error::Diagnostics` if invalid attribute is returned during setting row set array size.
 
