@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.26.1
+
+* `handles::Nullablility` now implements `Copy`.
+* `Nullable<T>` now implements `Copy` if `T` does.
+
 ## 0.26.0
 
 * Add `Error::InvalidRowArraySize` which is returned instead of `Error::Diagnostics` if invalid attribute is returned during setting row set array size.

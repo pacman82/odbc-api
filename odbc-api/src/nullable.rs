@@ -10,6 +10,7 @@ use crate::{
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null
 /// representation, those memory layout is compatible with ODBC.
+#[derive(Clone, Copy)]
 pub struct Nullable<T> {
     indicator: isize,
     value: T,

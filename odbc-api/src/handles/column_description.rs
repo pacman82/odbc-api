@@ -2,7 +2,7 @@ use super::data_type::DataType;
 use std::char::{decode_utf16, DecodeUtf16Error};
 
 /// Indication of whether a column is nullable or not.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Debug, Eq, PartialEq)]
 pub enum Nullability {
     /// Indicates that we do not know whether the column is Nullable or not.
     Unknown,

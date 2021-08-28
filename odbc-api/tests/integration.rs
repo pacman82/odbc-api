@@ -1784,7 +1784,7 @@ fn get_data_int(profile: &Profile) {
     let conn = profile.connection().unwrap();
     setup_empty_table(&conn, profile.index_type, "GetDataInt", &["INTEGER"]).unwrap();
 
-    conn.execute("INSERT INTO GetDataInt (a) VALUES (42)", ())
+    conn.execute("INSERT INTO GetDataInt (a) VALUES (42),(NULL)", ())
         .unwrap();
 
     let mut cursor = conn
@@ -1792,11 +1792,17 @@ fn get_data_int(profile: &Profile) {
         .unwrap()
         .unwrap();
 
-    let mut row = cursor.next_row().unwrap().unwrap();
     let mut actual = Nullable::<i32>::null();
 
+    // First value is 42
+    let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(Some(42), actual.into_opt());
+
+    // Second row contains a NULL
+    row = cursor.next_row().unwrap().unwrap();
+    row.get_data(1, &mut actual).unwrap();
+    assert_eq!(None, actual.into_opt());
 
     // Cursor has reached its end
     assert!(cursor.next_row().unwrap().is_none())
