@@ -11,7 +11,7 @@ use common::{
 use odbc_api::{
     buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
-        TextRowSet,
+        TextRowSet, Item
     },
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
@@ -1422,14 +1422,10 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
         _ => panic!("Unexpected column type"),
     }
     // Fill second column with integers
-    let mut view_mut = params.column_mut(1);
-    match &mut view_mut {
-        AnyColumnViewMut::NullableI32(col) => {
-            let input = [1, 2, 3];
-            col.write(input.iter().map(|&i| Some(i)))
-        }
-        _ => panic!("Unexpected column type"),
-    }
+    let input = [1, 2, 3];
+    let view_mut = params.column_mut(1);
+    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    col.write(input.iter().map(|&i| Some(i)));
 
     prepared.execute(&params).unwrap();
 
@@ -1624,11 +1620,11 @@ fn read_into_columnar_buffer(profile: &Profile) {
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     // Assert existence of first batch
     let batch = cursor.fetch().unwrap().unwrap();
-    match dbg!(batch.column(0)) {
-        AnyColumnView::NullableI32(mut col) => assert_eq!(Some(&42), col.next().unwrap()),
-        _ => panic!("Unexpected buffer type"),
-    }
-    match dbg!(batch.column(1)) {
+    
+    let mut col = i32::as_nullable_slice(batch.column(0)).unwrap();
+    assert_eq!(Some(&42), col.next().unwrap());
+    
+    match batch.column(1) {
         AnyColumnView::Text(mut col) => {
             assert_eq!(Some(&b"Hello, World!"[..]), col.next().unwrap())
         }
@@ -2518,10 +2514,7 @@ fn columns_query() {
     };
 
     const COLUMN_SIZE_INDEX: usize = 6;
-    let column_sizes = match batch.column(COLUMN_SIZE_INDEX) {
-        AnyColumnView::NullableI32(col) => col,
-        _ => panic!("expected nullable i32"),
-    };
+    let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
 
     let has_title_col_with_expected_size = column_names.zip(column_sizes).any(|(name, size)| {
         str::from_utf8(name.unwrap()).unwrap() == "title" && *size.unwrap() == 255
@@ -2577,10 +2570,7 @@ fn fill_vec_of_rows(profile: &Profile) {
         };
 
         // Extract second column known to contain non nullable i32
-        let col_b = match batch.column(1) {
-            AnyColumnView::I32(col) => col,
-            _ => panic!("Secord column is supposed to be an i32"),
-        };
+        let col_b = i32::as_slice(batch.column(1)).unwrap();
 
         for &b in col_b {
             let a = col_a

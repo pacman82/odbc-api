@@ -7,7 +7,9 @@
   * `Connection::max_catalog_name_len`
   * `Connection::max_schema_name_len`
   * `Connection::max_column_name_len`
-* `OptIt` is now renamed to `NullableSlice`.
+* Renamed `OptIt` to `NullableSlice`.
+* Renamed `OptWriter` to `NullableSliceMut`.
+* Added `buffer::Item` trait to make it more convinient to extract a slice or a `NullableSlice` from `AnyColumnView`.
 
 ## 0.26.1
 

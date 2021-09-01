@@ -63,8 +63,8 @@ where
     }
 
     /// Create a writer which writes to the first `n` elements of the buffer.
-    pub fn writer_n(&mut self, n: usize) -> OptWriter<'_, T> {
-        OptWriter {
+    pub fn writer_n(&mut self, n: usize) -> NullableSliceMut<'_, T> {
+        NullableSliceMut {
             indicators: &mut self.indicators[0..n],
             values: &mut self.values[0..n],
         }
@@ -166,16 +166,15 @@ where
     }
 }
 
-/// Used to fill a column buffer with an iterator. Returned by
-/// [`crate::buffers::ColumnarRowSet::column_mut`] as part of an
-/// [`crate::buffers::AnyColumnViewMut`].
+/// Used to fill a column buffer with an iterator. Returned by [`super::ColumnarRowSet::column_mut`]
+/// as part of an [`crate::buffers::AnyColumnViewMut`].
 #[derive(Debug)]
-pub struct OptWriter<'a, T> {
+pub struct NullableSliceMut<'a, T> {
     indicators: &'a mut [isize],
     values: &'a mut [T],
 }
 
-impl<'a, T> OptWriter<'a, T> {
+impl<'a, T> NullableSliceMut<'a, T> {
     /// Writes the elements returned by the iterator into the buffer, starting at the beginning.
     /// Writes elements until the iterator returns `None` or the buffer can not hold more elements.
     pub fn write(&mut self, it: impl Iterator<Item = Option<T>>) {
