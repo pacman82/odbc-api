@@ -377,7 +377,7 @@
 //! ```no_run
 //! use odbc_api::{
 //!     Environment, Cursor,
-//!     buffers::{AnyColumnView, ColumnarRowSet, BufferDescription, BufferKind},
+//!     buffers::{AnyColumnView, ColumnarRowSet, BufferDescription, BufferKind, Item},
 //! };
 //!
 //! let env = unsafe {
@@ -407,11 +407,11 @@
 //!     // Loop over row sets
 //!     while let Some(row_set) = row_set_cursor.fetch()? {
 //!         // Process years in row set
-//!         match row_set.column(0) {
-//!             AnyColumnView::NullableI16(it) => {
-//!                 // Iterate over `Option<i16>` with it ..
-//!             }
-//!             _ => panic!("Year column buffer expected to be nullable Int")
+//!         let year_col = row_set.column(0);
+//!         for year in i16::as_nullable_slice(year_col)
+//!             .expect("Year column buffer expected to be nullable Int")
+//!         {
+//!             // Iterate over `Option<i16>` with it ..
 //!         }
 //!         // Process names in row set
 //!         match row_set.column(1) {
@@ -488,7 +488,7 @@
 //! ```no_run
 //! use odbc_api::{
 //!     Connection, Error, IntoParameter,
-//!     buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut}
+//!     buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut, Item}
 //! };
 //!
 //! fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
@@ -520,12 +520,9 @@
 //!         _ => panic!("We know the name column to hold text.")
 //!     }
 //!
-//!     match buffer.column_mut(1) {
-//!         AnyColumnViewMut::I16(mut col) => {
-//!             col.copy_from_slice(years)
-//!         }
-//!         _ => panic!("We know the year column to hold i16.")
-//!     }
+//!     let col = i16::as_slice_mut(buffer.column_mut(1))
+//!         .expect("We know the year column to hold i16.");
+//!     col.copy_from_slice(years);
 //!
 //!     conn.execute(
 //!         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
