@@ -3,6 +3,7 @@
 ## 0.27.0
 
 * `Connection::columns` and `Preallocated::columns` now return a `Result<CursorImpl, Error>` instead of a `Result<Option<CursorImpl>, Error>` since `columns` always returns a Cursor.
+* `OptIt` is now renamed to `NullableSlice`.
 
 ## 0.26.1
 

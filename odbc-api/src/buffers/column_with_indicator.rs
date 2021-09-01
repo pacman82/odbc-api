@@ -48,8 +48,8 @@ where
     /// callers responsibility to ensure, a value has been written to the indexed position by
     /// `Cursor::fetch` using the value bound to the cursor with
     /// `Cursor::set_num_result_rows_fetched`.
-    pub unsafe fn iter(&self, num_rows: usize) -> OptIt<'_, T> {
-        OptIt {
+    pub unsafe fn iter(&self, num_rows: usize) -> NullableSlice<'_, T> {
+        NullableSlice {
             indicators: &self.indicators[0..num_rows],
             values: &self.values[0..num_rows],
         }
@@ -74,12 +74,12 @@ where
 /// Iterates over the elements of a column buffer. Returned by
 /// [`crate::buffers::ColumnarRowSet::column`] as part of an [`crate::buffers::AnyColumnView`].
 #[derive(Debug)]
-pub struct OptIt<'a, T> {
+pub struct NullableSlice<'a, T> {
     indicators: &'a [isize],
     values: &'a [T],
 }
 
-impl<'a, T> Iterator for OptIt<'a, T> {
+impl<'a, T> Iterator for NullableSlice<'a, T> {
     type Item = Option<&'a T>;
 
     fn next(&mut self) -> Option<Self::Item> {

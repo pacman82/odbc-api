@@ -9,7 +9,7 @@ mod text_row_set;
 
 pub use self::{
     bin_column::{BinColumnIt, BinColumnWriter},
-    column_with_indicator::{OptIt, OptWriter},
+    column_with_indicator::{NullableSlice, OptWriter},
     columnar::{AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,

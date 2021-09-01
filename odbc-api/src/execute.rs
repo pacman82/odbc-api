@@ -8,8 +8,8 @@ use crate::{
     CursorImpl, Error, ParameterCollection,
 };
 
-/// Shared implementation for executing a query with parameters between [`Connection`],
-/// [`Preallocated`] and [`Prepared`].
+/// Shared implementation for executing a query with parameters between [`crate::Connection`],
+/// [`crate::Preallocated`] and [`crate::Prepared`].
 ///
 /// # Parameters
 ///
@@ -73,7 +73,8 @@ where
     }
 }
 
-/// Shared implementation for executing a columns query between [`Connection`] and [`Preallocated`].
+/// Shared implementation for executing a columns query between [`crate::Connection`] and
+/// [`crate::Preallocated`].
 pub fn columns<'o, S>(
     mut statement: S,
     catalog_name: &U16Str,
@@ -90,6 +91,6 @@ where
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
-    
+
     Ok(CursorImpl::new(statement))
 }

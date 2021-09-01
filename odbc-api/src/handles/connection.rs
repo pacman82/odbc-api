@@ -1,6 +1,4 @@
-use crate::{
-    buffers::{BufferDescription, BufferKind},
-};
+use crate::buffers::{BufferDescription, BufferKind};
 
 use super::{
     as_handle::AsHandle,

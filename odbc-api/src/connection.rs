@@ -1,4 +1,10 @@
-use crate::{CursorImpl, Error, Preallocated, Prepared, buffers::BufferDescription, execute::{columns, execute_with_parameters}, handles::{self, State, Statement, StatementImpl}, parameter_collection::ParameterCollection};
+use crate::{
+    buffers::BufferDescription,
+    execute::{columns, execute_with_parameters},
+    handles::{self, State, Statement, StatementImpl},
+    parameter_collection::ParameterCollection,
+    CursorImpl, Error, Preallocated, Prepared,
+};
 use std::{borrow::Cow, str, thread::panicking};
 use widestring::{U16Str, U16String};
 

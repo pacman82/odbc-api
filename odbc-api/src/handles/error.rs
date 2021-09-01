@@ -45,7 +45,10 @@ pub enum Error {
         fetching data from the database in smaller batches.\nRow array size (aka. batch size): \
         {size}\n Diagnostic record returned by SQLSetEnvAttr:\n{record}"
     )]
-    InvalidRowArraySize{record: DiagnosticRecord, size: usize },
+    InvalidRowArraySize {
+        record: DiagnosticRecord,
+        size: usize,
+    },
 }
 
 pub trait IntoResult {
