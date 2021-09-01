@@ -3,6 +3,10 @@
 ## 0.27.0
 
 * `Connection::columns` and `Preallocated::columns` now return a `Result<CursorImpl, Error>` instead of a `Result<Option<CursorImpl>, Error>` since `columns` always returns a Cursor.
+* These functions now return a `Result<u16, Error>` instead of a `Result<usize, Error>`:
+  * `Connection::max_catalog_name_len`
+  * `Connection::max_schema_name_len`
+  * `Connection::max_column_name_len`
 * `OptIt` is now renamed to `NullableSlice`.
 
 ## 0.26.1

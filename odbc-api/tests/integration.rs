@@ -2457,10 +2457,10 @@ fn database_management_system_name(profile: &Profile, expected_name: &'static st
 #[test_case(SQLITE_3, 255, 255, 255, 255; "SQLite 3")]
 fn name_limits(
     profile: &Profile,
-    expected_max_catalog_name_len: usize,
-    expected_max_schema_name_len: usize,
-    expected_max_table_name_len: usize,
-    expected_max_column_name_len: usize,
+    expected_max_catalog_name_len: u16,
+    expected_max_schema_name_len: u16,
+    expected_max_table_name_len: u16,
+    expected_max_column_name_len: u16,
 ) {
     let conn = profile.connection().unwrap();
 

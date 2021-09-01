@@ -1,10 +1,4 @@
-use crate::{
-    buffers::BufferDescription,
-    execute::{columns, execute_with_parameters},
-    handles::{self, State, Statement, StatementImpl},
-    parameter_collection::ParameterCollection,
-    CursorImpl, Error, Preallocated, Prepared,
-};
+use crate::{CursorImpl, Error, Preallocated, Prepared, buffers::{BufferDescription, BufferKind}, execute::{columns, execute_with_parameters}, handles::{self, State, Statement, StatementImpl}, parameter_collection::ParameterCollection};
 use std::{borrow::Cow, str, thread::panicking};
 use widestring::{U16Str, U16String};
 
@@ -270,24 +264,24 @@ impl<'c> Connection<'c> {
         Ok(name.to_string().unwrap())
     }
 
-    /// Maximum length of catalog names in bytes.
-    pub fn max_catalog_name_len(&self) -> Result<usize, Error> {
-        self.connection.max_catalog_name_len().map(|v| v as usize)
+    /// Maximum length of catalog names.
+    pub fn max_catalog_name_len(&self) -> Result<u16, Error> {
+        self.connection.max_catalog_name_len()
     }
 
-    /// Maximum length of schema names in bytes.
-    pub fn max_schema_name_len(&self) -> Result<usize, Error> {
-        self.connection.max_schema_name_len().map(|v| v as usize)
+    /// Maximum length of schema names.
+    pub fn max_schema_name_len(&self) -> Result<u16, Error> {
+        self.connection.max_schema_name_len()
     }
 
-    /// Maximum length of table names in bytes.
-    pub fn max_table_name_len(&self) -> Result<usize, Error> {
-        self.connection.max_table_name_len().map(|v| v as usize)
+    /// Maximum length of table names.
+    pub fn max_table_name_len(&self) -> Result<u16, Error> {
+        self.connection.max_table_name_len()
     }
 
-    /// Maximum length of column names in bytes.
-    pub fn max_column_name_len(&self) -> Result<usize, Error> {
-        self.connection.max_column_name_len().map(|v| v as usize)
+    /// Maximum length of column names.
+    pub fn max_column_name_len(&self) -> Result<u16, Error> {
+        self.connection.max_column_name_len()
     }
 
     /// Fetch the name of the current catalog being used by the connection and store it into the
@@ -324,9 +318,6 @@ impl<'c> Connection<'c> {
 
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the
     /// columns query (e.g. [`Connection::columns`]).
-
-    /// The buffer descriptions for all standard buffers (not including extensions) returned in the
-    /// columns query (e.g. [`Connection::columns`]).
     ///
     /// # Arguments
     ///
@@ -339,11 +330,118 @@ impl<'c> Connection<'c> {
         remarks_max_len: usize,
         column_default_max_len: usize,
     ) -> Result<Vec<BufferDescription>, Error> {
-        self.connection.columns_buffer_description(
-            type_name_max_len,
-            remarks_max_len,
-            column_default_max_len,
-        )
+        let null_i16 = BufferDescription {
+            kind: BufferKind::I16,
+            nullable: true,
+        };
+
+        let not_null_i16 = BufferDescription {
+            kind: BufferKind::I16,
+            nullable: false,
+        };
+
+        let null_i32 = BufferDescription {
+            kind: BufferKind::I32,
+            nullable: true,
+        };
+
+        // The definitions for these descriptions are taken from the documentation of `SQLColumns`
+        // located at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
+        let catalog_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_catalog_name_len()? as usize,
+            },
+            nullable: true,
+        };
+
+        let schema_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_schema_name_len()? as usize,
+            },
+            nullable: true,
+        };
+
+        let table_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_table_name_len()? as usize,
+            },
+            nullable: false,
+        };
+
+        let column_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: self.max_column_name_len()? as usize,
+            },
+            nullable: false,
+        };
+
+        let data_type_desc = not_null_i16;
+
+        let type_name_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: type_name_max_len,
+            },
+            nullable: false,
+        };
+
+        let column_size_desc = null_i32;
+        let buffer_len_desc = null_i32;
+        let decimal_digits_desc = null_i16;
+        let precision_radix_desc = null_i16;
+        let nullable_desc = not_null_i16;
+
+        let remarks_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: remarks_max_len,
+            },
+            nullable: true,
+        };
+
+        let column_default_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: column_default_max_len,
+            },
+            nullable: true,
+        };
+
+        let sql_data_type_desc = not_null_i16;
+        let sql_datetime_sub_desc = null_i16;
+        let char_octet_len_desc = null_i32;
+        let ordinal_pos_desc = BufferDescription {
+            kind: BufferKind::I32,
+            nullable: false,
+        };
+
+        // We expect strings to be `YES`, `NO`, or a zero-length string, so `3` should be
+        // sufficient.
+        const IS_NULLABLE_LEN_MAX_LEN: usize = 3;
+        let is_nullable_desc = BufferDescription {
+            kind: BufferKind::Text {
+                max_str_len: IS_NULLABLE_LEN_MAX_LEN,
+            },
+            nullable: true,
+        };
+
+        Ok(vec![
+            catalog_name_desc,
+            schema_name_desc,
+            table_name_desc,
+            column_name_desc,
+            data_type_desc,
+            type_name_desc,
+            column_size_desc,
+            buffer_len_desc,
+            decimal_digits_desc,
+            precision_radix_desc,
+            nullable_desc,
+            remarks_desc,
+            column_default_desc,
+            sql_data_type_desc,
+            sql_datetime_sub_desc,
+            char_octet_len_desc,
+            ordinal_pos_desc,
+            is_nullable_desc,
+        ])
     }
 }
 
