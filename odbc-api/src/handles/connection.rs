@@ -1,10 +1,8 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
-    execute::columns,
 };
 
 use super::{
-    super::CursorImpl,
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
@@ -334,25 +332,6 @@ impl<'c> Connection<'c> {
         )
         .into_result(self, "SQLGetConnectAttrW")?;
         Ok(out)
-    }
-
-    /// Query all columns that match the provided catalog name, schema pattern, table pattern, and
-    /// column pattern.
-    pub fn columns(
-        &self,
-        statement: StatementImpl<'c>,
-        catalog_name: &U16Str,
-        schema_name: &U16Str,
-        table_name: &U16Str,
-        column_name: &U16Str,
-    ) -> Result<Option<CursorImpl<'c, StatementImpl<'c>>>, Error> {
-        columns(
-            statement,
-            catalog_name,
-            schema_name,
-            table_name,
-            column_name,
-        )
     }
 
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the

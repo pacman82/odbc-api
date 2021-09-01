@@ -1,10 +1,4 @@
-use crate::{
-    buffers::BufferDescription,
-    execute::execute_with_parameters,
-    handles::{self, State, Statement, StatementImpl},
-    parameter_collection::ParameterCollection,
-    CursorImpl, Error, Preallocated, Prepared,
-};
+use crate::{CursorImpl, Error, Preallocated, Prepared, buffers::BufferDescription, execute::{columns, execute_with_parameters}, handles::{self, State, Statement, StatementImpl}, parameter_collection::ParameterCollection};
 use std::{borrow::Cow, str, thread::panicking};
 use widestring::{U16Str, U16String};
 
@@ -312,8 +306,8 @@ impl<'c> Connection<'c> {
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
-        self.connection.columns(
+    ) -> Result<CursorImpl<'_, StatementImpl<'_>>, Error> {
+        columns(
             self.connection.allocate_statement()?,
             &U16String::from_str(catalog_name),
             &U16String::from_str(schema_name),

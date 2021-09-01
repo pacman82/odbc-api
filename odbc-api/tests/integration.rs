@@ -2506,8 +2506,8 @@ fn columns_query() {
     );
     let columns = conn
         .columns(&conn.current_catalog().unwrap(), "dbo", "Movies", "")
-        .unwrap()
         .unwrap();
+
     let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
 

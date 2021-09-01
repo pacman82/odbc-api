@@ -119,7 +119,7 @@ impl<'o> Preallocated<'o> {
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
+    ) -> Result<CursorImpl<'o, &mut StatementImpl<'o>>, Error> {
         columns(
             &mut self.statement,
             &U16String::from_str(catalog_name),
