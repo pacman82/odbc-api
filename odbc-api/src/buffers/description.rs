@@ -186,7 +186,7 @@ impl BufferKind {
             DataType::Integer => BufferKind::I32,
             DataType::SmallInt => BufferKind::I16,
             DataType::Float { precision: 0..=24 } | DataType::Real => BufferKind::F32,
-            DataType::Float { precision: 0..=53 } |DataType::Double => BufferKind::F64,
+            DataType::Float { precision: 25..=53 } |DataType::Double => BufferKind::F64,
             DataType::Date => BufferKind::Date,
             DataType::Time { precision: 0 } => BufferKind::Time,
             DataType::Timestamp { precision: _ } => BufferKind::Timestamp,
