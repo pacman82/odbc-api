@@ -143,8 +143,12 @@ impl BufferKind {
     ///     Some(BufferKind::I8)
     /// );
     /// assert_eq!(
-    ///     BufferKind::from_data_type(DataType::Float),
+    ///     BufferKind::from_data_type(DataType::Float { precision : 24 }),
     ///     Some(BufferKind::F32)
+    /// );
+    /// assert_eq!(
+    ///     BufferKind::from_data_type(DataType::Float { precision : 53 }),
+    ///     Some(BufferKind::F64)
     /// );
     /// assert_eq!(
     ///     BufferKind::from_data_type(DataType::Double),
@@ -173,8 +177,6 @@ impl BufferKind {
     /// ```
     pub fn from_data_type(data_type: DataType) -> Option<Self> {
         let buffer_kind = match data_type {
-            DataType::Unknown
-            | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => return None,
             DataType::Numeric { precision, scale }
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 3 => BufferKind::I8,
             DataType::Numeric { precision, scale }
@@ -183,8 +185,8 @@ impl BufferKind {
             | DataType::Decimal { precision, scale } if scale == 0 && precision < 19 => BufferKind::I64,
             DataType::Integer => BufferKind::I32,
             DataType::SmallInt => BufferKind::I16,
-            DataType::Float | DataType::Real => BufferKind::F32,
-            DataType::Double => BufferKind::F64,
+            DataType::Float { precision: 0..=24 } | DataType::Real => BufferKind::F32,
+            DataType::Float { precision: 0..=53 } |DataType::Double => BufferKind::F64,
             DataType::Date => BufferKind::Date,
             DataType::Time { precision: 0 } => BufferKind::Time,
             DataType::Timestamp { precision: _ } => BufferKind::Timestamp,
@@ -204,6 +206,9 @@ impl BufferKind {
             | DataType::Numeric { precision: _, scale: _ }
             | DataType::Decimal { precision: _, scale: _ }
             | DataType::Time { precision: _ } => BufferKind::Text { max_str_len: data_type.display_size().unwrap() },
+            DataType::Unknown
+            | DataType::Float { precision: _ }
+            | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => return None,
         };
         Some(buffer_kind)
     }

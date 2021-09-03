@@ -435,7 +435,7 @@ unsafe impl HasDataType for AnyColumnBuffer {
                 }
             }
             AnyColumnBuffer::F64(_) | AnyColumnBuffer::NullableF64(_) => DataType::Double,
-            AnyColumnBuffer::F32(_) | AnyColumnBuffer::NullableF32(_) => DataType::Float,
+            AnyColumnBuffer::F32(_) | AnyColumnBuffer::NullableF32(_) => DataType::Real,
             AnyColumnBuffer::I8(_) | AnyColumnBuffer::NullableI8(_) => DataType::TinyInt,
             AnyColumnBuffer::I16(_) | AnyColumnBuffer::NullableI16(_) => DataType::SmallInt,
             AnyColumnBuffer::I32(_) | AnyColumnBuffer::NullableI32(_) => DataType::Integer,

@@ -131,13 +131,14 @@ fn describe_columns() {
             "TIME",
             "text",
             "Image",
+            "DOUBLE PRECISION",
         ],
     )
     .unwrap();
-    let sql = "SELECT a,b,c,d,e,f,g,h,i,j FROM DescribeColumns ORDER BY Id;";
+    let sql = "SELECT a,b,c,d,e,f,g,h,i,j,k FROM DescribeColumns ORDER BY Id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 10);
+    assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
@@ -212,6 +213,12 @@ fn describe_columns() {
     cursor.describe_col(10, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(10).unwrap());
+
+    let kind = DataType::Float { precision: 53 };
+    let expected = desc("k", kind, Nullability::Nullable);
+    cursor.describe_col(11, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(11).unwrap());
 }
 
 #[test]

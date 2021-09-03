@@ -752,7 +752,9 @@ impl<'o> Statement for StatementImpl<'o> {
             },
             SqlDataType::INTEGER => DataType::Integer,
             SqlDataType::SMALLINT => DataType::SmallInt,
-            SqlDataType::FLOAT => DataType::Float,
+            SqlDataType::FLOAT => DataType::Float {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
             SqlDataType::REAL => DataType::Real,
             SqlDataType::DOUBLE => DataType::Double,
             SqlDataType::DATE => DataType::Date,

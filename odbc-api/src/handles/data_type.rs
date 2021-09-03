@@ -39,7 +39,7 @@ pub enum DataType {
     /// maximum precision is driver-defined.
     ///
     /// Depending on the implementation binary precision is either 24 (`f32`) or 53 (`f64`).
-    Float,
+    Float { precision: usize },
     /// `Real`. Signed, approximate, numeric value with a binary precision 24 (zero or absolute
     /// value 10^-38] to 10^38).
     Real,
@@ -149,7 +149,9 @@ impl DataType {
             },
             SqlDataType::INTEGER => DataType::Integer,
             SqlDataType::SMALLINT => DataType::SmallInt,
-            SqlDataType::FLOAT => DataType::Float,
+            SqlDataType::FLOAT => DataType::Float {
+                precision: column_size,
+            },
             SqlDataType::REAL => DataType::Real,
             SqlDataType::DOUBLE => DataType::Double,
             SqlDataType::DATE => DataType::Date,
@@ -188,7 +190,7 @@ impl DataType {
             DataType::Decimal { .. } => SqlDataType::DECIMAL,
             DataType::Integer => SqlDataType::INTEGER,
             DataType::SmallInt => SqlDataType::SMALLINT,
-            DataType::Float => SqlDataType::FLOAT,
+            DataType::Float { .. } => SqlDataType::FLOAT,
             DataType::Real => SqlDataType::REAL,
             DataType::Double => SqlDataType::DOUBLE,
             DataType::Varchar { .. } => SqlDataType::VARCHAR,
@@ -212,7 +214,6 @@ impl DataType {
             DataType::Unknown
             | DataType::Integer
             | DataType::SmallInt
-            | DataType::Float
             | DataType::Real
             | DataType::Double
             | DataType::Date
@@ -229,7 +230,9 @@ impl DataType {
             | DataType::WChar { length }
             | DataType::WVarchar { length }
             | DataType::LongVarchar { length } => *length,
-            DataType::Numeric { precision, .. } | DataType::Decimal { precision, .. } => *precision,
+            DataType::Float { precision, .. }
+            | DataType::Numeric { precision, .. }
+            | DataType::Decimal { precision, .. } => *precision,
             DataType::Other { column_size, .. } => *column_size,
         }
     }
@@ -241,7 +244,7 @@ impl DataType {
             | DataType::Char { .. }
             | DataType::Integer
             | DataType::SmallInt
-            | DataType::Float
+            | DataType::Float { .. }
             | DataType::Real
             | DataType::Double
             | DataType::Varchar { .. }
@@ -298,7 +301,7 @@ impl DataType {
             // 6 if signed (a sign and 5 digits) or 5 if unsigned (5 digits).
             DataType::SmallInt => Some(6),
             // 24 (a sign, 15 digits, a decimal point, the letter E, a sign, and 3 digits).
-            DataType::Float | DataType::Double => Some(24),
+            DataType::Float { .. } | DataType::Double => Some(24),
             // 14 (a sign, 7 digits, a decimal point, the letter E, a sign, and 2 digits).
             DataType::Real => Some(14),
             // 10 (a date in the format yyyy-mm-dd).

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.1
+
+Fix: `DataType::Float` is now a struct variant holding a precision value which is either `24` for 32Bit Floating points or `53` for 64Bit Floating point numbers.
+
 ## 0.27.0
 
 * `Connection::columns` and `Preallocated::columns` now return a `Result<CursorImpl, Error>` instead of a `Result<Option<CursorImpl>, Error>` since `columns` always returns a Cursor.
