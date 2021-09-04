@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.27.2
+
+* Add `NullableSlice::len`.
+
 ## 0.27.1
 
-Fix: `DataType::Float` is now a struct variant holding a precision value which is either `24` for 32Bit Floating points or `53` for 64Bit Floating point numbers.
+* Fix: `DataType::Float` is now a struct variant holding a precision value which is either `24` for 32Bit Floating points or `53` for 64Bit Floating point numbers.
 
 ## 0.27.0
 

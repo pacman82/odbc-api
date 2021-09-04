@@ -79,6 +79,13 @@ pub struct NullableSlice<'a, T> {
     values: &'a [T],
 }
 
+impl<'a, T> NullableSlice<'a, T> {
+    /// Number of entries in this slice of the buffer
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+}
+
 impl<'a, T> Iterator for NullableSlice<'a, T> {
     type Item = Option<&'a T>;
 
@@ -172,6 +179,13 @@ where
 pub struct NullableSliceMut<'a, T> {
     indicators: &'a mut [isize],
     values: &'a mut [T],
+}
+
+impl<'a, T> NullableSliceMut<'a, T> {
+    /// Number of entries in this slice of the buffer
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
 }
 
 impl<'a, T> NullableSliceMut<'a, T> {
