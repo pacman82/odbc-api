@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.3
+
+* Add implementation for `ExactSizeIterator` for `TextColumnIt` and `BinColumnIt`.
+
 ## 0.27.2
 
 * Add `NullableSlice::len`.

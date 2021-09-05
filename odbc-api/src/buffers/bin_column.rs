@@ -226,7 +226,14 @@ impl<'c> Iterator for BinColumnIt<'c> {
             ret
         }
     }
+    
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.num_rows - self.pos;
+        (len, Some(len))
+    }
 }
+
+impl<'c> ExactSizeIterator for BinColumnIt<'c> {}
 
 /// Fills a binary column buffer with elements from an Iterator. See
 /// [`crate::buffers::AnyColumnViewMut`]

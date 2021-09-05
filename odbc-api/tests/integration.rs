@@ -1265,6 +1265,7 @@ fn wchar(profile: &Profile) {
         AnyColumnView::WText(col) => col,
         _ => panic!("Unexpected column type"),
     };
+    assert_eq!(2, wtext_col.len());
     assert_eq!(U16String::from_str("A"), wtext_col.next().unwrap().unwrap());
     assert_eq!(U16String::from_str("Ü"), wtext_col.next().unwrap().unwrap());
     assert!(wtext_col.next().is_none());

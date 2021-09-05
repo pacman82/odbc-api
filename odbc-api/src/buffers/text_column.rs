@@ -335,7 +335,14 @@ impl<'c> Iterator for TextColumnIt<'c, u8> {
     fn next(&mut self) -> Option<Self::Item> {
         self.next_impl()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.num_rows - self.pos;
+        (len, Some(len))
+    }
 }
+
+impl<'c> ExactSizeIterator for TextColumnIt<'c, u8> {}
 
 impl<'c> Iterator for TextColumnIt<'c, u16> {
     type Item = Option<&'c U16Str>;
@@ -343,7 +350,14 @@ impl<'c> Iterator for TextColumnIt<'c, u16> {
     fn next(&mut self) -> Option<Self::Item> {
         self.next_impl().map(|opt| opt.map(U16Str::from_slice))
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.num_rows - self.pos;
+        (len, Some(len))
+    }
 }
+
+impl<'c> ExactSizeIterator for TextColumnIt<'c, u16> {}
 
 /// Fills a text column buffer with elements from an Iterator.
 #[derive(Debug)]
