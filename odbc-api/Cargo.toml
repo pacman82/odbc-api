@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "0.27.2"
+version = "0.27.3"
 authors = ["Markus Klein"]
 edition = "2018"
 license = "MIT"
@@ -30,7 +30,7 @@ readme = "../Readme.md"
 
 [dependencies]
 odbc-sys = "0.18.4"
-thiserror = "1.0.28"
+thiserror = "1.0.29"
 log = "0.4.14"
 widestring = "0.4.3"
 force-send-sync = "1.0.0"
