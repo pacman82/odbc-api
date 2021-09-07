@@ -41,6 +41,6 @@ log = "0.4.14"
 winit = "0.25.0"
 
 [dev-dependencies]
-assert_cmd = "2.0.0"
+assert_cmd = "2.0.1"
 lazy_static = "1.4.0"
 
