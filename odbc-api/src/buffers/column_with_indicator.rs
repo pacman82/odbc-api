@@ -80,6 +80,12 @@ pub struct NullableSlice<'a, T> {
 }
 
 impl<'a, T> NullableSlice<'a, T> {
+
+    /// `true` if the slice has a length of `0`.
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
     /// Number of entries in this slice of the buffer
     pub fn len(&self) -> usize {
         self.values.len()
@@ -182,6 +188,11 @@ pub struct NullableSliceMut<'a, T> {
 }
 
 impl<'a, T> NullableSliceMut<'a, T> {
+    /// `true` if the slice has a length of `0`.
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
     /// Number of entries in this slice of the buffer
     pub fn len(&self) -> usize {
         self.values.len()

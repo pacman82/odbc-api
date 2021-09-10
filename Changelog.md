@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Add `is_empty` to `NullableSlice` and `NullableSliceMut`.
+
 ## 0.27.3
 
 * Add implementation for `ExactSizeIterator` for `TextColumnIt` and `BinColumnIt`.
