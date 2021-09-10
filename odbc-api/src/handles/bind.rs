@@ -13,7 +13,14 @@ pub unsafe trait CData {
     /// the source, the driver converts the data from this type.
     fn cdata_type(&self) -> CDataType;
 
-    /// Indicates the length of variable sized types. May be zero for fixed sized types.
+    /// Indicates the length of variable sized types. May be zero for fixed sized types. Used to
+    /// determine the size or existence of input parameters.
+    ///
+    /// # Safety
+    ///
+    /// In case of variable sized types this must not exceed the value pointed to by `value_ptr`.
+    /// This requirement is a bit tricky since, if the same indicator buffer is used in an output
+    /// paramater the indicator value may be larger in case of truncation.
     fn indicator_ptr(&self) -> *const isize;
 
     /// Pointer to a value corresponding to the one described by `cdata_type`.
