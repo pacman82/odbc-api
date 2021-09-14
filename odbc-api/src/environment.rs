@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
-    handles::{self, OutputStringBuffer},
+    handles::{self, OutputStringBuffer, SqlResult},
     Connection, Error,
 };
 use odbc_sys::{AttrOdbcVersion, FetchOrientation, HWnd};
@@ -82,7 +82,15 @@ impl Environment {
     pub unsafe fn set_connection_pooling(
         scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
-        handles::Environment::set_connection_pooling(scheme)
+        match handles::Environment::set_connection_pooling(scheme) {
+            SqlResult::Error => Err(Error::NoDiagnostics),
+            SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
+            other => panic!(
+                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
+                pooling to {:?}",
+                other, scheme
+            ),
+        }
     }
 
     /// Determines how a connection is chosen from a connection pool. When [`Self::connect`],

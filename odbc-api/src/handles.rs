@@ -26,7 +26,7 @@ pub use {
     data_type::DataType,
     diagnostics::{Record, State},
     environment::Environment,
-    error::Error,
+    error::{SqlResult, Error},
     statement::{ParameterDescription, Statement, StatementImpl},
 };
 

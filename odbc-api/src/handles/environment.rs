@@ -1,7 +1,4 @@
-use super::{
-    as_handle::AsHandle, drop_handle, error::IntoResult, logging::log_diagnostics, Connection,
-    Error, State,
-};
+use super::{Connection, Error, State, as_handle::AsHandle, drop_handle, error::{IntoResult, SqlResult}, logging::log_diagnostics};
 use log::debug;
 use odbc_sys::{
     AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
@@ -61,21 +58,13 @@ impl Environment {
     /// > and to disconnect on a third thread.
     pub unsafe fn set_connection_pooling(
         scheme: odbc_sys::AttrConnectionPooling,
-    ) -> Result<(), Error> {
-        match SQLSetEnvAttr(
+    ) -> SqlResult<()> {
+        SQLSetEnvAttr(
             null_mut(),
             odbc_sys::EnvironmentAttribute::ConnectionPooling,
             scheme.into(),
             0,
-        ) {
-            SqlReturn::ERROR => Err(Error::NoDiagnostics),
-            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
-            other => panic!(
-                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
-                pooling to {:?}",
-                other, scheme
-            ),
-        }
+        ).into()
     }
 
     pub fn set_connection_pooling_matching(
