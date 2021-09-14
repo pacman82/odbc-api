@@ -51,25 +51,49 @@ pub enum Error {
     },
 }
 
+/// Result of an ODBC function call. Variants hold the same meaning as the constants associated with
+/// [`SqlReturn`]. This type may hold results, but it is still the responsibility of the user to
+/// fetch and handle the diagnostics in case of an Error.
+#[derive(Debug)]
+pub enum SqlResult<T> {
+    /// The function has been executed successfully.
+    Success(T),
+    /// The function has been executed successfully. There have been warnings.
+    SuccessWithInfo(T),
+    /// Function returned error state. Check diagnostics.
+    Error,
+}
+
+impl From<SqlReturn> for SqlResult<()> {
+    fn from(source: SqlReturn) -> Self {
+        match source {
+            SqlReturn::SUCCESS => SqlResult::Success(()),
+            SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
+            SqlReturn::ERROR => SqlResult::Error,
+            r => panic!("Unexpected odbc function return value: {:?}", r),
+        }
+    }
+}
+
 pub trait IntoResult {
     fn into_result(self, handle: &dyn AsHandle, function: &'static str) -> Result<(), Error>;
 }
 
-impl IntoResult for SqlReturn {
+impl IntoResult for SqlResult<()> {
     fn into_result(
-        self: SqlReturn,
+        self: SqlResult<()>,
         handle: &dyn AsHandle,
         function: &'static str,
     ) -> Result<(), Error> {
         match self {
             // The function has been executed successfully. Holds result.
-            SqlReturn::SUCCESS => Ok(()),
+            SqlResult::Success(()) => Ok(()),
             // The function has been executed successfully. There have been warnings. Holds result.
-            SqlReturn::SUCCESS_WITH_INFO => {
+            SqlResult::SuccessWithInfo(())=> {
                 log_diagnostics(handle);
                 Ok(())
             }
-            SqlReturn::ERROR => {
+            SqlResult::Error => {
                 let mut record = DiagnosticRecord::default();
                 if record.fill_from(handle, 1) {
                     log_diagnostics(handle);
@@ -78,7 +102,18 @@ impl IntoResult for SqlReturn {
                     Err(Error::NoDiagnostics)
                 }
             }
-            r => panic!("Unexpected odbc function result: {:?}", r),
+            // r => panic!("Unexpected odbc function result: {:?}", r),
         }
+    }
+}
+
+impl IntoResult for SqlReturn {
+    fn into_result(
+        self: SqlReturn,
+        handle: &dyn AsHandle,
+        function: &'static str,
+    ) -> Result<(), Error> {
+        let result: SqlResult<()> = self.into();
+        result.into_result(handle, function)
     }
 }
