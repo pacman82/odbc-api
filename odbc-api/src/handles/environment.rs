@@ -1,8 +1,14 @@
-use super::{Connection, Error, State, as_handle::AsHandle, drop_handle, error::{IntoResult, SqlResult}, logging::log_diagnostics};
+use super::{
+    as_handle::AsHandle,
+    drop_handle,
+    error::{IntoResult, SqlResult},
+    logging::log_diagnostics,
+    Connection, Error, State,
+};
 use log::debug;
 use odbc_sys::{
-    AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle, HandleType,
-    SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn,
+    AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
+    HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn,
 };
 use std::{convert::TryInto, ptr::null_mut};
 
@@ -56,37 +62,26 @@ impl Environment {
     /// > support connection pooling. This means the driver is able to handle a call on any thread
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
-    pub unsafe fn set_connection_pooling(
-        scheme: odbc_sys::AttrConnectionPooling,
-    ) -> SqlResult<()> {
+    pub unsafe fn set_connection_pooling(scheme: odbc_sys::AttrConnectionPooling) -> SqlResult<()> {
         SQLSetEnvAttr(
             null_mut(),
             odbc_sys::EnvironmentAttribute::ConnectionPooling,
             scheme.into(),
             0,
-        ).into()
+        )
+        .into()
     }
 
-    pub fn set_connection_pooling_matching(
-        &mut self,
-        matching: odbc_sys::AttrCpMatch,
-    ) -> Result<(), Error> {
+    pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> SqlResult<()> {
         unsafe {
-            match SQLSetEnvAttr(
+            SQLSetEnvAttr(
                 self.handle,
                 odbc_sys::EnvironmentAttribute::CpMatch,
                 matching.into(),
                 0,
-            ) {
-                SqlReturn::ERROR => Err(Error::NoDiagnostics),
-                SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Ok(()),
-                other => panic!(
-                    "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set \
-                    connection pooling maching to {:?}",
-                    other, matching
-                ),
-            }
+            )
         }
+        .into()
     }
 
     /// An allocated ODBC Environment handle
