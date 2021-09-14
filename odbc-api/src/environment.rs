@@ -4,7 +4,7 @@ use crate::{
     handles::{self, OutputStringBuffer, SqlResult},
     Connection, Error,
 };
-use odbc_sys::{AttrOdbcVersion, FetchOrientation, HWnd};
+use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
 
 // Currently only windows driver manager supports prompt.
@@ -107,11 +107,16 @@ impl Environment {
     /// the default.
     /// * [`crate::sys::AttrCpMatch::Relaxed`] = Connections with matching connection string \
     /// keywords can be used. Keywords must match, but not all connection attributes must match.
-    pub fn set_connection_pooling_matching(
-        &mut self,
-        matching: odbc_sys::AttrCpMatch,
-    ) -> Result<(), Error> {
-        self.environment.set_connection_pooling_matching(matching)
+    pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> Result<(), Error> {
+        match self.environment.set_connection_pooling_matching(matching) {
+            SqlResult::Error => Err(Error::NoDiagnostics),
+            SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
+            other => panic!(
+                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
+                pooling maching to {:?}",
+                other, matching
+            ),
+        }
     }
 
     /// Entry point into this API. Allocates a new ODBC Environment and declares to the driver
