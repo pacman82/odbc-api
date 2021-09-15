@@ -1,12 +1,12 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use crate::Bit;
 use super::{AnyColumnView, AnyColumnViewMut, BufferKind, NullableSlice, NullableSliceMut};
+use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnyColumnView`]. This allows
 /// the user to avoid matching on all possibile variants of an [`AnyColumnView`] in case the
 /// buffered type is known at compile time.
-pub trait Item: Sized + Copy{
+pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
     /// instantiate a [`super::ColumnarRowSet`].
     const BUFFER_KIND: BufferKind;
@@ -18,7 +18,7 @@ pub trait Item: Sized + Copy{
 
     /// Extract the array type from an [`AnyColumnViewMut`].
     fn as_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<&mut [Self]>;
-    
+
     /// Extract the typed nullable buffer from an [`AnyColumnViewMut`].
     fn as_nullable_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<NullableSliceMut<Self>>;
 }
@@ -49,7 +49,9 @@ macro_rules! impl_item {
                 }
             }
 
-            fn as_nullable_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<NullableSliceMut<Self>> {
+            fn as_nullable_slice_mut(
+                variant: AnyColumnViewMut<'_>,
+            ) -> Option<NullableSliceMut<Self>> {
                 match variant {
                     AnyColumnViewMut::$null(vals) => Some(vals),
                     _ => None,

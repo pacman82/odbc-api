@@ -1,7 +1,7 @@
 use super::{
     as_handle::AsHandle,
     drop_handle,
-    error::{IntoResult, SqlResult},
+    error::{ExtSqlReturn, IntoResult, SqlResult},
     Connection, Error, State,
 };
 use odbc_sys::{
@@ -67,7 +67,7 @@ impl Environment {
             scheme.into(),
             0,
         )
-        .into()
+        .into_sql_result("SQLSetEnvAttr")
     }
 
     pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> SqlResult<()> {
@@ -79,7 +79,7 @@ impl Environment {
                 0,
             )
         }
-        .into()
+        .into_sql_result("SQLSetEnvAttr")
     }
 
     /// An allocated ODBC Environment handle
@@ -95,7 +95,8 @@ impl Environment {
     /// Creating one environment in your binary is safe however.
     pub unsafe fn new() -> SqlResult<Self> {
         let mut handle = null_mut();
-        let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle).into();
+        let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle)
+            .into_sql_result("SQLAllocHandle");
         result.on_success(|| Environment {
             handle: handle as HEnv,
         })

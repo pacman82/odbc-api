@@ -11,7 +11,7 @@ use common::{
 use odbc_api::{
     buffers::{
         AnyColumnView, AnyColumnViewMut, BufferDescription, BufferKind, ColumnarRowSet, Indicator,
-        TextRowSet, Item
+        Item, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
@@ -1628,10 +1628,10 @@ fn read_into_columnar_buffer(profile: &Profile) {
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     // Assert existence of first batch
     let batch = cursor.fetch().unwrap().unwrap();
-    
+
     let mut col = i32::as_nullable_slice(batch.column(0)).unwrap();
     assert_eq!(Some(&42), col.next().unwrap());
-    
+
     match batch.column(1) {
         AnyColumnView::Text(mut col) => {
             assert_eq!(Some(&b"Hello, World!"[..]), col.next().unwrap())
@@ -2132,7 +2132,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
 /// Verify that the driver does not insert from invalid memory if inserting a truncated value
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // 'inconclusive' <= magic keyword used by test_case
-#[test_case(MARIADB; "Maria DB - expected fail inconclusive")] 
+#[test_case(MARIADB; "Maria DB - expected fail inconclusive")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_value(profile: &Profile) {
     let conn = profile.connection().unwrap();

@@ -1,6 +1,9 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
-use crate::{Connection, Error, handles::{self, OutputStringBuffer, SqlResult, log_diagnostics}};
+use crate::{
+    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult},
+    Connection, Error,
+};
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
@@ -81,7 +84,7 @@ impl Environment {
         scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
         match handles::Environment::set_connection_pooling(scheme) {
-            SqlResult::Error => Err(Error::NoDiagnostics),
+            SqlResult::Error { .. } => Err(Error::NoDiagnostics),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
             other => panic!(
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
@@ -107,7 +110,7 @@ impl Environment {
     /// keywords can be used. Keywords must match, but not all connection attributes must match.
     pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> Result<(), Error> {
         match self.environment.set_connection_pooling_matching(matching) {
-            SqlResult::Error => Err(Error::NoDiagnostics),
+            SqlResult::Error { .. } => Err(Error::NoDiagnostics),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
             other => panic!(
                 "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
@@ -137,10 +140,8 @@ impl Environment {
             SqlResult::SuccessWithInfo(env) => {
                 log_diagnostics(&env);
                 env
-            },
-            SqlResult::Error => {
-                return Err(Error::NoDiagnostics)
-            },
+            }
+            SqlResult::Error { .. } => return Err(Error::NoDiagnostics),
         };
 
         debug!("ODBC Environment created.");
