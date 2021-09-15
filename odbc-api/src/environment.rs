@@ -1,9 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
-use crate::{
-    handles::{self, OutputStringBuffer, SqlResult},
-    Connection, Error,
-};
+use crate::{Connection, Error, handles::{self, OutputStringBuffer, SqlResult, log_diagnostics}};
+use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
 
@@ -132,7 +130,21 @@ impl Environment {
     ///
     /// Creating one environment in your binary is safe however.
     pub unsafe fn new() -> Result<Self, Error> {
-        let environment = crate::handles::Environment::new()?;
+        let result = handles::Environment::new();
+
+        let environment = match result {
+            SqlResult::Success(env) => env,
+            SqlResult::SuccessWithInfo(env) => {
+                log_diagnostics(&env);
+                env
+            },
+            SqlResult::Error => {
+                return Err(Error::NoDiagnostics)
+            },
+        };
+
+        debug!("ODBC Environment created.");
+
         environment.declare_version(AttrOdbcVersion::Odbc3_80)?;
         Ok(Self {
             environment,

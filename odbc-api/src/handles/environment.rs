@@ -2,10 +2,8 @@ use super::{
     as_handle::AsHandle,
     drop_handle,
     error::{IntoResult, SqlResult},
-    logging::log_diagnostics,
     Connection, Error, State,
 };
-use log::debug;
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
     HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn,
@@ -95,28 +93,12 @@ impl Environment {
     /// lead to race condition thus violating Rust's safety guarantees.
     ///
     /// Creating one environment in your binary is safe however.
-    pub unsafe fn new() -> Result<Self, Error> {
+    pub unsafe fn new() -> SqlResult<Self> {
         let mut handle = null_mut();
-        let (handle, info) = match SQLAllocHandle(HandleType::Env, null_mut(), &mut handle) {
-            // We can't provide nay diagnostics, as we don't have
-            SqlReturn::ERROR => return Err(Error::NoDiagnostics),
-            SqlReturn::SUCCESS => (handle, false),
-            SqlReturn::SUCCESS_WITH_INFO => (handle, true),
-            other => panic!(
-                "Unexpected Return value for allocating ODBC Environment: {:?}",
-                other
-            ),
-        };
-
-        debug!("ODBC Environment created.");
-
-        let env = Environment {
+        let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle).into();
+        result.on_success(|| Environment {
             handle: handle as HEnv,
-        };
-        if info {
-            log_diagnostics(&env);
-        }
-        Ok(env)
+        })
     }
 
     /// Declares which Version of the ODBC API we want to use. This is the first thing that should
