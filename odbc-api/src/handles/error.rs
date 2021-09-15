@@ -92,7 +92,7 @@ impl<T> SqlResult<T> {
         }
     }
 
-    fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
+    pub fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(value) => Ok(value),
@@ -125,7 +125,7 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
             SqlReturn::ERROR => SqlResult::Error { function },
             r => panic!(
-                "Unexpected return value '{:?}' for ODBC function '{}'",
+                "Unknown return value '{:?}' for ODBC function '{}'",
                 r, function
             ),
         }

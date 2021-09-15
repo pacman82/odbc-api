@@ -2,7 +2,7 @@ use super::{
     as_handle::AsHandle,
     drop_handle,
     error::{ExtSqlReturn, IntoResult, SqlResult},
-    Connection, Error, State,
+    Connection, Error,
 };
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
@@ -104,39 +104,25 @@ impl Environment {
 
     /// Declares which Version of the ODBC API we want to use. This is the first thing that should
     /// be done with any ODBC environment.
-    pub fn declare_version(&self, version: AttrOdbcVersion) -> Result<(), Error> {
+    pub fn declare_version(&self, version: AttrOdbcVersion) -> SqlResult<()> {
         unsafe {
-            let result = SQLSetEnvAttr(
+            SQLSetEnvAttr(
                 self.handle,
                 EnvironmentAttribute::OdbcVersion,
                 version.into(),
                 0,
             )
-            .into_result(self, "SQLSetEnvAttr");
-
-            // Translate invalid attribute into a more meaningful error, provided the additional
-            // context that we know we tried to set version number.
-            result.map_err(|error| {
-                if let Error::Diagnostics { record, function } = error {
-                    if record.state == State::INVALID_STATE_TRANSACTION {
-                        Error::UnsupportedOdbcApiVersion(record)
-                    } else {
-                        Error::Diagnostics { record, function }
-                    }
-                } else {
-                    error
-                }
-            })
+            .into_sql_result("SQLSetEnvAttr")
         }
     }
 
     /// Allocate a new connection handle. The `Connection` must not outlive the `Environment`.
-    pub fn allocate_connection(&self) -> Result<Connection<'_>, Error> {
+    pub fn allocate_connection(&self) -> SqlResult<Connection<'_>> {
         let mut handle = null_mut();
         unsafe {
             SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle)
-                .into_result(self, "SQLAllocHandle")?;
-            Ok(Connection::new(handle as HDbc))
+                .into_sql_result("SQLAllocHandle")
+                .on_success(|| Connection::new(handle as HDbc))
         }
     }
 
