@@ -64,6 +64,30 @@ pub enum SqlResult<T> {
     Error,
 }
 
+impl SqlResult<()> {
+    /// Append a return value a successful to Result
+    pub fn on_success<F, T>(self, f: F) -> SqlResult<T>
+    where
+        F: FnOnce() -> T,
+    {
+        match self {
+            SqlResult::Success(()) => SqlResult::Success(f()),
+            SqlResult::SuccessWithInfo(()) => SqlResult::SuccessWithInfo(f()),
+            SqlResult::Error => SqlResult::Error,
+        }
+    }
+}
+
+impl<T> SqlResult<T> {
+    /// Logs diagonstics of `handle` if variant is either `Error` or `SuccessWithInfo`.
+    pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
+        match self {
+            SqlResult::Error | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
+            SqlResult::Success(_) => (),
+        }
+    }
+}
+
 impl From<SqlReturn> for SqlResult<()> {
     fn from(source: SqlReturn) -> Self {
         match source {
@@ -89,7 +113,7 @@ impl IntoResult for SqlResult<()> {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(()) => Ok(()),
             // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(())=> {
+            SqlResult::SuccessWithInfo(()) => {
                 log_diagnostics(handle);
                 Ok(())
             }
@@ -101,8 +125,7 @@ impl IntoResult for SqlResult<()> {
                 } else {
                     Err(Error::NoDiagnostics)
                 }
-            }
-            // r => panic!("Unexpected odbc function result: {:?}", r),
+            } // r => panic!("Unexpected odbc function result: {:?}", r),
         }
     }
 }
