@@ -226,7 +226,7 @@ impl<'c> Iterator for BinColumnIt<'c> {
             ret
         }
     }
-    
+
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.num_rows - self.pos;
         (len, Some(len))

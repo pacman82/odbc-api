@@ -61,7 +61,12 @@ pub enum SqlResult<T> {
     /// The function has been executed successfully. There have been warnings.
     SuccessWithInfo(T),
     /// Function returned error state. Check diagnostics.
-    Error,
+    Error {
+        /// Name of the ODBC Api call which caused the error. This might help interpreting
+        /// associatedif the error ODBC diagnostics if the error is bubbeld all the way up to the
+        /// end users output, but the context is lost.
+        function: &'static str,
+    },
 }
 
 impl SqlResult<()> {
@@ -73,7 +78,7 @@ impl SqlResult<()> {
         match self {
             SqlResult::Success(()) => SqlResult::Success(f()),
             SqlResult::SuccessWithInfo(()) => SqlResult::SuccessWithInfo(f()),
-            SqlResult::Error => SqlResult::Error,
+            SqlResult::Error { function } => SqlResult::Error { function },
         }
     }
 }
@@ -82,42 +87,21 @@ impl<T> SqlResult<T> {
     /// Logs diagonstics of `handle` if variant is either `Error` or `SuccessWithInfo`.
     pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
         match self {
-            SqlResult::Error | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
+            SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
             SqlResult::Success(_) => (),
         }
     }
-}
 
-impl From<SqlReturn> for SqlResult<()> {
-    fn from(source: SqlReturn) -> Self {
-        match source {
-            SqlReturn::SUCCESS => SqlResult::Success(()),
-            SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
-            SqlReturn::ERROR => SqlResult::Error,
-            r => panic!("Unexpected odbc function return value: {:?}", r),
-        }
-    }
-}
-
-pub trait IntoResult {
-    fn into_result(self, handle: &dyn AsHandle, function: &'static str) -> Result<(), Error>;
-}
-
-impl IntoResult for SqlResult<()> {
-    fn into_result(
-        self: SqlResult<()>,
-        handle: &dyn AsHandle,
-        function: &'static str,
-    ) -> Result<(), Error> {
+    fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
-            SqlResult::Success(()) => Ok(()),
+            SqlResult::Success(value) => Ok(value),
             // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(()) => {
+            SqlResult::SuccessWithInfo(value) => {
                 log_diagnostics(handle);
-                Ok(())
+                Ok(value)
             }
-            SqlResult::Error => {
+            SqlResult::Error { function } => {
                 let mut record = DiagnosticRecord::default();
                 if record.fill_from(handle, 1) {
                     log_diagnostics(handle);
@@ -130,13 +114,34 @@ impl IntoResult for SqlResult<()> {
     }
 }
 
+pub trait ExtSqlReturn {
+    fn into_sql_result(self, function_name: &'static str) -> SqlResult<()>;
+}
+
+impl ExtSqlReturn for SqlReturn {
+    fn into_sql_result(self, function: &'static str) -> SqlResult<()> {
+        match self {
+            SqlReturn::SUCCESS => SqlResult::Success(()),
+            SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
+            SqlReturn::ERROR => SqlResult::Error { function },
+            r => panic!(
+                "Unexpected return value '{:?}' for ODBC function '{}'",
+                r, function
+            ),
+        }
+    }
+}
+
+pub trait IntoResult {
+    fn into_result(self, handle: &dyn AsHandle, function: &'static str) -> Result<(), Error>;
+}
+
 impl IntoResult for SqlReturn {
     fn into_result(
         self: SqlReturn,
         handle: &dyn AsHandle,
         function: &'static str,
     ) -> Result<(), Error> {
-        let result: SqlResult<()> = self.into();
-        result.into_result(handle, function)
+        self.into_sql_result(function).into_result(handle)
     }
 }

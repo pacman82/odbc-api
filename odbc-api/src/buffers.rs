@@ -4,9 +4,9 @@ mod column_with_indicator;
 mod columnar;
 mod description;
 mod indicator;
+mod item;
 mod text_column;
 mod text_row_set;
-mod item;
 
 pub use self::{
     bin_column::{BinColumnIt, BinColumnWriter},
@@ -14,7 +14,7 @@ pub use self::{
     columnar::{AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
+    item::Item,
     text_column::{CharColumn, TextColumn, TextColumnIt, TextColumnWriter, WCharColumn},
     text_row_set::TextRowSet,
-    item::Item,
 };

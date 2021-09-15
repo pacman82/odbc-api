@@ -80,7 +80,6 @@ pub struct NullableSlice<'a, T> {
 }
 
 impl<'a, T> NullableSlice<'a, T> {
-
     /// `true` if the slice has a length of `0`.
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()

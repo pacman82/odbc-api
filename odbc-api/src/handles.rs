@@ -26,9 +26,9 @@ pub use {
     data_type::DataType,
     diagnostics::{Record, State},
     environment::Environment,
-    error::{SqlResult, Error},
-    statement::{ParameterDescription, Statement, StatementImpl},
+    error::{Error, SqlResult},
     logging::log_diagnostics,
+    statement::{ParameterDescription, Statement, StatementImpl},
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

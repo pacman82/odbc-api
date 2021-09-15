@@ -9,9 +9,9 @@ use crate::{
 use super::{
     bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
     column_with_indicator::{
-        NullableSlice, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column,
-        OptI32Column, OptI64Column, OptI8Column, OptTimeColumn, OptTimestampColumn, OptU8Column,
-        NullableSliceMut,
+        NullableSlice, NullableSliceMut, OptBitColumn, OptDateColumn, OptF32Column, OptF64Column,
+        OptI16Column, OptI32Column, OptI64Column, OptI8Column, OptTimeColumn, OptTimestampColumn,
+        OptU8Column,
     },
     text_column::{TextColumn, TextColumnIt, TextColumnWriter},
     BufferDescription, BufferKind, CharColumn, WCharColumn,
