@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult},
+    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State},
     Connection, Error,
 };
 use log::debug;
@@ -146,7 +146,24 @@ impl Environment {
 
         debug!("ODBC Environment created.");
 
-        environment.declare_version(AttrOdbcVersion::Odbc3_80)?;
+        let result = environment
+            .declare_version(AttrOdbcVersion::Odbc3_80)
+            .into_result(&environment);
+
+        // Translate invalid attribute into a more meaningful error, provided the additional
+        // context that we know we tried to set version number.
+        result.map_err(|error| {
+            if let Error::Diagnostics { record, function } = error {
+                if record.state == State::INVALID_STATE_TRANSACTION {
+                    Error::UnsupportedOdbcApiVersion(record)
+                } else {
+                    Error::Diagnostics { record, function }
+                }
+            } else {
+                error
+            }
+        })?;
+
         Ok(Self {
             environment,
             info_iterator_state: Mutex::new(()),
@@ -214,7 +231,10 @@ impl Environment {
         user: &U16Str,
         pwd: &U16Str,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self.environment.allocate_connection()?;
+        let mut connection = self
+            .environment
+            .allocate_connection()
+            .into_result(&self.environment)?;
         connection.connect(data_source_name, user, pwd)?;
         Ok(Connection::new(connection))
     }
@@ -267,7 +287,10 @@ impl Environment {
         &self,
         connection_string: &U16Str,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self.environment.allocate_connection()?;
+        let mut connection = self
+            .environment
+            .allocate_connection()
+            .into_result(&self.environment)?;
         connection.connect_with_connection_string(connection_string)?;
         Ok(Connection::new(connection))
     }
@@ -381,7 +404,10 @@ impl Environment {
         completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverCompleteOption<'_>,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self.environment.allocate_connection()?;
+        let mut connection = self
+            .environment
+            .allocate_connection()
+            .into_result(&self.environment)?;
         let connection_string = U16String::from_str(connection_string);
 
         unsafe {
