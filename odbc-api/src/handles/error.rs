@@ -67,6 +67,7 @@ pub enum SqlResult<T> {
         /// end users output, but the context is lost.
         function: &'static str,
     },
+    NoData,
 }
 
 impl SqlResult<()> {
@@ -79,6 +80,30 @@ impl SqlResult<()> {
             SqlResult::Success(()) => SqlResult::Success(f()),
             SqlResult::SuccessWithInfo(()) => SqlResult::SuccessWithInfo(f()),
             SqlResult::Error { function } => SqlResult::Error { function },
+            SqlResult::NoData => SqlResult::NoData,
+        }
+    }
+
+    /// Return `false` for NO_DATA
+    pub fn into_result_bool(self, handle: &dyn AsHandle) -> Result<bool, Error> {
+        match self {
+            // The function has been executed successfully. Holds result.
+            SqlResult::Success(()) => Ok(true),
+            // The function has been executed successfully. There have been warnings. Holds result.
+            SqlResult::SuccessWithInfo(()) => {
+                log_diagnostics(handle);
+                Ok(true)
+            }
+            SqlResult::Error { function } => {
+                let mut record = DiagnosticRecord::default();
+                if record.fill_from(handle, 1) {
+                    log_diagnostics(handle);
+                    Err(Error::Diagnostics { record, function })
+                } else {
+                    Err(Error::NoDiagnostics)
+                }
+            },
+            Self::NoData => Ok(false),
         }
     }
 }
@@ -88,7 +113,7 @@ impl<T> SqlResult<T> {
     pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
         match self {
             SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
-            SqlResult::Success(_) => (),
+            _ => (),
         }
     }
 
@@ -109,7 +134,8 @@ impl<T> SqlResult<T> {
                 } else {
                     Err(Error::NoDiagnostics)
                 }
-            } // r => panic!("Unexpected odbc function result: {:?}", r),
+            },
+            Self::NoData => panic!("Unexpected odbc function result NO_DATA"),
         }
     }
 }
@@ -124,6 +150,7 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::SUCCESS => SqlResult::Success(()),
             SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
             SqlReturn::ERROR => SqlResult::Error { function },
+            SqlReturn::NO_DATA => SqlResult::NoData,
             r => panic!(
                 "Unknown return value '{:?}' for ODBC function '{}'",
                 r, function

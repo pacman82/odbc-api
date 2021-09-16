@@ -131,7 +131,8 @@ impl Environment {
         self.handle
     }
 
-    /// List drivers descriptions and driver attribute keywords.
+    /// List drivers descriptions and driver attribute keywords. Return [`SqlResult::NoData`] to
+    /// indicate the end of the list.
     ///
     /// # Safety
     ///
@@ -160,12 +161,12 @@ impl Environment {
         direction: FetchOrientation,
         buffer_description: &mut Vec<u16>,
         buffer_attributes: &mut Vec<u16>,
-    ) -> Result<bool, Error> {
+    ) -> SqlResult<()> {
         // Use full capacity
         buffer_description.resize(buffer_description.capacity(), 0);
         buffer_attributes.resize(buffer_attributes.capacity(), 0);
 
-        match SQLDriversW(
+        SQLDriversW(
             self.handle,
             direction,
             buffer_description.as_mut_ptr(),
@@ -174,13 +175,7 @@ impl Environment {
             buffer_attributes.as_mut_ptr(),
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
-        ) {
-            SqlReturn::NO_DATA => Ok(false),
-            other => {
-                other.into_result(self, "SQLDriversW")?;
-                Ok(true)
-            }
-        }
+        ).into_sql_result("SQLDriversW")
     }
 
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and driver attribute
