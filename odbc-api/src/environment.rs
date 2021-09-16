@@ -142,6 +142,10 @@ impl Environment {
                 env
             }
             SqlResult::Error { .. } => return Err(Error::NoDiagnostics),
+            other => panic!(
+                "Unexpected return value allocating ODBC Environment: {:?}",
+                other
+            ),
         };
 
         debug!("ODBC Environment created.");
@@ -469,11 +473,11 @@ impl Environment {
             let mut desc_buf = vec![0; desc_len as usize + 1];
             let mut attr_buf = vec![0; attr_len as usize + 1];
 
-            while self.environment.drivers_buffer_fill(
-                FetchOrientation::Next,
-                &mut desc_buf,
-                &mut attr_buf,
-            )? {
+            while self
+                .environment
+                .drivers_buffer_fill(FetchOrientation::Next, &mut desc_buf, &mut attr_buf)
+                .into_result_bool(&self.environment)?
+            {
                 let description = U16CStr::from_slice_with_nul(&desc_buf).unwrap();
                 let attributes = U16CStr::from_slice_with_nul(&attr_buf).unwrap();
 
