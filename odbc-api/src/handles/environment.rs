@@ -175,11 +175,12 @@ impl Environment {
             buffer_attributes.as_mut_ptr(),
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
-        ).into_sql_result("SQLDriversW")
+        )
+        .into_sql_result("SQLDriversW")
     }
 
-    /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and driver attribute
-    /// keywords.
+    /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and
+    /// driver attribute keywords.
     ///
     /// # Safety
     ///
@@ -202,15 +203,12 @@ impl Environment {
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
-    pub unsafe fn drivers_buffer_len(
-        &self,
-        direction: FetchOrientation,
-    ) -> Result<Option<(i16, i16)>, Error> {
+    pub unsafe fn drivers_buffer_len(&self, direction: FetchOrientation) -> SqlResult<(i16, i16)> {
         // Lengths in characters minus terminating zero
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
         // Determine required buffer size
-        match SQLDriversW(
+        SQLDriversW(
             self.handle,
             direction,
             null_mut(),
@@ -219,11 +217,9 @@ impl Environment {
             null_mut(),
             0,
             &mut length_attributes,
-        ) {
-            SqlReturn::NO_DATA => return Ok(None),
-            other => other.into_result(self, "SQLDriversW")?,
-        }
-        Ok(Some((length_description, length_attributes)))
+        )
+        .into_sql_result("SQLDriversW")
+        .on_success(|| (length_description, length_attributes))
     }
 
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and

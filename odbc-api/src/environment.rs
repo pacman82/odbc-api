@@ -452,7 +452,8 @@ impl Environment {
             let (mut desc_len, mut attr_len) = if let Some(v) = self
                 .environment
                 // Start with first so we are independent of state
-                .drivers_buffer_len(FetchOrientation::First)?
+                .drivers_buffer_len(FetchOrientation::First)
+                .into_result_option(&self.environment)?
             {
                 v
             } else {
@@ -463,7 +464,8 @@ impl Environment {
             // If there are let's loop over the rest
             while let Some((candidate_desc_len, candidate_attr_len)) = self
                 .environment
-                .drivers_buffer_len(FetchOrientation::Next)?
+                .drivers_buffer_len(FetchOrientation::Next)
+                .into_result_option(&self.environment)?
             {
                 desc_len = max(candidate_desc_len, desc_len);
                 attr_len = max(candidate_attr_len, attr_len);
@@ -569,7 +571,8 @@ impl Environment {
             // If there are let's loop over the rest
             while let Some((candidate_name_len, candidate_decs_len)) = self
                 .environment
-                .drivers_buffer_len(FetchOrientation::Next)?
+                .drivers_buffer_len(FetchOrientation::Next)
+                .into_result_option(&self.environment)?
             {
                 server_name_len = max(candidate_name_len, server_name_len);
                 driver_len = max(candidate_decs_len, driver_len);

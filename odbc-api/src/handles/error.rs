@@ -84,15 +84,29 @@ impl SqlResult<()> {
         }
     }
 
-    /// Return `false` for NO_DATA
+    /// Return `false` for NO_DATA, and `true` for SUCCESS and SUCCESS_WITH_INFO.
     pub fn into_result_bool(self, handle: &dyn AsHandle) -> Result<bool, Error> {
+        self.into_result_option(handle).map(|option| option.is_some())
+    }
+}
+
+impl<T> SqlResult<T> {
+    /// Logs diagonstics of `handle` if variant is either `Error` or `SuccessWithInfo`.
+    pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
+        match self {
+            SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
+            _ => (),
+        }
+    }
+
+    pub fn into_result_option(self, handle: &dyn AsHandle) -> Result<Option<T>, Error> {
         match self {
             // The function has been executed successfully. Holds result.
-            SqlResult::Success(()) => Ok(true),
+            SqlResult::Success(value) => Ok(Some(value)),
             // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(()) => {
+            SqlResult::SuccessWithInfo(value) => {
                 log_diagnostics(handle);
-                Ok(true)
+                Ok(Some(value))
             }
             SqlResult::Error { function } => {
                 let mut record = DiagnosticRecord::default();
@@ -103,17 +117,7 @@ impl SqlResult<()> {
                     Err(Error::NoDiagnostics)
                 }
             },
-            Self::NoData => Ok(false),
-        }
-    }
-}
-
-impl<T> SqlResult<T> {
-    /// Logs diagonstics of `handle` if variant is either `Error` or `SuccessWithInfo`.
-    pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
-        match self {
-            SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
-            _ => (),
+            Self::NoData => Ok(None),
         }
     }
 
