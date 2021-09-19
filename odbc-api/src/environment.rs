@@ -568,11 +568,13 @@ impl Environment {
             let mut server_name_buf = vec![0; server_name_len as usize + 1];
             let mut driver_buf = vec![0; driver_len as usize + 1];
 
-            let mut not_empty = self.environment.data_source_buffer_fill(
-                direction,
-                &mut server_name_buf,
-                &mut driver_buf,
-            )?;
+            let mut not_empty = self
+                .environment
+                .data_source_buffer_fill(direction, &mut server_name_buf, &mut driver_buf)
+                .map(|res| res.into_result(&self.environment))
+                .transpose()?
+                .is_some();
+
             while not_empty {
                 let server_name = U16CStr::from_slice_with_nul(&server_name_buf).unwrap();
                 let driver = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
@@ -584,11 +586,16 @@ impl Environment {
                     server_name,
                     driver,
                 });
-                not_empty = self.environment.data_source_buffer_fill(
-                    FetchOrientation::Next,
-                    &mut server_name_buf,
-                    &mut driver_buf,
-                )?;
+                not_empty = self
+                    .environment
+                    .data_source_buffer_fill(
+                        FetchOrientation::Next,
+                        &mut server_name_buf,
+                        &mut driver_buf,
+                    )
+                    .map(|res| res.into_result(&self.environment))
+                    .transpose()?
+                    .is_some()
             }
         }
 
