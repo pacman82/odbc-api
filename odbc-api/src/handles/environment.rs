@@ -1,12 +1,12 @@
 use super::{
     as_handle::AsHandle,
     drop_handle,
-    error::{ExtSqlReturn, IntoResult, SqlResult},
-    Connection, Error,
+    error::{ExtSqlReturn, SqlResult},
+    Connection,
 };
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
-    HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr, SqlReturn,
+    HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr,
 };
 use std::{convert::TryInto, ptr::null_mut};
 
@@ -293,12 +293,12 @@ impl Environment {
         direction: FetchOrientation,
         buffer_name: &mut Vec<u16>,
         buffer_description: &mut Vec<u16>,
-    ) -> Result<bool, Error> {
+    ) -> Option<SqlResult<()>> {
         // Use full capacity
         buffer_name.resize(buffer_name.capacity(), 0);
         buffer_description.resize(buffer_description.capacity(), 0);
 
-        match SQLDataSourcesW(
+        SQLDataSourcesW(
             self.handle,
             direction,
             buffer_name.as_mut_ptr(),
@@ -307,12 +307,7 @@ impl Environment {
             buffer_description.as_mut_ptr(),
             buffer_description.len().try_into().unwrap(),
             null_mut(),
-        ) {
-            SqlReturn::NO_DATA => Ok(false),
-            other => {
-                other.into_result(self, "SQLDataSourceW")?;
-                Ok(true)
-            }
-        }
+        )
+        .into_opt_sql_result("SQLDataSourceW")
     }
 }
