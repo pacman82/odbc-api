@@ -67,7 +67,6 @@ pub enum SqlResult<T> {
         /// end users output, but the context is lost.
         function: &'static str,
     },
-    NoData,
 }
 
 impl SqlResult<()> {
@@ -80,13 +79,7 @@ impl SqlResult<()> {
             SqlResult::Success(()) => SqlResult::Success(f()),
             SqlResult::SuccessWithInfo(()) => SqlResult::SuccessWithInfo(f()),
             SqlResult::Error { function } => SqlResult::Error { function },
-            SqlResult::NoData => SqlResult::NoData,
         }
-    }
-
-    /// Return `false` for NO_DATA, and `true` for SUCCESS and SUCCESS_WITH_INFO.
-    pub fn into_result_bool(self, handle: &dyn AsHandle) -> Result<bool, Error> {
-        self.into_result_option(handle).map(|option| option.is_some())
     }
 }
 
@@ -96,28 +89,6 @@ impl<T> SqlResult<T> {
         match self {
             SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
             _ => (),
-        }
-    }
-
-    pub fn into_result_option(self, handle: &dyn AsHandle) -> Result<Option<T>, Error> {
-        match self {
-            // The function has been executed successfully. Holds result.
-            SqlResult::Success(value) => Ok(Some(value)),
-            // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(value) => {
-                log_diagnostics(handle);
-                Ok(Some(value))
-            }
-            SqlResult::Error { function } => {
-                let mut record = DiagnosticRecord::default();
-                if record.fill_from(handle, 1) {
-                    log_diagnostics(handle);
-                    Err(Error::Diagnostics { record, function })
-                } else {
-                    Err(Error::NoDiagnostics)
-                }
-            },
-            Self::NoData => Ok(None),
         }
     }
 
@@ -138,14 +109,16 @@ impl<T> SqlResult<T> {
                 } else {
                     Err(Error::NoDiagnostics)
                 }
-            },
-            Self::NoData => panic!("Unexpected odbc function result NO_DATA"),
+            }
         }
     }
 }
 
 pub trait ExtSqlReturn {
     fn into_sql_result(self, function_name: &'static str) -> SqlResult<()>;
+
+    /// Translates NO_DATA to None
+    fn into_opt_sql_result(self, function_name: &'static str) -> Option<SqlResult<()>>;
 }
 
 impl ExtSqlReturn for SqlReturn {
@@ -154,11 +127,17 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::SUCCESS => SqlResult::Success(()),
             SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
             SqlReturn::ERROR => SqlResult::Error { function },
-            SqlReturn::NO_DATA => SqlResult::NoData,
             r => panic!(
-                "Unknown return value '{:?}' for ODBC function '{}'",
+                "Unexpected return value '{:?}' for ODBC function '{}'",
                 r, function
             ),
+        }
+    }
+
+    fn into_opt_sql_result(self, function: &'static str) -> Option<SqlResult<()>> {
+        match self {
+            SqlReturn::NO_DATA => None,
+            other => Some(other.into_sql_result(function)),
         }
     }
 }
