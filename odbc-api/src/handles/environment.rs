@@ -131,8 +131,8 @@ impl Environment {
         self.handle
     }
 
-    /// List drivers descriptions and driver attribute keywords. Return [`SqlResult::NoData`] to
-    /// indicate the end of the list.
+    /// List drivers descriptions and driver attribute keywords. Returns `None` to indicate the end
+    /// of the list.
     ///
     /// # Safety
     ///
@@ -161,7 +161,7 @@ impl Environment {
         direction: FetchOrientation,
         buffer_description: &mut Vec<u16>,
         buffer_attributes: &mut Vec<u16>,
-    ) -> SqlResult<()> {
+    ) -> Option<SqlResult<()>> {
         // Use full capacity
         buffer_description.resize(buffer_description.capacity(), 0);
         buffer_attributes.resize(buffer_attributes.capacity(), 0);
@@ -176,7 +176,7 @@ impl Environment {
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_sql_result("SQLDriversW")
+        .into_opt_sql_result("SQLDriversW")
     }
 
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and
@@ -203,7 +203,10 @@ impl Environment {
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
-    pub unsafe fn drivers_buffer_len(&self, direction: FetchOrientation) -> SqlResult<(i16, i16)> {
+    pub unsafe fn drivers_buffer_len(
+        &self,
+        direction: FetchOrientation,
+    ) -> Option<SqlResult<(i16, i16)>> {
         // Lengths in characters minus terminating zero
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
@@ -218,8 +221,8 @@ impl Environment {
             0,
             &mut length_attributes,
         )
-        .into_sql_result("SQLDriversW")
-        .on_success(|| (length_description, length_attributes))
+        .into_opt_sql_result("SQLDriversW")
+        .map(|res| res.on_success(|| (length_description, length_attributes)))
     }
 
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
@@ -245,12 +248,12 @@ impl Environment {
     pub unsafe fn data_source_buffer_len(
         &self,
         direction: FetchOrientation,
-    ) -> Result<Option<(i16, i16)>, Error> {
+    ) -> Option<SqlResult<(i16, i16)>> {
         // Lengths in characters minus terminating zero
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
         // Determine required buffer size
-        match odbc_sys::SQLDataSourcesW(
+        odbc_sys::SQLDataSourcesW(
             self.handle,
             direction,
             null_mut(),
@@ -259,11 +262,9 @@ impl Environment {
             null_mut(),
             0,
             &mut length_description,
-        ) {
-            SqlReturn::NO_DATA => return Ok(None),
-            other => other.into_result(self, "SQLDataSourceW")?,
-        }
-        Ok(Some((length_name, length_description)))
+        )
+        .into_opt_sql_result("SQLDataSourceW")
+        .map(|res| res.on_success(|| (length_name, length_description)))
     }
 
     /// List drivers descriptions and driver attribute keywords.

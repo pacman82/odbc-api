@@ -86,11 +86,6 @@ impl Environment {
         match handles::Environment::set_connection_pooling(scheme) {
             SqlResult::Error { .. } => Err(Error::NoDiagnostics),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
-            other => panic!(
-                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
-                pooling to {:?}",
-                other, scheme
-            ),
         }
     }
 
@@ -112,11 +107,6 @@ impl Environment {
         match self.environment.set_connection_pooling_matching(matching) {
             SqlResult::Error { .. } => Err(Error::NoDiagnostics),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
-            other => panic!(
-                "Unexpected Return value ('{:?}') for SQLSetEnvAttr then trying to set connection \
-                pooling maching to {:?}",
-                other, matching
-            ),
         }
     }
 
@@ -142,10 +132,6 @@ impl Environment {
                 env
             }
             SqlResult::Error { .. } => return Err(Error::NoDiagnostics),
-            other => panic!(
-                "Unexpected return value allocating ODBC Environment: {:?}",
-                other
-            ),
         };
 
         debug!("ODBC Environment created.");
@@ -449,24 +435,21 @@ impl Environment {
         let _lock = self.info_iterator_state.lock().unwrap();
         unsafe {
             // Find required buffer size to avoid truncation.
-            let (mut desc_len, mut attr_len) = if let Some(v) = self
+            let (mut desc_len, mut attr_len) = if let Some(res) = self
                 .environment
                 // Start with first so we are independent of state
                 .drivers_buffer_len(FetchOrientation::First)
-                .into_result_option(&self.environment)?
             {
-                v
+                res.into_result(&self.environment)?
             } else {
                 // No drivers present
                 return Ok(Vec::new());
             };
 
             // If there are let's loop over the rest
-            while let Some((candidate_desc_len, candidate_attr_len)) = self
-                .environment
-                .drivers_buffer_len(FetchOrientation::Next)
-                .into_result_option(&self.environment)?
-            {
+            while let Some(res) = self.environment.drivers_buffer_len(FetchOrientation::Next) {
+                let (candidate_desc_len, candidate_attr_len) =
+                    res.into_result(&self.environment)?;
                 desc_len = max(candidate_desc_len, desc_len);
                 attr_len = max(candidate_attr_len, attr_len);
             }
@@ -478,7 +461,9 @@ impl Environment {
             while self
                 .environment
                 .drivers_buffer_fill(FetchOrientation::Next, &mut desc_buf, &mut attr_buf)
-                .into_result_bool(&self.environment)?
+                .map(|res| res.into_result(&self.environment))
+                .transpose()?
+                .is_some()
             {
                 let description = U16CStr::from_slice_with_nul(&desc_buf).unwrap();
                 let attributes = U16CStr::from_slice_with_nul(&attr_buf).unwrap();
@@ -561,8 +546,8 @@ impl Environment {
         unsafe {
             // Find required buffer size to avoid truncation.
             let (mut server_name_len, mut driver_len) =
-                if let Some(v) = self.environment.data_source_buffer_len(direction)? {
-                    v
+                if let Some(res) = self.environment.data_source_buffer_len(direction) {
+                    res.into_result(&self.environment)?
                 } else {
                     // No drivers present
                     return Ok(Vec::new());
@@ -572,7 +557,8 @@ impl Environment {
             while let Some((candidate_name_len, candidate_decs_len)) = self
                 .environment
                 .drivers_buffer_len(FetchOrientation::Next)
-                .into_result_option(&self.environment)?
+                .map(|res| res.into_result(&self.environment))
+                .transpose()?
             {
                 server_name_len = max(candidate_name_len, server_name_len);
                 driver_len = max(candidate_decs_len, driver_len);
