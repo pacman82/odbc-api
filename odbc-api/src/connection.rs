@@ -10,14 +10,14 @@ use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
-        match self.connection.disconnect() {
+        match self.connection.disconnect().into_result(&self.connection) {
             Ok(()) => (),
             Err(Error::Diagnostics {
                 record,
                 function: _,
             }) if record.state == State::INVALID_STATE_TRANSACTION => {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
-                if let Err(e) = self.connection.rollback() {
+                if let Err(e) = self.rollback() {
                     // Avoid panicking, if we already have a panic. We don't want to mask the original
                     // error.
                     if !panicking() {
@@ -29,7 +29,7 @@ impl<'conn> Drop for Connection<'conn> {
                     }
                 }
                 // Transaction is rolled back. Now let's try again to disconnect.
-                if let Err(e) = self.connection.disconnect() {
+                if let Err(e) = self.connection.disconnect().into_result(&self.connection) {
                     // Avoid panicking, if we already have a panic. We don't want to mask the original
                     // error.
                     if !panicking() {
@@ -65,7 +65,7 @@ impl<'c> Connection<'c> {
         query: &U16Str,
         params: impl ParameterCollection,
     ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
-        let lazy_statement = move || self.connection.allocate_statement();
+        let lazy_statement = move || self.allocate_statement();
         execute_with_parameters(lazy_statement, Some(query), params)
     }
 
@@ -119,7 +119,7 @@ impl<'c> Connection<'c> {
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
     pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared<'_>, Error> {
-        let mut stmt = self.connection.allocate_statement()?;
+        let mut stmt = self.allocate_statement()?;
         stmt.prepare(query)?;
         Ok(Prepared::new(stmt))
     }
@@ -167,7 +167,7 @@ impl<'c> Connection<'c> {
     /// }
     /// ```
     pub fn preallocate(&self) -> Result<Preallocated<'_>, Error> {
-        let stmt = self.connection.allocate_statement()?;
+        let stmt = self.allocate_statement()?;
         Ok(Preallocated::new(stmt))
     }
 
@@ -182,23 +182,25 @@ impl<'c> Connection<'c> {
     /// the transaction state is only discovered during a failed disconnect. It is preferable that
     /// the application makes sure all transactions are closed if in manual commit mode.
     pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
-        self.connection.set_autocommit(enabled)
+        self.connection
+            .set_autocommit(enabled)
+            .into_result(&self.connection)
     }
 
     /// To commit a transaction in manual-commit mode.
     pub fn commit(&self) -> Result<(), Error> {
-        self.connection.commit()
+        self.connection.commit().into_result(&self.connection)
     }
 
     /// To rollback a transaction in manual-commit mode.
     pub fn rollback(&self) -> Result<(), Error> {
-        self.connection.rollback()
+        self.connection.rollback().into_result(&self.connection)
     }
 
     /// Indicates the state of the connection. If `true` the connection has been lost. If `false`,
     /// the connection is still active.
     pub fn is_dead(&self) -> Result<bool, Error> {
-        self.connection.is_dead()
+        self.connection.is_dead().into_result(&self.connection)
     }
 
     /// Allows sending this connection to different threads. This Connection will still be only be
@@ -259,7 +261,9 @@ impl<'c> Connection<'c> {
     /// Fetch the name of the database management system used by the connection and store it into
     /// the provided `buf`.
     pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.connection.fetch_database_management_system_name(buf)
+        self.connection
+            .fetch_database_management_system_name(buf)
+            .into_result(&self.connection)
     }
 
     /// Get the name of the database management system used by the connection.
@@ -272,28 +276,36 @@ impl<'c> Connection<'c> {
 
     /// Maximum length of catalog names.
     pub fn max_catalog_name_len(&self) -> Result<u16, Error> {
-        self.connection.max_catalog_name_len()
+        self.connection
+            .max_catalog_name_len()
+            .into_result(&self.connection)
     }
 
     /// Maximum length of schema names.
     pub fn max_schema_name_len(&self) -> Result<u16, Error> {
-        self.connection.max_schema_name_len()
+        self.connection
+            .max_schema_name_len()
+            .into_result(&self.connection)
     }
 
     /// Maximum length of table names.
     pub fn max_table_name_len(&self) -> Result<u16, Error> {
-        self.connection.max_table_name_len()
+        self.connection
+            .max_table_name_len()
+            .into_result(&self.connection)
     }
 
     /// Maximum length of column names.
     pub fn max_column_name_len(&self) -> Result<u16, Error> {
-        self.connection.max_column_name_len()
+        self.connection
+            .max_column_name_len()
+            .into_result(&self.connection)
     }
 
     /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
     pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.connection.fetch_current_catalog(buf)
+        self.connection.fetch_current_catalog(buf).into_result(&self.connection)
     }
 
     /// Get the name of the current catalog being used by the connection.
@@ -314,7 +326,7 @@ impl<'c> Connection<'c> {
         column_name: &str,
     ) -> Result<CursorImpl<'_, StatementImpl<'_>>, Error> {
         columns(
-            self.connection.allocate_statement()?,
+            self.allocate_statement()?,
             &U16String::from_str(catalog_name),
             &U16String::from_str(schema_name),
             &U16String::from_str(table_name),
@@ -448,6 +460,12 @@ impl<'c> Connection<'c> {
             ordinal_pos_desc,
             is_nullable_desc,
         ])
+    }
+
+    fn allocate_statement(&self) -> Result<StatementImpl<'_>, Error> {
+        self.connection
+            .allocate_statement()
+            .into_result(&self.connection)
     }
 }
 

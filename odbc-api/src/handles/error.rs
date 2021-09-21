@@ -112,6 +112,20 @@ impl<T> SqlResult<T> {
             }
         }
     }
+
+    /// `True` if variant is [`SqlResult::Error`].
+    pub fn is_err(&self) -> bool {
+        matches!(self, SqlResult::Error { .. })
+    }
+
+    /// Applies `f` to any value wrapped in `Success` or `SuccessWithInfo`.
+    pub fn map<U, F>(self, f: F) -> SqlResult<U> where F: FnOnce(T) -> U {
+        match self {
+            SqlResult::Success(v) => SqlResult::Success(f(v)),
+            SqlResult::SuccessWithInfo(v) => SqlResult::SuccessWithInfo(f(v)),
+            SqlResult::Error { function } => SqlResult::Error { function },
+        }
+    }
 }
 
 pub trait ExtSqlReturn {

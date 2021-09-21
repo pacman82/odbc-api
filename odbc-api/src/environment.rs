@@ -225,7 +225,9 @@ impl Environment {
             .environment
             .allocate_connection()
             .into_result(&self.environment)?;
-        connection.connect(data_source_name, user, pwd)?;
+        connection
+            .connect(data_source_name, user, pwd)
+            .into_result(&connection)?;
         Ok(Connection::new(connection))
     }
 
@@ -281,7 +283,9 @@ impl Environment {
             .environment
             .allocate_connection()
             .into_result(&self.environment)?;
-        connection.connect_with_connection_string(connection_string)?;
+        connection
+            .connect_with_connection_string(connection_string)
+            .into_result(&connection)?;
         Ok(Connection::new(connection))
     }
 
@@ -406,8 +410,10 @@ impl Environment {
                 driver_completion.parent_window(),
                 completed_connection_string,
                 driver_completion.as_sys(),
-            )?;
+            )
         }
+        .map(|res| res.into_result(&connection))
+        .unwrap_or(Err(Error::AbortedConnectionStringCompletion))?;
         Ok(Connection::new(connection))
     }
 
