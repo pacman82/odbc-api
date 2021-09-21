@@ -6,7 +6,7 @@ use super::{
     data_type::DataType,
     drop_handle,
     error::{Error, ExtSqlReturn, IntoResult},
-    CData, SqlResult, State,
+    CData, SqlResult
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -118,7 +118,7 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> Result<(), Error>;
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()>;
 
     /// Fetch a column description using the column index.
     ///
@@ -133,7 +133,7 @@ pub trait Statement: AsHandle {
         &self,
         column_number: u16,
         column_description: &mut ColumnDescription,
-    ) -> Result<(), Error>;
+    ) -> SqlResult<()>;
 
     /// Executes a statement, using the current values of the parameter marker variables if any
     /// parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
@@ -148,17 +148,16 @@ pub trait Statement: AsHandle {
     ///
     /// # Return
     ///
-    /// If an update, insert, or delete statement did not affect any rows at the data source `false`
-    /// is returned.
-    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error>;
+    /// Returns `true` if execution requires additional data from delayed parameters.
+    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool>;
 
     /// Close an open cursor.
-    fn close_cursor(&mut self) -> Result<(), Error>;
+    fn close_cursor(&mut self) -> SqlResult<()>;
 
     /// Send an SQL statement to the data source for preparation. The application can include one or
     /// more parameter markers in the SQL statement. To include a parameter marker, the application
     /// embeds a question mark (?) into the SQL string at the appropriate position.
-    fn prepare(&mut self, statement_text: &U16Str) -> Result<(), Error>;
+    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()>;
 
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
     /// results from a call to `execute`, the application can call SQLExecute again with new
@@ -173,14 +172,13 @@ pub trait Statement: AsHandle {
     ///
     /// # Return
     ///
-    /// If an update, insert, or delete statement did not affect any rows at the data source `false`
-    /// is returned.
-    unsafe fn execute(&mut self) -> Result<bool, Error>;
+    /// `true` if data from a delayed parameter is needed.
+    unsafe fn execute(&mut self) -> SqlResult<bool>;
 
     /// Number of columns in result set.
     ///
     /// Can also be used to check, whether or not a result set has been created at all.
-    fn num_result_cols(&self) -> Result<i16, Error>;
+    fn num_result_cols(&self) -> SqlResult<i16>;
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
     ///
@@ -188,7 +186,7 @@ pub trait Statement: AsHandle {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: usize) -> Result<(), Error>;
+    unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()>;
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
     /// indicator buffers of the statement point to arrays. The cardinality of each array is equal
@@ -198,7 +196,7 @@ pub trait Statement: AsHandle {
     ///
     /// The bound buffers must at least hold the number of elements specified in this call then the
     /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: usize) -> Result<(), Error>;
+    unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()>;
 
     /// Sets the binding type to columnar binding for batch cursors.
     ///
@@ -392,19 +390,19 @@ impl<'o> Statement for StatementImpl<'o> {
         unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_sql_result("SQLFreeStmt")
     }
 
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> Result<(), Error> {
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()> {
         let value = num_rows
             .map(|r| r as *mut ULen as Pointer)
             .unwrap_or_else(null_mut);
         SQLSetStmtAttrW(self.handle, StatementAttribute::RowsFetchedPtr, value, 0)
-            .into_result(self, "SQLSetStmtAttrW")
+            .into_sql_result("SQLSetStmtAttrW")
     }
 
     fn describe_col(
         &self,
         column_number: u16,
         column_description: &mut ColumnDescription,
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         let name = &mut column_description.name;
         // Use maximum available capacity.
         name.resize(name.capacity(), 0);
@@ -414,7 +412,7 @@ impl<'o> Statement for StatementImpl<'o> {
         let mut decimal_digits = 0;
         let mut nullable = odbc_sys::Nullability::UNKNOWN;
 
-        unsafe {
+        let res = unsafe {
             SQLDescribeColW(
                 self.handle,
                 column_number,
@@ -426,7 +424,11 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut decimal_digits,
                 &mut nullable,
             )
-            .into_result(self, "SQLDescribeColW")?;
+            .into_sql_result("SQLDescribeColW")
+        };
+
+        if res.is_err() {
+            return res;
         }
 
         column_description.nullability = Nullability::new(nullable);
@@ -438,7 +440,7 @@ impl<'o> Statement for StatementImpl<'o> {
         } else {
             name.resize(name_length as usize, 0);
             column_description.data_type = DataType::new(data_type, column_size, decimal_digits);
-            Ok(())
+            res
         }
     }
 
@@ -446,25 +448,25 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// Returns `true`, if SQLExecuteDirect return NEED_DATA indicating the need to send data at
     /// execution.
-    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> Result<bool, Error> {
+    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool> {
         match SQLExecDirectW(
             self.handle,
             buf_ptr(statement_text.as_slice()),
             statement_text.len().try_into().unwrap(),
         ) {
-            SqlReturn::NEED_DATA => Ok(true),
+            SqlReturn::NEED_DATA => SqlResult::Success(true),
             // A searched update or delete statement that does not affect any rows at the data
             // source.
-            SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self, "SQLExecDirectW").map(|()| false),
+            SqlReturn::NO_DATA => SqlResult::Success(false),
+            other => other.into_sql_result("SQLExecDirectW").on_success(|| false),
         }
     }
 
-    fn close_cursor(&mut self) -> Result<(), Error> {
-        unsafe { SQLCloseCursor(self.handle) }.into_result(self, "SQLCloseCursor")
+    fn close_cursor(&mut self) -> SqlResult<()> {
+        unsafe { SQLCloseCursor(self.handle) }.into_sql_result("SQLCloseCursor")
     }
 
-    fn prepare(&mut self, statement_text: &U16Str) -> Result<(), Error> {
+    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()> {
         unsafe {
             SQLPrepareW(
                 self.handle,
@@ -472,7 +474,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 statement_text.len().try_into().unwrap(),
             )
         }
-        .into_result(self, "SQLPrepareW")
+        .into_sql_result("SQLPrepareW")
     }
 
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
@@ -490,23 +492,24 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// Returns `true`, if SQLExecute return NEED_DATA indicating the need to send data at
     /// execution.
-    unsafe fn execute(&mut self) -> Result<bool, Error> {
+    unsafe fn execute(&mut self) -> SqlResult<bool> {
         match SQLExecute(self.handle) {
-            SqlReturn::NEED_DATA => Ok(true),
+            SqlReturn::NEED_DATA => SqlResult::Success(true),
             // A searched update or delete statement that does not affect any rows at the data
             // source.
-            SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self, "SQLExecute").map(|()| false),
+            SqlReturn::NO_DATA => SqlResult::Success(false),
+            other => other.into_sql_result("SQLExecute").on_success(|| false),
         }
     }
 
     /// Number of columns in result set.
     ///
     /// Can also be used to check, whether or not a result set has been created at all.
-    fn num_result_cols(&self) -> Result<i16, Error> {
+    fn num_result_cols(&self) -> SqlResult<i16> {
         let mut out: i16 = 0;
-        unsafe { SQLNumResultCols(self.handle, &mut out) }.into_result(self, "SQLNumResultCols")?;
-        Ok(out)
+        unsafe { SQLNumResultCols(self.handle, &mut out) }
+            .into_sql_result("SQLNumResultCols")
+            .on_success(|| out)
     }
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
@@ -515,7 +518,7 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: usize) -> Result<(), Error> {
+    unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
         SQLSetStmtAttrW(
             self.handle,
@@ -523,16 +526,7 @@ impl<'o> Statement for StatementImpl<'o> {
             size as Pointer,
             0,
         )
-        .into_result(self, "SQLSetStmtAttrW")
-        // SAP anywhere has been seen to return with an "invalid attribute" error instead of a
-        // success with "option value changed" info. Let us map invalid attributes during setting
-        // row set array size to something more precise.
-        .map_err(|error| match error {
-            Error::Diagnostics { record, .. } if record.state == State::INVALID_ATTRIBUTE_VALUE => {
-                Error::InvalidRowArraySize { record, size }
-            }
-            error => error,
-        })
+        .into_sql_result("SQLSetStmtAttrW")
     }
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
@@ -543,7 +537,7 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// The bound buffers must at least hold the number of elements specified in this call then the
     /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: usize) -> Result<(), Error> {
+    unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
         SQLSetStmtAttrW(
             self.handle,
@@ -551,7 +545,7 @@ impl<'o> Statement for StatementImpl<'o> {
             size as Pointer,
             0,
         )
-        .into_result(self, "SQLSetStmtAttrW")
+        .into_sql_result("SQLSetStmtAttrW")
     }
 
     /// Sets the binding type to columnar binding for batch cursors.

@@ -39,13 +39,13 @@ where
     // `exec_direct`.
     stmt.reset_parameters()?;
     let need_data = unsafe {
-        stmt.set_paramset_size(parameter_set_size)?;
+        stmt.set_paramset_size(parameter_set_size).into_result(stmt)?;
         // Bind new parameters passed by caller.
         params.bind_parameters_to(stmt)?;
         if let Some(sql) = query {
-            stmt.exec_direct(sql)?
+            stmt.exec_direct(sql).into_result(stmt)?
         } else {
-            stmt.execute()?
+            stmt.execute().into_result(stmt)?
         }
     };
 
@@ -66,7 +66,7 @@ where
     }
 
     // Check if a result set has been created.
-    if stmt.num_result_cols()? == 0 {
+    if stmt.num_result_cols().into_result(stmt)? == 0 {
         Ok(None)
     } else {
         Ok(Some(CursorImpl::new(statement)))

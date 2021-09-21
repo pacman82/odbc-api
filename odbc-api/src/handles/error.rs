@@ -75,11 +75,7 @@ impl SqlResult<()> {
     where
         F: FnOnce() -> T,
     {
-        match self {
-            SqlResult::Success(()) => SqlResult::Success(f()),
-            SqlResult::SuccessWithInfo(()) => SqlResult::SuccessWithInfo(f()),
-            SqlResult::Error { function } => SqlResult::Error { function },
-        }
+        self.map(|()| f())
     }
 }
 
@@ -127,6 +123,13 @@ impl<T> SqlResult<T> {
             SqlResult::Success(v) => SqlResult::Success(f(v)),
             SqlResult::SuccessWithInfo(v) => SqlResult::SuccessWithInfo(f(v)),
             SqlResult::Error { function } => SqlResult::Error { function },
+        }
+    }
+
+    pub fn unwrap(self) -> T {
+        match self {
+            SqlResult::Success(v) | SqlResult::SuccessWithInfo(v) => v,
+            SqlResult::Error { .. } => panic!("Unwraping SqlResult::Error"),
         }
     }
 }

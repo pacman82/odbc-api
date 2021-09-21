@@ -120,7 +120,7 @@ impl<'c> Connection<'c> {
     ///   execution.
     pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared<'_>, Error> {
         let mut stmt = self.allocate_statement()?;
-        stmt.prepare(query)?;
+        stmt.prepare(query).into_result(&stmt)?;
         Ok(Prepared::new(stmt))
     }
 

@@ -1,6 +1,6 @@
 use crate::{
     buffers::Indicator,
-    handles::{Statement, StatementImpl},
+    handles::{State, Statement, StatementImpl},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     ColumnDescription, DataType, Error, Output,
 };
@@ -348,7 +348,8 @@ where
     S: BorrowMut<StatementImpl<'o>>,
 {
     fn drop(&mut self) {
-        if let Err(e) = self.statement.borrow_mut().close_cursor() {
+        let stmt = self.statement.borrow_mut();
+        if let Err(e) = stmt.close_cursor().into_result(stmt) {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
@@ -373,14 +374,14 @@ where
         column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> Result<(), Error> {
-        self.statement
-            .borrow()
-            .describe_col(column_number, column_description)?;
-        Ok(())
+        let stmt = self.statement.borrow();
+        stmt.describe_col(column_number, column_description)
+            .into_result(stmt)
     }
 
     fn num_result_cols(&self) -> Result<i16, Error> {
-        self.statement.borrow().num_result_cols()
+        let stmt = self.statement.borrow();
+        stmt.num_result_cols().into_result(stmt)
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
@@ -394,8 +395,22 @@ where
         let stmt = self.statement.borrow_mut();
         unsafe {
             stmt.set_row_bind_type(row_set_buffer.bind_type())?;
-            stmt.set_row_array_size(row_set_buffer.row_array_size())?;
-            stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))?;
+            let size = row_set_buffer.row_array_size();
+            stmt.set_row_array_size(size)
+                .into_result(stmt)
+                // SAP anywhere has been seen to return with an "invalid attribute" error instead of
+                // a success with "option value changed" info. Let us map invalid attributes during
+                // setting row set array size to something more precise.
+                .map_err(|error| match error {
+                    Error::Diagnostics { record, .. }
+                        if record.state == State::INVALID_ATTRIBUTE_VALUE =>
+                    {
+                        Error::InvalidRowArraySize { record, size }
+                    }
+                    error => error,
+                })?;
+            stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
+                .into_result(stmt)?;
             row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
@@ -537,7 +552,7 @@ where
             if let Err(e) = stmt
                 .unbind_cols()
                 .into_result(stmt)
-                .and_then(|()| stmt.set_num_rows_fetched(None))
+                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(stmt))
             {
                 // Avoid panicking, if we already have a panic. We don't want to mask the original
                 // error.
