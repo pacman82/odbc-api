@@ -65,7 +65,13 @@ pub trait Cursor {
     /// driver in advance. Consider binding a buffer to the cursor first using
     /// [`Self::bind_buffer`].
     fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self::Statement>>, Error> {
-        let row_available = unsafe { self.stmt().fetch()? };
+        let row_available = unsafe {
+            self.stmt()
+                .fetch()
+                .map(|res| res.into_result(self.stmt()))
+                .transpose()?
+                .is_some()
+        };
         let ret = if row_available {
             Some(CursorRow::new(unsafe { self.stmt() }))
         } else {
@@ -149,7 +155,9 @@ where
         col_or_param_num: u16,
         target: &mut impl Output,
     ) -> Result<(), Error> {
-        self.statement.get_data(col_or_param_num, target)
+        self.statement
+            .get_data(col_or_param_num, target)
+            .into_result(self.statement)
     }
 
     /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
@@ -508,11 +516,13 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
-        let has_data = unsafe { self.cursor.stmt().fetch()? };
-        if has_data {
-            Ok(Some(&self.buffer))
-        } else {
-            Ok(None)
+        unsafe {
+            if let Some(res) = self.cursor.stmt().fetch() {
+                res.into_result(self.cursor.stmt())?;
+                Ok(Some(&self.buffer))
+            } else {
+                Ok(None)
+            }
         }
     }
 }
@@ -526,6 +536,7 @@ where
             let stmt = self.cursor.stmt();
             if let Err(e) = stmt
                 .unbind_cols()
+                .into_result(stmt)
                 .and_then(|()| stmt.set_num_rows_fetched(None))
             {
                 // Avoid panicking, if we already have a panic. We don't want to mask the original

@@ -119,7 +119,10 @@ impl<T> SqlResult<T> {
     }
 
     /// Applies `f` to any value wrapped in `Success` or `SuccessWithInfo`.
-    pub fn map<U, F>(self, f: F) -> SqlResult<U> where F: FnOnce(T) -> U {
+    pub fn map<U, F>(self, f: F) -> SqlResult<U>
+    where
+        F: FnOnce(T) -> U,
+    {
         match self {
             SqlResult::Success(v) => SqlResult::Success(f(v)),
             SqlResult::SuccessWithInfo(v) => SqlResult::SuccessWithInfo(f(v)),

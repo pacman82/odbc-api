@@ -247,7 +247,10 @@ unsafe impl RowSetBuffer for TextRowSet {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         for (index, column_buffer) in self.buffers.iter_mut().enumerate() {
             let column_number = (index + 1) as u16;
-            cursor.stmt().bind_col(column_number, column_buffer)?;
+            cursor
+                .stmt()
+                .bind_col(column_number, column_buffer)
+                .into_result(cursor.stmt())?;
         }
         Ok(())
     }
