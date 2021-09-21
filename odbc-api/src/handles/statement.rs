@@ -5,8 +5,8 @@ use super::{
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
-    error::{Error, IntoResult},
-    CData, State,
+    error::{Error, ExtSqlReturn, IntoResult},
+    CData, SqlResult, State,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -69,7 +69,7 @@ impl<'s> StatementImpl<'s> {
 /// The trait allows us to reason about statements without taking the lifetime of their connection
 /// into account. It also allows for the trait to be implemented by a handle taking ownership of
 /// both, the statement and the connection.
-pub trait Statement {
+pub trait Statement: AsHandle {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt;
 
@@ -91,11 +91,7 @@ pub trait Statement {
     ///
     /// It is the callers responsibility to make sure the bound columns live until they are no
     /// longer bound.
-    unsafe fn bind_col(
-        &mut self,
-        column_number: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error>;
+    unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()>;
 
     /// Returns the next row set in the result set.
     ///
@@ -108,13 +104,13 @@ pub trait Statement {
     /// # Safety
     ///
     /// Fetch dereferences bound column pointers.
-    unsafe fn fetch(&mut self) -> Result<bool, Error>;
+    unsafe fn fetch(&mut self) -> Option<SqlResult<()>>;
 
     /// Retrieves data for a single column in the result set or for a single parameter.
-    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error>;
+    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()>;
 
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
-    fn unbind_cols(&mut self) -> Result<(), Error>;
+    fn unbind_cols(&mut self) -> SqlResult<()>;
 
     /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
     /// Passing `None` for `num_rows` is going to unbind the value from the statement.
@@ -362,11 +358,7 @@ impl<'o> Statement for StatementImpl<'o> {
         self.handle
     }
 
-    unsafe fn bind_col(
-        &mut self,
-        column_number: u16,
-        target: &mut impl CDataMut,
-    ) -> Result<(), Error> {
+    unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()> {
         SQLBindCol(
             self.handle,
             column_number,
@@ -375,17 +367,14 @@ impl<'o> Statement for StatementImpl<'o> {
             target.buffer_length(),
             target.mut_indicator_ptr(),
         )
-        .into_result(self, "SQLBindCol")
+        .into_sql_result("SQLBindCol")
     }
 
-    unsafe fn fetch(&mut self) -> Result<bool, Error> {
-        match SQLFetch(self.handle) {
-            SqlReturn::NO_DATA => Ok(false),
-            other => other.into_result(self, "SQLFetch").map(|()| true),
-        }
+    unsafe fn fetch(&mut self) -> Option<SqlResult<()>> {
+        SQLFetch(self.handle).into_opt_sql_result("SQLFetch")
     }
 
-    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> Result<(), Error> {
+    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()> {
         unsafe {
             SQLGetData(
                 self.handle,
@@ -396,11 +385,11 @@ impl<'o> Statement for StatementImpl<'o> {
                 target.mut_indicator_ptr(),
             )
         }
-        .into_result(self, "SQLGetData ")
+        .into_sql_result("SQLGetData")
     }
 
-    fn unbind_cols(&mut self) -> Result<(), Error> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_result(self, "SQLFreeStmt")
+    fn unbind_cols(&mut self) -> SqlResult<()> {
+        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_sql_result("SQLFreeStmt")
     }
 
     unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> Result<(), Error> {

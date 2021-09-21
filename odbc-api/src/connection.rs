@@ -305,7 +305,9 @@ impl<'c> Connection<'c> {
     /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
     pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.connection.fetch_current_catalog(buf).into_result(&self.connection)
+        self.connection
+            .fetch_current_catalog(buf)
+            .into_result(&self.connection)
     }
 
     /// Get the name of the current catalog being used by the connection.
