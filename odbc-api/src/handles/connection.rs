@@ -2,14 +2,14 @@ use super::{
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
-    error::Error,
-    error::IntoResult,
+    error::ExtSqlReturn,
     statement::StatementImpl,
+    SqlResult,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
-    SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW, SqlReturn,
+    SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
 };
 use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
@@ -69,7 +69,7 @@ impl<'c> Connection<'c> {
         data_source_name: &U16Str,
         user: &U16Str,
         pwd: &U16Str,
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         unsafe {
             SQLConnectW(
                 self.handle,
@@ -80,18 +80,14 @@ impl<'c> Connection<'c> {
                 buf_ptr(pwd.as_slice()),
                 pwd.len().try_into().unwrap(),
             )
-            .into_result(self, "SQLConnectW")?;
-            Ok(())
+            .into_sql_result("SQLConnectW")
         }
     }
 
     /// An alternative to `connect`. It supports data sources that require more connection
     /// information than the three arguments in `connect` and data sources that are not defined in
     /// the system information.
-    pub fn connect_with_connection_string(
-        &mut self,
-        connection_string: &U16Str,
-    ) -> Result<(), Error> {
+    pub fn connect_with_connection_string(&mut self, connection_string: &U16Str) -> SqlResult<()> {
         unsafe {
             let parent_window = null_mut();
             let completed_connection_string = None;
@@ -102,11 +98,17 @@ impl<'c> Connection<'c> {
                 completed_connection_string,
                 DriverConnectOption::NoPrompt,
             )
+            // Since we did pass NoPrompt we know the user can not abort the prompt.
+            .unwrap()
         }
     }
 
     /// An alternative to `connect` for connecting with a connection string. Allows for completing
     /// a connection string with a GUI prompt on windows.
+    ///
+    /// # Return
+    ///
+    /// `None` in case the prompt completing the connection string has been aborted.
     ///
     /// # Safety
     ///
@@ -117,13 +119,13 @@ impl<'c> Connection<'c> {
         parent_window: HWnd,
         mut completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverConnectOption,
-    ) -> Result<(), Error> {
+    ) -> Option<SqlResult<()>> {
         let (out_connection_string, out_buf_len, actual_len_ptr) = completed_connection_string
             .as_mut()
             .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
             .unwrap_or((null_mut(), 0, null_mut()));
 
-        let ret = SQLDriverConnectW(
+        SQLDriverConnectW(
             self.handle,
             parent_window,
             buf_ptr(connection_string.as_slice()),
@@ -132,27 +134,22 @@ impl<'c> Connection<'c> {
             out_buf_len,
             actual_len_ptr,
             driver_completion,
-        );
-
-        if ret == SqlReturn::NO_DATA {
-            Err(Error::AbortedConnectionStringCompletion)
-        } else {
-            ret.into_result(self, "SQLDriverConnectW")
-        }
+        )
+        .into_opt_sql_result("SQLDriverConnectW")
     }
 
     /// Disconnect from an ODBC data source.
-    pub fn disconnect(&mut self) -> Result<(), Error> {
-        unsafe { SQLDisconnect(self.handle).into_result(self, "SQLDisconnect") }
+    pub fn disconnect(&mut self) -> SqlResult<()> {
+        unsafe { SQLDisconnect(self.handle).into_sql_result("SQLDisconnect") }
     }
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
-    pub fn allocate_statement(&self) -> Result<StatementImpl<'_>, Error> {
+    pub fn allocate_statement(&self) -> SqlResult<StatementImpl<'_>> {
         let mut out = null_mut();
         unsafe {
             SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out)
-                .into_result(self, "SQLAllocHandle")?;
-            Ok(StatementImpl::new(out as HStmt))
+                .into_sql_result("SQLAllocHandle")
+                .on_success(|| StatementImpl::new(out as HStmt))
         }
     }
 
@@ -160,7 +157,7 @@ impl<'c> Connection<'c> {
     /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
     /// the connection.
-    pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
+    pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
         let val = if enabled { 1u32 } else { 0u32 };
         unsafe {
             SQLSetConnectAttrW(
@@ -169,64 +166,73 @@ impl<'c> Connection<'c> {
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
             )
-            .into_result(self, "SQLSetConnectAttrW")
+            .into_sql_result("SQLSetConnectAttrW")
         }
     }
 
     /// To commit a transaction in manual-commit mode.
-    pub fn commit(&self) -> Result<(), Error> {
+    pub fn commit(&self) -> SqlResult<()> {
         unsafe {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Commit)
-                .into_result(self, "SQLEndTran")
+                .into_sql_result("SQLEndTran")
         }
     }
 
     /// Roll back a transaction in manual-commit mode.
-    pub fn rollback(&self) -> Result<(), Error> {
+    pub fn rollback(&self) -> SqlResult<()> {
         unsafe {
             SQLEndTran(HandleType::Dbc, self.as_handle(), CompletionType::Rollback)
-                .into_result(self, "SQLEndTran")
+                .into_sql_result("SQLEndTran")
         }
     }
 
     /// Fetch the name of the database management system used by the connection and store it into
     /// the provided `buf`.
-    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
+    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
 
         unsafe {
-            SQLGetInfoW(
+            let mut res = SQLGetInfoW(
                 self.handle,
                 InfoType::DbmsName,
                 mut_buf_ptr(buf) as Pointer,
                 (buf.len() * 2).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
             )
-            .into_result(self, "SQLGetInfoW")?;
+            .into_sql_result("SQLGetInfoW");
 
+            if res.is_err() {
+                return res;
+            }
+
+            // Call has been a success but let's check if the buffer had been large enough.
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
+                // It seems we must try again with a large enough buffer.
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
-                SQLGetInfoW(
+                res = SQLGetInfoW(
                     self.handle,
                     InfoType::DbmsName,
                     mut_buf_ptr(buf) as Pointer,
                     (buf.len() * 2).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                 )
-                .into_result(self, "SQLGetInfoW")?;
+                .into_sql_result("SQLGetInfoW");
+
+                if res.is_err() {
+                    return res;
+                }
             }
 
             // Resize buffer to exact string length without terminal zero
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+            res
         }
-
-        Ok(())
     }
 
-    fn get_info_u16(&self, info_type: InfoType) -> Result<u16, Error> {
+    fn info_u16(&self, info_type: InfoType) -> SqlResult<u16> {
         unsafe {
             let mut value = 0u16;
             SQLGetInfoW(
@@ -240,84 +246,92 @@ impl<'c> Connection<'c> {
                 size_of::<*mut u16>() as i16,
                 null_mut(),
             )
-            .into_result(self, "SQLGetInfoW")?;
-            Ok(value)
+            .into_sql_result("SQLGetInfoW")
+            .on_success(|| value)
         }
     }
 
-    /// Maximum length of catalog names in bytes.
-    pub fn max_catalog_name_len(&self) -> Result<u16, Error> {
-        self.get_info_u16(InfoType::MaxCatalogNameLen)
+    /// Maximum length of catalog names.
+    pub fn max_catalog_name_len(&self) -> SqlResult<u16> {
+        self.info_u16(InfoType::MaxCatalogNameLen)
     }
 
-    /// Maximum length of schema names in bytes.
-    pub fn max_schema_name_len(&self) -> Result<u16, Error> {
-        self.get_info_u16(InfoType::MaxSchemaNameLen)
+    /// Maximum length of schema names.
+    pub fn max_schema_name_len(&self) -> SqlResult<u16> {
+        self.info_u16(InfoType::MaxSchemaNameLen)
     }
 
-    /// Maximum length of table names in bytes.
-    pub fn max_table_name_len(&self) -> Result<u16, Error> {
-        self.get_info_u16(InfoType::MaxTableNameLen)
+    /// Maximum length of table names.
+    pub fn max_table_name_len(&self) -> SqlResult<u16> {
+        self.info_u16(InfoType::MaxTableNameLen)
     }
 
-    /// Maximum length of column names in bytes.
-    pub fn max_column_name_len(&self) -> Result<u16, Error> {
-        self.get_info_u16(InfoType::MaxColumnNameLen)
+    /// Maximum length of column names.
+    pub fn max_column_name_len(&self) -> SqlResult<u16> {
+        self.info_u16(InfoType::MaxColumnNameLen)
     }
 
     /// Fetch the name of the current catalog being usd by the connection and store it into the
     /// provided `buf`.
-    pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
+    pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i32 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
 
         unsafe {
-            SQLGetConnectAttrW(
+            let mut res = SQLGetConnectAttrW(
                 self.handle,
                 ConnectionAttribute::CurrentCatalog,
                 mut_buf_ptr(buf) as Pointer,
                 (buf.len() * 2).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i32,
             )
-            .into_result(self, "SQLGetConnectAttrW")?;
+            .into_sql_result("SQLGetConnectAttrW");
+
+            if res.is_err() {
+                return res;
+            }
 
             if clamp_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
-                SQLGetConnectAttrW(
+                res = SQLGetConnectAttrW(
                     self.handle,
                     ConnectionAttribute::CurrentCatalog,
                     mut_buf_ptr(buf) as Pointer,
                     (buf.len() * 2).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i32,
                 )
-                .into_result(self, "SQLGetConnectAttrW")?;
+                .into_sql_result("SQLGetConnectAttrW");
+            }
+
+            if res.is_err() {
+                return res;
             }
 
             // Resize buffer to exact string length without terminal zero
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+            res
         }
-
-        Ok(())
     }
 
     /// Indicates the state of the connection. If `true` the connection has been lost. If `false`,
     /// the connection is still active.
-    pub fn is_dead(&self) -> Result<bool, Error> {
+    pub fn is_dead(&self) -> SqlResult<bool> {
         unsafe {
-            match self.numeric_attribute(ConnectionAttribute::ConnectionDead)? {
-                0 => Ok(false),
-                1 => Ok(true),
-                other => panic!("Unexpected return value from SQLGetConnectAttrW: {}", other),
-            }
+            self.numeric_attribute(ConnectionAttribute::ConnectionDead)
+                .map(|v| match v {
+                    0 => false,
+                    1 => true,
+                    other => panic!("Unexpected result value from SQLGetConnectAttrW: {}", other),
+                })
         }
     }
 
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.
-    unsafe fn numeric_attribute(&self, attribute: ConnectionAttribute) -> Result<usize, Error> {
+    unsafe fn numeric_attribute(&self, attribute: ConnectionAttribute) -> SqlResult<usize> {
         let mut out: usize = 0;
         SQLGetConnectAttrW(
             self.handle,
@@ -326,7 +340,7 @@ impl<'c> Connection<'c> {
             0,
             null_mut(),
         )
-        .into_result(self, "SQLGetConnectAttrW")?;
-        Ok(out)
+        .into_sql_result("SQLGetConnectAttrW")
+        .on_success(|| out)
     }
 }
