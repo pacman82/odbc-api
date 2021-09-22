@@ -106,7 +106,8 @@ where
 
     unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
-            stmt.bind_input_parameter(index as u16 + 1, parameter)?;
+            stmt.bind_input_parameter(index as u16 + 1, parameter)
+                .into_result(stmt)?;
         }
         Ok(())
     }
