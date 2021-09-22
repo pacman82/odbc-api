@@ -39,7 +39,8 @@ where
     // `exec_direct`.
     stmt.reset_parameters()?;
     let need_data = unsafe {
-        stmt.set_paramset_size(parameter_set_size).into_result(stmt)?;
+        stmt.set_paramset_size(parameter_set_size)
+            .into_result(stmt)?;
         // Bind new parameters passed by caller.
         params.bind_parameters_to(stmt)?;
         if let Some(sql) = query {

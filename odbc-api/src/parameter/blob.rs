@@ -97,6 +97,7 @@ unsafe impl Parameter for &mut BlobParam<'_> {
         stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_delayed_input_parameter(parameter_number, self)
+            .into_result(stmt)
     }
 }
 

@@ -264,7 +264,8 @@ unsafe impl ParameterCollection for &TextRowSet {
     unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
-            stmt.bind_input_parameter(parameter_number, column)?;
+            stmt.bind_input_parameter(parameter_number, column)
+                .into_result(stmt)?;
             parameter_number += 1;
         }
         Ok(())

@@ -6,7 +6,7 @@ use super::{
     data_type::DataType,
     drop_handle,
     error::{Error, ExtSqlReturn, IntoResult},
-    CData, SqlResult
+    CData, SqlResult,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -207,7 +207,7 @@ pub trait Statement: AsHandle {
     ///
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> Result<(), Error>;
+    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()>;
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
@@ -224,7 +224,7 @@ pub trait Statement: AsHandle {
         &mut self,
         parameter_number: u16,
         parameter: &(impl HasDataType + CData + ?Sized),
-    ) -> Result<(), Error>;
+    ) -> SqlResult<()>;
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
     /// input parameters using constant references see [`Statement::bind_input_parameter`].
@@ -240,7 +240,7 @@ pub trait Statement: AsHandle {
         parameter_number: u16,
         input_output_type: ParamType,
         parameter: &mut (impl CDataMut + HasDataType),
-    ) -> Result<(), Error>;
+    ) -> SqlResult<()>;
 
     /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
     /// values at statement execution time. To bind preallocated constant buffers see
@@ -256,24 +256,24 @@ pub trait Statement: AsHandle {
         &mut self,
         parameter_number: u16,
         parameter: &mut (impl DelayedInput + HasDataType),
-    ) -> Result<(), Error>;
+    ) -> SqlResult<()>;
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error>;
+    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool>;
 
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error>;
+    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType>;
 
     /// The concise data type. For the datetime and interval data types, this field returns the
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error>;
+    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType>;
 
     /// Data type of the specified column.
     ///
@@ -309,11 +309,8 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
-    unsafe fn numeric_col_attribute(
-        &self,
-        attribute: Desc,
-        column_number: u16,
-    ) -> Result<Len, Error>;
+    unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16)
+        -> SqlResult<isize>;
 
     /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
     /// given StatementHandle.
@@ -557,14 +554,14 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> Result<(), Error> {
+    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()> {
         SQLSetStmtAttrW(
             self.handle,
             StatementAttribute::RowBindType,
             row_size as Pointer,
             0,
         )
-        .into_result(self, "SQLSetStmtAttrW")
+        .into_sql_result("SQLSetStmtAttrW")
     }
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
@@ -582,7 +579,7 @@ impl<'o> Statement for StatementImpl<'o> {
         &mut self,
         parameter_number: u16,
         parameter: &(impl HasDataType + CData + ?Sized),
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(
             self.handle,
@@ -598,7 +595,7 @@ impl<'o> Statement for StatementImpl<'o> {
             // We cast const to mut here, but we specify the input_output_type as input.
             parameter.indicator_ptr() as *mut isize,
         )
-        .into_result(self, "SQLBindParameter")
+        .into_sql_result("SQLBindParameter")
     }
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
@@ -615,7 +612,7 @@ impl<'o> Statement for StatementImpl<'o> {
         parameter_number: u16,
         input_output_type: ParamType,
         parameter: &mut (impl CDataMut + HasDataType),
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
         SQLBindParameter(
             self.handle,
@@ -629,7 +626,7 @@ impl<'o> Statement for StatementImpl<'o> {
             parameter.buffer_length(),
             parameter.mut_indicator_ptr(),
         )
-        .into_result(self, "SQLBindParameter")
+        .into_sql_result("SQLBindParameter")
     }
 
     /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
@@ -646,7 +643,7 @@ impl<'o> Statement for StatementImpl<'o> {
         &mut self,
         parameter_number: u16,
         parameter: &mut (impl DelayedInput + HasDataType),
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         let paramater_type = parameter.data_type();
         SQLBindParameter(
             self.handle,
@@ -661,44 +658,43 @@ impl<'o> Statement for StatementImpl<'o> {
             // We cast const to mut here, but we specify the input_output_type as input.
             parameter.indicator_ptr() as *mut isize,
         )
-        .into_result(self, "SQLBindParameter")
+        .into_sql_result("SQLBindParameter")
     }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
-        let out = unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number)? };
-        match out {
-            0 => Ok(false),
-            1 => Ok(true),
+    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool> {
+        unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number) }.map(|out| match out {
+            0 => false,
+            1 => true,
             _ => panic!("Unsigned column attribute must be either 0 or 1."),
-        }
+        })
     }
 
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        let out = unsafe { self.numeric_col_attribute(Desc::Type, column_number)? };
-        Ok(SqlDataType(out.try_into().unwrap()))
+    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+        unsafe { self.numeric_col_attribute(Desc::Type, column_number) }
+            .map(|ret| SqlDataType(ret.try_into().unwrap()))
     }
 
     /// The concise data type. For the datetime and interval data types, this field returns the
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> Result<SqlDataType, Error> {
-        let out = unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number)? };
-        Ok(SqlDataType(out.try_into().unwrap()))
+    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+        unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }
+            .map(|ret| SqlDataType(ret.try_into().unwrap()))
     }
 
     /// Data type of the specified column.
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
-        let kind = self.col_concise_type(column_number)?;
+        let kind = self.col_concise_type(column_number).into_result(self)?;
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
@@ -786,14 +782,20 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
+        unsafe {
+            self.numeric_col_attribute(Desc::OctetLength, column_number)
+                .into_result(self)
+        }
     }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
+        unsafe {
+            self.numeric_col_attribute(Desc::DisplaySize, column_number)
+                .into_result(self)
+        }
     }
 
     /// Precision of the column.
@@ -802,13 +804,19 @@ impl<'o> Statement for StatementImpl<'o> {
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
     fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe { self.numeric_col_attribute(Desc::Precision, column_number) }
+        unsafe {
+            self.numeric_col_attribute(Desc::Precision, column_number)
+                .into_result(self)
+        }
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
     fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
+        unsafe {
+            self.numeric_col_attribute(Desc::Scale, column_number)
+                .into_result(self)
+        }
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
@@ -851,11 +859,7 @@ impl<'o> Statement for StatementImpl<'o> {
     /// # Safety
     ///
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
-    unsafe fn numeric_col_attribute(
-        &self,
-        attribute: Desc,
-        column_number: u16,
-    ) -> Result<Len, Error> {
+    unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
         let mut out: Len = 0;
         SQLColAttributeW(
             self.handle,
@@ -866,8 +870,8 @@ impl<'o> Statement for StatementImpl<'o> {
             null_mut(),
             &mut out as *mut Len,
         )
-        .into_result(self, "SQLColAttributeW")?;
-        Ok(out)
+        .into_sql_result("SQLColAttributeW")
+        .on_success(|| out)
     }
 
     /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the

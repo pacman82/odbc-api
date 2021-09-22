@@ -385,7 +385,8 @@ where
     }
 
     fn is_unsigned_column(&self, column_number: u16) -> Result<bool, Error> {
-        self.statement.borrow().is_unsigned_column(column_number)
+        let stmt = self.statement.borrow();
+        stmt.is_unsigned_column(column_number).into_result(stmt)
     }
 
     fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
@@ -394,7 +395,8 @@ where
     {
         let stmt = self.statement.borrow_mut();
         unsafe {
-            stmt.set_row_bind_type(row_set_buffer.bind_type())?;
+            stmt.set_row_bind_type(row_set_buffer.bind_type())
+                .into_result(stmt)?;
             let size = row_set_buffer.row_array_size();
             stmt.set_row_array_size(size)
                 .into_result(stmt)
@@ -417,7 +419,8 @@ where
     }
 
     fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
-        self.statement.borrow().col_data_type(column_number)
+        let stmt = self.statement.borrow();
+        stmt.col_data_type(column_number)
     }
 
     fn col_octet_length(&self, column_number: u16) -> Result<isize, Error> {

@@ -394,6 +394,7 @@ where
         stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_input_parameter(parameter_number, self)
+            .into_result(stmt)
     }
 }
 
@@ -408,6 +409,7 @@ where
         stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self)
+            .into_result(stmt)
     }
 }
 
@@ -447,6 +449,7 @@ where
         stmt: &mut StatementImpl<'_>,
     ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
+            .into_result(stmt)
     }
 }
 
