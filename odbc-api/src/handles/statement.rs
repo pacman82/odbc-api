@@ -91,7 +91,17 @@ pub trait Statement: AsHandle {
     ///
     /// It is the callers responsibility to make sure the bound columns live until they are no
     /// longer bound.
-    unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()>;
+    unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()> {
+        SQLBindCol(
+            self.as_sys(),
+            column_number,
+            target.cdata_type(),
+            target.mut_value_ptr(),
+            target.buffer_length(),
+            target.mut_indicator_ptr(),
+        )
+        .into_sql_result("SQLBindCol")
+    }
 
     /// Returns the next row set in the result set.
     ///
@@ -104,13 +114,29 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// Fetch dereferences bound column pointers.
-    unsafe fn fetch(&mut self) -> Option<SqlResult<()>>;
+    unsafe fn fetch(&mut self) -> Option<SqlResult<()>> {
+        SQLFetch(self.as_sys()).into_opt_sql_result("SQLFetch")
+    }
 
     /// Retrieves data for a single column in the result set or for a single parameter.
-    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()>;
+    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()> {
+        unsafe {
+            SQLGetData(
+                self.as_sys(),
+                col_or_param_num,
+                target.cdata_type(),
+                target.mut_value_ptr(),
+                target.buffer_length(),
+                target.mut_indicator_ptr(),
+            )
+        }
+        .into_sql_result("SQLGetData")
+    }
 
     /// Release all column buffers bound by `bind_col`. Except bookmark column.
-    fn unbind_cols(&mut self) -> SqlResult<()>;
+    fn unbind_cols(&mut self) -> SqlResult<()> {
+        unsafe { SQLFreeStmt(self.as_sys(), FreeStmtOption::Unbind) }.into_sql_result("SQLFreeStmt")
+    }
 
     /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
     /// Passing `None` for `num_rows` is going to unbind the value from the statement.
@@ -351,40 +377,6 @@ impl<'o> Statement for StatementImpl<'o> {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt {
         self.handle
-    }
-
-    unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()> {
-        SQLBindCol(
-            self.handle,
-            column_number,
-            target.cdata_type(),
-            target.mut_value_ptr(),
-            target.buffer_length(),
-            target.mut_indicator_ptr(),
-        )
-        .into_sql_result("SQLBindCol")
-    }
-
-    unsafe fn fetch(&mut self) -> Option<SqlResult<()>> {
-        SQLFetch(self.handle).into_opt_sql_result("SQLFetch")
-    }
-
-    fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()> {
-        unsafe {
-            SQLGetData(
-                self.handle,
-                col_or_param_num,
-                target.cdata_type(),
-                target.mut_value_ptr(),
-                target.buffer_length(),
-                target.mut_indicator_ptr(),
-            )
-        }
-        .into_sql_result("SQLGetData")
-    }
-
-    fn unbind_cols(&mut self) -> SqlResult<()> {
-        unsafe { SQLFreeStmt(self.handle, FreeStmtOption::Unbind) }.into_sql_result("SQLFreeStmt")
     }
 
     unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()> {

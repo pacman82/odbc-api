@@ -1,3 +1,5 @@
+use odbc_sys::SqlDataType;
+
 use crate::{
     buffers::Indicator,
     handles::{State, Statement, StatementImpl},
@@ -420,7 +422,69 @@ where
 
     fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
         let stmt = self.statement.borrow();
-        stmt.col_data_type(column_number)
+        let kind = stmt.col_concise_type(column_number).into_result(stmt)?;
+        let dt = match kind {
+            SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
+            SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_BINARY => DataType::Binary {
+                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_W_CHAR => DataType::WChar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::CHAR => DataType::Char {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::VARCHAR => DataType::Varchar {
+                length: self.col_display_size(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::NUMERIC => DataType::Numeric {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                scale: self.col_scale(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::DECIMAL => DataType::Decimal {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                scale: self.col_scale(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::INTEGER => DataType::Integer,
+            SqlDataType::SMALLINT => DataType::SmallInt,
+            SqlDataType::FLOAT => DataType::Float {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::REAL => DataType::Real,
+            SqlDataType::DOUBLE => DataType::Double,
+            SqlDataType::DATE => DataType::Date,
+            SqlDataType::TIME => DataType::Time {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::TIMESTAMP => DataType::Timestamp {
+                precision: self.col_precision(column_number)?.try_into().unwrap(),
+            },
+            SqlDataType::EXT_BIG_INT => DataType::BigInt,
+            SqlDataType::EXT_TINY_INT => DataType::TinyInt,
+            SqlDataType::EXT_BIT => DataType::Bit,
+            other => {
+                let mut column_description = ColumnDescription::default();
+                self.describe_col(column_number, &mut column_description)?;
+                DataType::Other {
+                    data_type: other,
+                    column_size: column_description.data_type.column_size(),
+                    decimal_digits: column_description.data_type.decimal_digits(),
+                }
+            }
+        };
+        Ok(dt)
     }
 
     fn col_octet_length(&self, column_number: u16) -> Result<isize, Error> {
