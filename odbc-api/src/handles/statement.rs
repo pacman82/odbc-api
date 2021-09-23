@@ -144,7 +144,13 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()>;
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()> {
+        let value = num_rows
+            .map(|r| r as *mut ULen as Pointer)
+            .unwrap_or_else(null_mut);
+        SQLSetStmtAttrW(self.as_sys(), StatementAttribute::RowsFetchedPtr, value, 0)
+            .into_sql_result("SQLSetStmtAttrW")
+    }
 
     /// Fetch a column description using the column index.
     ///
@@ -159,7 +165,47 @@ pub trait Statement: AsHandle {
         &self,
         column_number: u16,
         column_description: &mut ColumnDescription,
-    ) -> SqlResult<()>;
+    ) -> SqlResult<()> {
+        let name = &mut column_description.name;
+        // Use maximum available capacity.
+        name.resize(name.capacity(), 0);
+        let mut name_length: i16 = 0;
+        let mut data_type = SqlDataType::UNKNOWN_TYPE;
+        let mut column_size = 0;
+        let mut decimal_digits = 0;
+        let mut nullable = odbc_sys::Nullability::UNKNOWN;
+
+        let res = unsafe {
+            SQLDescribeColW(
+                self.as_sys(),
+                column_number,
+                mut_buf_ptr(name),
+                clamp_small_int(name.len()),
+                &mut name_length,
+                &mut data_type,
+                &mut column_size,
+                &mut decimal_digits,
+                &mut nullable,
+            )
+            .into_sql_result("SQLDescribeColW")
+        };
+
+        if res.is_err() {
+            return res;
+        }
+
+        column_description.nullability = Nullability::new(nullable);
+
+        if name_length + 1 > clamp_small_int(name.len()) {
+            // Buffer is to small to hold name, retry with larger buffer
+            name.resize(name_length as usize + 1, 0);
+            self.describe_col(column_number, column_description)
+        } else {
+            name.resize(name_length as usize, 0);
+            column_description.data_type = DataType::new(data_type, column_size, decimal_digits);
+            res
+        }
+    }
 
     /// Executes a statement, using the current values of the parameter marker variables if any
     /// parameters exist in the statement. SQLExecDirect is the fastest way to submit an SQL
@@ -175,15 +221,38 @@ pub trait Statement: AsHandle {
     /// # Return
     ///
     /// Returns `true` if execution requires additional data from delayed parameters.
-    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool>;
+    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool> {
+        match SQLExecDirectW(
+            self.as_sys(),
+            buf_ptr(statement_text.as_slice()),
+            statement_text.len().try_into().unwrap(),
+        ) {
+            SqlReturn::NEED_DATA => SqlResult::Success(true),
+            // A searched update or delete statement that does not affect any rows at the data
+            // source.
+            SqlReturn::NO_DATA => SqlResult::Success(false),
+            other => other.into_sql_result("SQLExecDirectW").on_success(|| false),
+        }
+    }
 
     /// Close an open cursor.
-    fn close_cursor(&mut self) -> SqlResult<()>;
+    fn close_cursor(&mut self) -> SqlResult<()> {
+        unsafe { SQLCloseCursor(self.as_sys()) }.into_sql_result("SQLCloseCursor")
+    }
 
     /// Send an SQL statement to the data source for preparation. The application can include one or
     /// more parameter markers in the SQL statement. To include a parameter marker, the application
     /// embeds a question mark (?) into the SQL string at the appropriate position.
-    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()>;
+    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()> {
+        unsafe {
+            SQLPrepareW(
+                self.as_sys(),
+                buf_ptr(statement_text.as_slice()),
+                statement_text.len().try_into().unwrap(),
+            )
+        }
+        .into_sql_result("SQLPrepareW")
+    }
 
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
     /// results from a call to `execute`, the application can call SQLExecute again with new
@@ -199,12 +268,25 @@ pub trait Statement: AsHandle {
     /// # Return
     ///
     /// `true` if data from a delayed parameter is needed.
-    unsafe fn execute(&mut self) -> SqlResult<bool>;
+    unsafe fn execute(&mut self) -> SqlResult<bool> {
+        match SQLExecute(self.as_sys()) {
+            SqlReturn::NEED_DATA => SqlResult::Success(true),
+            // A searched update or delete statement that does not affect any rows at the data
+            // source.
+            SqlReturn::NO_DATA => SqlResult::Success(false),
+            other => other.into_sql_result("SQLExecute").on_success(|| false),
+        }
+    }
 
     /// Number of columns in result set.
     ///
     /// Can also be used to check, whether or not a result set has been created at all.
-    fn num_result_cols(&self) -> SqlResult<i16>;
+    fn num_result_cols(&self) -> SqlResult<i16> {
+        let mut out: i16 = 0;
+        unsafe { SQLNumResultCols(self.as_sys(), &mut out) }
+            .into_sql_result("SQLNumResultCols")
+            .on_success(|| out)
+    }
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
     ///
@@ -212,7 +294,16 @@ pub trait Statement: AsHandle {
     ///
     /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
     /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()>;
+    unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()> {
+        assert!(size > 0);
+        SQLSetStmtAttrW(
+            self.as_sys(),
+            StatementAttribute::RowArraySize,
+            size as Pointer,
+            0,
+        )
+        .into_sql_result("SQLSetStmtAttrW")
+    }
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
     /// indicator buffers of the statement point to arrays. The cardinality of each array is equal
@@ -222,7 +313,16 @@ pub trait Statement: AsHandle {
     ///
     /// The bound buffers must at least hold the number of elements specified in this call then the
     /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()>;
+    unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()> {
+        assert!(size > 0);
+        SQLSetStmtAttrW(
+            self.as_sys(),
+            StatementAttribute::ParamsetSize,
+            size as Pointer,
+            0,
+        )
+        .into_sql_result("SQLSetStmtAttrW")
+    }
 
     /// Sets the binding type to columnar binding for batch cursors.
     ///
@@ -233,7 +333,15 @@ pub trait Statement: AsHandle {
     ///
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()>;
+    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()> {
+        SQLSetStmtAttrW(
+            self.as_sys(),
+            StatementAttribute::RowBindType,
+            row_size as Pointer,
+            0,
+        )
+        .into_sql_result("SQLSetStmtAttrW")
+    }
 
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
@@ -250,7 +358,24 @@ pub trait Statement: AsHandle {
         &mut self,
         parameter_number: u16,
         parameter: &(impl HasDataType + CData + ?Sized),
-    ) -> SqlResult<()>;
+    ) -> SqlResult<()> {
+        let parameter_type = parameter.data_type();
+        SQLBindParameter(
+            self.as_sys(),
+            parameter_number,
+            ParamType::Input,
+            parameter.cdata_type(),
+            parameter_type.data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.value_ptr() as *mut c_void,
+            parameter.buffer_length(),
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut isize,
+        )
+        .into_sql_result("SQLBindParameter")
+    }
 
     /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
     /// input parameters using constant references see [`Statement::bind_input_parameter`].
@@ -266,7 +391,22 @@ pub trait Statement: AsHandle {
         parameter_number: u16,
         input_output_type: ParamType,
         parameter: &mut (impl CDataMut + HasDataType),
-    ) -> SqlResult<()>;
+    ) -> SqlResult<()> {
+        let parameter_type = parameter.data_type();
+        SQLBindParameter(
+            self.as_sys(),
+            parameter_number,
+            input_output_type,
+            parameter.cdata_type(),
+            parameter_type.data_type(),
+            parameter_type.column_size(),
+            parameter_type.decimal_digits(),
+            parameter.value_ptr() as *mut c_void,
+            parameter.buffer_length(),
+            parameter.mut_indicator_ptr(),
+        )
+        .into_sql_result("SQLBindParameter")
+    }
 
     /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
     /// values at statement execution time. To bind preallocated constant buffers see
@@ -282,40 +422,71 @@ pub trait Statement: AsHandle {
         &mut self,
         parameter_number: u16,
         parameter: &mut (impl DelayedInput + HasDataType),
-    ) -> SqlResult<()>;
+    ) -> SqlResult<()> {
+        let paramater_type = parameter.data_type();
+        SQLBindParameter(
+            self.as_sys(),
+            parameter_number,
+            ParamType::Input,
+            parameter.cdata_type(),
+            paramater_type.data_type(),
+            paramater_type.column_size(),
+            paramater_type.decimal_digits(),
+            parameter.stream_ptr(),
+            0,
+            // We cast const to mut here, but we specify the input_output_type as input.
+            parameter.indicator_ptr() as *mut isize,
+        )
+        .into_sql_result("SQLBindParameter")
+    }
 
     /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool>;
+    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool> {
+        unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number) }.map(|out| match out {
+            0 => false,
+            1 => true,
+            _ => panic!("Unsigned column attribute must be either 0 or 1."),
+        })
+    }
 
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType>;
+    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+        unsafe { self.numeric_col_attribute(Desc::Type, column_number) }
+            .map(|ret| SqlDataType(ret.try_into().unwrap()))
+    }
 
     /// The concise data type. For the datetime and interval data types, this field returns the
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType>;
-
-    /// Data type of the specified column.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_data_type(&self, column_number: u16) -> Result<DataType, Error>;
+    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+        unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }
+            .map(|ret| SqlDataType(ret.try_into().unwrap()))
+    }
 
     /// Returns the size in bytes of the columns. For variable sized types the maximum size is
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_octet_length(&self, column_number: u16) -> SqlResult<isize> {
+        unsafe {
+            self.numeric_col_attribute(Desc::OctetLength, column_number)
+        }
+    }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_display_size(&self, column_number: u16) -> SqlResult<Len> {
+        unsafe {
+            self.numeric_col_attribute(Desc::DisplaySize, column_number)
+        }
+    }
 
     /// Precision of the column.
     ///
@@ -377,417 +548,6 @@ impl<'o> Statement for StatementImpl<'o> {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt {
         self.handle
-    }
-
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()> {
-        let value = num_rows
-            .map(|r| r as *mut ULen as Pointer)
-            .unwrap_or_else(null_mut);
-        SQLSetStmtAttrW(self.handle, StatementAttribute::RowsFetchedPtr, value, 0)
-            .into_sql_result("SQLSetStmtAttrW")
-    }
-
-    fn describe_col(
-        &self,
-        column_number: u16,
-        column_description: &mut ColumnDescription,
-    ) -> SqlResult<()> {
-        let name = &mut column_description.name;
-        // Use maximum available capacity.
-        name.resize(name.capacity(), 0);
-        let mut name_length: i16 = 0;
-        let mut data_type = SqlDataType::UNKNOWN_TYPE;
-        let mut column_size = 0;
-        let mut decimal_digits = 0;
-        let mut nullable = odbc_sys::Nullability::UNKNOWN;
-
-        let res = unsafe {
-            SQLDescribeColW(
-                self.handle,
-                column_number,
-                mut_buf_ptr(name),
-                clamp_small_int(name.len()),
-                &mut name_length,
-                &mut data_type,
-                &mut column_size,
-                &mut decimal_digits,
-                &mut nullable,
-            )
-            .into_sql_result("SQLDescribeColW")
-        };
-
-        if res.is_err() {
-            return res;
-        }
-
-        column_description.nullability = Nullability::new(nullable);
-
-        if name_length + 1 > clamp_small_int(name.len()) {
-            // Buffer is to small to hold name, retry with larger buffer
-            name.resize(name_length as usize + 1, 0);
-            self.describe_col(column_number, column_description)
-        } else {
-            name.resize(name_length as usize, 0);
-            column_description.data_type = DataType::new(data_type, column_size, decimal_digits);
-            res
-        }
-    }
-
-    /// # Return
-    ///
-    /// Returns `true`, if SQLExecuteDirect return NEED_DATA indicating the need to send data at
-    /// execution.
-    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool> {
-        match SQLExecDirectW(
-            self.handle,
-            buf_ptr(statement_text.as_slice()),
-            statement_text.len().try_into().unwrap(),
-        ) {
-            SqlReturn::NEED_DATA => SqlResult::Success(true),
-            // A searched update or delete statement that does not affect any rows at the data
-            // source.
-            SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result("SQLExecDirectW").on_success(|| false),
-        }
-    }
-
-    fn close_cursor(&mut self) -> SqlResult<()> {
-        unsafe { SQLCloseCursor(self.handle) }.into_sql_result("SQLCloseCursor")
-    }
-
-    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()> {
-        unsafe {
-            SQLPrepareW(
-                self.handle,
-                buf_ptr(statement_text.as_slice()),
-                statement_text.len().try_into().unwrap(),
-            )
-        }
-        .into_sql_result("SQLPrepareW")
-    }
-
-    /// Executes a statement prepared by `prepare`. After the application processes or discards the
-    /// results from a call to `execute`, the application can call SQLExecute again with new
-    /// parameter values.
-    ///
-    /// # Safety
-    ///
-    /// While `self` as always guaranteed to be a valid allocated handle, this function may
-    /// dereference bound parameters. It is the callers responsibility to ensure these are still
-    /// valid. One strategy is to reset potentially invalid parameters right before the call using
-    /// `reset_parameters`.
-    ///
-    /// # Return
-    ///
-    /// Returns `true`, if SQLExecute return NEED_DATA indicating the need to send data at
-    /// execution.
-    unsafe fn execute(&mut self) -> SqlResult<bool> {
-        match SQLExecute(self.handle) {
-            SqlReturn::NEED_DATA => SqlResult::Success(true),
-            // A searched update or delete statement that does not affect any rows at the data
-            // source.
-            SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result("SQLExecute").on_success(|| false),
-        }
-    }
-
-    /// Number of columns in result set.
-    ///
-    /// Can also be used to check, whether or not a result set has been created at all.
-    fn num_result_cols(&self) -> SqlResult<i16> {
-        let mut out: i16 = 0;
-        unsafe { SQLNumResultCols(self.handle, &mut out) }
-            .into_sql_result("SQLNumResultCols")
-            .on_success(|| out)
-    }
-
-    /// Sets the batch size for bulk cursors, if retrieving many rows at once.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
-    /// specified amount of rows.
-    unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()> {
-        assert!(size > 0);
-        SQLSetStmtAttrW(
-            self.handle,
-            StatementAttribute::RowArraySize,
-            size as Pointer,
-            0,
-        )
-        .into_sql_result("SQLSetStmtAttrW")
-    }
-
-    /// Specifies the number of values for each parameter. If it is greater than 1, the data and
-    /// indicator buffers of the statement point to arrays. The cardinality of each array is equal
-    /// to the value of this field.
-    ///
-    /// # Safety
-    ///
-    /// The bound buffers must at least hold the number of elements specified in this call then the
-    /// statement is executed.
-    unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()> {
-        assert!(size > 0);
-        SQLSetStmtAttrW(
-            self.handle,
-            StatementAttribute::ParamsetSize,
-            size as Pointer,
-            0,
-        )
-        .into_sql_result("SQLSetStmtAttrW")
-    }
-
-    /// Sets the binding type to columnar binding for batch cursors.
-    ///
-    /// Any Positive number indicates a row wise binding with that row length. `0` indicates a
-    /// columnar binding.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to ensure that the bound buffers match the memory layout
-    /// specified by this function.
-    unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()> {
-        SQLSetStmtAttrW(
-            self.handle,
-            StatementAttribute::RowBindType,
-            row_size as Pointer,
-            0,
-        )
-        .into_sql_result("SQLSetStmtAttrW")
-    }
-
-    /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
-    /// specialized version takes a constant reference to parameter, but is therefore limited to
-    /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
-    /// input and output parameters.
-    ///
-    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
-    ///
-    /// # Safety
-    ///
-    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
-    /// * Calling this function may influence other statements that share the APD.
-    unsafe fn bind_input_parameter(
-        &mut self,
-        parameter_number: u16,
-        parameter: &(impl HasDataType + CData + ?Sized),
-    ) -> SqlResult<()> {
-        let parameter_type = parameter.data_type();
-        SQLBindParameter(
-            self.handle,
-            parameter_number,
-            ParamType::Input,
-            parameter.cdata_type(),
-            parameter_type.data_type(),
-            parameter_type.column_size(),
-            parameter_type.decimal_digits(),
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.value_ptr() as *mut c_void,
-            parameter.buffer_length(),
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut isize,
-        )
-        .into_sql_result("SQLBindParameter")
-    }
-
-    /// Binds a buffer holding a single parameter to a parameter marker in an SQL statement. To bind
-    /// input parameters using constant references see [`Statement::bind_input_parameter`].
-    ///
-    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
-    ///
-    /// # Safety
-    ///
-    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
-    /// * Calling this function may influence other statements that share the APD.
-    unsafe fn bind_parameter(
-        &mut self,
-        parameter_number: u16,
-        input_output_type: ParamType,
-        parameter: &mut (impl CDataMut + HasDataType),
-    ) -> SqlResult<()> {
-        let parameter_type = parameter.data_type();
-        SQLBindParameter(
-            self.handle,
-            parameter_number,
-            input_output_type,
-            parameter.cdata_type(),
-            parameter_type.data_type(),
-            parameter_type.column_size(),
-            parameter_type.decimal_digits(),
-            parameter.value_ptr() as *mut c_void,
-            parameter.buffer_length(),
-            parameter.mut_indicator_ptr(),
-        )
-        .into_sql_result("SQLBindParameter")
-    }
-
-    /// Binds an input stream to a parameter marker in an SQL statement. Use this to stream large
-    /// values at statement execution time. To bind preallocated constant buffers see
-    /// [`Statement::bind_input_parameter`].
-    ///
-    /// See <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindparameter-function>.
-    ///
-    /// # Safety
-    ///
-    /// * It is up to the caller to ensure the lifetimes of the bound parameters.
-    /// * Calling this function may influence other statements that share the APD.
-    unsafe fn bind_delayed_input_parameter(
-        &mut self,
-        parameter_number: u16,
-        parameter: &mut (impl DelayedInput + HasDataType),
-    ) -> SqlResult<()> {
-        let paramater_type = parameter.data_type();
-        SQLBindParameter(
-            self.handle,
-            parameter_number,
-            ParamType::Input,
-            parameter.cdata_type(),
-            paramater_type.data_type(),
-            paramater_type.column_size(),
-            paramater_type.decimal_digits(),
-            parameter.stream_ptr(),
-            0,
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut isize,
-        )
-        .into_sql_result("SQLBindParameter")
-    }
-
-    /// `true` if a given column in a result set is unsigned or not a numeric type, `false`
-    /// otherwise.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool> {
-        unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number) }.map(|out| match out {
-            0 => false,
-            1 => true,
-            _ => panic!("Unsigned column attribute must be either 0 or 1."),
-        })
-    }
-
-    /// Returns a number identifying the SQL type of the column in the result set.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
-        unsafe { self.numeric_col_attribute(Desc::Type, column_number) }
-            .map(|ret| SqlDataType(ret.try_into().unwrap()))
-    }
-
-    /// The concise data type. For the datetime and interval data types, this field returns the
-    /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
-        unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }
-            .map(|ret| SqlDataType(ret.try_into().unwrap()))
-    }
-
-    /// Data type of the specified column.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_data_type(&self, column_number: u16) -> Result<DataType, Error> {
-        let kind = self.col_concise_type(column_number).into_result(self)?;
-        let dt = match kind {
-            SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
-            SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_BINARY => DataType::Binary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::CHAR => DataType::Char {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::VARCHAR => DataType::Varchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::NUMERIC => DataType::Numeric {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
-                scale: self.col_scale(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::DECIMAL => DataType::Decimal {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
-                scale: self.col_scale(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::INTEGER => DataType::Integer,
-            SqlDataType::SMALLINT => DataType::SmallInt,
-            SqlDataType::FLOAT => DataType::Float {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::REAL => DataType::Real,
-            SqlDataType::DOUBLE => DataType::Double,
-            SqlDataType::DATE => DataType::Date,
-            SqlDataType::TIME => DataType::Time {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::TIMESTAMP => DataType::Timestamp {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
-            },
-            SqlDataType::EXT_BIG_INT => DataType::BigInt,
-            SqlDataType::EXT_TINY_INT => DataType::TinyInt,
-            SqlDataType::EXT_BIT => DataType::Bit,
-            other => {
-                let mut column_size = 0;
-                let mut decimal_digits = 0;
-                let mut name_length = 0;
-                let mut data_type = SqlDataType::UNKNOWN_TYPE;
-                let mut nullable = odbc_sys::Nullability::UNKNOWN;
-
-                unsafe {
-                    SQLDescribeColW(
-                        self.handle,
-                        column_number,
-                        null_mut(),
-                        0,
-                        &mut name_length,
-                        &mut data_type,
-                        &mut column_size,
-                        &mut decimal_digits,
-                        &mut nullable,
-                    )
-                    .into_result(self, "SQLDescribeColW")?;
-                }
-                DataType::Other {
-                    data_type: other,
-                    column_size,
-                    decimal_digits,
-                }
-            }
-        };
-        Ok(dt)
-    }
-
-    /// Returns the size in bytes of the columns. For variable sized types the maximum size is
-    /// returned, excluding a terminating zero.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe {
-            self.numeric_col_attribute(Desc::OctetLength, column_number)
-                .into_result(self)
-        }
-    }
-
-    /// Maximum number of characters required to display data from the column.
-    ///
-    /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe {
-            self.numeric_col_attribute(Desc::DisplaySize, column_number)
-                .into_result(self)
-        }
     }
 
     /// Precision of the column.
