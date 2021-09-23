@@ -488,11 +488,13 @@ where
     }
 
     fn col_octet_length(&self, column_number: u16) -> Result<isize, Error> {
-        self.statement.borrow().col_octet_length(column_number)
+        let stmt = self.statement.borrow();
+        stmt.col_octet_length(column_number).into_result(stmt)
     }
 
     fn col_display_size(&self, column_number: u16) -> Result<isize, Error> {
-        self.statement.borrow().col_display_size(column_number)
+        let stmt = self.statement.borrow();
+        stmt.col_display_size(column_number).into_result(stmt)
     }
 
     fn col_precision(&self, column_number: u16) -> Result<isize, Error> {
