@@ -498,11 +498,13 @@ where
     }
 
     fn col_precision(&self, column_number: u16) -> Result<isize, Error> {
-        self.statement.borrow().col_precision(column_number)
+        let stmt = self.statement.borrow();
+        stmt.col_precision(column_number).into_result(stmt)
     }
 
     fn col_scale(&self, column_number: u16) -> Result<isize, Error> {
-        self.statement.borrow().col_scale(column_number)
+        let stmt = self.statement.borrow();
+        stmt.col_scale(column_number).into_result(stmt)
     }
 
     fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
