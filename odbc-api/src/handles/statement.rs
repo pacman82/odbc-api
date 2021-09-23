@@ -482,7 +482,7 @@ pub trait Statement: AsHandle {
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&self, column_number: u16) -> SqlResult<Len> {
+    fn col_display_size(&self, column_number: u16) -> SqlResult<isize> {
         unsafe {
             self.numeric_col_attribute(Desc::DisplaySize, column_number)
         }
@@ -493,11 +493,19 @@ pub trait Statement: AsHandle {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    fn col_precision(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_precision(&self, column_number: u16) -> SqlResult<isize> {
+        unsafe {
+            self.numeric_col_attribute(Desc::Precision, column_number)
+        }
+    }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    fn col_scale(&self, column_number: u16) -> Result<Len, Error>;
+    fn col_scale(&self, column_number: u16) -> SqlResult<Len> {
+        unsafe {
+            self.numeric_col_attribute(Desc::Scale, column_number)
+        }
+    }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
@@ -548,27 +556,6 @@ impl<'o> Statement for StatementImpl<'o> {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt {
         self.handle
-    }
-
-    /// Precision of the column.
-    ///
-    /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
-    /// the interval data types that represent a time interval, its value is the applicable
-    /// precision of the fractional seconds component.
-    fn col_precision(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe {
-            self.numeric_col_attribute(Desc::Precision, column_number)
-                .into_result(self)
-        }
-    }
-
-    /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
-    /// the defined scale. It is undefined for all other data types.
-    fn col_scale(&self, column_number: u16) -> Result<Len, Error> {
-        unsafe {
-            self.numeric_col_attribute(Desc::Scale, column_number)
-                .into_result(self)
-        }
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
