@@ -7,6 +7,7 @@
 mod connection;
 mod cursor;
 mod environment;
+mod error;
 mod execute;
 mod fixed_sized;
 mod into_parameter;
@@ -14,7 +15,6 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
-mod error;
 
 pub mod buffers;
 pub mod guide;
@@ -25,6 +25,7 @@ pub use self::{
     connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
+    error::Error,
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
@@ -33,7 +34,6 @@ pub use self::{
     parameter_collection::ParameterCollection,
     preallocated::Preallocated,
     prepared::Prepared,
-    error::Error,
 };
 // Reexports
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this

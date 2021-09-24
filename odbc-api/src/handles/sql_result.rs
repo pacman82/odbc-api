@@ -1,8 +1,4 @@
-use crate::Error;
-
-use super::{
-    as_handle::AsHandle, diagnostics::Record as DiagnosticRecord, logging::log_diagnostics,
-};
+use super::{as_handle::AsHandle, logging::log_diagnostics};
 use odbc_sys::SqlReturn;
 
 /// Result of an ODBC function call. Variants hold the same meaning as the constants associated with
@@ -39,27 +35,6 @@ impl<T> SqlResult<T> {
         match self {
             SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
             _ => (),
-        }
-    }
-
-    pub fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
-        match self {
-            // The function has been executed successfully. Holds result.
-            SqlResult::Success(value) => Ok(value),
-            // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(value) => {
-                log_diagnostics(handle);
-                Ok(value)
-            }
-            SqlResult::Error { function } => {
-                let mut record = DiagnosticRecord::default();
-                if record.fill_from(handle, 1) {
-                    log_diagnostics(handle);
-                    Err(Error::Diagnostics { record, function })
-                } else {
-                    Err(Error::NoDiagnostics)
-                }
-            }
         }
     }
 
@@ -113,19 +88,5 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::NO_DATA => None,
             other => Some(other.into_sql_result(function)),
         }
-    }
-}
-
-pub trait IntoResult {
-    fn into_result(self, handle: &dyn AsHandle, function: &'static str) -> Result<(), Error>;
-}
-
-impl IntoResult for SqlReturn {
-    fn into_result(
-        self: SqlReturn,
-        handle: &dyn AsHandle,
-        function: &'static str,
-    ) -> Result<(), Error> {
-        self.into_sql_result(function).into_result(handle)
     }
 }
