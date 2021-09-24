@@ -5,7 +5,7 @@ use super::{
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
-    error::ExtSqlReturn,
+    sql_result::ExtSqlReturn,
     CData, SqlResult,
 };
 use odbc_sys::{

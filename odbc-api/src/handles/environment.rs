@@ -1,7 +1,7 @@
 use super::{
     as_handle::AsHandle,
     drop_handle,
-    error::{ExtSqlReturn, SqlResult},
+    sql_result::{ExtSqlReturn, SqlResult},
     Connection,
 };
 use odbc_sys::{
