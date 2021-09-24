@@ -14,6 +14,7 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
+mod error;
 
 pub mod buffers;
 pub mod guide;
@@ -25,13 +26,14 @@ pub use self::{
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
     fixed_sized::Bit,
-    handles::{ColumnDescription, DataType, Error, Nullability},
+    handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
     nullable::Nullable,
     parameter::{InputParameter, Out, Output, Parameter},
     parameter_collection::ParameterCollection,
     preallocated::Preallocated,
     prepared::Prepared,
+    error::Error,
 };
 // Reexports
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this

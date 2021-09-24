@@ -2,7 +2,7 @@ use super::{
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
-    error::ExtSqlReturn,
+    sql_result::ExtSqlReturn,
     statement::StatementImpl,
     SqlResult,
 };
