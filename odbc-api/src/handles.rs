@@ -13,8 +13,8 @@ mod connection;
 mod data_type;
 mod diagnostics;
 mod environment;
-mod sql_result;
 mod logging;
+mod sql_result;
 mod statement;
 
 pub use {
@@ -26,8 +26,8 @@ pub use {
     data_type::DataType,
     diagnostics::{Record, State},
     environment::Environment,
-    sql_result::SqlResult,
     logging::log_diagnostics,
+    sql_result::SqlResult,
     statement::{ParameterDescription, Statement, StatementImpl},
 };
 

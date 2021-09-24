@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::handles::Record as DiagnosticRecord;
+use crate::handles::{log_diagnostics, AsHandle, Record as DiagnosticRecord, SqlResult};
 
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
@@ -47,4 +47,29 @@ pub enum Error {
         record: DiagnosticRecord,
         size: usize,
     },
+}
+
+// Define that here rather than in `sql_result` mod to keep the `handles` modlue entirely agnostic
+// about the top level `Error` type.
+impl<T> SqlResult<T> {
+    pub fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
+        match self {
+            // The function has been executed successfully. Holds result.
+            SqlResult::Success(value) => Ok(value),
+            // The function has been executed successfully. There have been warnings. Holds result.
+            SqlResult::SuccessWithInfo(value) => {
+                log_diagnostics(handle);
+                Ok(value)
+            }
+            SqlResult::Error { function } => {
+                let mut record = DiagnosticRecord::default();
+                if record.fill_from(handle, 1) {
+                    log_diagnostics(handle);
+                    Err(Error::Diagnostics { record, function })
+                } else {
+                    Err(Error::NoDiagnostics)
+                }
+            }
+        }
+    }
 }
