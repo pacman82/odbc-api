@@ -36,6 +36,8 @@ impl<'o> Prepared<'o> {
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
     pub fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error> {
-        self.statement.describe_param(parameter_number)
+        self.statement
+            .describe_param(parameter_number)
+            .into_result(&self.statement)
     }
 }

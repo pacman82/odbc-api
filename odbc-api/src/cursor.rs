@@ -508,7 +508,8 @@ where
     }
 
     fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.statement.borrow().col_name(column_number, buf)
+        let stmt = self.statement.borrow();
+        stmt.col_name(column_number, buf).into_result(stmt)
     }
 
     fn column_names(&self) -> Result<ColumnNamesIt<'_, Self>, Error> {

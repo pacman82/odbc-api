@@ -5,7 +5,7 @@ use super::{
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
-    error::{Error, ExtSqlReturn, IntoResult},
+    error::ExtSqlReturn,
     CData, SqlResult,
 };
 use odbc_sys::{
@@ -474,18 +474,14 @@ pub trait Statement: AsHandle {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_octet_length(&self, column_number: u16) -> SqlResult<isize> {
-        unsafe {
-            self.numeric_col_attribute(Desc::OctetLength, column_number)
-        }
+        unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
     }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_display_size(&self, column_number: u16) -> SqlResult<isize> {
-        unsafe {
-            self.numeric_col_attribute(Desc::DisplaySize, column_number)
-        }
+        unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
     }
 
     /// Precision of the column.
@@ -494,80 +490,25 @@ pub trait Statement: AsHandle {
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
     fn col_precision(&self, column_number: u16) -> SqlResult<isize> {
-        unsafe {
-            self.numeric_col_attribute(Desc::Precision, column_number)
-        }
+        unsafe { self.numeric_col_attribute(Desc::Precision, column_number) }
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
     fn col_scale(&self, column_number: u16) -> SqlResult<Len> {
-        unsafe {
-            self.numeric_col_attribute(Desc::Scale, column_number)
-        }
+        unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error>;
-
-    /// # Safety
-    ///
-    /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
-    unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16)
-        -> SqlResult<isize>;
-
-    /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
-    /// given StatementHandle.
-    fn reset_parameters(&mut self) -> Result<(), Error>;
-
-    /// Describes parameter marker associated with a prepared SQL statement.
-    ///
-    /// # Parameters
-    ///
-    /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
-    ///   order, starting at 1.
-    fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error>;
-
-    /// Use to check if which additional parameters need data. Should be called after binding
-    /// parameters with an indicator set to [`crate::sys::DATA_AT_EXEC`] or a value created with
-    /// [`crate::sys::len_data_at_exec`].
-    ///
-    /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
-    fn param_data(&mut self) -> Result<Option<Pointer>, Error>;
-
-    /// Executes a columns query using this statement handle.
-    fn columns(
-        &mut self,
-        catalog_name: &U16Str,
-        schema_name: &U16Str,
-        table_name: &U16Str,
-        column_name: &U16Str,
-    ) -> Result<(), Error>;
-
-    /// To put a batch of binary data into the data source at statement execution time. Returns true
-    /// if the `NEED_DATA` is returned by the driver.
-    ///
-    /// Panics if batch is empty.
-    fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error>;
-}
-
-impl<'o> Statement for StatementImpl<'o> {
-    /// Gain access to the underlying statement handle without transferring ownership to it.
-    fn as_sys(&self) -> HStmt {
-        self.handle
-    }
-
-    /// The column alias, if it applies. If the column alias does not apply, the column name is
-    /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
+    fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
         unsafe {
-            SQLColAttributeW(
-                self.handle,
+            let mut res = SQLColAttributeW(
+                self.as_sys(),
                 column_number,
                 Desc::Name,
                 mut_buf_ptr(buf) as Pointer,
@@ -575,11 +516,16 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut string_length_in_bytes as *mut i16,
                 null_mut(),
             )
-            .into_result(self, "SQLColAttributeW")?;
+            .into_sql_result("SQLColAttributeW");
+
+            if res.is_err() {
+                return res;
+            }
+
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
                 buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
-                SQLColAttributeW(
-                    self.handle,
+                res = SQLColAttributeW(
+                    self.as_sys(),
                     column_number,
                     Desc::Name,
                     mut_buf_ptr(buf) as Pointer,
@@ -587,12 +533,13 @@ impl<'o> Statement for StatementImpl<'o> {
                     &mut string_length_in_bytes as *mut i16,
                     null_mut(),
                 )
-                .into_result(self, "SQLColAttributeW")?;
+                .into_sql_result("SQLColAttributeW");
             }
             // Resize buffer to exact string length without terminal zero
             buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+
+            res
         }
-        Ok(())
     }
 
     /// # Safety
@@ -601,7 +548,7 @@ impl<'o> Statement for StatementImpl<'o> {
     unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
         let mut out: Len = 0;
         SQLColAttributeW(
-            self.handle,
+            self.as_sys(),
             column_number,
             attribute,
             null_mut(),
@@ -615,9 +562,9 @@ impl<'o> Statement for StatementImpl<'o> {
 
     /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
     /// given StatementHandle.
-    fn reset_parameters(&mut self) -> Result<(), Error> {
+    fn reset_parameters(&mut self) -> SqlResult<()> {
         unsafe {
-            SQLFreeStmt(self.handle, FreeStmtOption::ResetParams).into_result(self, "SQLFreeStmt")
+            SQLFreeStmt(self.as_sys(), FreeStmtOption::ResetParams).into_sql_result("SQLFreeStmt")
         }
     }
 
@@ -627,14 +574,14 @@ impl<'o> Statement for StatementImpl<'o> {
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
-    fn describe_param(&self, parameter_number: u16) -> Result<ParameterDescription, Error> {
+    fn describe_param(&self, parameter_number: u16) -> SqlResult<ParameterDescription> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut parameter_size = 0;
         let mut decimal_digits = 0;
         let mut nullable = odbc_sys::Nullability::UNKNOWN;
         unsafe {
             SQLDescribeParam(
-                self.handle,
+                self.as_sys(),
                 parameter_number,
                 &mut data_type,
                 &mut parameter_size,
@@ -642,9 +589,8 @@ impl<'o> Statement for StatementImpl<'o> {
                 &mut nullable,
             )
         }
-        .into_result(self, "SQLDescribeParam")?;
-
-        Ok(ParameterDescription {
+        .into_sql_result("SQLDescribeParam")
+        .on_success(|| ParameterDescription {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
             nullable: Nullability::new(nullable),
         })
@@ -655,13 +601,13 @@ impl<'o> Statement for StatementImpl<'o> {
     /// [`crate::sys::len_data_at_exec`].
     ///
     /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
-    fn param_data(&mut self) -> Result<Option<Pointer>, Error> {
+    fn param_data(&mut self) -> SqlResult<Option<Pointer>> {
         unsafe {
             let mut param_id: Pointer = null_mut();
             // Use cases for `PARAM_DATA_AVAILABLE` and `NO_DATA` not implemented yet.
-            match SQLParamData(self.handle, &mut param_id as *mut Pointer) {
-                SqlReturn::NEED_DATA => Ok(Some(param_id)),
-                other => other.into_result(self, "SQLParamData").map(|()| None),
+            match SQLParamData(self.as_sys(), &mut param_id as *mut Pointer) {
+                SqlReturn::NEED_DATA => SqlResult::Success(Some(param_id)),
+                other => other.into_sql_result("SQLParamData").on_success(|| None),
             }
         }
     }
@@ -673,10 +619,10 @@ impl<'o> Statement for StatementImpl<'o> {
         schema_name: &U16Str,
         table_name: &U16Str,
         column_name: &U16Str,
-    ) -> Result<(), Error> {
+    ) -> SqlResult<()> {
         unsafe {
             SQLColumnsW(
-                self.handle,
+                self.as_sys(),
                 buf_ptr(catalog_name.as_slice()),
                 catalog_name.len().try_into().unwrap(),
                 buf_ptr(schema_name.as_slice()),
@@ -686,7 +632,7 @@ impl<'o> Statement for StatementImpl<'o> {
                 buf_ptr(column_name.as_slice()),
                 column_name.len().try_into().unwrap(),
             )
-            .into_result(self, "SQLColumnsW")
+            .into_sql_result("SQLColumnsW")
         }
     }
 
@@ -694,7 +640,7 @@ impl<'o> Statement for StatementImpl<'o> {
     /// if the `NEED_DATA` is returned by the driver.
     ///
     /// Panics if batch is empty.
-    fn put_binary_batch(&mut self, batch: &[u8]) -> Result<bool, Error> {
+    fn put_binary_batch(&mut self, batch: &[u8]) -> SqlResult<bool> {
         // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
         // Still strikes me as a programming error. Maybe we could also do nothing instead.
         if batch.is_empty() {
@@ -703,14 +649,21 @@ impl<'o> Statement for StatementImpl<'o> {
 
         unsafe {
             match SQLPutData(
-                self.handle,
+                self.as_sys(),
                 batch.as_ptr() as Pointer,
                 batch.len().try_into().unwrap(),
             ) {
-                SqlReturn::NEED_DATA => Ok(true),
-                other => other.into_result(self, "SQLPutData").map(|()| false),
+                SqlReturn::NEED_DATA => SqlResult::Success(true),
+                other => other.into_sql_result("SQLPutData").on_success(|| false),
             }
         }
+    }
+}
+
+impl<'o> Statement for StatementImpl<'o> {
+    /// Gain access to the underlying statement handle without transferring ownership to it.
+    fn as_sys(&self) -> HStmt {
+        self.handle
     }
 }
 

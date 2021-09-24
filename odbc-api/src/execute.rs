@@ -37,7 +37,7 @@ where
     let stmt = statement.borrow_mut();
     // Reset parameters so we do not dereference stale once by mistake if we call
     // `exec_direct`.
-    stmt.reset_parameters()?;
+    stmt.reset_parameters().into_result(stmt)?;
     let need_data = unsafe {
         stmt.set_paramset_size(parameter_set_size)
             .into_result(stmt)?;
@@ -53,7 +53,7 @@ where
     if need_data {
         // Check if any delayed parameters have been bound which stream data to the database at
         // statement execution time. Loops over each bound stream.
-        while let Some(blob_ptr) = stmt.param_data()? {
+        while let Some(blob_ptr) = stmt.param_data().into_result(stmt)? {
             // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
             let blob_ref = unsafe {
                 let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
@@ -61,7 +61,7 @@ where
             };
             // Loop over all batches within each blob
             while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
-                stmt.put_binary_batch(batch)?;
+                stmt.put_binary_batch(batch).into_result(stmt)?;
             }
         }
     }
@@ -88,7 +88,8 @@ where
 {
     let stmt = statement.borrow_mut();
 
-    stmt.columns(catalog_name, schema_name, table_name, column_name)?;
+    stmt.columns(catalog_name, schema_name, table_name, column_name)
+        .into_result(stmt)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
