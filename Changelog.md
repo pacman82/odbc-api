@@ -4,6 +4,7 @@
 
 * Add `is_empty` to `NullableSlice` and `NullableSliceMut`.
 * Remove `Statement::col_data_type`. Method is still available via the `Cursor` trait, though.
+* Replace `Error` with `SqlReturn` in `handles` module to not make any decisions about handling diagnostics in that layer.
 
 ## 0.27.3
 
