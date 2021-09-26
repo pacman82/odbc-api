@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.28.0
 
 * Add `is_empty` to `NullableSlice` and `NullableSliceMut`.
 * Remove `Statement::col_data_type`. Method is still available via the `Cursor` trait, though.
