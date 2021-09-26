@@ -221,13 +221,41 @@ fn describe_columns() {
     assert_eq!(kind, cursor.col_data_type(11).unwrap());
 }
 
-#[test]
-fn text_buffer() {
-    let query = "SELECT title, year FROM Movies ORDER BY year;";
+/// Fetch text from data source using the TextBuffer type
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn text_buffer(profile: &Profile) {
+    let table_name = "TextBuffer";
     let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+        .connect_with_connection_string(profile.connection_string)
         .unwrap();
-    let cursor = conn.execute(query, ()).unwrap().unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["VARCHAR(255)", "INT"],
+    )
+    .unwrap();
+
+    // Insert data
+    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?), (?,?),(?,?)", table_name);
+    conn.execute(
+        &insert,
+        (
+            &"Interstellar".into_parameter(),
+            &None::<i32>.into_parameter(),
+            &"2001: A Space Odyssey".into_parameter(),
+            &1968,
+            &"Jurassic Park".into_parameter(),
+            &1993,
+        ),
+    )
+    .unwrap();
+
+    let query = format!("SELECT a,b FROM {} ORDER BY id;", table_name);
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    // Cursor to string helper utilizes the text buffer
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
