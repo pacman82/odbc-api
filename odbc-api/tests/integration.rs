@@ -227,9 +227,7 @@ fn describe_columns() {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn text_buffer(profile: &Profile) {
     let table_name = "TextBuffer";
-    let conn = ENV
-        .connect_with_connection_string(profile.connection_string)
-        .unwrap();
+    let conn = profile.connection().unwrap();
     setup_empty_table(
         &conn,
         profile.index_type,
@@ -2200,9 +2198,7 @@ fn insert_truncated_value(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB expected fail inconclusive")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_var_char_array(profile: &Profile) {
-    let conn = ENV
-        .connect_with_connection_string(profile.connection_string)
-        .unwrap();
+    let conn = profile.connection().unwrap();
     let table_name = "InsertedTruncatedVarCharArray";
 
     // Prepare table content
