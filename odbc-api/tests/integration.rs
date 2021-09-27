@@ -279,48 +279,6 @@ fn column_attributes() {
     assert_eq!("year", name.to_string().unwrap());
 }
 
-#[test]
-fn prices() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
-        .unwrap();
-    let sql = "SELECT id,day,time,product,price FROM Sales ORDER BY id;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
-
-    // Test names
-    let mut buf = Vec::new();
-
-    let mut name = |column_number| {
-        cursor.col_name(column_number, &mut buf).unwrap();
-        std::char::decode_utf16(buf.iter().copied())
-            .collect::<Result<String, _>>()
-            .unwrap()
-    };
-
-    assert_eq!("id", name(1));
-    assert_eq!("day", name(2));
-    assert_eq!("time", name(3));
-    assert_eq!("product", name(4));
-    assert_eq!("price", name(5));
-
-    // Test types
-
-    assert_eq!(
-        DataType::Decimal {
-            precision: 10,
-            scale: 2
-        },
-        cursor.col_data_type(5).unwrap()
-    );
-
-    // Test binding id int buffer
-    let batch_size = 10;
-    assert_eq!(DataType::Integer, cursor.col_data_type(1).unwrap());
-    let id_buffer = SingleColumnRowSetBuffer::new(batch_size);
-    let mut row_set_cursor = cursor.bind_buffer(id_buffer).unwrap();
-    assert_eq!(&[1, 2, 3], row_set_cursor.fetch().unwrap().unwrap().get());
-}
-
 /// Bind a CHAR column to a character buffer.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
