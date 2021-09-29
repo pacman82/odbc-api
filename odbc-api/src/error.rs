@@ -7,10 +7,30 @@ use crate::handles::{log_diagnostics, AsHandle, Record as DiagnosticRecord, SqlR
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
 pub enum Error {
-    /// No Diagnostics available. This is usually the case if allocation of the ODBC Environment
-    /// itself fails. In that case no object exist to obtain the diagnostic record from.
-    #[error("No Diagnostics available.")]
-    NoDiagnostics,
+    /// Setting connection pooling match option failed. Exclusively emitted by
+    /// [`crate::Environment::set_connection_pooling_matching`].
+    #[error("Failed to set connection pooling matching.")]
+    FailedSettingConnectionPoolingMatching,
+    /// Setting connection pooling option failed. Exclusively emitted by
+    /// [`crate::Environment::set_connection_pooling`].
+    #[error("Failed to set connection pooling.")]
+    FailedSettingConnectionPooling,
+    /// Allocating the environment itself fails. Further diagnostics are not available, as they
+    /// would be retrieved using the envirorment handle. Exclusively emitted by
+    /// [`crate::Environment::new`].
+    #[error("Failed to allocate ODBC Environment.")]
+    FailedAllocatingEnvironment,
+    /// This should never happen, given that ODBC driver manager and ODBC driver do not have any
+    /// Bugs. Since we may link vs a bunch of these, better to be on the safe side.
+    #[error(
+        "No Diagnostics available. The ODBC function call to {} returned an error. Sadly neither the
+        ODBC driver manager, nor the driver were polite enough to leave a diagnostic record
+        specifying what exactly went wrong.", function
+    )]
+    NoDiagnostics {
+        /// ODBC API call which returned error without producing a diagnostic record.
+        function: &'static str,
+    },
     /// SQL Error had been returned by a low level ODBC function call. A Diagnostic record is
     /// obtained and associated with this error.
     #[error("ODBC emitted an error calling '{function}':\n{record}")]
@@ -67,7 +87,7 @@ impl<T> SqlResult<T> {
                     log_diagnostics(handle);
                     Err(Error::Diagnostics { record, function })
                 } else {
-                    Err(Error::NoDiagnostics)
+                    Err(Error::NoDiagnostics { function })
                 }
             }
         }

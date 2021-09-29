@@ -30,7 +30,6 @@ unsafe impl Send for Environment {}
 // We are not declaring Environment as Sync due to its interior mutablity with regards to iterator
 // state and error handilng
 
-
 unsafe impl AsHandle for Environment {
     fn as_handle(&self) -> Handle {
         self.handle as Handle

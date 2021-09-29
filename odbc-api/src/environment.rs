@@ -89,7 +89,7 @@ impl Environment {
         scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
         match handles::Environment::set_connection_pooling(scheme) {
-            SqlResult::Error { .. } => Err(Error::NoDiagnostics),
+            SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPooling),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
         }
     }
@@ -110,7 +110,7 @@ impl Environment {
     /// keywords can be used. Keywords must match, but not all connection attributes must match.
     pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> Result<(), Error> {
         match self.environment.set_connection_pooling_matching(matching) {
-            SqlResult::Error { .. } => Err(Error::NoDiagnostics),
+            SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPoolingMatching),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
         }
     }
@@ -136,7 +136,7 @@ impl Environment {
                 log_diagnostics(&env);
                 env
             }
-            SqlResult::Error { .. } => return Err(Error::NoDiagnostics),
+            SqlResult::Error { .. } => return Err(Error::FailedAllocatingEnvironment),
         };
 
         debug!("ODBC Environment created.");
@@ -607,7 +607,9 @@ impl Environment {
     fn allocate_connection(&self) -> Result<handles::Connection, Error> {
         // Hold lock diagnostics errors are consumed in this thread.
         let _lock = self.internal_state.lock().unwrap();
-        self.environment.allocate_connection().into_result(&self.environment)
+        self.environment
+            .allocate_connection()
+            .into_result(&self.environment)
     }
 }
 
