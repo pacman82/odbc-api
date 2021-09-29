@@ -1,5 +1,10 @@
 # Changelog
 
+## Next
+
+* Fix: `handles::Environment` is now longer declared `Sync`. Due to the interior mutability regarding error states.
+* Fix: A lock has been added to `Environment` to ensure diagnostics for allocation errors always are handled by the correct thread.
+
 ## 0.28.0
 
 * Add `is_empty` to `NullableSlice` and `NullableSliceMut`.

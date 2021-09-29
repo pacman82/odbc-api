@@ -30,8 +30,13 @@ pub struct Environment {
     /// synchronization mechanism, yet in order to be able to access to iterate over information
     /// using a shared reference we need to protect the interior iteration state with a mutex of its
     /// own.
-    info_iterator_state: Mutex<()>,
+    /// The environment is also mutable with regards to Errors, which are accessed over the handle.
+    /// If multiple fallible operations are executed in parallel, we need the mutex to ensure the
+    /// errors are fetched by the correct thread.
+    internal_state: Mutex<()>,
 }
+
+unsafe impl Sync for Environment {}
 
 impl Environment {
     /// Enable or disable (default) connection pooling for ODBC connections. Call this function
@@ -156,7 +161,7 @@ impl Environment {
 
         Ok(Self {
             environment,
-            info_iterator_state: Mutex::new(()),
+            internal_state: Mutex::new(()),
         })
     }
 
@@ -221,10 +226,7 @@ impl Environment {
         user: &U16Str,
         pwd: &U16Str,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self
-            .environment
-            .allocate_connection()
-            .into_result(&self.environment)?;
+        let mut connection = self.allocate_connection()?;
         connection
             .connect(data_source_name, user, pwd)
             .into_result(&connection)?;
@@ -279,10 +281,7 @@ impl Environment {
         &self,
         connection_string: &U16Str,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self
-            .environment
-            .allocate_connection()
-            .into_result(&self.environment)?;
+        let mut connection = self.allocate_connection()?;
         connection
             .connect_with_connection_string(connection_string)
             .into_result(&connection)?;
@@ -398,10 +397,7 @@ impl Environment {
         completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverCompleteOption<'_>,
     ) -> Result<Connection<'_>, Error> {
-        let mut connection = self
-            .environment
-            .allocate_connection()
-            .into_result(&self.environment)?;
+        let mut connection = self.allocate_connection()?;
         let connection_string = U16String::from_str(connection_string);
 
         unsafe {
@@ -438,7 +434,7 @@ impl Environment {
         // Since we have exclusive ownership of the environment handle and we take the lock, we can
         // guarantee that this method is currently the only one changing the state of the internal
         // iterators of the environment.
-        let _lock = self.info_iterator_state.lock().unwrap();
+        let _lock = self.internal_state.lock().unwrap();
         unsafe {
             // Find required buffer size to avoid truncation.
             let (mut desc_len, mut attr_len) = if let Some(res) = self
@@ -548,7 +544,7 @@ impl Environment {
         // Since we have exclusive ownership of the environment handle and we take the lock, we can
         // guarantee that this method is currently the only one changing the state of the internal
         // iterators of the environment.
-        let _lock = self.info_iterator_state.lock().unwrap();
+        let _lock = self.internal_state.lock().unwrap();
         unsafe {
             // Find required buffer size to avoid truncation.
             let (mut server_name_len, mut driver_len) =
@@ -606,6 +602,12 @@ impl Environment {
         }
 
         Ok(data_source_info)
+    }
+
+    fn allocate_connection(&self) -> Result<handles::Connection, Error> {
+        // Hold lock diagnostics errors are consumed in this thread.
+        let _lock = self.internal_state.lock().unwrap();
+        self.environment.allocate_connection().into_result(&self.environment)
     }
 }
 

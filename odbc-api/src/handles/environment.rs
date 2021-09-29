@@ -26,8 +26,10 @@ pub struct Environment {
 
 /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
 unsafe impl Send for Environment {}
-/// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
-unsafe impl Sync for Environment {}
+
+// We are not declaring Environment as Sync due to its interior mutablity with regards to iterator
+// state and error handilng
+
 
 unsafe impl AsHandle for Environment {
     fn as_handle(&self) -> Handle {
