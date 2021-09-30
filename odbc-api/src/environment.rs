@@ -109,10 +109,9 @@ impl Environment {
     /// * [`crate::sys::AttrCpMatch::Relaxed`] = Connections with matching connection string \
     /// keywords can be used. Keywords must match, but not all connection attributes must match.
     pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> Result<(), Error> {
-        match self.environment.set_connection_pooling_matching(matching) {
-            SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPoolingMatching),
-            SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
-        }
+        self.environment
+            .set_connection_pooling_matching(matching)
+            .into_result(&self.environment)
     }
 
     /// Entry point into this API. Allocates a new ODBC Environment and declares to the driver

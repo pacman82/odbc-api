@@ -7,10 +7,6 @@ use crate::handles::{log_diagnostics, AsHandle, Record as DiagnosticRecord, SqlR
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
 pub enum Error {
-    /// Setting connection pooling match option failed. Exclusively emitted by
-    /// [`crate::Environment::set_connection_pooling_matching`].
-    #[error("Failed to set connection pooling matching.")]
-    FailedSettingConnectionPoolingMatching,
     /// Setting connection pooling option failed. Exclusively emitted by
     /// [`crate::Environment::set_connection_pooling`].
     #[error("Failed to set connection pooling.")]
