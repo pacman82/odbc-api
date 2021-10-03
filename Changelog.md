@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.2
+
+* Reexport crate `force_send_sync`.
+
 ## 0.28.1
 
 * Fix: `handles::Environment` is now longer declared `Sync`. Due to the interior mutability regarding error states.
