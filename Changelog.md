@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.3
+
+* After failing to get any race conditions with it on either Windows or Linux. `Environment::new` is now considered to be safe.
+
 ## 0.28.2
 
 * Reexport crate `force_send_sync`.
