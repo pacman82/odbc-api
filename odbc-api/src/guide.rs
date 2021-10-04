@@ -41,9 +41,9 @@
 //!     let out = stdout();
 //!     let mut writer = csv::Writer::from_writer(out);
 //!
-//!     // We know this is going to be the only ODBC environment in the entire process, so this is
-//!     // safe.
-//!     let environment = unsafe { Environment::new() }?;
+//!     // If you do not do anything fancy it is recommended to have only one Environment in the
+//!     // entire process.
+//!     let environment = Environment::new()?;
 //!
 //!     // Connect using a DSN. Alternatively we could have used a connection string
 //!     let mut connection = environment.connect(
@@ -93,7 +93,7 @@
 //!
 //! ## 32 Bit and 64 Bit considerations.
 //!
-//! To consider wether you want to work with 32 Bit or 64 Bit data sources is especially important
+//! To consider whether you want to work with 32 Bit or 64 Bit data sources is especially important
 //! for windows users, as driver managers (and possibly drivers) may both exist at the same time
 //! in the same system.
 //!
@@ -117,24 +117,13 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
-//! // making this call safe.
-//! unsafe {
-//!     let env = Environment::new()?;
-//! }
+//! let env = Environment::new()?;
+//!
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! Oh dear! Aren't we of to a bad start. First step in using this API and already a piece of unsafe
-//! code. Well we are talking with a C API those contract explicitly demands that there MUST be at
-//! most one ODBC Environment in the entire process. This requirement can only be verified in
-//! application code. If you write a library you MUST NOT wrap the creation of an ODBC environment
-//! in a safe function call. If another libray would do the same and an application were to use
-//! both of these, it might create two environments in safe code and thus causing undefined
-//! behaviour, which is clearly a violation of Rusts safety guarantees. On the other hand in
-//! application code it is pretty easy to get right. You call it, and you call it only once.
-//!
-//! Apart from that. This is it. Our ODBC Environment is ready for action.
+//! This is it. Our ODBC Environment is ready for action. We can use it to list data sources and 
+//! drivers, but most importantly we can use it to create connections.
 //!
 //! These bindings currently support two ways of creating a connections:
 //!
@@ -146,11 +135,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
-//! // making this call safe.
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let connection_string = "
 //!     Driver={ODBC Driver 17 for SQL Server};\
@@ -180,11 +165,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
-//! // making this call safe.
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! # Ok::<(), odbc_api::Error>(())
@@ -207,22 +188,26 @@
 //! unsafe.
 //!
 //! The other one is changed via [`crate::Environment::set_connection_pooling_matching`]. It governs
-//! how a connection is choosen from the pool. It defaults to strict which means the `Connection`
+//! how a connection is chosen from the pool. It defaults to strict which means the `Connection`
 //! you get from the pool will have exactly the attributes specified in the connection string.
 //!
-//! Here is an example of how to create an ODBC enviroment with connection pooling.
+//! Here is an example of how to create an ODBC environment with connection pooling.
 //!
 //! ```
 //! use lazy_static::lazy_static;
 //! use odbc_api::{Environment, sys::{AttrConnectionPooling, AttrCpMatch}};
 //!
 //! lazy_static! {
-//!     pub static ref ENV: Environment = unsafe {
-//!         // Enable connection pooling. Let driver decide wether the attributes of two connection
+//!     pub static ref ENV: Environment = {
+//!         // Enable connection pooling. Let driver decide whether the attributes of two connection
 //!         // are similar enough to change the attributes of a pooled one, to fit the requested
 //!         // connection, or if it is cheaper to create a new Connection from scratch.
 //!         // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
-//!         Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+//!         //
+//!         // Safety: This call changes global mutable space in the underlying ODBC driver manager.
+//!         unsafe {
+//!             Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+//!         }
 //!         let mut env = Environment::new().unwrap();
 //!         // Strict is the default, and is set here to be explicit about it.
 //!         env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
@@ -231,7 +216,7 @@
 //! }
 //! ```
 //!
-//! ## Executing SQL statments
+//! ## Executing SQL statements
 //!
 //! ### Executing a single SQL statement
 //!
@@ -240,9 +225,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
@@ -255,7 +238,7 @@
 //! arguments of the SQL Statements itself (more on that later). Ours has none, so we use `()` to
 //! not bind any arguments to the statement. You can learn all about passing parameters from the
 //! [`parameter module level documentation`](`crate::parameter`). It may feature an example for
-//! your usecase.
+//! your use case.
 //!
 //! Note that the result of the operation is an `Option`. This reflects that not every statement
 //! returns a [`Cursor`](crate::Cursor). `INSERT` statements usually do not, but even `SELECT`
@@ -345,7 +328,7 @@
 //!
 //! ### Fetching results row by row without binding buffers upfront.
 //!
-//! Fetching data without binding buffers, may imply lots of roundtrips to the data source (one by
+//! Fetching data without binding buffers, may imply lots of round trips to the data source (one by
 //! row, or even by field). Also the driver has no upfront knowledge what C-Type your value should
 //! be represented as, preventing further optimizations. Usually it is the slowest possible way to
 //! siphon data out of a data source. That being said, it is a convenient programming model, as the
@@ -380,9 +363,7 @@
 //!     buffers::{AnyColumnView, ColumnarRowSet, BufferDescription, BufferKind, Item},
 //! };
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let batch_size = 1000; // Maximum number of rows in each row set
 //! let buffer_description = [

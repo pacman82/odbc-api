@@ -17,9 +17,7 @@ mod tuple;
 /// ```no_run
 /// use odbc_api::Environment;
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let year = 1980;
@@ -34,9 +32,7 @@ mod tuple;
 /// ```no_run
 /// use odbc_api::Environment;
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let too_old = 1980;
@@ -55,9 +51,7 @@ mod tuple;
 /// ```no_run
 /// use odbc_api::Environment;
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// let params = [1980, 2000];

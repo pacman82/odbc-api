@@ -84,23 +84,22 @@ impl Environment {
     }
 
     /// An allocated ODBC Environment handle
-    ///
-    /// # Safety
-    ///
-    /// There may only be one Odbc environment in any process at any time. Take care using this
-    /// function in unit tests, as these run in parallel by default in Rust. Also no library should
-    /// probably wrap the creation of an odbc environment into a safe function call. This is because
-    /// using two of these "safe" libraries at the same time in different parts of your program may
-    /// lead to race condition thus violating Rust's safety guarantees.
-    ///
-    /// Creating one environment in your binary is safe however.
-    pub unsafe fn new() -> SqlResult<Self> {
-        let mut handle = null_mut();
-        let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle)
-            .into_sql_result("SQLAllocHandle");
-        result.on_success(|| Environment {
-            handle: handle as HEnv,
-        })
+    pub fn new() -> SqlResult<Self> {
+        // After running a lot of unit tests in parallel on both linux and windows architectures and
+        // never seeing a race condition related to this I deem this save. In the past I feared
+        // concurrent construction of multiple Environments might race on shared state. Mostly due
+        // to <https://github.com/Koka/odbc-rs/issues/29> and
+        // <http://old.vk.pp.ru/docs/sybase-any/interfaces/00000034.htm>. Since however I since
+        // however official sources imply it is ok for an application to have multiple environments
+        // and I did not get it to race ever on my machine.
+        unsafe {
+            let mut handle = null_mut();
+            let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle)
+                .into_sql_result("SQLAllocHandle");
+            result.on_success(|| Environment {
+                handle: handle as HEnv,
+            })
+        }
     }
 
     /// Declares which Version of the ODBC API we want to use. This is the first thing that should

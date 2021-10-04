@@ -9,7 +9,7 @@ const MSSQL: &str =
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
-    static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    static ref ENV: Environment = Environment::new().unwrap();
 }
 
 /// Test helper using two commands to roundtrip csv to and from a data source.

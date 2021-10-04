@@ -128,8 +128,8 @@ fn main() -> Result<(), Error> {
         .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
-    // We know this is going to be the only ODBC environment in the entire process, so this is safe.
-    let environment = unsafe { Environment::new() }?;
+    // It is recommended to have only one Environment per Application.
+    let environment = Environment::new()?;
 
     match opt.command {
         Command::Query { query_opt } => {

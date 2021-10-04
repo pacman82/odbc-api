@@ -21,9 +21,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let year = 1980;
@@ -46,9 +44,7 @@
 //! ```no_run
 //! use odbc_api::{Environment, parameter::WithDataType, DataType};
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let year = WithDataType{
@@ -75,9 +71,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let too_old = 1980;
@@ -99,9 +93,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! let params = [1980, 2000];
@@ -163,9 +155,7 @@
 //! ```no_run
 //! use odbc_api::{Environment, Out, Nullable};
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //!
@@ -293,9 +283,7 @@
 //! ```no_run
 //! use odbc_api::Environment;
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! // conn.execute("SELECT year FROM Birthdays WHERE name=?;", "Bernd")?; // <- compiler error.
@@ -308,9 +296,7 @@
 //! ```no_run
 //! use odbc_api::{Environment, IntoParameter};
 //!
-//! let env = unsafe {
-//!     Environment::new()?
-//! };
+//! let env = Environment::new()?;
 //!
 //! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 //! if let Some(cursor) = conn.execute(
@@ -421,9 +407,7 @@ where
 /// ```no_run
 /// use odbc_api::{Environment, Out, Nullable};
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 ///
@@ -461,9 +445,7 @@ where
 /// ```no_run
 /// use odbc_api::{Environment, parameter::WithDataType, DataType};
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// // Bind year as VARCHAR(4) rather than integer.

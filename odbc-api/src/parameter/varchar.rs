@@ -232,9 +232,7 @@ where
 /// ```no_run
 /// use odbc_api::{Environment, IntoParameter};
 ///
-/// let env = unsafe {
-///     Environment::new()?
-/// };
+/// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 /// if let Some(cursor) = conn.execute(

@@ -126,7 +126,7 @@ impl Environment {
     /// lead to race condition thus violating Rust's safety guarantees.
     ///
     /// Creating one environment in your binary is safe however.
-    pub unsafe fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let result = handles::Environment::new();
 
         let environment = match result {
@@ -181,11 +181,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
-    /// // making this call safe.
-    /// let env = unsafe {
-    ///     Environment::new()?
-    /// };
+    /// let env = Environment::new()?;
     ///
     /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
     /// # Ok::<(), odbc_api::Error>(())
@@ -245,11 +241,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// // I herby solemnly swear that this is the only ODBC environment in the entire process, thus
-    /// // making this call safe.
-    /// let env = unsafe {
-    ///     Environment::new()?
-    /// };
+    /// let env = Environment::new()?;
     ///
     /// let connection_string = "
     ///     Driver={ODBC Driver 17 for SQL Server};\
@@ -321,11 +313,7 @@ impl Environment {
     /// #   -> Result<(), odbc_api::Error> {
     /// use odbc_api::{Environment, handles::OutputStringBuffer, DriverCompleteOption};
     ///
-    /// // I hereby solemnly swear that this is the only ODBC environment in the entire process,
-    /// // thus making this call safe.
-    /// let env = unsafe {
-    ///     Environment::new()?
-    /// };
+    /// let env = Environment::new()?;
     ///
     /// let mut output_buffer = OutputStringBuffer::with_buffer_size(1024);
     /// let connection = env.driver_connect(
@@ -420,7 +408,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let env = unsafe { Environment::new () }?;
+    /// let env = Environment::new ()?;
     /// for driver_info in env.drivers()? {
     ///     println!("{:#?}", driver_info);
     /// }
@@ -490,7 +478,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let env = unsafe { Environment::new () }?;
+    /// let env = Environment::new()?;
     /// for data_source in env.data_sources()? {
     ///     println!("{:#?}", data_source);
     /// }
@@ -508,7 +496,7 @@ impl Environment {
     /// ```no_run
     /// use odbc_api::Environment;
     ///
-    /// let env = unsafe { Environment::new () }?;
+    /// let env = Environment::new ()?;
     /// for data_source in env.system_data_sources()? {
     ///     println!("{:#?}", data_source);
     /// }
