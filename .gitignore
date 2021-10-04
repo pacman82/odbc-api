@@ -4,7 +4,7 @@
 # Cargo.lock
 
 # Normally IDE stuff is put in global gitignore, but at the moment I don't know how to make this
-# work with the developmont container
+# work with the development container
 /.idea/
 
 # Machine specific test expectation for list-drivers test
