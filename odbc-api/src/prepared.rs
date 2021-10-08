@@ -25,7 +25,7 @@ impl<'o> Prepared<'o> {
     pub fn execute(
         &mut self,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), None, params)
     }
 

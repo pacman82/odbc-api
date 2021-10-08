@@ -64,7 +64,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &U16Str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let lazy_statement = move || self.allocate_statement();
         execute_with_parameters(lazy_statement, Some(query), params)
     }
@@ -102,7 +102,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'_, StatementImpl<'_>>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }
@@ -322,7 +322,7 @@ impl<'c> Connection<'c> {
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<CursorImpl<'_, StatementImpl<'_>>, Error> {
+    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         columns(
             self.allocate_statement()?,
             &U16String::from_str(catalog_name),

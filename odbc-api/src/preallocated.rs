@@ -46,7 +46,7 @@ impl<'o> Preallocated<'o> {
         &mut self,
         query: &U16Str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
     }
 
@@ -94,7 +94,7 @@ impl<'o> Preallocated<'o> {
         &mut self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<'o, &mut StatementImpl<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
     }
@@ -119,7 +119,7 @@ impl<'o> Preallocated<'o> {
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<CursorImpl<'o, &mut StatementImpl<'o>>, Error> {
+    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
         columns(
             &mut self.statement,
             &U16String::from_str(catalog_name),

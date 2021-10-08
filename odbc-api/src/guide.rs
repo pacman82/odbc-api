@@ -122,7 +122,7 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! This is it. Our ODBC Environment is ready for action. We can use it to list data sources and 
+//! This is it. Our ODBC Environment is ready for action. We can use it to list data sources and
 //! drivers, but most importantly we can use it to create connections.
 //!
 //! These bindings currently support two ways of creating a connections:
