@@ -1,8 +1,9 @@
-use std::{borrow::BorrowMut, intrinsics::transmute};
+use std::intrinsics::transmute;
 
 use widestring::U16Str;
 
 use crate::{
+    cursor::BorrowMutStatement,
     handles::{Statement, StatementImpl},
     parameter::Blob,
     CursorImpl, Error, ParameterCollection,
@@ -23,9 +24,9 @@ pub fn execute_with_parameters<'o, S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&U16Str>,
     params: impl ParameterCollection,
-) -> Result<Option<CursorImpl<'o, S>>, Error>
+) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: BorrowMut<StatementImpl<'o>>,
+    S: BorrowMutStatement<Statement = StatementImpl<'o>>,
 {
     let parameter_set_size = params.parameter_set_size();
     if parameter_set_size == 0 {
@@ -76,15 +77,15 @@ where
 
 /// Shared implementation for executing a columns query between [`crate::Connection`] and
 /// [`crate::Preallocated`].
-pub fn columns<'o, S>(
+pub fn columns<S>(
     mut statement: S,
     catalog_name: &U16Str,
     schema_name: &U16Str,
     table_name: &U16Str,
     column_name: &U16Str,
-) -> Result<CursorImpl<'o, S>, Error>
+) -> Result<CursorImpl<S>, Error>
 where
-    S: BorrowMut<StatementImpl<'o>>,
+    S: BorrowMutStatement,
 {
     let stmt = statement.borrow_mut();
 
