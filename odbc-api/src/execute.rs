@@ -3,10 +3,8 @@ use std::intrinsics::transmute;
 use widestring::U16Str;
 
 use crate::{
-    cursor::BorrowMutStatement,
-    handles::{Statement, StatementImpl},
-    parameter::Blob,
-    CursorImpl, Error, ParameterCollection,
+    cursor::BorrowMutStatement, handles::Statement, parameter::Blob, CursorImpl, Error,
+    ParameterCollection,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],
@@ -20,13 +18,13 @@ use crate::{
 /// * `query`: SQL query to be executed. If `None` it is a assumed a prepared query is to be
 ///   executed.
 /// * `params`: The parameters bound to the statement before query execution.
-pub fn execute_with_parameters<'o, S>(
+pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&U16Str>,
     params: impl ParameterCollection,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: BorrowMutStatement<Statement = StatementImpl<'o>>,
+    S: BorrowMutStatement,
 {
     let parameter_set_size = params.parameter_set_size();
     if parameter_set_size == 0 {

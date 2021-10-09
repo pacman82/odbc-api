@@ -1,7 +1,7 @@
 use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
-    handles::{DelayedInput, HasDataType, Statement, StatementImpl},
+    handles::{DelayedInput, HasDataType, Statement},
     DataType, Error, Parameter,
 };
 use std::{
@@ -94,7 +94,7 @@ unsafe impl Parameter for &mut BlobParam<'_> {
     unsafe fn bind_parameter(
         self,
         parameter_number: u16,
-        stmt: &mut StatementImpl<'_>,
+        stmt: &mut impl Statement,
     ) -> Result<(), Error> {
         stmt.bind_delayed_input_parameter(parameter_number, self)
             .into_result(stmt)

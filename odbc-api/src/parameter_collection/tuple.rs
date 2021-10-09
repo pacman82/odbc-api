@@ -2,7 +2,7 @@
 //! trait.
 
 use super::ParameterCollection;
-use crate::{handles::StatementImpl, Error, Parameter};
+use crate::{handles::Statement, Error, Parameter};
 
 macro_rules! impl_bind_parameters {
     ($offset:expr, $stmt:ident) => (
@@ -27,7 +27,7 @@ macro_rules! impl_parameters_for_tuple{
                 1
             }
 
-            unsafe fn bind_parameters_to(self, stmt: &mut StatementImpl<'_>) -> Result<(), Error> {
+            unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error> {
                 let ($($t,)*) = self;
                 impl_bind_parameters!(0, stmt $($t)*)
             }
