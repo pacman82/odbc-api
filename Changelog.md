@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.0 (next)
+
+* Removed generic lifetime argument from `CursorImpl`.
+
 ## 0.28.3
 
 * After failing to get any race conditions with it on either Windows or Linux. `Environment::new` is now considered to be safe.
