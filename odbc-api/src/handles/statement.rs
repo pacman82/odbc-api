@@ -12,10 +12,16 @@ use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW,
     SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
-    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SqlDataType,
-    SqlReturn, StatementAttribute, ULen,
+    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW,
+    SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
-use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
+use std::{
+    convert::TryInto,
+    ffi::c_void,
+    marker::PhantomData,
+    mem::ManuallyDrop,
+    ptr::{null, null_mut},
+};
 use widestring::U16Str;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -633,6 +639,14 @@ pub trait Statement: AsHandle {
                 column_name.len().try_into().unwrap(),
             )
             .into_sql_result("SQLColumnsW")
+        }
+    }
+
+    /// Query the datasource for a list of tables
+    fn tables(&mut self) -> SqlResult<()> {
+        unsafe {
+            SQLTablesW(self.as_sys(), null(), 0, null(), 0, null(), 0, null(), 0)
+                .into_sql_result("SQLColumnsW")
         }
     }
 

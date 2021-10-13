@@ -114,6 +114,15 @@ fn query_mssql() {
 }
 
 #[test]
+fn tables() {
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&["-vvvv", "tables", "--connection-string", MSSQL])
+        .assert()
+        .success();
+}
+
+#[test]
 fn max_str_len() {
     let csv = "title,year\n\
         Jura,1993\n\

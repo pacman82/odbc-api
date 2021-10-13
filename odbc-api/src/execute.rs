@@ -75,7 +75,7 @@ where
 
 /// Shared implementation for executing a columns query between [`crate::Connection`] and
 /// [`crate::Preallocated`].
-pub fn columns<S>(
+pub fn execute_columns<S>(
     mut statement: S,
     catalog_name: &U16Str,
     schema_name: &U16Str,
@@ -89,6 +89,22 @@ where
 
     stmt.columns(catalog_name, schema_name, table_name, column_name)
         .into_result(stmt)?;
+
+    // We assume columns always creates a result set, since it works like a SELECT statement.
+    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+
+    Ok(CursorImpl::new(statement))
+}
+
+/// Shared implementation for executing a tables query between [`crate::Connection`] and
+/// [`crate::Preallocated`].
+pub fn execute_tables<S>(mut statement: S) -> Result<CursorImpl<S>, Error>
+where
+    S: BorrowMutStatement,
+{
+    let stmt = statement.borrow_mut();
+
+    stmt.tables().into_result(stmt)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);

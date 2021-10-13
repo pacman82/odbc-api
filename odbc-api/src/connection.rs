@@ -1,6 +1,6 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
-    execute::{columns, execute_with_parameters},
+    execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, State, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
     CursorImpl, Error, Preallocated, Prepared,
@@ -323,13 +323,17 @@ impl<'c> Connection<'c> {
         table_name: &str,
         column_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-        columns(
+        execute_columns(
             self.allocate_statement()?,
             &U16String::from_str(catalog_name),
             &U16String::from_str(schema_name),
             &U16String::from_str(table_name),
             &U16String::from_str(column_name),
         )
+    }
+
+    pub fn tables(&self) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+        execute_tables(self.allocate_statement()?)
     }
 
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the

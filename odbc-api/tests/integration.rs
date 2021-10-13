@@ -2635,6 +2635,19 @@ fn no_data(profile: &Profile) {
     conn.prepare(&sql).unwrap().execute(()).unwrap();
 }
 
+/// List tables for various data sources
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn tables(profile: &Profile) {
+    let table_name = "Tables";
+    let conn = profile.connection().unwrap();
+
+    setup_empty_table(&conn, profile.index_type, table_name, &["INTEGER"]).unwrap();
+
+    let cursor = conn.tables().unwrap();
+}
+
 /// Some drivers seem to have trouble binding buffers beyond `u16::MAX`. This has been seen failing
 /// in the wild with SAP anywhere, but that ODBC driver is not part of this test suite.
 #[test_case(MSSQL; "Microsoft SQL Server")]
