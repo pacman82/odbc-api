@@ -1,7 +1,7 @@
 use widestring::{U16Str, U16String};
 
 use crate::{
-    execute::{columns, execute_with_parameters},
+    execute::{execute_columns, execute_with_parameters},
     handles::StatementImpl,
     CursorImpl, Error, ParameterCollection,
 };
@@ -120,7 +120,7 @@ impl<'o> Preallocated<'o> {
         table_name: &str,
         column_name: &str,
     ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
-        columns(
+        execute_columns(
             &mut self.statement,
             &U16String::from_str(catalog_name),
             &U16String::from_str(schema_name),

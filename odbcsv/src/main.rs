@@ -40,6 +40,10 @@ enum Command {
         #[structopt(flatten)]
         insert_opt: InsertOpt,
     },
+    Tables {
+        #[structopt(flatten)]
+        table_opt: TableOpt,
+    },
     /// List available drivers. Useful to find out which exact driver name to specify in the
     /// connections string.
     ListDrivers,
@@ -115,6 +119,12 @@ struct InsertOpt {
     table: String,
 }
 
+#[derive(StructOpt)]
+struct TableOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+}
+
 fn main() -> Result<(), Error> {
     // Parse arguments from command line interface
     let opt = Cli::from_args();
@@ -140,6 +150,9 @@ fn main() -> Result<(), Error> {
                 bail!("batch size, must be at least 1");
             }
             insert(&environment, &insert_opt)?;
+        }
+        Command::Tables { table_opt } => {
+            tables(&environment, &table_opt)?;
         }
         Command::ListDrivers => {
             let mut first = true;
@@ -257,27 +270,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     match connection.execute(query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
-            let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
-            writer.write_record(headline)?;
-
-            let mut buffers = TextRowSet::for_cursor(*batch_size, &cursor, *max_str_len)?;
-            let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
-
-            // Use this number to count the batches. Only used for logging.
-            let mut num_batch = 0;
-            while let Some(buffer) = row_set_cursor.fetch()? {
-                num_batch += 1;
-                info!(
-                    "Fetched batch {} with {} rows.",
-                    num_batch,
-                    buffer.num_rows()
-                );
-                for row_index in 0..buffer.num_rows() {
-                    let record = (0..buffer.num_cols())
-                        .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
-                    writer.write_record(record)?;
-                }
-            }
+            cursor_to_csv(cursor, &mut writer, *batch_size, *max_str_len)?;
         }
         None => {
             eprintln!("Query came back empty (not even a schema has been returned). No output has been created.");
@@ -368,5 +361,50 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     statement.execute(&buffer)?;
     info!("Insert last batch with {} rows into DB.", batch_size);
 
+    Ok(())
+}
+
+fn tables(environment: &Environment, table_opt: &TableOpt) -> Result<(), Error> {
+    let TableOpt { connect_opts } = table_opt;
+    let conn = open_connection(environment, connect_opts)?;
+
+    let cursor = conn.tables()?;
+
+    // If an output file has been specified write to it, otherwise use stdout instead.
+    let hold_stdout; // Prolongs scope of `stdout()` so we can lock() it.
+    let out: Box<dyn Write> = {
+        hold_stdout = stdout();
+        Box::new(hold_stdout.lock())
+    };
+    let mut writer = csv::Writer::from_writer(out);
+
+    cursor_to_csv(cursor, &mut writer, 100, None)?;
+    Ok(())
+}
+
+fn cursor_to_csv(
+    cursor: impl Cursor,
+    writer: &mut csv::Writer<impl Write>,
+    batch_size: usize,
+    max_str_len: Option<usize>,
+) -> Result<(), Error> {
+    let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
+    writer.write_record(headline)?;
+    let mut buffers = TextRowSet::for_cursor(batch_size, &cursor, max_str_len)?;
+    let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
+    let mut num_batch = 0;
+    while let Some(buffer) = row_set_cursor.fetch()? {
+        num_batch += 1;
+        info!(
+            "Fetched batch {} with {} rows.",
+            num_batch,
+            buffer.num_rows()
+        );
+        for row_index in 0..buffer.num_rows() {
+            let record = (0..buffer.num_cols())
+                .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
+            writer.write_record(record)?;
+        }
+    }
     Ok(())
 }
