@@ -642,11 +642,42 @@ pub trait Statement: AsHandle {
         }
     }
 
-    /// Query the datasource for a list of tables
-    fn tables(&mut self) -> SqlResult<()> {
+    /// Returns the list of table, catalog, or schema names, and table types, stored in a specific
+    /// data source. The driver returns the information as a result set.
+    fn tables(
+        &mut self,
+        catalog_name: Option<&U16Str>,
+        schema_name: Option<&U16Str>,
+        table_name: Option<&U16Str>,
+        table_type: Option<&U16Str>,
+    ) -> SqlResult<()> {
+        // Convert each filter into a pair of buffer pointer and buffer length.
+        let to_buf = |filter: Option<&U16Str>| {
+            if let Some(text) = filter {
+                (buf_ptr(text.as_slice()), text.len().try_into().unwrap())
+            } else {
+                (null(), 0i16)
+            }
+        };
+
+        let catalog = to_buf(catalog_name);
+        let schema = to_buf(schema_name);
+        let table = to_buf(table_name);
+        let type_ = to_buf(table_type);
+
         unsafe {
-            SQLTablesW(self.as_sys(), null(), 0, null(), 0, null(), 0, null(), 0)
-                .into_sql_result("SQLColumnsW")
+            SQLTablesW(
+                self.as_sys(),
+                catalog.0,
+                catalog.1,
+                schema.0,
+                schema.1,
+                table.0,
+                table.1,
+                type_.0,
+                type_.1,
+            )
+            .into_sql_result("SQLColumnsW")
         }
     }
 

@@ -98,13 +98,20 @@ where
 
 /// Shared implementation for executing a tables query between [`crate::Connection`] and
 /// [`crate::Preallocated`].
-pub fn execute_tables<S>(mut statement: S) -> Result<CursorImpl<S>, Error>
+pub fn execute_tables<S>(
+    mut statement: S,
+    catalog_name: Option<&U16Str>,
+    schema_name: Option<&U16Str>,
+    table_name: Option<&U16Str>,
+    column_name: Option<&U16Str>,
+) -> Result<CursorImpl<S>, Error>
 where
     S: BorrowMutStatement,
 {
     let stmt = statement.borrow_mut();
 
-    stmt.tables().into_result(stmt)?;
+    stmt.tables(catalog_name, schema_name, table_name, column_name)
+        .into_result(stmt)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
