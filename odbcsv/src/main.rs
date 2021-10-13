@@ -40,6 +40,7 @@ enum Command {
         #[structopt(flatten)]
         insert_opt: InsertOpt,
     },
+    /// List tables, schemas, views and catalogs provided by the datasource.
     Tables {
         #[structopt(flatten)]
         table_opt: TableOpt,
@@ -123,6 +124,18 @@ struct InsertOpt {
 struct TableOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
+    /// Filters results by catalog name.
+    #[structopt(long)]
+    catalog: Option<String>,
+    /// Filters results by schema name.
+    #[structopt(long)]
+    schema: Option<String>,
+    /// Filters results by table name.
+    #[structopt(long)]
+    name: Option<String>,
+    /// Filters results by table type. E.g: TABLE, VIEW
+    #[structopt(long = "type")]
+    type_: Option<String>,
 }
 
 fn main() -> Result<(), Error> {
@@ -365,10 +378,21 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
 }
 
 fn tables(environment: &Environment, table_opt: &TableOpt) -> Result<(), Error> {
-    let TableOpt { connect_opts } = table_opt;
+    let TableOpt {
+        connect_opts,
+        catalog,
+        schema,
+        name,
+        type_,
+    } = table_opt;
     let conn = open_connection(environment, connect_opts)?;
 
-    let cursor = conn.tables()?;
+    let cursor = conn.tables(
+        catalog.as_deref(),
+        schema.as_deref(),
+        name.as_deref(),
+        type_.as_deref()
+    )?;
 
     // If an output file has been specified write to it, otherwise use stdout instead.
     let hold_stdout; // Prolongs scope of `stdout()` so we can lock() it.

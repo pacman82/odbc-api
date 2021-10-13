@@ -332,8 +332,24 @@ impl<'c> Connection<'c> {
         )
     }
 
-    pub fn tables(&self) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-        execute_tables(self.allocate_statement()?)
+    pub fn tables(
+        &self,
+        catalog_name: Option<&str>,
+        schema_name: Option<&str>,
+        table_name: Option<&str>,
+        table_type: Option<&str>,
+    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+        let catalog_name = catalog_name.map(|s| U16String::from_str(s));
+        let schema_name = schema_name.map(|s| U16String::from_str(s));
+        let table_name = table_name.map(|s| U16String::from_str(s));
+        let table_type = table_type.map(|s| U16String::from_str(s));
+        execute_tables(
+            self.allocate_statement()?,
+            catalog_name.as_deref(),
+            schema_name.as_deref(),
+            table_name.as_deref(),
+            table_type.as_deref(),
+        )
     }
 
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the

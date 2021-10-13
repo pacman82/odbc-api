@@ -115,11 +115,37 @@ fn query_mssql() {
 
 #[test]
 fn tables() {
+    let csv = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS\n\
+        master,dbo,OdbcsvTestTables,TABLE,\n\
+    ";
+
+    let table_name = "OdbcsvTestTables";
+    // Setup table for test. We use the table name only in this test.
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+        .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&["-vvvv", "tables", "--connection-string", MSSQL])
+        .args(&[
+            "-vvvv",
+            "tables",
+            "--connection-string",
+            MSSQL,
+            "--name",
+            table_name,
+        ])
         .assert()
-        .success();
+        .success()
+        .stdout(csv);
 }
 
 #[test]
