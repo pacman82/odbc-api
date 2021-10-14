@@ -3,6 +3,8 @@
 ## 0.29.0 (next)
 
 * Removed generic lifetime argument from `CursorImpl`.
+* Add `Connection::tables`.
+* Add `Preallocated::tables`.
 
 ## 0.28.3
 

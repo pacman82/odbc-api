@@ -137,7 +137,7 @@ fn tables() {
         .unwrap()
         .args(&[
             "-vvvv",
-            "tables",
+            "list-tables",
             "--connection-string",
             MSSQL,
             "--name",

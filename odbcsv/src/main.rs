@@ -41,7 +41,7 @@ enum Command {
         insert_opt: InsertOpt,
     },
     /// List tables, schemas, views and catalogs provided by the datasource.
-    Tables {
+    ListTables {
         #[structopt(flatten)]
         table_opt: TableOpt,
     },
@@ -166,7 +166,7 @@ fn main() -> Result<(), Error> {
             }
             insert(&environment, &insert_opt)?;
         }
-        Command::Tables { table_opt } => {
+        Command::ListTables { table_opt } => {
             tables(&environment, &table_opt)?;
         }
         Command::ListDrivers => {

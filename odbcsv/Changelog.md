@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.46
+
+* Add new subcommand `list-tables`.
+
 ## 0.3.45
 
 * Updated dependencies

@@ -343,7 +343,7 @@ impl<'c> Connection<'c> {
     ///   `catalog_name`.
     /// * `table_name`: Filter result by table. Accepts patterns in the same way as `catalog_name`.
     /// * `table_type`: Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a
-    ///   comma separeted list of table types. Ommit it to not filter the result by table type at
+    ///   comma separeted list of table types. Omit it to not filter the result by table type at
     ///   all.
     pub fn tables(
         &self,
