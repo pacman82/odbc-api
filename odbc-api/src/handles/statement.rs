@@ -349,6 +349,18 @@ pub trait Statement: AsHandle {
         .into_sql_result("SQLSetStmtAttrW")
     }
 
+    fn set_metadata_id(&mut self, metadata_id: bool) -> SqlResult<()> {
+        unsafe {
+            SQLSetStmtAttrW(
+                self.as_sys(),
+                StatementAttribute::MetadataId,
+                metadata_id as u8 as Pointer,
+                0,
+            )
+            .into_sql_result("SQLSetStmtAttrW")
+        }
+    }
+
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
     /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
@@ -644,6 +656,10 @@ pub trait Statement: AsHandle {
 
     /// Returns the list of table, catalog, or schema names, and table types, stored in a specific
     /// data source. The driver returns the information as a result set.
+    /// 
+    /// The catalog, schema and table parameters are search patterns by default unless
+    /// [`set_metadata_id`] is called with `true`. In that case they must also not be `None` since
+    /// otherwise a NulPointer error is emitted.
     fn tables(
         &mut self,
         catalog_name: Option<&U16Str>,
@@ -677,7 +693,7 @@ pub trait Statement: AsHandle {
                 type_.0,
                 type_.1,
             )
-            .into_sql_result("SQLColumnsW")
+            .into_sql_result("SQLTablesW")
         }
     }
 

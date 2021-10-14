@@ -332,6 +332,19 @@ impl<'c> Connection<'c> {
         )
     }
 
+    /// List tables, schemas, views and catalogs of a datasource.
+    /// 
+    /// # Parameters
+    /// 
+    /// * `catalog_name`: Filter result by catalog name. Accept search patterns. Use `%` to match
+    ///   any number of characters. Use `_` to match exactly on character. Use `\` to escape
+    ///   characeters.
+    /// * `schema_name`: Filter result by schema. Accepts patterns in the same way as
+    ///   `catalog_name`.
+    /// * `table_name`: Filter result by table. Accepts patterns in the same way as `catalog_name`.
+    /// * `table_type`: Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a
+    ///   comma separeted list of table types. Ommit it to not filter the result by table type at
+    ///   all.
     pub fn tables(
         &self,
         catalog_name: Option<&str>,
@@ -339,12 +352,15 @@ impl<'c> Connection<'c> {
         table_name: Option<&str>,
         table_type: Option<&str>,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+
+        let statement = self.allocate_statement()?;
+
         let catalog_name = catalog_name.map(|s| U16String::from_str(s));
         let schema_name = schema_name.map(|s| U16String::from_str(s));
         let table_name = table_name.map(|s| U16String::from_str(s));
         let table_type = table_type.map(|s| U16String::from_str(s));
         execute_tables(
-            self.allocate_statement()?,
+            statement,
             catalog_name.as_deref(),
             schema_name.as_deref(),
             table_name.as_deref(),
