@@ -333,9 +333,9 @@ impl<'c> Connection<'c> {
     }
 
     /// List tables, schemas, views and catalogs of a datasource.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// * `catalog_name`: Filter result by catalog name. Accept search patterns. Use `%` to match
     ///   any number of characters. Use `_` to match exactly on character. Use `\` to escape
     ///   characeters.
@@ -345,6 +345,50 @@ impl<'c> Connection<'c> {
     /// * `table_type`: Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a
     ///   comma separeted list of table types. Omit it to not filter the result by table type at
     ///   all.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use odbc_api::{Connection, Cursor, Error, buffers::TextRowSet};
+    ///
+    /// fn print_all_tables(conn: &Connection<'_>) -> Result<(), Error> {
+    ///     // Set all filters to None, to really print all tables
+    ///     let cursor = conn.tables(None, None, None, None)?;
+    ///
+    ///     // The column are gonna be TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS, but may
+    ///     // also contain additional driver specific columns.
+    ///     for (index, name) in cursor.column_names()?.enumerate() {
+    ///         if index != 0 {
+    ///             print!(",")
+    ///         }
+    ///         print!("{}", name?);
+    ///     }
+    ///
+    ///     let batch_size = 100;
+    ///     let mut buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4096))?;
+    ///     let mut row_set_cursor = cursor.bind_buffer(&mut buffer)?;
+    ///
+    ///     while let Some(row_set) = row_set_cursor.fetch()? {
+    ///         for row_index in 0..row_set.num_rows() {
+    ///             if row_index != 0 {
+    ///                 print!("\n");
+    ///             }
+    ///             for col_index in 0..row_set.num_cols() {
+    ///                 if col_index != 0 {
+    ///                     print!(",");
+    ///                 }
+    ///                 let value = row_set
+    ///                     .at_as_str(col_index, row_index)
+    ///                     .unwrap()
+    ///                     .unwrap_or("NULL");
+    ///                 print!("{}", value);
+    ///             }
+    ///         }
+    ///     }
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn tables(
         &self,
         catalog_name: Option<&str>,
@@ -352,7 +396,6 @@ impl<'c> Connection<'c> {
         table_name: Option<&str>,
         table_type: Option<&str>,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-
         let statement = self.allocate_statement()?;
 
         let catalog_name = catalog_name.map(|s| U16String::from_str(s));

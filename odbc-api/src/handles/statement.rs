@@ -658,7 +658,7 @@ pub trait Statement: AsHandle {
     /// data source. The driver returns the information as a result set.
     /// 
     /// The catalog, schema and table parameters are search patterns by default unless
-    /// [`set_metadata_id`] is called with `true`. In that case they must also not be `None` since
+    /// [`Self::set_metadata_id`] is called with `true`. In that case they must also not be `None` since
     /// otherwise a NulPointer error is emitted.
     fn tables(
         &mut self,
