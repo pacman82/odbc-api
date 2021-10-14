@@ -29,7 +29,7 @@ readme = "../Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-sys = "0.18.4"
+odbc-sys = "0.19.0"
 thiserror = "1.0.30"
 log = "0.4.14"
 widestring = "0.5.0"
