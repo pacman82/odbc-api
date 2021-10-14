@@ -271,7 +271,7 @@ impl<'c> Connection<'c> {
         self.info_u16(InfoType::MaxColumnNameLen)
     }
 
-    /// Fetch the name of the current catalog being usd by the connection and store it into the
+    /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
     pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
