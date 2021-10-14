@@ -454,8 +454,8 @@ impl Environment {
                 .transpose()?
                 .is_some()
             {
-                let description = U16CStr::from_slice_with_nul(&desc_buf).unwrap();
-                let attributes = U16CStr::from_slice_with_nul(&attr_buf).unwrap();
+                let description = U16CStr::from_slice_truncate(&desc_buf).unwrap();
+                let attributes = U16CStr::from_slice_truncate(&attr_buf).unwrap();
 
                 let description = description.to_string().unwrap();
                 let attributes = attributes.to_string().unwrap();
@@ -565,8 +565,8 @@ impl Environment {
                 .is_some();
 
             while not_empty {
-                let server_name = U16CStr::from_slice_with_nul(&server_name_buf).unwrap();
-                let driver = U16CStr::from_slice_with_nul(&driver_buf).unwrap();
+                let server_name = U16CStr::from_slice_truncate(&server_name_buf).unwrap();
+                let driver = U16CStr::from_slice_truncate(&driver_buf).unwrap();
 
                 let server_name = server_name.to_string().unwrap();
                 let driver = driver.to_string().unwrap();

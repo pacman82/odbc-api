@@ -77,7 +77,7 @@ impl OutputStringBuffer {
 
     /// Interpret buffer as UTF16 string. Panics if no terminating zero present.
     pub fn as_ucstr(&self) -> &U16CStr {
-        U16CStr::from_slice_with_nul(&self.buffer).unwrap()
+        U16CStr::from_slice_truncate(&self.buffer).unwrap()
     }
 
     /// Call this method to extract string from buffer after ODBC has filled it.
