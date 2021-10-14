@@ -124,16 +124,18 @@ struct InsertOpt {
 struct TableOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
-    /// Filters results by catalog name.
+    /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
+    /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
     #[structopt(long)]
     catalog: Option<String>,
-    /// Filters results by schema name.
+    /// Filter result by schema. Accepts patterns in the same way as `catalog`.
     #[structopt(long)]
     schema: Option<String>,
-    /// Filters results by table name.
+    /// Filter result by table name. Accepts patterns in the same way as `catalog`.
     #[structopt(long)]
     name: Option<String>,
-    /// Filters results by table type. E.g: TABLE, VIEW
+    /// Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a comma separeted
+    /// list of table types. Ommit it to not filter the result by table type at all.
     #[structopt(long = "type")]
     type_: Option<String>,
 }
@@ -391,7 +393,7 @@ fn tables(environment: &Environment, table_opt: &TableOpt) -> Result<(), Error> 
         catalog.as_deref(),
         schema.as_deref(),
         name.as_deref(),
-        type_.as_deref()
+        type_.as_deref(),
     )?;
 
     // If an output file has been specified write to it, otherwise use stdout instead.
