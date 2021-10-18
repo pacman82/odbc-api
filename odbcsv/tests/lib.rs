@@ -126,7 +126,7 @@ fn tables() {
         .unwrap();
     conn.execute(
         &format!(
-            "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
+            "CREATE TABLE {} (a INTEGER);",
             table_name
         ),
         (),
@@ -142,6 +142,48 @@ fn tables() {
             MSSQL,
             "--name",
             table_name,
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
+
+#[test]
+fn columns() {
+    let csv = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,\
+    BUFFER_LENGTH,DECIMAL_DIGITS,NUM_PREC_RADIX,NULLABLE,REMARKS,COLUMN_DEF,SQL_DATA_TYPE,\
+    SQL_DATETIME_SUB,CHAR_OCTET_LENGTH,ORDINAL_POSITION,IS_NULLABLE,SS_IS_SPARSE,SS_IS_COLUMN_SET,\
+    SS_IS_COMPUTED,SS_IS_IDENTITY,SS_UDT_CATALOG_NAME,SS_UDT_SCHEMA_NAME,SS_UDT_ASSEMBLY_TYPE_NAME,\
+    SS_XML_SCHEMACOLLECTION_CATALOG_NAME,SS_XML_SCHEMACOLLECTION_SCHEMA_NAME,\
+    SS_XML_SCHEMACOLLECTION_NAME,SS_DATA_TYPE\n\
+    master,dbo,OdbcsvTestColumns,a,12,varchar,255,255,,,1,,,12,,255,1,YES,0,0,0,0,,,,,,,39\n\
+    ";
+
+    let table_name = "OdbcsvTestColumns";
+    // Setup table for test. We use the table name only in this test.
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+        .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {} (a VARCHAR(255));",
+            table_name
+        ),
+        (),
+    )
+    .unwrap();
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "list-columns",
+            "--connection-string",
+            MSSQL,
+            "--catalog",
+            "master",
+            "--table",
+            table_name
         ])
         .assert()
         .success()

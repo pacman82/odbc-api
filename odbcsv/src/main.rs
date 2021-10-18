@@ -43,7 +43,12 @@ enum Command {
     /// List tables, schemas, views and catalogs provided by the datasource.
     ListTables {
         #[structopt(flatten)]
-        table_opt: TableOpt,
+        table_opt: ListTablesOpt,
+    },
+    /// List columns
+    ListColumns {
+        #[structopt(flatten)]
+        columns_opt: ListColumnsOpt,
     },
     /// List available drivers. Useful to find out which exact driver name to specify in the
     /// connections string.
@@ -121,7 +126,7 @@ struct InsertOpt {
 }
 
 #[derive(StructOpt)]
-struct TableOpt {
+struct ListTablesOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
     /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
@@ -138,6 +143,24 @@ struct TableOpt {
     /// list of table types. Ommit it to not filter the result by table type at all.
     #[structopt(long = "type")]
     type_: Option<String>,
+}
+
+#[derive(StructOpt)]
+struct ListColumnsOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+    /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
+    /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
+    #[structopt(long)]
+    catalog: Option<String>,
+    /// Filter result by schema. Accepts patterns in the same way as `catalog`.
+    #[structopt(long)]
+    schema: Option<String>,
+    /// Filter result by table name. Accepts patterns in the same way as `catalog`.
+    #[structopt(long)]
+    table: Option<String>,
+    /// Filter result by column name. Accepts patterns in the same way as `catalog`.
+    column: Option<String>,
 }
 
 fn main() -> Result<(), Error> {
@@ -168,6 +191,9 @@ fn main() -> Result<(), Error> {
         }
         Command::ListTables { table_opt } => {
             tables(&environment, &table_opt)?;
+        }
+        Command::ListColumns { columns_opt } => {
+            columns(&environment, &columns_opt)?;
         }
         Command::ListDrivers => {
             let mut first = true;
@@ -379,8 +405,8 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     Ok(())
 }
 
-fn tables(environment: &Environment, table_opt: &TableOpt) -> Result<(), Error> {
-    let TableOpt {
+fn tables(environment: &Environment, table_opt: &ListTablesOpt) -> Result<(), Error> {
+    let ListTablesOpt {
         connect_opts,
         catalog,
         schema,
@@ -396,12 +422,33 @@ fn tables(environment: &Environment, table_opt: &TableOpt) -> Result<(), Error> 
         type_.as_deref(),
     )?;
 
-    // If an output file has been specified write to it, otherwise use stdout instead.
-    let hold_stdout; // Prolongs scope of `stdout()` so we can lock() it.
-    let out: Box<dyn Write> = {
-        hold_stdout = stdout();
-        Box::new(hold_stdout.lock())
-    };
+    let hold_stdout = stdout();
+    let out = hold_stdout.lock();
+    let mut writer = csv::Writer::from_writer(out);
+
+    cursor_to_csv(cursor, &mut writer, 100, None)?;
+    Ok(())
+}
+
+fn columns(environment: &Environment, columns_opt: &ListColumnsOpt) -> Result<(), Error> {
+    let ListColumnsOpt {
+        connect_opts,
+        catalog,
+        schema,
+        table,
+        column,
+    } = columns_opt;
+
+    let conn = open_connection(environment, connect_opts)?;
+    let cursor = conn.columns(
+        catalog.as_deref().unwrap_or_default(),
+        schema.as_deref().unwrap_or_default(),
+        table.as_deref().unwrap_or_default(),
+        column.as_deref().unwrap_or_default(),
+    )?;
+
+    let hold_stdout = stdout();
+    let out = hold_stdout.lock();
     let mut writer = csv::Writer::from_writer(out);
 
     cursor_to_csv(cursor, &mut writer, 100, None)?;
