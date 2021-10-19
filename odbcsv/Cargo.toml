@@ -33,7 +33,7 @@ odbc-api = { version = "0.29.1", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.44"
 stderrlog = "0.5.1"
-structopt = "0.3.23"
+structopt = "0.3.25"
 log = "0.4.14"
 
 # Prompt functionality is only supported for windows
