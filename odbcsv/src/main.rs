@@ -160,6 +160,7 @@ struct ListColumnsOpt {
     #[structopt(long)]
     table: Option<String>,
     /// Filter result by column name. Accepts patterns in the same way as `catalog`.
+    #[structopt(long)]
     column: Option<String>,
 }
 
