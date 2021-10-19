@@ -124,14 +124,8 @@ fn tables() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
         .unwrap();
-    conn.execute(
-        &format!(
-            "CREATE TABLE {} (a INTEGER);",
-            table_name
-        ),
-        (),
-    )
-    .unwrap();
+    conn.execute(&format!("CREATE TABLE {} (a INTEGER);", table_name), ())
+        .unwrap();
 
     Command::cargo_bin("odbcsv")
         .unwrap()
@@ -165,10 +159,7 @@ fn columns() {
     conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
         .unwrap();
     conn.execute(
-        &format!(
-            "CREATE TABLE {} (a VARCHAR(255));",
-            table_name
-        ),
+        &format!("CREATE TABLE {} (a VARCHAR(255));", table_name),
         (),
     )
     .unwrap();
@@ -183,7 +174,7 @@ fn columns() {
             "--catalog",
             "master",
             "--table",
-            table_name
+            table_name,
         ])
         .assert()
         .success()

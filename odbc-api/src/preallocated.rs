@@ -1,6 +1,10 @@
 use widestring::{U16Str, U16String};
 
-use crate::{CursorImpl, Error, ParameterCollection, execute::{execute_columns, execute_tables, execute_with_parameters}, handles::StatementImpl};
+use crate::{
+    execute::{execute_columns, execute_tables, execute_with_parameters},
+    handles::StatementImpl,
+    CursorImpl, Error, ParameterCollection,
+};
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
 /// [`crate::Connection::preallocate`].
@@ -108,9 +112,9 @@ impl<'o> Preallocated<'o> {
     }
 
     /// List tables, schemas, views and catalogs of a datasource.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// * `catalog_name`: Filter result by catalog name. Accept search patterns. Use `%` to match
     ///   any number of characters. Use `_` to match exactly on character. Use `\` to escape
     ///   characeters.
@@ -126,8 +130,7 @@ impl<'o> Preallocated<'o> {
         schema_name: Option<&str>,
         table_name: Option<&str>,
         table_type: Option<&str>,
-    ) -> Result<CursorImpl<&mut  StatementImpl<'o>>, Error> {
-
+    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
         let catalog_name = catalog_name.map(|s| U16String::from_str(s));
         let schema_name = schema_name.map(|s| U16String::from_str(s));
         let table_name = table_name.map(|s| U16String::from_str(s));
@@ -149,7 +152,7 @@ impl<'o> Preallocated<'o> {
     /// `COLUMN_SIZE`, `BUFFER_LENGTH`, `DECIMAL_DIGITS`, `NUM_PREC_RADIX`, `NULLABLE`,
     /// `REMARKS`, `COLUMN_DEF`, `SQL_DATA_TYPE`, `SQL_DATETIME_SUB`, `CHAR_OCTET_LENGTH`,
     /// `ORDINAL_POSITION`, `IS_NULLABLE`.
-    /// 
+    ///
     /// In addition to that there may be a number of columns specific to the data source.
     pub fn columns(
         &mut self,

@@ -656,7 +656,7 @@ pub trait Statement: AsHandle {
 
     /// Returns the list of table, catalog, or schema names, and table types, stored in a specific
     /// data source. The driver returns the information as a result set.
-    /// 
+    ///
     /// The catalog, schema and table parameters are search patterns by default unless
     /// [`Self::set_metadata_id`] is called with `true`. In that case they must also not be `None` since
     /// otherwise a NulPointer error is emitted.

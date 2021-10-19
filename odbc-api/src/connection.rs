@@ -321,7 +321,7 @@ impl<'c> Connection<'c> {
     /// `COLUMN_SIZE`, `BUFFER_LENGTH`, `DECIMAL_DIGITS`, `NUM_PREC_RADIX`, `NULLABLE`,
     /// `REMARKS`, `COLUMN_DEF`, `SQL_DATA_TYPE`, `SQL_DATETIME_SUB`, `CHAR_OCTET_LENGTH`,
     /// `ORDINAL_POSITION`, `IS_NULLABLE`.
-    /// 
+    ///
     /// In addition to that there may be a number of columns specific to the data source.
     pub fn columns(
         &self,
