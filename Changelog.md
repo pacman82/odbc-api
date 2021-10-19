@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.29.0 (next)
+## 0.29.1
+
+* Improved documentation for `Connection::columns`.
+
+## 0.29.0
 
 * Removed generic lifetime argument from `CursorImpl`.
 * Add `Connection::tables`.

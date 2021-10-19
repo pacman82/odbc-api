@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.47
+
+* Add new subcommand `list-columns`.
+
 ## 0.3.46
 
 * Add new subcommand `list-tables`.
