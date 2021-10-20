@@ -48,7 +48,16 @@ pub enum DataType {
     Double,
     /// `Varchar(n)`. Variable length character string.
     Varchar {
-        /// Maximum length of the character string (excluding terminating zero).
+        /// Maximum length of the character string (excluding terminating zero). Wether this length
+        /// is to be interpreted as bytes or Codepoints is ambigious and depends on the datasource.
+        /// 
+        /// E.g. For Microsoft SQL Server this is the binary length, theras for a MariaDB this
+        /// refers to codepoints in case of UTF-8 encoding. If you need the binary size query the
+        /// octet length for that column instead.
+        /// 
+        /// To find out how to interpret this value for a particular datasource you can use the
+        /// `odbcsv` command line tool `list-columns` subcommand and query a Varchar column. If the
+        /// buffer/octet length matches the column size, you can interpret this as the byte length.
         length: usize,
     },
     /// `NVARCHAR(n)`. Variable length character string. Indicates the use of wide character strings
