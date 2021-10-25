@@ -32,7 +32,7 @@ readme = "../Readme.md"
 odbc-sys = "0.20.0"
 thiserror = "1.0.30"
 log = "0.4.14"
-widestring = "0.5.0"
+widestring = "0.5.1"
 force-send-sync = "1.0.0"
 
 [target.'cfg(windows)'.dependencies]
