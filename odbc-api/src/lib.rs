@@ -16,7 +16,7 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
-mod statement_with_connection;
+mod statement_connection;
 
 pub mod buffers;
 pub mod guide;
@@ -36,6 +36,7 @@ pub use self::{
     parameter_collection::ParameterCollection,
     preallocated::Preallocated,
     prepared::Prepared,
+    statement_connection::StatementConnection,
 };
 // Reexports
 pub use force_send_sync;

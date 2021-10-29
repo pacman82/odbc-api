@@ -1,6 +1,6 @@
 use crate::{
     handles::{Statement, StatementImpl},
-    statement_with_connection::StatementWithConnection,
+    statement_connection::StatementConnection,
 };
 
 /// Allows us to be generic over the ownership type (mutably borrowed or owned) of a statement
@@ -38,8 +38,8 @@ impl<'o> BorrowMutStatement for &mut StatementImpl<'o> {
     }
 }
 
-impl<'o> BorrowMutStatement for StatementWithConnection<'o> {
-    type Statement = StatementWithConnection<'o>;
+impl<'o> BorrowMutStatement for StatementConnection<'o> {
+    type Statement = StatementConnection<'o>;
 
     fn borrow(&self) -> &Self::Statement {
         self

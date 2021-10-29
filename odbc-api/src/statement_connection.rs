@@ -6,13 +6,13 @@ use crate::{
 };
 
 /// Statement handle which also takes ownership of Connection
-pub struct StatementWithConnection<'env> {
+pub struct StatementConnection<'env> {
     handle: HStmt,
     _parent: Connection<'env>,
 }
 
-impl<'env> StatementWithConnection<'env> {
-    pub unsafe fn new(handle: HStmt, parent: Connection<'env>) -> Self {
+impl<'env> StatementConnection<'env> {
+    pub(crate) unsafe fn new(handle: HStmt, parent: Connection<'env>) -> Self {
         Self {
             _parent: parent,
             handle,
@@ -20,7 +20,7 @@ impl<'env> StatementWithConnection<'env> {
     }
 }
 
-impl<'s> Drop for StatementWithConnection<'s> {
+impl<'s> Drop for StatementConnection<'s> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Stmt);
@@ -28,7 +28,7 @@ impl<'s> Drop for StatementWithConnection<'s> {
     }
 }
 
-unsafe impl AsHandle for StatementWithConnection<'_> {
+unsafe impl AsHandle for StatementConnection<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -38,7 +38,7 @@ unsafe impl AsHandle for StatementWithConnection<'_> {
     }
 }
 
-impl Statement for StatementWithConnection<'_> {
+impl Statement for StatementConnection<'_> {
     fn as_sys(&self) -> HStmt {
         self.handle
     }

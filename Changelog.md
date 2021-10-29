@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.3
+
+* Make `StatementConnection` public
+
 ## 0.29.2
 
 * Add `into_cursor` to Connection

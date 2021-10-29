@@ -3,7 +3,7 @@ use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, State, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
-    statement_with_connection::StatementWithConnection,
+    statement_connection::StatementConnection,
     CursorImpl, Error, Preallocated, Prepared,
 };
 use odbc_sys::HDbc;
@@ -144,7 +144,7 @@ impl<'c> Connection<'c> {
         self,
         query: &str,
         params: impl ParameterCollection,
-    ) -> Result<Option<CursorImpl<StatementWithConnection<'c>>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, Error> {
         let cursor = match self.execute(query, params) {
             Ok(Some(cursor)) => cursor,
             Ok(None) => return Ok(None),
@@ -152,7 +152,7 @@ impl<'c> Connection<'c> {
         };
         let cursor = ManuallyDrop::new(cursor);
         let handle = cursor.as_sys();
-        let statement = unsafe { StatementWithConnection::new(handle, self) };
+        let statement = unsafe { StatementConnection::new(handle, self) };
         Ok(Some(CursorImpl::new(statement)))
     }
 
