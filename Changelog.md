@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.2
+
+* Add `into_cursor` to Connection
+
 ## 0.29.1
 
 * Improved documentation for `Connection::columns`.

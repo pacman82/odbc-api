@@ -4,6 +4,7 @@
 //! standard to access databases. See the [`guide`] for more information and code
 //! examples.
 
+mod borrow_mut_statement;
 mod connection;
 mod cursor;
 mod environment;
@@ -15,6 +16,7 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
+mod statement_with_connection;
 
 pub mod buffers;
 pub mod guide;

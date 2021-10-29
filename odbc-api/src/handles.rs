@@ -36,7 +36,11 @@ use std::thread::panicking;
 
 /// Helper function freeing a handle and panicking on errors. Yet if the drop is triggered during
 /// another panic, the function will simply ignore errors from failed drops.
-unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
+///
+/// # Safety
+///
+/// `handle` Must be a valid ODBC handle and `handle_type` must match its type.
+pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
     match SQLFreeHandle(handle_type, handle) {
         SqlReturn::SUCCESS => (),
         other => {
