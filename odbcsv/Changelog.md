@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.48
+
+* Updated dependencies
+
 ## 0.3.47
 
 * Add new subcommand `list-columns`.
