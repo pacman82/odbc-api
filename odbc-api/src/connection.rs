@@ -3,9 +3,11 @@ use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, State, Statement, StatementImpl},
     parameter_collection::ParameterCollection,
+    statement_with_connection::StatementWithConnection,
     CursorImpl, Error, Preallocated, Prepared,
 };
-use std::{borrow::Cow, str, thread::panicking};
+use odbc_sys::HDbc;
+use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
 use widestring::{U16Str, U16String};
 
 impl<'conn> Drop for Connection<'conn> {
@@ -59,6 +61,12 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
+    /// Transfers ownership of the handle to this open connection to the raw ODBC pointer.
+    pub fn into_sys(self) -> HDbc {
+        // We do not want to run the drop handler, but transfer ownership instead.
+        ManuallyDrop::new(self).connection.as_sys()
+    }
+
     /// Executes an sql statement using a wide string. See [`Self::execute`].
     pub fn execute_utf16(
         &self,
@@ -105,6 +113,47 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
+    }
+
+    /// In some use cases there you only execute a single statement, or the time to open a
+    /// connection does not matter users may wish to choose to not keep a connection alive seperatly
+    /// from the cursor, in order to have an easier time withe the borrow checker.
+    ///
+    /// ```no_run
+    /// use lazy_static::lazy_static;
+    /// use odbc_api::{Environment, Error, Cursor};
+    ///
+    /// lazy_static! {
+    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    /// }
+    ///
+    /// const CONNECTION_STRING: &str =
+    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     Server=localhost;UID=SA;\
+    ///     PWD=<YourStrong@Passw0rd>;";
+    ///
+    /// fn execute_query(query: &str) -> Result<Option<impl Cursor>, Error> {
+    ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
+    ///
+    ///     // connect.execute(&query, ()) // Compiler error: Would return local ref to `conn`.
+    ///
+    ///     conn.into_cursor(&query, ())
+    /// }
+    /// ```
+    pub fn into_cursor(
+        self,
+        query: &str,
+        params: impl ParameterCollection,
+    ) -> Result<Option<CursorImpl<StatementWithConnection<'c>>>, Error> {
+        let cursor = match self.execute(query, params) {
+            Ok(Some(cursor)) => cursor,
+            Ok(None) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let cursor = ManuallyDrop::new(cursor);
+        let handle = cursor.as_sys();
+        let statement = unsafe { StatementWithConnection::new(handle, self) };
+        Ok(Some(CursorImpl::new(statement)))
     }
 
     /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.

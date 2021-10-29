@@ -50,6 +50,11 @@ impl<'c> Connection<'c> {
         }
     }
 
+    /// Directly acces the underlying ODBC handle.
+    pub fn as_sys(&self) -> HDbc {
+        self.handle
+    }
+
     /// Establishes connections to a driver and a data source.
     ///
     /// * See [Connecting with SQLConnect][1]

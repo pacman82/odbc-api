@@ -259,6 +259,49 @@ fn text_buffer(profile: &Profile) {
     assert_eq!(expected, actual);
 }
 
+/// Into cursor should enable users to open a connection within a function and return a cursor.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn into_cursor(profile: &Profile) {
+    let table_name = "IntoCursor";
+    let conn = profile.connection().unwrap();
+    setup_empty_table(
+        &conn,
+        profile.index_type,
+        table_name,
+        &["VARCHAR(255)", "INT"],
+    )
+    .unwrap();
+
+    // Insert data
+    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?), (?,?),(?,?)", table_name);
+    conn.execute(
+        &insert,
+        (
+            &"Interstellar".into_parameter(),
+            &None::<i32>.into_parameter(),
+            &"2001: A Space Odyssey".into_parameter(),
+            &1968,
+            &"Jurassic Park".into_parameter(),
+            &1993,
+        ),
+    )
+    .unwrap();
+
+    let make_cursor = || {
+        let conn = profile.connection().unwrap();
+        let query = format!("SELECT a,b FROM {} ORDER BY id;", table_name);
+        conn.into_cursor(&query, ()).unwrap().unwrap()
+    };
+    let cursor = make_cursor();
+
+    // Cursor to string helper utilizes the text buffer
+    let actual = cursor_to_string(cursor);
+    let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
+    assert_eq!(expected, actual);
+}
+
 #[test]
 fn column_attributes() {
     let conn = ENV

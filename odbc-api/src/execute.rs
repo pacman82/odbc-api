@@ -3,8 +3,8 @@ use std::intrinsics::transmute;
 use widestring::U16Str;
 
 use crate::{
-    cursor::BorrowMutStatement, handles::Statement, parameter::Blob, CursorImpl, Error,
-    ParameterCollection,
+    borrow_mut_statement::BorrowMutStatement, handles::Statement, parameter::Blob, CursorImpl,
+    Error, ParameterCollection,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],

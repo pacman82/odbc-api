@@ -1,8 +1,9 @@
-use odbc_sys::SqlDataType;
+use odbc_sys::{HStmt, SqlDataType};
 
 use crate::{
+    borrow_mut_statement::BorrowMutStatement,
     buffers::Indicator,
-    handles::{State, Statement, StatementImpl},
+    handles::{State, Statement},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     ColumnDescription, DataType, Error, Output,
 };
@@ -331,41 +332,6 @@ where
 
 impl<C> ExactSizeIterator for ColumnNamesIt<'_, C> where C: Cursor {}
 
-/// Allows us to be generic over the ownership type (mutably borrowed or owned) of a statement
-pub trait BorrowMutStatement {
-    /// An instantiation of [`StatementImpl`]. Allows us to be generic of lifetime of borrowed
-    /// connection or ownership thereof.
-    type Statement: Statement;
-
-    fn borrow(&self) -> &Self::Statement;
-
-    fn borrow_mut(&mut self) -> &mut Self::Statement;
-}
-
-impl<'o> BorrowMutStatement for StatementImpl<'o> {
-    type Statement = StatementImpl<'o>;
-
-    fn borrow(&self) -> &Self::Statement {
-        self
-    }
-
-    fn borrow_mut(&mut self) -> &mut Self::Statement {
-        self
-    }
-}
-
-impl<'o> BorrowMutStatement for &mut StatementImpl<'o> {
-    type Statement = StatementImpl<'o>;
-
-    fn borrow(&self) -> &Self::Statement {
-        self
-    }
-
-    fn borrow_mut(&mut self) -> &mut Self::Statement {
-        self
-    }
-}
-
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
@@ -551,6 +517,10 @@ where
 {
     pub(crate) fn new(statement: S) -> Self {
         Self { statement }
+    }
+
+    pub(crate) fn as_sys(&self) -> HStmt {
+        self.statement.borrow().as_sys()
     }
 }
 
