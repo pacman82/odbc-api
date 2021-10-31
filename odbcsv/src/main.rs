@@ -4,7 +4,7 @@ use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, Connection, Cursor, Environment, IntoParameter,
 };
 use std::{
-    fs::File,
+    fs::{read_to_string, File},
     io::{stdin, stdout, Read, Write},
     path::PathBuf,
 };
@@ -34,6 +34,11 @@ enum Command {
     Query {
         #[structopt(flatten)]
         query_opt: QueryOpt,
+    },
+    /// Query a data source and write the result as csv.
+    Fetch {
+        #[structopt(flatten)]
+        fetch_opt: FetchOpt,
     },
     /// Read the content of a csv and insert it into a table.
     Insert {
@@ -109,6 +114,34 @@ struct QueryOpt {
 }
 
 #[derive(StructOpt)]
+struct FetchOpt {
+    #[structopt(flatten)]
+    connect_opts: ConnectOpts,
+    /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
+    /// but require more memory during execution.
+    #[structopt(long, default_value = "5000")]
+    batch_size: usize,
+    /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
+    /// for its word regarding the maximum length of the columns.
+    #[structopt(long, short = "m")]
+    max_str_len: Option<usize>,
+    /// Path to the output csv file the returned values are going to be written to. If omitted the
+    /// csv is going to be printed to standard out.
+    #[structopt(long, short = "o")]
+    output: Option<PathBuf>,
+    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// placeholders for positional parameters.
+    #[structopt(long, short = "q")]
+    query: Option<String>,
+    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// placeholders for positional parameters.
+    #[structopt(long, short = "f")]
+    sql_file: Option<PathBuf>,
+    /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
+    /// the end of the command line.
+    parameters: Vec<String>,
+}
+#[derive(StructOpt)]
 struct InsertOpt {
     #[structopt(flatten)]
     connect_opts: ConnectOpts,
@@ -183,6 +216,9 @@ fn main() -> Result<(), Error> {
     match opt.command {
         Command::Query { query_opt } => {
             query(&environment, &query_opt)?;
+        }
+        Command::Fetch { fetch_opt } => {
+            fetch(&environment, fetch_opt)?;
         }
         Command::Insert { insert_opt } => {
             if insert_opt.batch_size == 0 {
@@ -277,6 +313,36 @@ fn message_only_window() -> Result<Window, Error> {
         .with_visible(false)
         .build(&EventLoop::new())?;
     Ok(window)
+}
+
+/// Execute a query and writes the result to csv.
+fn fetch(environment: &Environment, opt: FetchOpt) -> Result<(), Error> {
+    let FetchOpt {
+        connect_opts,
+        output,
+        parameters,
+        query: query_literal,
+        batch_size,
+        max_str_len,
+        sql_file,
+    } = opt;
+
+    let query_str = match (query_literal, sql_file) {
+        (Some(literal), _) => literal,
+        (None, Some(path)) => read_to_string(path)?,
+        _ => bail!("Either `--query` or `--sql-file` must be specified."),
+    };
+
+    let query_opt = QueryOpt {
+        connect_opts,
+        batch_size,
+        max_str_len,
+        output,
+        query: query_str,
+        parameters,
+    };
+
+    query(environment, &query_opt)
 }
 
 /// Execute a query and writes the result to csv.
