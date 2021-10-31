@@ -29,6 +29,18 @@ impl Profile {
     pub fn connection(&self) -> Result<Connection<'static>, Error> {
         ENV.connect_with_connection_string(self.connection_string)
     }
+
+    /// Convinience function, setting up an empty table, and returning the connection used to create
+    /// it.
+    pub fn setup_empty_table(
+        &self,
+        table_name: &str,
+        column_types: &[&str],
+    ) -> Result<Connection<'static>, odbc_api::Error> {
+        let conn = self.connection()?;
+        setup_empty_table(&conn, self.index_type, table_name, column_types)?;
+        Ok(conn)
+    }
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
