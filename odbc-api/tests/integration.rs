@@ -16,7 +16,7 @@ use odbc_api::{
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
-    U16String,
+    Out, U16String,
 };
 use std::{
     convert::TryInto,
@@ -1700,17 +1700,33 @@ fn ignore_output_column(profile: &Profile) {
     assert!(cursor.fetch().unwrap().is_none());
 }
 
-#[test]
-fn output_parameter() {
-    use odbc_api::Out;
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn output_parameter(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+    conn.execute(
+        r#"
+        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestOutputParam')  
+        DROP PROCEDURE TestOutputParam  
+        "#,
+        (),
+    )
+    .unwrap();
+
+    conn.execute(
+        r#"CREATE PROCEDURE TestOutputParam   
+        @OutParm int OUTPUT   
+        AS
+        SELECT @OutParm = @OutParm + 5  
+        RETURN 99  
+        "#,
+        (),
+    )
+    .unwrap();
 
     let mut ret = Nullable::<i32>::null();
     let mut param = Nullable::<i32>::new(7);
 
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
-        .unwrap();
-    conn.execute("{? = call TestParam(?)}", (Out(&mut ret), &mut param))
+    conn.execute("{? = call TestOutputParam(?)}", (Out(&mut ret), &mut param))
         .unwrap();
 
     // See magic numbers hardcoded in setup.sql
