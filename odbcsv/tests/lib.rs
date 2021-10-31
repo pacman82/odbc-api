@@ -1,8 +1,9 @@
-use std::{fs::File, io::Read};
+use std::{fs::{self, File}, io::Read};
 
-use assert_cmd::{assert::Assert, Command};
+use assert_cmd::{Command, assert::Assert};
 use lazy_static::lazy_static;
-use odbc_api::Environment;
+use odbc_api::{Connection, Environment};
+use tempfile::NamedTempFile;
 
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
@@ -93,12 +94,27 @@ fn append_user_and_password_to_connection_string() {
 
 #[test]
 fn query_mssql() {
-    let csv = "title,year\n\
+    let table_name = "OdbcsvQueryMssql";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a, b)
+        Values
+        ('Jurassic Park', 1993),
+        ('2001: A Space Odyssey', 1968),
+        ('Interstellar', NULL);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let csv = "a,b\n\
         Jurassic Park,1993\n\
         2001: A Space Odyssey,1968\n\
         Interstellar,\n\
     ";
 
+    let query = format!("SELECT a, b from {}", table_name);
     Command::cargo_bin("odbcsv")
         .unwrap()
         .args(&[
@@ -106,7 +122,7 @@ fn query_mssql() {
             "query",
             "--connection-string",
             MSSQL,
-            "SELECT title, year from Movies",
+            &query,
         ])
         .assert()
         .success()
@@ -122,10 +138,7 @@ fn tables() {
     let table_name = "OdbcsvTestTables";
     // Setup table for test. We use the table name only in this test.
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
-        .unwrap();
-    conn.execute(&format!("CREATE TABLE {} (a INTEGER);", table_name), ())
-        .unwrap();
+    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
 
     Command::cargo_bin("odbcsv")
         .unwrap()
@@ -155,6 +168,7 @@ fn columns() {
 
     let table_name = "OdbcsvTestColumns";
     // Setup table for test. We use the table name only in this test.
+    // Setup empty table handle would implicitly create an ID column
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
         .unwrap();
@@ -285,4 +299,111 @@ fn list_drivers() {
             .success()
             .stdout(buf);
     }
+}
+
+/// Creates the table and assures it is empty. Columns are named a,b,c, etc.
+pub fn setup_empty_table(
+    conn: &Connection<'_>,
+    table_name: &str,
+    column_types: &[&str],
+) -> Result<(), odbc_api::Error> {
+    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+
+    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+    let cols = column_types
+        .iter()
+        .zip(column_names)
+        .map(|(ty, name)| format!("{} {}", name, ty))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let create_table = format!(
+        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
+        table_name, cols
+    );
+    conn.execute(drop_table, ())?;
+    conn.execute(&create_table, ())?;
+    Ok(())
+}
+
+#[test]
+fn fetch_from_mssql() {
+    let table_name = "OdbcsvFetchMssql";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a, b)
+        Values
+        ('Jurassic Park', 1993),
+        ('2001: A Space Odyssey', 1968),
+        ('Interstellar', NULL);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let csv = "a,b\n\
+        Jurassic Park,1993\n\
+        2001: A Space Odyssey,1968\n\
+        Interstellar,\n\
+    ";
+
+    let query = format!("SELECT a, b from {}", table_name);
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "fetch",
+            "--connection-string",
+            MSSQL,
+            "--query",
+            &query,
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
+
+#[test]
+fn fetch_with_query_read_from_file() {
+    let table_name = "OdbcsvFetchWithQueryReadFromFile";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a, b)
+        Values
+        ('Jurassic Park', 1993),
+        ('2001: A Space Odyssey', 1968),
+        ('Interstellar', NULL);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let named = NamedTempFile::new().unwrap();
+    let path = named.into_temp_path();
+
+    let query = format!("SELECT a, b from {}", table_name);
+
+    fs::write(&path, query).unwrap();
+
+    let csv = "a,b\n\
+        Jurassic Park,1993\n\
+        2001: A Space Odyssey,1968\n\
+        Interstellar,\n\
+    ";
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "fetch",
+            "--connection-string",
+            MSSQL,
+            "--sql-file",
+            path.to_str().unwrap(),
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
 }

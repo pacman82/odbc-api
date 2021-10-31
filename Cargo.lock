@@ -882,6 +882,7 @@ dependencies = [
  "odbc-api",
  "stderrlog",
  "structopt",
+ "tempfile",
  "winit",
 ]
 
