@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.29.4
+## 0.30.0
 
-* Introduced trait `ResultSetMetadata`.
+* Allows for fetching result set metadata from `Prepared` statements.
+  * Introduced trait `ResultSetMetadata`. Which is implemented by both `Prepared` and `Cursor`.
 
 ## 0.29.3
 

@@ -1361,6 +1361,38 @@ fn column_names_iterator(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+fn column_names_from_prepared_query(profile: &Profile) {
+    let table_name = "column_names_from_prepared_query";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .unwrap();
+    let sql = format!("SELECT a, b FROM {};", table_name);
+    let prepared = conn.prepare(&sql).unwrap();
+    let names: Vec<_> = prepared
+        .column_names()
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+
+    assert_eq!(&["a", "b"], names.as_slice());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn metadata_from_prepared_insert_query(profile: &Profile) {
+    let table_name = "metadata_from_prepared_insert_query";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .unwrap();
+    let sql = format!("INSERT INTO {} (a, b) VALUES (42, 'Hello');", table_name);
+    let prepared = conn.prepare(&sql).unwrap();
+    assert_eq!(0, prepared.num_result_cols().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_insert_with_text_buffer(profile: &Profile) {
     let conn = profile
         .setup_empty_table("BulkInsertWithTextBuffer", &["VARCHAR(50)"])

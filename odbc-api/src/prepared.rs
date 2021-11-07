@@ -1,7 +1,7 @@
 use crate::{
     execute::execute_with_parameters,
     handles::{ParameterDescription, Statement, StatementImpl},
-    CursorImpl, Error, ParameterCollection,
+    CursorImpl, Error, ParameterCollection, ResultSetMetadata,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -39,5 +39,13 @@ impl<'o> Prepared<'o> {
         self.statement
             .describe_param(parameter_number)
             .into_result(&self.statement)
+    }
+}
+
+impl<'o> ResultSetMetadata for Prepared<'o> {
+    type Statement = StatementImpl<'o>;
+
+    fn stmt_ref(&self) -> &Self::Statement {
+        &self.statement
     }
 }
