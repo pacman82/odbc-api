@@ -20,7 +20,7 @@ pub trait Cursor: ResultSetMetadata {
     /// of safe wrapper types (i.e. [`crate::RowSetCursor`]). Some actions like closing the cursor
     /// may just result in ODBC transition errors, others like binding columns may even cause actual
     /// invalid memory access if not used with care.
-    unsafe fn stmt(&mut self) -> &mut Self::Statement;
+    unsafe fn stmt_mut(&mut self) -> &mut Self::Statement;
 
     /// Advances the cursor to the next row in the result set.
     ///
@@ -33,14 +33,14 @@ pub trait Cursor: ResultSetMetadata {
     /// [`Self::bind_buffer`].
     fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self::Statement>>, Error> {
         let row_available = unsafe {
-            self.stmt()
+            self.stmt_mut()
                 .fetch()
-                .map(|res| res.into_result(self.stmt()))
+                .map(|res| res.into_result(self.stmt_mut()))
                 .transpose()?
                 .is_some()
         };
         let ret = if row_available {
-            Some(CursorRow::new(unsafe { self.stmt() }))
+            Some(CursorRow::new(unsafe { self.stmt_mut() }))
         } else {
             None
         };
@@ -238,7 +238,7 @@ impl<S> Cursor for CursorImpl<S>
 where
     S: BorrowMutStatement,
 {
-    unsafe fn stmt(&mut self) -> &mut Self::Statement {
+    unsafe fn stmt_mut(&mut self) -> &mut Self::Statement {
         self.statement.borrow_mut()
     }
 
@@ -360,8 +360,8 @@ where
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
         unsafe {
-            if let Some(res) = self.cursor.stmt().fetch() {
-                res.into_result(self.cursor.stmt())?;
+            if let Some(res) = self.cursor.stmt_mut().fetch() {
+                res.into_result(self.cursor.stmt_mut())?;
                 Ok(Some(&self.buffer))
             } else {
                 Ok(None)
@@ -376,7 +376,7 @@ where
 {
     fn drop(&mut self) {
         unsafe {
-            let stmt = self.cursor.stmt();
+            let stmt = self.cursor.stmt_mut();
             if let Err(e) = stmt
                 .unbind_cols()
                 .into_result(stmt)

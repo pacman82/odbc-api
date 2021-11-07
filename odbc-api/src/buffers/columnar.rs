@@ -638,9 +638,9 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
             cursor
-                .stmt()
+                .stmt_mut()
                 .bind_col(*col_number, column)
-                .into_result(cursor.stmt())?;
+                .into_result(cursor.stmt_mut())?;
         }
         Ok(())
     }

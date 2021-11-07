@@ -245,9 +245,9 @@ unsafe impl RowSetBuffer for TextRowSet {
         for (index, column_buffer) in self.buffers.iter_mut().enumerate() {
             let column_number = (index + 1) as u16;
             cursor
-                .stmt()
+                .stmt_mut()
                 .bind_col(column_number, column_buffer)
-                .into_result(cursor.stmt())?;
+                .into_result(cursor.stmt_mut())?;
         }
         Ok(())
     }
