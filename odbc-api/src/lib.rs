@@ -16,6 +16,7 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
+mod result_set_metadata;
 mod statement_connection;
 
 pub mod buffers;
@@ -25,7 +26,7 @@ pub mod parameter;
 
 pub use self::{
     connection::{escape_attribute_value, Connection},
-    cursor::{Cursor, CursorImpl, CursorRow, ResultSetMetadata, RowSetBuffer, RowSetCursor},
+    cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
     error::Error,
     fixed_sized::Bit,
@@ -36,6 +37,7 @@ pub use self::{
     parameter_collection::ParameterCollection,
     preallocated::Preallocated,
     prepared::Prepared,
+    result_set_metadata::ResultSetMetadata,
     statement_connection::StatementConnection,
 };
 // Reexports
