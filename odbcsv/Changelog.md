@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.50
+
+* Introduced new subcommand `fetch`. It replaces `query` and allows for reading the SQL query text from a file.
+
 ## 0.3.49
 
 * Updated dependencies
