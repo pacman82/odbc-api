@@ -1,6 +1,9 @@
-use std::{fs::{self, File}, io::Read};
+use std::{
+    fs::{self, File},
+    io::Read,
+};
 
-use assert_cmd::{Command, assert::Assert};
+use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
 use odbc_api::{Connection, Environment};
 use tempfile::NamedTempFile;
@@ -117,13 +120,7 @@ fn query_mssql() {
     let query = format!("SELECT a, b from {}", table_name);
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
-            "-vvvv",
-            "query",
-            "--connection-string",
-            MSSQL,
-            &query,
-        ])
+        .args(&["-vvvv", "query", "--connection-string", MSSQL, &query])
         .assert()
         .success()
         .stdout(csv);
@@ -366,6 +363,7 @@ fn fetch_from_mssql() {
 
 #[test]
 fn fetch_with_query_read_from_file() {
+    // Fill Table with dummy data
     let table_name = "OdbcsvFetchWithQueryReadFromFile";
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
@@ -380,13 +378,13 @@ fn fetch_with_query_read_from_file() {
     );
     conn.execute(&insert, ()).unwrap();
 
+    // Write query into temporary file
     let named = NamedTempFile::new().unwrap();
     let path = named.into_temp_path();
-
     let query = format!("SELECT a, b from {}", table_name);
-
     fs::write(&path, query).unwrap();
 
+    // Use query safed in file to fetch dummy data and assert the result
     let csv = "a,b\n\
         Jurassic Park,1993\n\
         2001: A Space Odyssey,1968\n\
