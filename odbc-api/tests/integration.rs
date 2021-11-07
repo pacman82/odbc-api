@@ -1339,20 +1339,23 @@ fn heterogenous_parameters_in_array(profile: &Profile) {
     assert_eq!("3,Hello", actual);
 }
 
-#[test]
-fn column_names_iterator() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn column_names_iterator(profile: &Profile) {
+    let table_name = "column_names_iterator";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = "SELECT title, year FROM Movies;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let sql = format!("SELECT a, b FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
         .column_names()
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
 
-    assert_eq!(&["title", "year"], names.as_slice());
+    assert_eq!(&["a", "b"], names.as_slice());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
