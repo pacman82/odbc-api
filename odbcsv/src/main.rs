@@ -30,7 +30,7 @@ struct Cli {
 
 #[derive(StructOpt)]
 enum Command {
-    /// Query a data source and write the result as csv.
+    /// Query a data source and write the result as csv. This is the deprecated version of `fetch`.
     Query {
         #[structopt(flatten)]
         query_opt: QueryOpt,
@@ -129,13 +129,14 @@ struct FetchOpt {
     /// csv is going to be printed to standard out.
     #[structopt(long, short = "o")]
     output: Option<PathBuf>,
-    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
-    /// placeholders for positional parameters.
-    #[structopt(long, short = "q")]
+    /// Query executed against the ODBC data source. Within the SQL text Question marks (`?`) can be
+    /// used as placeholders for positional parameters.
+    #[structopt(long, short = "q", conflicts_with = "sql_file")]
     query: Option<String>,
-    /// Query executed against the ODBC data source. Question marks (`?`) can be used as
+    /// Read the SQL query from a file, rather than a literal passed at the command line. Argument
+    /// specifies path to that file. Within the SQL text question marks (`?`) can be used as
     /// placeholders for positional parameters.
-    #[structopt(long, short = "f")]
+    #[structopt(long, short = "f", conflicts_with = "query")]
     sql_file: Option<PathBuf>,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
@@ -199,7 +200,7 @@ struct ListColumnsOpt {
 
 fn main() -> Result<(), Error> {
     // Parse arguments from command line interface
-    let opt = Cli::from_args();
+    let opt = Cli::from_args_safe()?;
 
     // Initialize logging.
     stderrlog::new()
@@ -269,13 +270,15 @@ fn main() -> Result<(), Error> {
 fn open_connection<'e>(
     environment: &'e Environment,
     opt: &ConnectOpts,
-) -> Result<Connection<'e>, odbc_api::Error> {
+) -> Result<Connection<'e>, Error> {
     if let Some(dsn) = opt.dsn.as_deref() {
-        return environment.connect(
-            dsn,
-            opt.user.as_deref().unwrap_or(""),
-            opt.password.as_deref().unwrap_or(""),
-        );
+        return environment
+            .connect(
+                dsn,
+                opt.user.as_deref().unwrap_or(""),
+                opt.password.as_deref().unwrap_or(""),
+            )
+            .map_err(|e| e.into());
     }
 
     // Append user and or password to connection string
@@ -290,21 +293,25 @@ fn open_connection<'e>(
     #[cfg(target_os = "windows")]
     if opt.prompt {
         let window = message_only_window().unwrap();
-        return environment.driver_connect(&cs, None, DriverCompleteOption::Complete(&window));
+        return environment
+            .driver_connect(&cs, None, DriverCompleteOption::Complete(&window))
+            .map_err(|e| e.into());
     }
 
     // Would rather use conditional compilation on the flag itself. While this works fine, it does
     // mess with rust analyzer, so I keep it and panic here to keep development experience smooth.
     #[cfg(not(target_os = "windows"))]
     if opt.prompt {
-        panic!("--prompt is only supported on windows.")
+        bail!("--prompt is only supported on windows.")
     }
 
     if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
-        panic!("Either DSN, connection string or prompt must be specified.")
+        bail!("Either DSN, connection string or prompt must be specified.")
     }
 
-    environment.connect_with_connection_string(&cs)
+    environment
+        .connect_with_connection_string(&cs)
+        .map_err(|e| e.into())
 }
 
 #[cfg(target_os = "windows")]
