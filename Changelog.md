@@ -2,6 +2,8 @@
 
 ## 0.29.4
 
+* Introduced trait `ResultSetMetadata`.
+
 ## 0.29.3
 
 * Make `StatementConnection` public

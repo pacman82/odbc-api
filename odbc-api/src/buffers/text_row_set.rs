@@ -15,7 +15,7 @@ use std::{
 /// //! `anyhow` and `csv` crate.
 ///
 /// use anyhow::Error;
-/// use odbc_api::{buffers::TextRowSet, Cursor, Environment};
+/// use odbc_api::{buffers::TextRowSet, Cursor, Environment, ResultSetMetadata};
 /// use std::{
 ///     ffi::CStr,
 ///     io::{stdout, Write},

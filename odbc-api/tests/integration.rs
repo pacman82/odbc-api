@@ -16,7 +16,7 @@ use odbc_api::{
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
-    Out, U16String,
+    Out, ResultSetMetadata, U16String,
 };
 use std::{
     convert::TryInto,

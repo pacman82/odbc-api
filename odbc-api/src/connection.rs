@@ -405,7 +405,7 @@ impl<'c> Connection<'c> {
     /// # Example
     ///
     /// ```
-    /// use odbc_api::{Connection, Cursor, Error, buffers::TextRowSet};
+    /// use odbc_api::{Connection, Cursor, Error, ResultSetMetadata, buffers::TextRowSet};
     ///
     /// fn print_all_tables(conn: &Connection<'_>) -> Result<(), Error> {
     ///     // Set all filters to None, to really print all tables

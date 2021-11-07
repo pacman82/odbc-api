@@ -26,7 +26,7 @@ the Rust bindings for applications which want to utilize ODBC data sources.
 //! `anyhow` and `csv` crate.
 
 use anyhow::Error;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment};
+use odbc_api::{buffers::TextRowSet, Cursor, Environment, ResultSetMetadata};
 use std::{
     ffi::CStr,
     io::{stdout, Write},
@@ -415,7 +415,7 @@ have an easier time with the borrow checker.
 
 ```no_run
 use odbc_api::{
-    Connection, RowSetCursor, Error, Cursor, Nullability,
+    Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
     buffers::{ColumnarRowSet, BufferDescription, BufferKind}
 };
 
