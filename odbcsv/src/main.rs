@@ -62,7 +62,8 @@ enum Command {
     ListDataSources,
 }
 
-/// Command line arguments used to establish a connection with the ODBC data source
+// Attention: This has overwritten some help messages for the enduser if turned into a docstring:
+// Command line arguments used to establish a connection with the ODBC data source
 #[derive(StructOpt)]
 struct ConnectOpts {
     #[structopt(long, conflicts_with = "dsn")]
