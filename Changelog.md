@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.1
+
+* Minor improvements to documentation.
+
 ## 0.30.0
 
 * Allows for fetching result set metadata from `Prepared` statements.

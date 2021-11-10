@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.51
+
+* Fixed an issue which caused the wrong text to be rendered in the help message.
+
 ## 0.3.50
 
 * Introduced new subcommand `fetch`. It replaces `query` and allows for reading the SQL query text from a file.
