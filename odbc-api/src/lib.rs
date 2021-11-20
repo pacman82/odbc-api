@@ -7,6 +7,7 @@
 mod borrow_mut_statement;
 mod connection;
 mod cursor;
+mod driver_complete_option;
 mod environment;
 mod error;
 mod execute;
@@ -27,7 +28,8 @@ pub mod parameter;
 pub use self::{
     connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
-    environment::{DataSourceInfo, DriverCompleteOption, DriverInfo, Environment},
+    driver_complete_option::DriverCompleteOption,
+    environment::{DataSourceInfo, DriverInfo, Environment},
     error::Error,
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},
