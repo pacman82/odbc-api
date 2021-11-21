@@ -884,7 +884,6 @@ dependencies = [
  "stderrlog",
  "structopt",
  "tempfile",
- "winit",
 ]
 
 [[package]]
