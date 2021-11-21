@@ -16,16 +16,14 @@ pub enum DriverCompleteOption {
 }
 
 impl DriverCompleteOption {
-
     pub fn as_sys(&self) -> odbc_sys::DriverConnectOption {
         match self {
             DriverCompleteOption::NoPrompt => odbc_sys::DriverConnectOption::NoPrompt,
             DriverCompleteOption::Prompt => odbc_sys::DriverConnectOption::Prompt,
-            DriverCompleteOption::Complete=> odbc_sys::DriverConnectOption::Complete,
+            DriverCompleteOption::Complete => odbc_sys::DriverConnectOption::Complete,
             DriverCompleteOption::CompleteRequired => {
                 odbc_sys::DriverConnectOption::CompleteRequired
             }
         }
     }
-
 }

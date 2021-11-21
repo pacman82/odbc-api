@@ -1,7 +1,8 @@
 use anyhow::{bail, Error};
 use log::info;
 use odbc_api::{
-    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, Environment, IntoParameter,
+    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, DriverCompleteOption,
+    Environment, IntoParameter,
 };
 use std::{
     fs::{read_to_string, File},
@@ -9,9 +10,6 @@ use std::{
     path::PathBuf,
 };
 use structopt::StructOpt;
-
-#[cfg(target_os = "windows")]
-use odbc_api::DriverCompleteOption;
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt)]
