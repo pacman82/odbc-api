@@ -1,12 +1,18 @@
-use std::{cmp::max, collections::HashMap, sync::Mutex};
+use std::{cmp::max, collections::HashMap, panic, ptr::null_mut, sync::Mutex};
 
-use crate::{
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State},
-    Connection, DriverCompleteOption, Error,
-};
+use crate::{Connection, DriverCompleteOption, Error, handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State}};
 use log::debug;
-use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation};
+use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
+
+// Currently only windows driver manager supports prompt.
+#[cfg(target_os = "windows")]
+use winit::{
+    event_loop::EventLoop,
+    window::WindowBuilder,
+};
+#[cfg(target_os = "windows")]
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 /// An ODBC 3.8 environment.
 ///
@@ -295,7 +301,10 @@ impl Environment {
     ///   * Maria DB crashes with STATUS_TACK_BUFFER_OVERRUN
     ///   * SQLite does not change the output buffer at all and does not indicate truncation.
     /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete
-    ///   the provided connection string.
+    ///   the provided connection string. For arguments other than
+    ///   [`crate::DriverCompleteOption::NoPrompt`] this method is going to create a message only
+    ///   parent window for you on windows. On other platform this method is going to panic. In case
+    ///   you want to provide your own parent window please use [`Self::driver_connect_with_hwnd`].
     ///
     /// # Examples
     ///
@@ -304,9 +313,6 @@ impl Environment {
     /// windows.
     ///
     /// ```no_run
-    /// # #[cfg(target_os = "widows")]
-    /// # fn f(parent_window: impl raw_window_handle::HasRawWindowHandle)
-    /// #   -> Result<(), odbc_api::Error> {
     /// use odbc_api::{Environment, handles::OutputStringBuffer, DriverCompleteOption};
     ///
     /// let env = Environment::new()?;
@@ -315,7 +321,7 @@ impl Environment {
     /// let connection = env.driver_connect(
     ///     "",
     ///     Some(&mut output_buffer),
-    ///     DriverCompleteOption::Prompt(&parent_window),
+    ///     DriverCompleteOption::Prompt,
     /// )?;
     ///
     /// // Check that the output buffer has been large enough to hold the entire connection string.
@@ -323,7 +329,7 @@ impl Environment {
     ///
     /// // Now `connection_string` will contain the data source selected by the user.
     /// let connection_string = output_buffer.to_utf8();
-    /// # Ok(()) }
+    /// # Ok::<_,odbc_api::Error>(())
     /// ```
     ///
     /// In the following examples we specify a DSN that requires login credentials, but the DSN does
@@ -335,7 +341,6 @@ impl Environment {
     /// # use odbc_api::DriverCompleteOption;
     /// # #[cfg(target_os = "windows")]
     /// # fn f(
-    /// #    parent_window: impl raw_window_handle::HasRawWindowHandle,
     /// #    mut output_buffer: odbc_api::handles::OutputStringBuffer,
     /// #    env: odbc_api::Environment,
     /// # ) -> Result<(), odbc_api::Error> {
@@ -343,7 +348,7 @@ impl Environment {
     /// let connection = env.driver_connect(
     ///     &without_uid_or_pwd,
     ///     Some(&mut output_buffer),
-    ///     DriverCompleteOption::Complete(&parent_window),
+    ///     DriverCompleteOption::Complete,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
     ///
@@ -378,21 +383,68 @@ impl Environment {
         &self,
         connection_string: &str,
         completed_connection_string: Option<&mut OutputStringBuffer>,
-        driver_completion: DriverCompleteOption<'_>,
+        driver_completion: DriverCompleteOption,
+    ) -> Result<Connection<'_>, Error> {
+        #[cfg(target_os = "windows")]
+        let parent_window = if driver_completion.as_sys() == odbc_sys::DriverConnectOption::NoPrompt {
+            None
+        } else {
+            if !cfg!(target_os = "windows") {
+                panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.") 
+            }
+            // We need a parent window, let's provide a message only window.
+            Some(WindowBuilder::new()
+                .with_visible(false)
+                .build(&EventLoop::new())
+                .unwrap())
+        };
+        #[cfg(target_os = "windows")]
+        let hwnd = parent_window.as_ref().map(|window|{
+            match window.raw_window_handle() {
+                RawWindowHandle::Windows(handle) => handle.hwnd,
+                _ => null_mut(),
+            }
+        }).unwrap_or_else(null_mut);
+        #[cfg(not(target_os = "windows"))]
+        let hwnd = null_mut();
+        unsafe {
+            self.driver_connect_with_hwnd(
+                connection_string,
+                completed_connection_string,
+                driver_completion,
+                hwnd,
+            )
+        }
+    }
+
+    /// Allows to call driver connect with a user supplied HWnd. Same as [`Self::driver_connect`],
+    /// but with the possibility to provide your own parent window handle in case you want to show
+    /// a prompt to the user.
+    ///
+    /// # Safety
+    ///
+    /// `parent_window` must be a valid window handle, to a window type supported by the ODBC driver
+    /// manager. On windows this is a plain window handle, which is of course understood by the
+    /// windows built in ODBC driver manager. Other working combinations are unknown to the author.
+    pub unsafe fn driver_connect_with_hwnd(
+        &self,
+        connection_string: &str,
+        completed_connection_string: Option<&mut OutputStringBuffer>,
+        driver_completion: DriverCompleteOption,
+        parent_window: HWnd,
     ) -> Result<Connection<'_>, Error> {
         let mut connection = self.allocate_connection()?;
         let connection_string = U16String::from_str(connection_string);
 
-        unsafe {
-            connection.driver_connect(
+        connection
+            .driver_connect(
                 &connection_string,
-                driver_completion.parent_window(),
+                parent_window,
                 completed_connection_string,
                 driver_completion.as_sys(),
             )
-        }
-        .map(|res| res.into_result(&connection))
-        .unwrap_or(Err(Error::AbortedConnectionStringCompletion))?;
+            .map(|res| res.into_result(&connection))
+            .unwrap_or(Err(Error::AbortedConnectionStringCompletion))?;
         Ok(Connection::new(connection))
     }
 

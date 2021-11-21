@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.52
+
+* Updated dependencies
+
 ## 0.3.51
 
 * Fixed an issue which caused the wrong text to be rendered in the help message.

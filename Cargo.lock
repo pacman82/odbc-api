@@ -112,9 +112,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.71"
+version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79c2681d6594606957bbb8631c4b90a7fcaaa72cdb714743a437b156d6a7eedd"
+checksum = "22a9137b95ea06864e018375b72adfb7db6e6f68cfc8df5a04d00288050485ee"
 
 [[package]]
 name = "cfg-if"
@@ -452,7 +452,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac1b7517328c04c2aa68422fc60a41b92208182142ed04a25879c26c8f878794"
 dependencies = [
- "libloading 0.7.1",
+ "libloading 0.7.2",
 ]
 
 [[package]]
@@ -592,9 +592,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.107"
+version = "0.2.108"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbe5e23404da5b4f555ef85ebed98fb4083e55a00c317800bc2a50ede9f3d219"
+checksum = "8521a1b57e76b1ec69af7599e75e38e7b7fad6610f037db8c79b127201b5d119"
 
 [[package]]
 name = "libloading"
@@ -608,9 +608,9 @@ dependencies = [
 
 [[package]]
 name = "libloading"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0cf036d15402bea3c5d4de17b3fce76b3e4a56ebc1f577be0e7a72f7c607cf0"
+checksum = "afe203d669ec979b7128619bae5a63b7b42e9203c1b29146079ee05e2f604b52"
 dependencies = [
  "cfg-if 1.0.0",
  "winapi",
@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.30.1"
+version = "0.31.0"
 dependencies = [
  "anyhow",
  "csv",
@@ -862,6 +862,7 @@ dependencies = [
  "test-case",
  "thiserror",
  "widestring",
+ "winit",
 ]
 
 [[package]]
@@ -872,7 +873,7 @@ checksum = "4becfc9f75e44ac11ee3cc87a9cb2d58a4db5bf83f87313189d5bb1bafeb942c"
 
 [[package]]
 name = "odbcsv"
-version = "0.3.51"
+version = "0.3.52"
 dependencies = [
  "anyhow",
  "assert_cmd",

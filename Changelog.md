@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.0
+
+In order to avoid exposing the dependency to `raw-window-handle` in the public interface the way
+this library opens prompts for connecetion on windows platform has changed:
+
+* Breaking change: `Environment::driver_connect` now automatically creates a message only window for
+  the user on non-windows platform. `DriverCompleteOption` is now a simple C-Like enumeration.
+* Introduced `Environment::driver_connect_with_hwnd` to allow power users to provide their own
+  window handles.
+
 ## 0.30.1
 
 * Minor improvements to documentation.

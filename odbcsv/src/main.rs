@@ -12,11 +12,6 @@ use structopt::StructOpt;
 
 #[cfg(target_os = "windows")]
 use odbc_api::DriverCompleteOption;
-#[cfg(target_os = "windows")]
-use winit::{
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
-};
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(StructOpt)]
@@ -292,35 +287,24 @@ fn open_connection<'e>(
     }
 
     #[cfg(target_os = "windows")]
-    if opt.prompt {
-        let window = message_only_window().unwrap();
-        return environment
-            .driver_connect(&cs, None, DriverCompleteOption::Complete(&window))
-            .map_err(|e| e.into());
-    }
-
-    // Would rather use conditional compilation on the flag itself. While this works fine, it does
-    // mess with rust analyzer, so I keep it and panic here to keep development experience smooth.
-    #[cfg(not(target_os = "windows"))]
-    if opt.prompt {
-        bail!("--prompt is only supported on windows.")
-    }
+    let driver_completion = if opt.prompt {
+        // Would rather use conditional compilation on the flag itself. While this works fine, it
+        // does mess with rust analyzer, so I keep it and panic here to keep development experience
+        // smooth.
+        #[cfg(not(target_os = "windows"))]
+        bail!("--prompt is only supported on windows.");
+        DriverCompleteOption::Complete
+    } else {
+        DriverCompleteOption::NoPrompt
+    };
 
     if !opt.prompt && opt.connection_string.is_none() && opt.dsn.is_none() {
         bail!("Either DSN, connection string or prompt must be specified.")
     }
 
     environment
-        .connect_with_connection_string(&cs)
+        .driver_connect(&cs, None, driver_completion)
         .map_err(|e| e.into())
-}
-
-#[cfg(target_os = "windows")]
-fn message_only_window() -> Result<Window, Error> {
-    let window = WindowBuilder::new()
-        .with_visible(false)
-        .build(&EventLoop::new())?;
-    Ok(window)
 }
 
 /// Execute a query and writes the result to csv.
