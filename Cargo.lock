@@ -857,7 +857,6 @@ dependencies = [
  "lazy_static",
  "log",
  "odbc-sys",
- "raw-window-handle",
  "tempfile",
  "test-case",
  "thiserror",

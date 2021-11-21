@@ -36,7 +36,6 @@ widestring = "0.5.1"
 force-send-sync = "1.0.0"
 
 [target.'cfg(windows)'.dependencies]
-raw-window-handle = "0.3.3"
 winit = "0.25.0"
 
 [dev-dependencies]

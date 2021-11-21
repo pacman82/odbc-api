@@ -9,10 +9,7 @@ use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
 
 // Currently only windows driver manager supports prompt.
-#[cfg(target_os = "windows")]
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-#[cfg(target_os = "windows")]
-use winit::{event_loop::EventLoop, window::WindowBuilder};
+use winit::{event_loop::EventLoop, platform::windows::WindowExtWindows, window::WindowBuilder};
 
 /// An ODBC 3.8 environment.
 ///
@@ -386,28 +383,25 @@ impl Environment {
         driver_completion: DriverCompleteOption,
     ) -> Result<Connection<'_>, Error> {
         #[cfg(target_os = "windows")]
-        let parent_window = if driver_completion.as_sys() == odbc_sys::DriverConnectOption::NoPrompt
-        {
-            None
-        } else {
-            if !cfg!(target_os = "windows") {
-                panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.")
+        let parent_window = match driver_completion {
+            DriverCompleteOption::NoPrompt => None,
+            _ => {
+                if !cfg!(target_os = "windows") {
+                    panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.")
+                }
+                // We need a parent window, let's provide a message only window.
+                Some(
+                    WindowBuilder::new()
+                        .with_visible(false)
+                        .build(&EventLoop::new())
+                        .unwrap(),
+                )
             }
-            // We need a parent window, let's provide a message only window.
-            Some(
-                WindowBuilder::new()
-                    .with_visible(false)
-                    .build(&EventLoop::new())
-                    .unwrap(),
-            )
         };
         #[cfg(target_os = "windows")]
         let hwnd = parent_window
             .as_ref()
-            .map(|window| match window.raw_window_handle() {
-                RawWindowHandle::Windows(handle) => handle.hwnd,
-                _ => null_mut(),
-            })
+            .map(|window| window.hwnd())
             .unwrap_or_else(null_mut);
         #[cfg(not(target_os = "windows"))]
         let hwnd = null_mut();
