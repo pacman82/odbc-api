@@ -17,9 +17,44 @@ This crate is build on top of the `odbc-sys` ffi bindings, which provide definit
 
 ## Usage
 
+Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for code examples and a tour of the features.
+
+## Installation
+
 To build this library you need to link against the `odbc` library of your systems ODBC driver manager. It should be automatically detected by the build. On Windows systems it is preinstalled. On Linux and OS-X [unix-odbc](http://www.unixodbc.org/) must be installed. To create a Connections to a data source, its ODBC driver must also be installed.
 
-Check the [guide](https://docs.rs/odbc-api/latest/odbc_api/guide/index.html) for code examples and a tour of the features.
+### Windows
+
+Nothing to do. ODBC driver manager is preinstalled.
+
+### Ubuntu
+
+```shell
+sudo apt-get install unixodbc-dev
+```
+
+### OS-X (intel)
+
+You can use homebrew to install UnixODBC
+
+```shell
+brew install unixodbc
+```
+
+### OS-X (ARM / MAC M1)
+
+`cargo build` is not going to pick up `libodbc.so` installed via homebrew due to the fact that homebrew on ARM Mac installs into `/opt/homebrew/Cellar` as opposed to `/usr/local/opt/`.
+
+You find documentation on what directories are searched during build here: <https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths>.
+
+You can also install unixODBC from source:
+
+1. copy the unixODBC-2.3.9.tar.gz file somewhere you can create files and directories
+2. gunzip unixODBC*.tar.gz
+3. tar xvf unixODBC*.tar
+4. `./configure`
+5. `make`
+6. `make install`
 
 ## Features
 
