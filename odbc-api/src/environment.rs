@@ -8,6 +8,7 @@ use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 use widestring::{U16CStr, U16Str, U16String};
 
+#[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
 use winit::{event_loop::EventLoop, platform::windows::WindowExtWindows, window::WindowBuilder};
 

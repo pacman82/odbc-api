@@ -286,12 +286,17 @@ fn open_connection<'e>(
 
     #[cfg(target_os = "windows")]
     let driver_completion = if opt.prompt {
+        DriverCompleteOption::Complete
+    } else {
+        DriverCompleteOption::NoPrompt
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let driver_completion = if opt.prompt {
         // Would rather use conditional compilation on the flag itself. While this works fine, it
         // does mess with rust analyzer, so I keep it and panic here to keep development experience
         // smooth.
-        #[cfg(not(target_os = "windows"))]
         bail!("--prompt is only supported on windows.");
-        DriverCompleteOption::Complete
     } else {
         DriverCompleteOption::NoPrompt
     };
