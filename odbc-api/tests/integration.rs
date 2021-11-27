@@ -2489,7 +2489,7 @@ fn get_full_connection_string(profile: &Profile) {
 /// We must be able to detect truncation in case we provide a buffer too small to hold the output
 /// connection string
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")] STATUS_TACK_BUFFER_OVERRUN
+// #[test_case(MARIADB; "Maria DB")] STATUS_STACK_BUFFER_OVERRUN
 // #[test_case(SQLITE_3; "SQLite 3")] Does not write truncated connection string at all
 fn get_full_connection_string_truncated(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1);
