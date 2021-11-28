@@ -541,7 +541,12 @@ pub trait Statement: AsHandle {
             }
 
             if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
-                buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
+                // If we could rely on every ODBC driver sticking to the specifcation it would
+                // probably best to resize by `string_length_in_bytes / 2 + 1`. Yet i.e. SQLite
+                // seems to report the length in characters, so to work with a wide range of DB
+                // systems, and since buffers for names are not expected to become super large we
+                // ommit the division by two here.
+                buf.resize((string_length_in_bytes + 1).try_into().unwrap(), 0);
                 res = SQLColAttributeW(
                     self.as_sys(),
                     column_number,

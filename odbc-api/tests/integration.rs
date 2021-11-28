@@ -292,24 +292,28 @@ fn into_cursor(profile: &Profile) {
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn column_attributes() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn column_name(profile: &Profile) {
+    let table_name = "ColumnName";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
-    let sql = "SELECT title, year FROM Movies;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+
+    let sql = format!("SELECT a, b FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     let mut buf = Vec::new();
 
     cursor.col_name(1, &mut buf).unwrap();
     let buf = U16String::from_vec(buf);
-    assert_eq!("title", buf.to_string().unwrap());
+    assert_eq!("a", buf.to_string().unwrap());
 
     let mut buf = buf.into_vec();
     cursor.col_name(2, &mut buf).unwrap();
     let name = U16String::from_vec(buf);
-    assert_eq!("year", name.to_string().unwrap());
+    assert_eq!("b", name.to_string().unwrap());
 }
 
 /// Bind a CHAR column to a character buffer.

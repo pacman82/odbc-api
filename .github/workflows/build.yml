@@ -107,11 +107,8 @@ jobs:
         run: docker logs odbc-api_mssql_1
       - name: Check logs Maria DB
         run: docker logs odbc-api_mariadb_1
-      # We currently test neither against SQLite nor PostgreSQL, but the time will come leave these
+      # We currently do not test against PostgreSQL, but the time will come leave this
       # in for reference
-      # - name: Install SQLite Driver
-      #   run: |
-      #     sudo apt-get install -y libsqliteodbc
       # - name: Install PostgreSQL Driver
       #   run: |
       #     sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
