@@ -606,7 +606,10 @@ impl<'c> Connection<'c> {
 /// connection string as the value for the `PWD` attribute. This method is only of interest for
 /// application in need to create their own connection strings.
 ///
-/// See: <https://stackoverflow.com/questions/22398212/escape-semicolon-in-odbc-connection-string-in-app-config-file>
+/// See:
+/// 
+/// * <https://stackoverflow.com/questions/22398212/escape-semicolon-in-odbc-connection-string-in-app-config-file>
+/// * <https://docs.microsoft.com/en-us/dotnet/api/system.data.odbc.odbcconnection.connectionstring>
 ///
 /// # Example
 ///
@@ -637,11 +640,12 @@ impl<'c> Connection<'c> {
 /// assert_eq!("ab}c", escape_attribute_value("ab}c"));
 /// assert_eq!("{ab;c}", escape_attribute_value("ab;c"));
 /// assert_eq!("{a}}b;c}", escape_attribute_value("a}b;c"));
+/// assert_eq!("{ab[c}", escape_attribute_value("ab[c"));
 /// ```
 pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
     // Search the string for semicolon (';') if we do not find any, nothing is to do and we can work
     // without an extra allocation.
-    if unescaped.contains(';') {
+    if unescaped.contains(&[';', '[', ']', ',', '?', '*', '=', '!', '@'][..]) {
         // Surround the string with curly braces ('{','}') and escape every closing curly brace by
         // repeating it.
         let escaped = unescaped.replace("}", "}}");
