@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.2
+
+* `escape_attribute_value` now also escapes `+` signs. This has been introduced because an
+  authentication vs a PostgreSQL failed, if a password containing `+` has not been escaped.
+
 ## 0.31.1
 
 * Fix: Some drivers (i.e. SqLite) report the size of column names in characters instead of bytes. This could cause truncation of names provided by `colum_names` if the supplied buffers were to short. Now the correct provided buffer is always resized to be large enough to hold the entire name, even for these drivers.

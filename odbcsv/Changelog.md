@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.54
+
+* Passwords containing `+` are now also escaped, if passed via the `--password` parameter.
+
 ## 0.3.53
 
 * Updated dependencies
