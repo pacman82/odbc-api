@@ -640,12 +640,15 @@ impl<'c> Connection<'c> {
 /// assert_eq!("ab}c", escape_attribute_value("ab}c"));
 /// assert_eq!("{ab;c}", escape_attribute_value("ab;c"));
 /// assert_eq!("{a}}b;c}", escape_attribute_value("a}b;c"));
-/// assert_eq!("{ab[c}", escape_attribute_value("ab[c"));
+/// assert_eq!("{ab+c}", escape_attribute_value("ab+c"));
 /// ```
 pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
     // Search the string for semicolon (';') if we do not find any, nothing is to do and we can work
     // without an extra allocation.
-    if unescaped.contains(&[';', '[', ']', ',', '?', '*', '=', '!', '@'][..]) {
+    //
+    // * We escape ';' because it severs as a separator between key=value pairs
+    // * We escape '+' because passwords with `+` must be escaped on PostgreSQL for some reason.
+    if unescaped.contains(&[';', '+'][..]) {
         // Surround the string with curly braces ('{','}') and escape every closing curly brace by
         // repeating it.
         let escaped = unescaped.replace("}", "}}");
