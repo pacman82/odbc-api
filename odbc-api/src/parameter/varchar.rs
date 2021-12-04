@@ -193,7 +193,7 @@ where
     }
 }
 
-unsafe impl<B> HasDataType for VarChar<B>
+impl<B> HasDataType for VarChar<B>
 where
     B: Borrow<[u8]>,
 {

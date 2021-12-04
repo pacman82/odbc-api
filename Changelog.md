@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* Removed `unsafe` from trait `HasDataType`.
+
 ## 0.31.2
 
 * `escape_attribute_value` now also escapes `+` signs. This has been introduced because an

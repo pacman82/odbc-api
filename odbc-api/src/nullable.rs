@@ -72,7 +72,7 @@ where
     }
 }
 
-unsafe impl<T> HasDataType for Nullable<T>
+impl<T> HasDataType for Nullable<T>
 where
     T: Pod + HasDataType,
 {

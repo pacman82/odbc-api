@@ -419,7 +419,7 @@ unsafe impl CDataMut for AnyColumnBuffer {
     }
 }
 
-unsafe impl HasDataType for AnyColumnBuffer {
+impl HasDataType for AnyColumnBuffer {
     fn data_type(&self) -> DataType {
         match self {
             AnyColumnBuffer::Binary(col) => col.data_type(),

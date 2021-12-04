@@ -406,7 +406,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     let headline = reader.byte_headers()?;
     let column_names: Vec<&str> = headline
         .iter()
-        .map(|bytes| std::str::from_utf8(bytes))
+        .map(std::str::from_utf8)
         .collect::<Result<_, _>>()?;
     let columns = column_names.join(", ");
     let values = column_names

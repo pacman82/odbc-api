@@ -165,7 +165,7 @@ where
     }
 }
 
-unsafe impl<B> HasDataType for VarBinary<B>
+impl<B> HasDataType for VarBinary<B>
 where
     B: Borrow<[u8]>,
 {

@@ -27,7 +27,7 @@ unsafe impl CData for CStr {
     }
 }
 
-unsafe impl HasDataType for CStr {
+impl HasDataType for CStr {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.to_bytes().len(),
@@ -55,7 +55,7 @@ unsafe impl CData for CString {
     }
 }
 
-unsafe impl HasDataType for CString {
+impl HasDataType for CString {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.as_bytes().len(),

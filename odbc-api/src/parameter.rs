@@ -348,19 +348,25 @@ use crate::{
 /// the buffer and the value within).
 pub unsafe trait InputParameter: HasDataType + CData {}
 
+/// # Safety
+///
 /// Guarantees that there is space in the output buffer for at least one element.
 pub unsafe trait Output: CDataMut + HasDataType {}
 
 /// Implementers of this trait can be used as individual parameters of in a
 /// [`crate::ParameterCollection`]. They can be bound as either input parameters, output parameters
 /// or both.
+/// 
+/// # Safety
+///
+/// Parameters bound to the statement must remain valid for the lifetime of the instance.
 pub unsafe trait Parameter {
     /// Bind the parameter in question to a specific `parameter_number`.
     ///
     /// # Safety
     ///
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
-    /// the parameter remains valid while it is bound. If the parameter is bound as an output
+    /// the parameter remains valid while it is used. If the parameter is bound as an output
     /// parameter it must also be ensured that it is exclusively referenced by statement.
     unsafe fn bind_parameter(
         self,
@@ -487,7 +493,7 @@ where
     }
 }
 
-unsafe impl<T> HasDataType for WithDataType<T>
+impl<T> HasDataType for WithDataType<T>
 where
     T: HasDataType,
 {
@@ -517,7 +523,7 @@ unsafe impl CData for Box<dyn InputParameter> {
     }
 }
 
-unsafe impl HasDataType for Box<dyn InputParameter> {
+impl HasDataType for Box<dyn InputParameter> {
     fn data_type(&self) -> DataType {
         self.as_ref().data_type()
     }

@@ -366,7 +366,7 @@ unsafe impl CData for BinColumn {
     }
 }
 
-unsafe impl HasDataType for BinColumn {
+impl HasDataType for BinColumn {
     fn data_type(&self) -> DataType {
         DataType::Varbinary {
             length: self.max_len,

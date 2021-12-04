@@ -26,6 +26,11 @@ impl Bit {
 
 /// A plain old data type. With an associated C Type. Must be completely stack allocated without any
 /// external references. In addition to that the buffer size must be known to ODBC in advance.
+/// 
+/// # Safety
+/// 
+/// A type implementing this trait, must be a fixed sized type. The information in the `C_DATA_TYPE`
+/// constant must be enough to determine both the size and the buffer length of an Instance.
 pub unsafe trait Pod: Default + Copy + CData {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;
@@ -80,7 +85,7 @@ impl_fixed_sized!(u64, CDataType::UBigInt);
 
 macro_rules! impl_input_fixed_sized {
     ($t:ident, $data_type:expr) => {
-        unsafe impl HasDataType for $t {
+        impl HasDataType for $t {
             fn data_type(&self) -> DataType {
                 $data_type
             }

@@ -131,10 +131,10 @@ impl<'o> Preallocated<'o> {
         table_name: Option<&str>,
         table_type: Option<&str>,
     ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
-        let catalog_name = catalog_name.map(|s| U16String::from_str(s));
-        let schema_name = schema_name.map(|s| U16String::from_str(s));
-        let table_name = table_name.map(|s| U16String::from_str(s));
-        let table_type = table_type.map(|s| U16String::from_str(s));
+        let catalog_name = catalog_name.map(U16String::from_str);
+        let schema_name = schema_name.map(U16String::from_str);
+        let table_name = table_name.map(U16String::from_str);
+        let table_type = table_type.map(U16String::from_str);
 
         execute_tables(
             &mut self.statement,

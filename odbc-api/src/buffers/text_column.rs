@@ -548,7 +548,7 @@ unsafe impl CDataMut for CharColumn {
     }
 }
 
-unsafe impl HasDataType for CharColumn {
+impl HasDataType for CharColumn {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
             length: self.max_str_len,
@@ -584,7 +584,7 @@ unsafe impl CDataMut for WCharColumn {
     }
 }
 
-unsafe impl HasDataType for WCharColumn {
+impl HasDataType for WCharColumn {
     fn data_type(&self) -> DataType {
         DataType::WVarchar {
             length: self.max_str_len,

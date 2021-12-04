@@ -60,6 +60,13 @@ mod tuple;
 /// }
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
+/// 
+/// # Safety
+/// 
+/// Instances of this type are passed by value, so this type can be implemented by both constant and
+/// mutabale references. Implementers should take care that the values bound by `bind_parameters_to`
+/// to the statement live at least for the Duration of `self`. The most straight forward way of
+/// achieving this is of course, to bind members.
 pub unsafe trait ParameterCollection {
     /// Number of values per parameter in the collection. This can be different from the maximum
     /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
@@ -68,9 +75,9 @@ pub unsafe trait ParameterCollection {
 
     /// # Safety
     ///
-    /// Implementers should take care that the values bound by this method to the statement live at
-    /// least for the Duration of `self`. The most straight forward way of achieving this is of
-    /// course, to bind members.
+    /// On execution a statement may want to read/write to the bound paramaters. It is the callers
+    /// responsibility that by then the buffers are either unbound from the statement or still
+    /// valild.
     unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error>;
 }
 

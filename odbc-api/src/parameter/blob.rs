@@ -84,7 +84,7 @@ unsafe impl DelayedInput for BlobParam<'_> {
     }
 }
 
-unsafe impl HasDataType for BlobParam<'_> {
+impl HasDataType for BlobParam<'_> {
     fn data_type(&self) -> DataType {
         self.blob.data_type()
     }
@@ -181,7 +181,7 @@ impl<'a> BlobSlice<'a> {
     }
 }
 
-unsafe impl HasDataType for BlobSlice<'_> {
+impl HasDataType for BlobSlice<'_> {
     fn data_type(&self) -> DataType {
         if self.is_binary {
             DataType::LongVarbinary {
@@ -336,7 +336,7 @@ impl BlobRead<BufReader<File>> {
     }
 }
 
-unsafe impl<R> HasDataType for BlobRead<R>
+impl<R> HasDataType for BlobRead<R>
 where
     R: BufRead,
 {
