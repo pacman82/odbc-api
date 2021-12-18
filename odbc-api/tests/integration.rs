@@ -1301,20 +1301,25 @@ fn wchar_as_char() {
     assert_eq!("A\nÜ", output);
 }
 
-#[test]
-fn two_parameters_in_tuple() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn two_parameters_in_tuple(profile: &Profile) {
+    let table_name = "TwoParmetersInTuple";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
         .unwrap();
-    let sql = "SELECT title FROM Movies where ? < year AND year < ?;";
-    let cursor = conn.execute(sql, (&1960, &1970)).unwrap().unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
-    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+    let insert = format!("INSERT INTO {} (a) VALUES (1), (2), (3), (4);", table_name);
+    conn.execute(&insert, ()).unwrap();
 
-    let batch = cursor.fetch().unwrap().unwrap();
-    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+    let sql = format!("SELECT a FROM {} where ? < a AND a < ? ORDER BY id;", table_name);
 
-    assert_eq!("2001: A Space Odyssey", title);
+    let cursor = conn
+        .execute(&sql, (&1, &4))
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("2\n3", actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
