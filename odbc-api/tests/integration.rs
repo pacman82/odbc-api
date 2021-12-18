@@ -2568,10 +2568,13 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
     assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
 }
 
-#[test]
-fn columns_query() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL.connection_string)
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columns_query(profile: &Profile) {
+    let table_name = "ColumnsQuery";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(10)"])
         .unwrap();
 
     let row_set_buffer = ColumnarRowSet::new(
@@ -2581,7 +2584,7 @@ fn columns_query() {
             .into_iter(),
     );
     let columns = conn
-        .columns(&conn.current_catalog().unwrap(), "dbo", "Movies", "")
+        .columns(&conn.current_catalog().unwrap(), "dbo", table_name, "a")
         .unwrap();
 
     let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
@@ -2596,11 +2599,11 @@ fn columns_query() {
     const COLUMN_SIZE_INDEX: usize = 6;
     let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
 
-    let has_title_col_with_expected_size = column_names.zip(column_sizes).any(|(name, size)| {
-        str::from_utf8(name.unwrap()).unwrap() == "title" && *size.unwrap() == 255
+    let column_has_name_a_and_size_10 = column_names.zip(column_sizes).any(|(name, size)| {
+        str::from_utf8(name.unwrap()).unwrap() == "a" && *size.unwrap() == 10
     });
 
-    assert!(has_title_col_with_expected_size);
+    assert!(column_has_name_a_and_size_10);
 }
 
 /// Demonstrating how to fill a vector of rows using this crate.
