@@ -27,14 +27,16 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release
+        run: |
+          cargo build --release
+          Compress-Archive -LiteralPath target/release/odbcsv.exe -DestinationPath odbcsv-win64.zip
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/odbcsv.exe
-          asset_name: odbcsv-win64
+          file: odbcsv-win64.zip
+          asset_name: odbcsv-win64.zip
           tag: ${{ github.ref }}
   
   release_win32:
@@ -54,14 +56,16 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --release
+        run: |
+          cargo build --release
+          Compress-Archive -LiteralPath target/release/odbcsv.exe -DestinationPath odbcsv-win32.zip
 
       - name: Github Upload
         uses: svenstaro/upload-release-action@v1-release
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/odbcsv.exe
-          asset_name: odbcsv-win32
+          file: odbcsv-win32.zip
+          asset_name: odbcsv-win32.zip
           tag: ${{ github.ref }}
 
   release_os-x:
