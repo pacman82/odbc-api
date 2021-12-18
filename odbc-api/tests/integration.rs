@@ -2425,10 +2425,14 @@ fn send_long_data_binary_file(profile: &Profile) {
 
 /// Demonstrate how to strip abstractions and access raw functionality as exposed by `odbc-sys`.
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn escape_hatch(profile: &Profile) {
-    let conn = profile.connection().unwrap();
+    let table_name = "EscapeHatch";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
+
     let preallocated = conn.preallocate().unwrap();
     let mut statement = preallocated.into_statement();
 
@@ -2436,7 +2440,7 @@ fn escape_hatch(profile: &Profile) {
 
     unsafe {
         // TableName does not exist, but we won't execute the query anyway
-        let select = U16String::from_str("SELECT * FROM Movies");
+        let select = U16String::from_str("SELECT * FROM EscapeHatch");
         let ret = sys::SQLPrepareW(
             statement.as_sys(),
             select.as_ptr(),
