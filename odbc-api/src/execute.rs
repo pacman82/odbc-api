@@ -69,7 +69,9 @@ where
     if stmt.num_result_cols().into_result(stmt)? == 0 {
         Ok(None)
     } else {
-        Ok(Some(CursorImpl::new(statement)))
+        // Safe: `statement` is in cursor state.
+        let cursor = unsafe { CursorImpl::new(statement) };
+        Ok(Some(cursor))
     }
 }
 
@@ -93,7 +95,9 @@ where
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
 
-    Ok(CursorImpl::new(statement))
+    // Safe: `statement` is in cursor state
+    let cursor = unsafe { CursorImpl::new(statement) };
+    Ok(cursor)
 }
 
 /// Shared implementation for executing a tables query between [`crate::Connection`] and
@@ -116,5 +120,8 @@ where
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
 
-    Ok(CursorImpl::new(statement))
+    // Safe: `statement` is in Cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+
+    Ok(cursor)
 }

@@ -276,7 +276,17 @@ impl<S> CursorImpl<S>
 where
     S: BorrowMutStatement,
 {
-    pub(crate) fn new(statement: S) -> Self {
+    /// Users of this library are encouraged not to call this constructor directly but rather invoke
+    /// [`crate::Connection::execute`] or [`crate::Prepared::execute`] to get a cursor and utilize
+    /// it using the [`crate::Cursor`] trait. This method is pubilc so users with an understanding
+    /// of the raw ODBC C-API have a way to create a cursor, after they left the safety rails of the
+    /// Rust type System, in order to implement a use case not covered yet, by the safe abstractions
+    /// within this crate.
+    ///
+    /// # Safety
+    /// 
+    /// `statement` must be in Cursor state, for the invariants of this type to hold.
+    pub unsafe fn new(statement: S) -> Self {
         Self { statement }
     }
 

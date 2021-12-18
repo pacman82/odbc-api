@@ -150,10 +150,15 @@ impl<'c> Connection<'c> {
             Ok(None) => return Ok(None),
             Err(e) => return Err(e),
         };
+        // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
+        // resulting cursor would depend on the lifetime of `params`.
         let cursor = ManuallyDrop::new(cursor);
         let handle = cursor.as_sys();
+        // Safe: `handle` is a valid statement, and we are giving up ownership of `self`.
         let statement = unsafe { StatementConnection::new(handle, self) };
-        Ok(Some(CursorImpl::new(statement)))
+        // Safe: `statement is in the cursor state`.
+        let cursor = unsafe { CursorImpl::new(statement) };
+        Ok(Some(cursor))
     }
 
     /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
