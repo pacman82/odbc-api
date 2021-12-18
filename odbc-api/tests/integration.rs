@@ -1029,20 +1029,23 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
     assert_eq!(expected, actual);
 }
 
-#[test]
-fn bind_integer_parameter() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
-        .unwrap();
-    let sql = "SELECT title FROM Movies where year=?;";
-    let cursor = conn.execute(sql, &1968).unwrap().unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
-    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_integer_parameter(profile: &Profile) {
+    let table_name = "BindIntegerParam";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER", "INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    conn.execute(&insert, ()).unwrap();
 
-    let batch = cursor.fetch().unwrap().unwrap();
-    let title = batch.at_as_str(0, 0).unwrap().unwrap();
+    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let cursor = conn.execute(&sql, &1).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1", actual);
 
-    assert_eq!("2001: A Space Odyssey", title);
+    let cursor = conn.execute(&sql, &2).unwrap().unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("2", actual);
 }
 
 /// Learning test. Insert a string ending with \0. Not a terminating zero, but the payload ending
