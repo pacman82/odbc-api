@@ -1194,39 +1194,32 @@ fn integer_parameter_as_string(profile: &Profile) {
     assert_eq!("2", actual);
 }
 
-#[test]
-fn parameter_option_integer_some() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_optional_integer_parameter(profile: &Profile) {
+    let table_name = "ParameterOptionIntegerSome";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
         .unwrap();
-    let sql = "SELECT title FROM Movies where year=?;";
+    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    conn.execute(&insert, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+
     let cursor = conn
-        .execute(sql, &Some(1968).into_parameter())
+        .execute(&sql, &Some(2).into_parameter())
         .unwrap()
         .unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
-    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("2", actual);
 
-    let batch = cursor.fetch().unwrap().unwrap();
-    let title = batch.at_as_str(0, 0).unwrap().unwrap();
-
-    assert_eq!("2001: A Space Odyssey", title);
-}
-
-#[test]
-fn parameter_option_integer_none() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
-        .unwrap();
-    let sql = "SELECT title FROM Movies where year=?;";
     let cursor = conn
-        .execute(sql, &None::<i32>.into_parameter())
+        .execute(&sql, &None::<i32>.into_parameter())
         .unwrap()
         .unwrap();
-    let mut buffer = TextRowSet::for_cursor(1, &cursor, None).unwrap();
-    let mut cursor = cursor.bind_buffer(&mut buffer).unwrap();
-
-    assert!(cursor.fetch().unwrap().is_none());
+    let actual = cursor_to_string(cursor);
+    assert_eq!("", actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
