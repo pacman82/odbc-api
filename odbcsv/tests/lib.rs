@@ -89,7 +89,7 @@ fn append_user_and_password_to_connection_string() {
             "SA",
             "--password",
             "<YourStrong@Passw0rd>",
-            "SELECT title, year from Movies",
+            "SELECT 42",
         ])
         .assert()
         .success();
@@ -194,10 +194,8 @@ fn columns() {
 
 #[test]
 fn max_str_len() {
-    let csv = "title,year\n\
-        Jura,1993\n\
-        2001,1968\n\
-        Inte,\n\
+    let csv = "some_string\n\
+        1234\n\
     ";
 
     Command::cargo_bin("odbcsv")
@@ -209,7 +207,7 @@ fn max_str_len() {
             "4",
             "--connection-string",
             MSSQL,
-            "SELECT title, year from Movies",
+            "SELECT '12345' as some_string",
         ])
         .assert()
         .success()
@@ -218,8 +216,22 @@ fn max_str_len() {
 
 #[test]
 fn placeholders() {
-    let csv = "title\n\
-        2001: A Space Odyssey\n\
+    let table_name = "OdbcsvPlaceholders";
+    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+    let insert = format!(
+        "INSERT INTO {}
+        (a, b)
+        Values
+        ('one', 10),
+        ('two', 20),
+        ('thre', NULL);",
+        table_name
+    );
+    conn.execute(&insert, ()).unwrap();
+
+    let csv = "a\n\
+        two\n\
     ";
 
     Command::cargo_bin("odbcsv")
@@ -229,9 +241,12 @@ fn placeholders() {
             "query",
             "--connection-string",
             MSSQL,
-            "SELECT title from Movies where year > ? and year < ? ",
-            "1960",
-            "1970",
+            &format!(
+                "SELECT a from {} where b > ? and b < ?;",
+                table_name
+            ),
+            "12",
+            "23",
         ])
         .assert()
         .success()
