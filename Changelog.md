@@ -1,8 +1,9 @@
 # Changelog
 
-## Next
+## 0.32.0
 
 * Removed `unsafe` from trait `HasDataType`.
+* Introduced `Prepared::into_statement` and `CursorImpl::new` to enable usecases not covered by safe abstractions yet.
 
 ## 0.31.2
 
