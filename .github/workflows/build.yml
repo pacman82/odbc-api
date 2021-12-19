@@ -68,8 +68,14 @@ jobs:
     # We currently use docker compose instead of these services. Leave the comment for reference in
     # case of switch
 
-    # services:
-    #   sqlserver:
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        ports:
+        - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: <YourStrong@Passw0rd>
     #     postgres:
     #     image: postgres
     #     ports:
@@ -79,13 +85,7 @@ jobs:
     #       POSTGRES_PASSWORD: password
     #       POSTGRES_DB: test
     #     options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    #   sqlserver:
-    #     image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
-    #     ports:
-    #     - 1433:1433
-    #     env:
-    #       ACCEPT_EULA: Y
-    #       SA_PASSWORD: Password12
+
 
     steps:
       - name: Checkout
@@ -102,9 +102,7 @@ jobs:
       - name: Start databases in test containers
         run: docker-compose -f docker-compose.ci.yml up -d
       - name: Check running containers
-        run: docker ps -a  
-      - name: Check logs MSSQL
-        run: docker logs odbc-api_mssql_1
+        run: docker ps -a 
       - name: Check logs Maria DB
         run: docker logs odbc-api_mariadb_1
       # We currently do not test against PostgreSQL, but the time will come leave this
