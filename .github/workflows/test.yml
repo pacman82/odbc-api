@@ -60,6 +60,8 @@ jobs:
 
       - name: Build
         run: cargo build --release
+      - name: Test
+        run: cargo test --release -- --skip maria_db --skip sqlite_3
 
   linux:
     name: Build & Test Linux
@@ -75,23 +77,17 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: <YourStrong@Passw0rd>
+
+      # Maria DB test stopped working on Ubuntu after driver update
+
       # Maria DB
-      mariadb:
-        image: mariadb
-        ports:
-        - 3306:3306
-        env:
-          MYSQL_ROOT_PASSWORD: my-secret-pw
-          MYSQL_DATABASE: test_db
-    #     postgres:
-    #     image: postgres
-    #     ports:
-    #     - 5432:5432
-    #     env:
-    #       POSTGRES_USER: postgres
-    #       POSTGRES_PASSWORD: password
-    #       POSTGRES_DB: test
-    #     options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      # mariadb:
+      #   image: mariadb
+      #   ports:
+      #   - 3306:3306
+      #   env:
+      #     MYSQL_ROOT_PASSWORD: my-secret-pw
+      #     MYSQL_DATABASE: test_db
 
 
     steps:
