@@ -2717,6 +2717,7 @@ fn row_array_size_66536(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profile: &Profile) {
+    
     let table_name = "ExecuteQueryTwiceWithDifferentArgsByModifyingBoundParamBuffer";
     let conn = profile
         .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
@@ -2742,10 +2743,14 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profi
     assert_eq!("1", cursor_to_string(cursor));
 
     // Execute a second time, with a different argument, but without rebinding the parameter buffer.
-    b = 2;
+    // This assignment is indeed used, but the Rust tooling doesn't know about the pointer to `b`
+    // keeping track of it.
+    #[allow(unused_assignments)]
+    {
+        b = 2;
+    }
 
     let cursor = unsafe {
-        stmt.bind_input_parameter(1, &b);
         stmt.execute();
         CursorImpl::new(&mut stmt)
     };
