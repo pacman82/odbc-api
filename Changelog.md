@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.33.0
+
+* Renamed `Parameter` to `ParameterRef`
+* Renamed `Parameter::bind_parameter` to `ParameterRef::bind_to`
+
 ## 0.32.0
 
 * Removed `unsafe` from trait `HasDataType`.

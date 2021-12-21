@@ -360,7 +360,7 @@ pub unsafe trait Output: CDataMut + HasDataType {}
 /// # Safety
 ///
 /// Parameters bound to the statement must remain valid for the lifetime of the instance.
-pub unsafe trait Parameter {
+pub unsafe trait ParameterRef {
     /// Bind the parameter in question to a specific `parameter_number`.
     ///
     /// # Safety
@@ -368,7 +368,7 @@ pub unsafe trait Parameter {
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
     /// the parameter remains valid while it is used. If the parameter is bound as an output
     /// parameter it must also be ensured that it is exclusively referenced by statement.
-    unsafe fn bind_parameter(
+    unsafe fn bind_to(
         self,
         parameter_number: u16,
         stmt: &mut impl Statement,
@@ -376,11 +376,11 @@ pub unsafe trait Parameter {
 }
 
 /// Bind immutable references as input parameters.
-unsafe impl<T: ?Sized> Parameter for &T
+unsafe impl<T: ?Sized> ParameterRef for &T
 where
     T: InputParameter,
 {
-    unsafe fn bind_parameter(
+    unsafe fn bind_to(
         self,
         parameter_number: u16,
         stmt: &mut impl Statement,
@@ -391,11 +391,11 @@ where
 }
 
 /// Bind mutable references as input/output parameter.
-unsafe impl<T> Parameter for &mut T
+unsafe impl<T> ParameterRef for &mut T
 where
     T: Output,
 {
-    unsafe fn bind_parameter(
+    unsafe fn bind_to(
         self,
         parameter_number: u16,
         stmt: &mut impl Statement,
@@ -429,11 +429,11 @@ where
 pub struct Out<'a, T>(pub &'a mut T);
 
 /// Mutable references wrapped in `Out` are bound as output parameters.
-unsafe impl<'a, T> Parameter for Out<'a, T>
+unsafe impl<'a, T> ParameterRef for Out<'a, T>
 where
     T: Output,
 {
-    unsafe fn bind_parameter(
+    unsafe fn bind_to(
         self,
         parameter_number: u16,
         stmt: &mut impl Statement,

@@ -2,7 +2,7 @@ use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
     handles::{DelayedInput, HasDataType, Statement},
-    DataType, Error, Parameter,
+    DataType, Error, ParameterRef,
 };
 use std::{
     convert::TryInto,
@@ -90,8 +90,8 @@ impl HasDataType for BlobParam<'_> {
     }
 }
 
-unsafe impl Parameter for &mut BlobParam<'_> {
-    unsafe fn bind_parameter(
+unsafe impl ParameterRef for &mut BlobParam<'_> {
+    unsafe fn bind_to(
         self,
         parameter_number: u16,
         stmt: &mut impl Statement,
