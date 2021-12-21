@@ -2,7 +2,7 @@
 //! trait.
 
 use super::ParameterCollection;
-use crate::{handles::Statement, Error, Parameter};
+use crate::{handles::Statement, Error, ParameterRef};
 
 macro_rules! impl_bind_parameters {
     ($offset:expr, $stmt:ident) => (
@@ -10,7 +10,7 @@ macro_rules! impl_bind_parameters {
     );
     ($offset:expr, $stmt:ident $head:ident $($tail:ident)*) => (
         {
-            $head.bind_parameter($offset+1, $stmt)?;
+            $head.bind_to($offset+1, $stmt)?;
             impl_bind_parameters!($offset+1, $stmt $($tail)*)
         }
     );
@@ -21,7 +21,7 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         #[allow(non_snake_case)]
-        unsafe impl<$($t:Parameter,)*> ParameterCollection for ($($t,)*)
+        unsafe impl<$($t:ParameterRef,)*> ParameterCollection for ($($t,)*)
         {
             fn parameter_set_size(&self) -> usize {
                 1
