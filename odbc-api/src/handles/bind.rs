@@ -7,9 +7,9 @@ use crate::DataType;
 
 /// Provides description of C type layout and pointers to it. Used to bind and buffers to ODBC
 /// statements.
-/// 
+///
 /// # Safety
-/// 
+///
 /// In case of variable sized types [`Self::indicator_ptr`] must not exceed the value pointed to by
 /// [`Self::value_ptr`]. This requirement is a bit tricky since, if the same indicator buffer is
 /// used in an output paramater the indicator value may be larger in case of truncation.
@@ -33,9 +33,9 @@ pub unsafe trait CData {
 }
 
 /// A type which can be bound mutably to ODBC.
-/// 
+///
 /// # Safety
-/// 
+///
 /// Care must be taken to only implement this for types which can maintain their invariants then
 /// ODBC writes into them.
 pub unsafe trait CDataMut: CData {
@@ -48,9 +48,9 @@ pub unsafe trait CDataMut: CData {
 
 /// Stream which can be bound as in input parameter to a statement in order to provide the actual
 /// data at statement execution time, rather than preallocated buffers.
-/// 
+///
 /// # Safety
-/// 
+///
 /// [`Self::stream_ptr`] must return a valid pointer to a reference of a dynamic Blob trait object
 /// `(*mut &mut dyn Blob)` which must at least be valid for the lifetime of the instance. The
 /// indicator pointer and C data type must describe that instance truthfully.

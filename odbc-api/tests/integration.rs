@@ -15,8 +15,8 @@ use odbc_api::{
     },
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
-    sys, ColumnDescription, Cursor, CursorImpl, DataType, InputParameter, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, U16String,
+    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    Out, Prebound, ResultSetMetadata, U16String,
 };
 use std::{
     convert::TryInto,
@@ -1306,18 +1306,16 @@ fn wchar_as_char() {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn two_parameters_in_tuple(profile: &Profile) {
     let table_name = "TwoParmetersInTuple";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     let insert = format!("INSERT INTO {} (a) VALUES (1), (2), (3), (4);", table_name);
     conn.execute(&insert, ()).unwrap();
 
-    let sql = format!("SELECT a FROM {} where ? < a AND a < ? ORDER BY id;", table_name);
+    let sql = format!(
+        "SELECT a FROM {} where ? < a AND a < ? ORDER BY id;",
+        table_name
+    );
 
-    let cursor = conn
-        .execute(&sql, (&1, &4))
-        .unwrap()
-        .unwrap();
+    let cursor = conn.execute(&sql, (&1, &4)).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     assert_eq!("2\n3", actual);
 }
@@ -2429,9 +2427,7 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn escape_hatch(profile: &Profile) {
     let table_name = "EscapeHatch";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let preallocated = conn.preallocate().unwrap();
     let mut statement = preallocated.into_statement();
@@ -2599,9 +2595,9 @@ fn columns_query(profile: &Profile) {
     const COLUMN_SIZE_INDEX: usize = 6;
     let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
 
-    let column_has_name_a_and_size_10 = column_names.zip(column_sizes).any(|(name, size)| {
-        str::from_utf8(name.unwrap()).unwrap() == "a" && *size.unwrap() == 10
-    });
+    let column_has_name_a_and_size_10 = column_names
+        .zip(column_sizes)
+        .any(|(name, size)| str::from_utf8(name.unwrap()).unwrap() == "a" && *size.unwrap() == 10);
 
     assert!(column_has_name_a_and_size_10);
 }
@@ -2717,7 +2713,6 @@ fn row_array_size_66536(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profile: &Profile) {
-    
     let table_name = "ExecuteQueryTwiceWithDifferentArgsByModifyingBoundParamBuffer";
     let conn = profile
         .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
@@ -2734,26 +2729,21 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profi
     // Stack allocated parameter. Used for both query executions.
     let mut b = 1;
 
-    let cursor = unsafe {
+    let mut prebound = unsafe {
         stmt.bind_input_parameter(1, &b);
-        stmt.execute();
-        CursorImpl::new(&mut stmt)
+        Prebound::new(stmt, &mut b)
     };
+
+    let cursor = prebound.execute().unwrap().unwrap();
 
     assert_eq!("1", cursor_to_string(cursor));
 
     // Execute a second time, with a different argument, but without rebinding the parameter buffer.
     // This assignment is indeed used, but the Rust tooling doesn't know about the pointer to `b`
     // keeping track of it.
-    #[allow(unused_assignments)]
-    {
-        b = 2;
-    }
+    **prebound.params_mut() = 2;
 
-    let cursor = unsafe {
-        stmt.execute();
-        CursorImpl::new(&mut stmt)
-    };
+    let cursor = prebound.execute().unwrap().unwrap();
 
     assert_eq!("2", cursor_to_string(cursor));
 }

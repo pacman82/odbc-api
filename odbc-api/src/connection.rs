@@ -612,7 +612,7 @@ impl<'c> Connection<'c> {
 /// application in need to create their own connection strings.
 ///
 /// See:
-/// 
+///
 /// * <https://stackoverflow.com/questions/22398212/escape-semicolon-in-odbc-connection-string-in-app-config-file>
 /// * <https://docs.microsoft.com/en-us/dotnet/api/system.data.odbc.odbcconnection.connectionstring>
 ///

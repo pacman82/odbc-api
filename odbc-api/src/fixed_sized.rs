@@ -26,9 +26,9 @@ impl Bit {
 
 /// A plain old data type. With an associated C Type. Must be completely stack allocated without any
 /// external references. In addition to that the buffer size must be known to ODBC in advance.
-/// 
+///
 /// # Safety
-/// 
+///
 /// A type implementing this trait, must be a fixed sized type. The information in the `C_DATA_TYPE`
 /// constant must be enough to determine both the size and the buffer length of an Instance.
 pub unsafe trait Pod: Default + Copy + CData {

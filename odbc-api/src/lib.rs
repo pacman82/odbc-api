@@ -16,6 +16,7 @@ mod into_parameter;
 mod nullable;
 mod parameter_collection;
 mod preallocated;
+mod prebound;
 mod prepared;
 mod result_set_metadata;
 mod statement_connection;
@@ -38,6 +39,7 @@ pub use self::{
     parameter::{InputParameter, Out, Output, Parameter},
     parameter_collection::ParameterCollection,
     preallocated::Preallocated,
+    prebound::Prebound,
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     statement_connection::StatementConnection,

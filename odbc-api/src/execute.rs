@@ -37,16 +37,32 @@ where
     // Reset parameters so we do not dereference stale once by mistake if we call
     // `exec_direct`.
     stmt.reset_parameters().into_result(stmt)?;
-    let need_data = unsafe {
+    unsafe {
         stmt.set_paramset_size(parameter_set_size)
             .into_result(stmt)?;
         // Bind new parameters passed by caller.
         params.bind_parameters_to(stmt)?;
-        if let Some(sql) = query {
-            stmt.exec_direct(sql).into_result(stmt)?
-        } else {
-            stmt.execute().into_result(stmt)?
-        }
+        execute(statement, query)
+    }
+}
+
+/// # Safety
+///
+/// * Execute may dereference pointers to bound parameters, so these must guaranteed to be valid
+///   then calling this function.
+/// * Furthermore all bound delayed parameters must be of type `*mut &mut dyn Blob`.
+pub unsafe fn execute<S>(
+    mut statement: S,
+    query: Option<&U16Str>,
+) -> Result<Option<CursorImpl<S>>, Error>
+where
+    S: BorrowMutStatement,
+{
+    let stmt = statement.borrow_mut();
+    let need_data = if let Some(sql) = query {
+        stmt.exec_direct(sql).into_result(stmt)?
+    } else {
+        stmt.execute().into_result(stmt)?
     };
 
     if need_data {
@@ -54,10 +70,8 @@ where
         // statement execution time. Loops over each bound stream.
         while let Some(blob_ptr) = stmt.param_data().into_result(stmt)? {
             // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
-            let blob_ref = unsafe {
-                let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
-                &mut *blob_ptr
-            };
+            let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
+            let blob_ref = &mut *blob_ptr;
             // Loop over all batches within each blob
             while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
                 stmt.put_binary_batch(batch).into_result(stmt)?;
@@ -70,7 +84,7 @@ where
         Ok(None)
     } else {
         // Safe: `statement` is in cursor state.
-        let cursor = unsafe { CursorImpl::new(statement) };
+        let cursor = CursorImpl::new(statement);
         Ok(Some(cursor))
     }
 }
