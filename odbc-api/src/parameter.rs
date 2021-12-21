@@ -356,7 +356,7 @@ pub unsafe trait Output: CDataMut + HasDataType {}
 /// Implementers of this trait can be used as individual parameters of in a
 /// [`crate::ParameterCollection`]. They can be bound as either input parameters, output parameters
 /// or both.
-/// 
+///
 /// # Safety
 ///
 /// Parameters bound to the statement must remain valid for the lifetime of the instance.

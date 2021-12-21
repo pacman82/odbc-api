@@ -241,10 +241,7 @@ fn placeholders() {
             "query",
             "--connection-string",
             MSSQL,
-            &format!(
-                "SELECT a from {} where b > ? and b < ?;",
-                table_name
-            ),
+            &format!("SELECT a from {} where b > ? and b < ?;", table_name),
             "12",
             "23",
         ])

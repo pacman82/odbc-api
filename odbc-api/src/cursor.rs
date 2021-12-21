@@ -284,7 +284,7 @@ where
     /// within this crate.
     ///
     /// # Safety
-    /// 
+    ///
     /// `statement` must be in Cursor state, for the invariants of this type to hold.
     pub unsafe fn new(statement: S) -> Self {
         Self { statement }
