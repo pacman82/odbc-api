@@ -3,7 +3,7 @@ use widestring::{U16Str, U16String};
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::StatementImpl,
-    CursorImpl, Error, ParameterCollection,
+    CursorImpl, Error, ParameterRefCollection,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -45,7 +45,7 @@ impl<'o> Preallocated<'o> {
     pub fn execute_utf16(
         &mut self,
         query: &U16Str,
-        params: impl ParameterCollection,
+        params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
     }
@@ -93,7 +93,7 @@ impl<'o> Preallocated<'o> {
     pub fn execute(
         &mut self,
         query: &str,
-        params: impl ParameterCollection,
+        params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)

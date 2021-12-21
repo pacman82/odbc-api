@@ -67,7 +67,7 @@ mod tuple;
 /// mutabale references. Implementers should take care that the values bound by `bind_parameters_to`
 /// to the statement live at least for the Duration of `self`. The most straight forward way of
 /// achieving this is of course, to bind members.
-pub unsafe trait ParameterCollection {
+pub unsafe trait ParameterRefCollection {
     /// Number of values per parameter in the collection. This can be different from the maximum
     /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
     /// executed.
@@ -81,7 +81,7 @@ pub unsafe trait ParameterCollection {
     unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error>;
 }
 
-unsafe impl<T> ParameterCollection for T
+unsafe impl<T> ParameterRefCollection for T
 where
     T: ParameterRef,
 {
@@ -94,7 +94,7 @@ where
     }
 }
 
-unsafe impl<T> ParameterCollection for &[T]
+unsafe impl<T> ParameterRefCollection for &[T]
 where
     T: InputParameter,
 {

@@ -3,7 +3,7 @@ use std::{collections::HashSet, ffi::c_void};
 use crate::{
     fixed_sized::Bit,
     handles::{CData, CDataMut, HasDataType, Statement},
-    Cursor, DataType, Error, ParameterCollection, RowSetBuffer,
+    Cursor, DataType, Error, ParameterRefCollection, RowSetBuffer,
 };
 
 use super::{
@@ -646,7 +646,7 @@ unsafe impl RowSetBuffer for ColumnarRowSet {
     }
 }
 
-unsafe impl ParameterCollection for &ColumnarRowSet {
+unsafe impl ParameterRefCollection for &ColumnarRowSet {
     fn parameter_set_size(&self) -> usize {
         *self.num_rows
     }

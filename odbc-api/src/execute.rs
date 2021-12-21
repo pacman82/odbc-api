@@ -4,7 +4,7 @@ use widestring::U16Str;
 
 use crate::{
     borrow_mut_statement::BorrowMutStatement, handles::Statement, parameter::Blob, CursorImpl,
-    Error, ParameterCollection,
+    Error, ParameterRefCollection,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],
@@ -21,7 +21,7 @@ use crate::{
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&U16Str>,
-    params: impl ParameterCollection,
+    params: impl ParameterRefCollection,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: BorrowMutStatement,

@@ -2,7 +2,7 @@ use crate::{
     buffers::{BufferDescription, BufferKind},
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, State, Statement, StatementImpl},
-    parameter_collection::ParameterCollection,
+    parameter_collection::ParameterRefCollection,
     statement_connection::StatementConnection,
     CursorImpl, Error, Preallocated, Prepared,
 };
@@ -71,7 +71,7 @@ impl<'c> Connection<'c> {
     pub fn execute_utf16(
         &self,
         query: &U16Str,
-        params: impl ParameterCollection,
+        params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let lazy_statement = move || self.allocate_statement();
         execute_with_parameters(lazy_statement, Some(query), params)
@@ -109,7 +109,7 @@ impl<'c> Connection<'c> {
     pub fn execute(
         &self,
         query: &str,
-        params: impl ParameterCollection,
+        params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = U16String::from_str(query);
         self.execute_utf16(&query, params)
@@ -143,7 +143,7 @@ impl<'c> Connection<'c> {
     pub fn into_cursor(
         self,
         query: &str,
-        params: impl ParameterCollection,
+        params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, Error> {
         let cursor = match self.execute(query, params) {
             Ok(Some(cursor)) => cursor,

@@ -1,5 +1,5 @@
 use super::{text_column::TextColumn, Indicator};
-use crate::{handles::Statement, Cursor, Error, ParameterCollection, RowSetBuffer};
+use crate::{handles::Statement, Cursor, Error, ParameterRefCollection, RowSetBuffer};
 use std::{
     cmp::min,
     str::{from_utf8, Utf8Error},
@@ -253,7 +253,7 @@ unsafe impl RowSetBuffer for TextRowSet {
     }
 }
 
-unsafe impl ParameterCollection for &TextRowSet {
+unsafe impl ParameterRefCollection for &TextRowSet {
     fn parameter_set_size(&self) -> usize {
         *self.num_rows
     }
