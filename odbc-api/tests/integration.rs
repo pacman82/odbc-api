@@ -15,7 +15,7 @@ use odbc_api::{
     },
     handles::{OutputStringBuffer, Statement},
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
-    sys, ColumnDescription, Cursor, DataType, InputParameter, IntoParameter, Nullability, Nullable,
+    sys, ColumnDescription, Cursor, DataType, InOut, InputParameter, IntoParameter, Nullability, Nullable,
     Out, Prebound, ResultSetMetadata, U16String,
 };
 use std::{
@@ -1718,7 +1718,7 @@ fn output_parameter(profile: &Profile) {
     let mut ret = Nullable::<i32>::null();
     let mut param = Nullable::<i32>::new(7);
 
-    conn.execute("{? = call TestOutputParam(?)}", (Out(&mut ret), &mut param))
+    conn.execute("{? = call TestOutputParam(?)}", (Out(&mut ret), InOut(&mut param)))
         .unwrap();
 
     // See magic numbers hardcoded in setup.sql
