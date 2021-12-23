@@ -4,7 +4,7 @@
 //!
 //! * `()` -> No parameter
 //! * `&a` -> Single input parameter
-//! * `&mut a` -> Input Output parameter
+//! * `InOut(&mut a)` -> Input Output parameter
 //! * `Out(&mut a)` -> Output parameter
 //! * `(a,b,c)` -> Fixed number of parameters
 //! * `&[a]` -> Arbitrary number of parameters
@@ -153,7 +153,7 @@
 //! bound as a mutable reference.
 //!
 //! ```no_run
-//! use odbc_api::{Environment, Out, Nullable};
+//! use odbc_api::{Environment, Out, InOut, Nullable};
 //!
 //! let env = Environment::new()?;
 //!
@@ -164,7 +164,7 @@
 //!
 //! conn.execute(
 //!     "{? = call TestParam(?)}",
-//!     (Out(&mut ret), &mut param))?;
+//!     (Out(&mut ret), InOut(&mut param)))?;
 //!
 //! assert_eq!(Some(99), ret.into_opt());
 //! assert_eq!(Some(7 + 5), param.into_opt());
@@ -368,11 +368,7 @@ pub unsafe trait ParameterRef {
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
     /// the parameter remains valid while it is used. If the parameter is bound as an output
     /// parameter it must also be ensured that it is exclusively referenced by statement.
-    unsafe fn bind_to(
-        self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error>;
+    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error>;
 }
 
 /// Bind immutable references as input parameters.
@@ -380,49 +376,64 @@ unsafe impl<T: ?Sized> ParameterRef for &T
 where
     T: InputParameter,
 {
-    unsafe fn bind_to(
-        self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
+    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
         stmt.bind_input_parameter(parameter_number, self)
             .into_result(stmt)
     }
 }
 
 /// Bind mutable references as input/output parameter.
-unsafe impl<T> ParameterRef for &mut T
+unsafe impl<'a, T> ParameterRef for InOut<'a, T>
 where
     T: Output,
 {
-    unsafe fn bind_to(
-        self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self)
+    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
+        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
             .into_result(stmt)
     }
 }
 
 /// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
-/// be bound as an output parameter only, rather than an input / output parameter.
+/// be bound as an input / output parameter.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use odbc_api::{Environment, Out, Nullable};
+/// use odbc_api::{Environment, Out, InOut, Nullable};
 ///
 /// let env = Environment::new()?;
 ///
 /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 ///
 /// let mut ret = Nullable::<i32>::null();
-/// let mut param = Nullable::<i32>::new(7);
+/// let mut param = Nullable::new(7);
 ///
 /// conn.execute(
 ///     "{? = call TestParam(?)}",
-///     (Out(&mut ret), &mut param))?;
+///     (Out(&mut ret), InOut(&mut param)))?;
+///
+/// # Ok::<(), odbc_api::Error>(())
+/// ```
+pub struct InOut<'a, T>(pub &'a mut T);
+
+/// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
+/// be bound as an output parameter only.
+///
+/// # Example
+///
+/// ```no_run
+/// use odbc_api::{Environment, Out, InOut, Nullable};
+///
+/// let env = Environment::new()?;
+///
+/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+///
+/// let mut ret = Nullable::<i32>::null();
+/// let mut param = Nullable::new(7);
+///
+/// conn.execute(
+///     "{? = call TestParam(?)}",
+///     (Out(&mut ret), InOut(&mut param)))?;
 ///
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
@@ -433,11 +444,7 @@ unsafe impl<'a, T> ParameterRef for Out<'a, T>
 where
     T: Output,
 {
-    unsafe fn bind_to(
-        self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
+    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
             .into_result(stmt)
     }
