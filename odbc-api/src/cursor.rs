@@ -5,7 +5,7 @@ use crate::{
     buffers::Indicator,
     handles::{State, Statement},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
-    Error, Output, ResultSetMetadata,
+    Error, OutputParameter, ResultSetMetadata,
 };
 
 use std::{cmp::max, thread::panicking};
@@ -76,7 +76,7 @@ where
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
-        target: &mut impl Output,
+        target: &mut impl OutputParameter,
     ) -> Result<(), Error> {
         self.statement
             .get_data(col_or_param_num, target)

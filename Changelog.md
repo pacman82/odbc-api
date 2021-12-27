@@ -5,6 +5,7 @@
 * Mutable references `&mut T` are no longer implicitly bound as input / output Parameters, but must be wrapped with `InOut` instead. This has been done to make the decision between `Out` and `InOut` explicit, and also help to avoid binding parameters as `InOut` by accident. Shared references `&T` are still implicitly bound as input parameters however.
 * Renamed `Parameter` to `ParameterRef`
 * Renamed `Parameter::bind_parameter` to `ParameterRef::bind_to`
+* Renamed `Output` to `OutputParameter`
 * `InputParameter` is now longer exported in the top level namespace, but only as `parameter::InputParameter`.
 
 ## 0.32.0

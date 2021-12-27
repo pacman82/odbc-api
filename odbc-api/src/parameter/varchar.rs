@@ -9,7 +9,7 @@ use odbc_sys::{CDataType, NULL_DATA};
 use crate::{
     buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
-    DataType, parameter::InputParameter, Output,
+    DataType, parameter::InputParameter, OutputParameter,
 };
 
 /// Binds a byte array as Variadic sized character data. It can not be used for columnar bulk
@@ -304,11 +304,11 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
 
 unsafe impl InputParameter for VarCharSlice<'_> {}
 
-unsafe impl<const LENGTH: usize> Output for VarCharArray<LENGTH> {}
+unsafe impl<const LENGTH: usize> OutputParameter for VarCharArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> InputParameter for VarCharArray<LENGTH> {}
 
-unsafe impl<'a> Output for VarCharSliceMut<'a> {}
+unsafe impl<'a> OutputParameter for VarCharSliceMut<'a> {}
 unsafe impl<'a> InputParameter for VarCharSliceMut<'a> {}
 
-unsafe impl<'a> Output for VarCharBox {}
+unsafe impl<'a> OutputParameter for VarCharBox {}
 unsafe impl<'a> InputParameter for VarCharBox {}

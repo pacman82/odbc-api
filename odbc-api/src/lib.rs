@@ -36,7 +36,7 @@ pub use self::{
     handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
     nullable::Nullable,
-    parameter::{Out, InOut, Output, ParameterRef},
+    parameter::{Out, InOut, OutputParameter, ParameterRef},
     parameter_collection::{ParameterCollection, ParameterRefCollection},
     preallocated::Preallocated,
     prebound::Prebound,

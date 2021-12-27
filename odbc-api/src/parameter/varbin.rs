@@ -9,7 +9,7 @@ use odbc_sys::{CDataType, NULL_DATA};
 use crate::{
     buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
-    DataType, parameter::InputParameter, Output,
+    DataType, parameter::InputParameter, OutputParameter,
 };
 
 /// Binds a byte array as Variadic sized binary data. It can not be used for columnar bulk fetches,
@@ -248,11 +248,11 @@ impl<const LENGTH: usize> VarBinaryArray<LENGTH> {
 
 unsafe impl InputParameter for VarBinarySlice<'_> {}
 
-unsafe impl<const LENGTH: usize> Output for VarBinaryArray<LENGTH> {}
+unsafe impl<const LENGTH: usize> OutputParameter for VarBinaryArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> InputParameter for VarBinaryArray<LENGTH> {}
 
-unsafe impl<'a> Output for VarBinarySliceMut<'a> {}
+unsafe impl<'a> OutputParameter for VarBinarySliceMut<'a> {}
 unsafe impl<'a> InputParameter for VarBinarySliceMut<'a> {}
 
-unsafe impl<'a> Output for VarBinaryBox {}
+unsafe impl<'a> OutputParameter for VarBinaryBox {}
 unsafe impl<'a> InputParameter for VarBinaryBox {}

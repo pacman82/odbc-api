@@ -351,7 +351,7 @@ pub unsafe trait InputParameter: HasDataType + CData {}
 /// # Safety
 ///
 /// Guarantees that there is space in the output buffer for at least one element.
-pub unsafe trait Output: CDataMut + HasDataType {}
+pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 
 /// Implementers of this trait can be used as individual parameters of in a
 /// [`crate::ParameterRefCollection`]. They can be bound as either input parameters, output
@@ -385,7 +385,7 @@ where
 /// Bind mutable references as input/output parameter.
 unsafe impl<'a, T> ParameterRef for InOut<'a, T>
 where
-    T: Output,
+    T: OutputParameter,
 {
     unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
@@ -442,7 +442,7 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// Mutable references wrapped in `Out` are bound as output parameters.
 unsafe impl<'a, T> ParameterRef for Out<'a, T>
 where
-    T: Output,
+    T: OutputParameter,
 {
     unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
