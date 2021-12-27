@@ -2745,7 +2745,7 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profi
     // Execute a second time, with a different argument, but without rebinding the parameter buffer.
     // This assignment is indeed used, but the Rust tooling doesn't know about the pointer to `b`
     // keeping track of it.
-    **prebound.params_mut() = 2;
+    *prebound.params_mut() = 2;
 
     let cursor = prebound.execute().unwrap().unwrap();
 
