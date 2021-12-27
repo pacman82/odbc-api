@@ -21,7 +21,7 @@ use crate::{
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&U16Str>,
-    params: impl ParameterRefCollection,
+    mut params: impl ParameterRefCollection,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: BorrowMutStatement,

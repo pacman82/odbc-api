@@ -92,11 +92,11 @@ impl HasDataType for BlobParam<'_> {
 
 unsafe impl ParameterRef for &mut BlobParam<'_> {
     unsafe fn bind_to(
-        self,
+        &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
-        stmt.bind_delayed_input_parameter(parameter_number, self)
+        stmt.bind_delayed_input_parameter(parameter_number, *self)
             .into_result(stmt)
     }
 }

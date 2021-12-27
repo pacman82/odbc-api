@@ -82,7 +82,7 @@ pub unsafe trait ParameterRefCollection {
     /// On execution a statement may want to read/write to the bound paramaters. It is the callers
     /// responsibility that by then the buffers are either unbound from the statement or still
     /// valild.
-    unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error>;
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error>;
 }
 
 unsafe impl<T> ParameterRefCollection for T
@@ -93,7 +93,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
         self.bind_to(1, stmt)
     }
 }
@@ -106,7 +106,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
             stmt.bind_input_parameter(index as u16 + 1, parameter)
                 .into_result(stmt)?;
@@ -116,15 +116,14 @@ where
 }
 
 /// # Safety
-/// 
+///
 /// * Pointers bound to a statement may not become invalid if the instance is moved
 /// * Pointers bound to a statement may not be invalidated through a mutable reference.
 pub unsafe trait ParameterCollection {
-
     /// Bind arguments to the statement.
     ///
     /// # Safety
-    /// 
+    ///
     /// Callers must make sure the called pointers are not dereferenced once they become invalid.
     unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error>;
 }

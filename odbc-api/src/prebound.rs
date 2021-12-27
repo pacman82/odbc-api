@@ -1,4 +1,8 @@
-use crate::{execute::execute, handles::{StatementImpl, Statement}, CursorImpl, Error, ParameterCollection};
+use crate::{
+    execute::execute,
+    handles::{Statement, StatementImpl},
+    CursorImpl, Error, ParameterCollection,
+};
 
 /// A prepared statement with prebound parameters.
 ///
