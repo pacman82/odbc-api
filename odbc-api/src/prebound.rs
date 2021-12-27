@@ -70,3 +70,12 @@ unsafe impl<T> StableMutRef for &mut T where T: StableCData,
         self
     }
 }
+
+unsafe impl<T> StableMutRef for Box<T> where T: StableCData,
+{
+    type Mut = T;
+
+    fn as_mut(&mut self) -> &mut T {
+        self
+    }
+}
