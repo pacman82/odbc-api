@@ -6,7 +6,8 @@ use odbc_sys::{CDataType, NTS};
 
 use crate::{
     handles::{CData, HasDataType},
-    DataType, InputParameter,
+    parameter::InputParameter,
+    DataType,
 };
 
 unsafe impl CData for CStr {

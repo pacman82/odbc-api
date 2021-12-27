@@ -1,4 +1,8 @@
-use crate::{handles::Statement, Error, InputParameter, ParameterRef};
+use crate::{
+    handles::Statement,
+    parameter::{InputParameter, StableCData},
+    Error, ParameterRef,
+};
 
 mod tuple;
 
@@ -107,6 +111,31 @@ where
             stmt.bind_input_parameter(index as u16 + 1, parameter)
                 .into_result(stmt)?;
         }
+        Ok(())
+    }
+}
+
+/// # Safety
+/// 
+/// * Pointers bound to a statement may not become invalid if the instance is moved
+/// * Pointers bound to a statement may not be invalidated through a mutable reference.
+pub unsafe trait ParameterCollection {
+
+    /// Bind arguments to the statement.
+    ///
+    /// # Safety
+    /// 
+    /// Callers must make sure the called pointers are not dereferenced once they become invalid.
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error>;
+}
+
+unsafe impl<T> ParameterCollection for &mut T
+where
+    T: InputParameter + StableCData,
+{
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
+        stmt.set_paramset_size(1).into_result(stmt)?;
+        stmt.bind_input_parameter(1, *self).into_result(stmt)?;
         Ok(())
     }
 }

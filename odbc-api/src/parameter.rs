@@ -537,3 +537,10 @@ impl HasDataType for Box<dyn InputParameter> {
 }
 
 unsafe impl InputParameter for Box<dyn InputParameter> {}
+
+/// # Safety
+/// 
+/// A subclass of CData those value pointer or indicator pointer can not be changed through a
+/// mutable reference. The values these pointers point to, may change however. Used to determine,
+/// that the value has not to be rebound between multiple calls to execute.
+pub unsafe trait StableCData : CData {}

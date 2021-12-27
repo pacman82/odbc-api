@@ -1,7 +1,7 @@
 use crate::{
     fixed_sized::Pod,
-    parameter::{VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice},
-    InputParameter, Nullable,
+    parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice},
+    Nullable,
 };
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
