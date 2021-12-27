@@ -2716,8 +2716,8 @@ fn row_array_size_66536(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profile: &Profile) {
-    let table_name = "ExecuteQueryTwiceWithDifferentArgsByModifyingBoundParamBuffer";
+fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer_on_stack(profile: &Profile) {
+    let table_name = "ModifyingBoundParamBufferOnStack";
     let conn = profile
         .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
         .unwrap();
@@ -2728,14 +2728,51 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profi
     let prepared = conn.prepare(&query).unwrap();
 
     // Prepared statement has not yet any abstraction to keep parameters bound between execution.
-    let mut stmt = prepared.into_statement();
+    let stmt = prepared.into_statement();
 
     // Stack allocated parameter. Used for both query executions.
     let mut b = 1;
 
     let mut prebound = unsafe {
-        stmt.bind_input_parameter(1, &b);
         Prebound::new(stmt, &mut b).unwrap()
+    };
+
+    let cursor = prebound.execute().unwrap().unwrap();
+
+    assert_eq!("1", cursor_to_string(cursor));
+
+    // Execute a second time, with a different argument, but without rebinding the parameter buffer.
+    // This assignment is indeed used, but the Rust tooling doesn't know about the pointer to `b`
+    // keeping track of it.
+    *prebound.params_mut() = 2;
+
+    let cursor = prebound.execute().unwrap().unwrap();
+
+    assert_eq!("2", cursor_to_string(cursor));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
+    let table_name = "ModifyingBoundParamBufferOnHeap";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
+        .unwrap();
+    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    conn.execute(&insert, ()).unwrap();
+
+    let query = format!("SELECT a FROM {} WHERE b=?;", table_name);
+    let prepared = conn.prepare(&query).unwrap();
+
+    // Prepared statement has not yet any abstraction to keep parameters bound between execution.
+    let stmt = prepared.into_statement();
+
+    // Stack allocated parameter. Used for both query executions.
+    let b = Box::new(1);
+
+    let mut prebound = unsafe {
+        Prebound::new(stmt, b).unwrap()
     };
 
     let cursor = prebound.execute().unwrap().unwrap();
