@@ -1,4 +1,4 @@
-use crate::{execute::execute, handles::StatementImpl, CursorImpl, Error};
+use crate::{execute::execute, handles::{StatementImpl, Statement}, CursorImpl, Error, ParameterCollection};
 
 /// A prepared statement with prebound parameters.
 ///
@@ -11,18 +11,23 @@ pub struct Prebound<'open_connection, Parameters> {
     parameters: Parameters,
 }
 
-impl<'o, P> Prebound<'o, P> {
+impl<'o, P> Prebound<'o, P>
+where
+    P: ParameterCollection,
+{
     /// # Safety
     ///
     /// * `statement` must be a prepared statement without any parameters bound.
     /// * `parameters` bound to statement. Must not be invalidated by moving. Nor should any
     ///   operations which can be performed through a mutable reference be able to invalide the
     ///   binding.
-    pub unsafe fn new(statement: StatementImpl<'o>, parameters: P) -> Self {
-        Self {
+    pub unsafe fn new(mut statement: StatementImpl<'o>, mut parameters: P) -> Result<Self, Error> {
+        statement.reset_parameters().into_result(&statement)?;
+        parameters.bind_parameters_to(&mut statement)?;
+        Ok(Self {
             statement,
             parameters,
-        }
+        })
     }
 
     /// Execute the prepared statement

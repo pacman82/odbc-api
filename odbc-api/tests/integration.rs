@@ -14,9 +14,10 @@ use odbc_api::{
         Item, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
+    parameter::InputParameter,
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
-    sys, ColumnDescription, Cursor, DataType, InOut, InputParameter, IntoParameter, Nullability, Nullable,
-    Out, Prebound, ResultSetMetadata, U16String,
+    sys, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable, Out,
+    Prebound, ResultSetMetadata, U16String,
 };
 use std::{
     convert::TryInto,
@@ -1718,8 +1719,11 @@ fn output_parameter(profile: &Profile) {
     let mut ret = Nullable::<i32>::null();
     let mut param = Nullable::<i32>::new(7);
 
-    conn.execute("{? = call TestOutputParam(?)}", (Out(&mut ret), InOut(&mut param)))
-        .unwrap();
+    conn.execute(
+        "{? = call TestOutputParam(?)}",
+        (Out(&mut ret), InOut(&mut param)),
+    )
+    .unwrap();
 
     // See magic numbers hardcoded in setup.sql
     assert_eq!(Some(99), ret.into_opt());
@@ -2731,7 +2735,7 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer(profi
 
     let mut prebound = unsafe {
         stmt.bind_input_parameter(1, &b);
-        Prebound::new(stmt, &mut b)
+        Prebound::new(stmt, &mut b).unwrap()
     };
 
     let cursor = prebound.execute().unwrap().unwrap();
