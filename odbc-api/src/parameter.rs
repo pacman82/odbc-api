@@ -368,7 +368,11 @@ pub unsafe trait ParameterRef {
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
     /// the parameter remains valid while it is used. If the parameter is bound as an output
     /// parameter it must also be ensured that it is exclusively referenced by statement.
-    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error>;
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error>;
 }
 
 /// Bind immutable references as input parameters.
@@ -376,8 +380,12 @@ unsafe impl<T: ?Sized> ParameterRef for &T
 where
     T: InputParameter,
 {
-    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
-        stmt.bind_input_parameter(parameter_number, self)
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_input_parameter(parameter_number, *self)
             .into_result(stmt)
     }
 }
@@ -387,7 +395,11 @@ unsafe impl<'a, T> ParameterRef for InOut<'a, T>
 where
     T: OutputParameter,
 {
-    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
             .into_result(stmt)
     }
@@ -444,7 +456,11 @@ unsafe impl<'a, T> ParameterRef for Out<'a, T>
 where
     T: OutputParameter,
 {
-    unsafe fn bind_to(self, parameter_number: u16, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
             .into_result(stmt)
     }
@@ -539,8 +555,8 @@ impl HasDataType for Box<dyn InputParameter> {
 unsafe impl InputParameter for Box<dyn InputParameter> {}
 
 /// # Safety
-/// 
+///
 /// A subclass of CData those value pointer or indicator pointer can not be changed through a
 /// mutable reference. The values these pointers point to, may change however. Used to determine,
 /// that the value has not to be rebound between multiple calls to execute.
-pub unsafe trait StableCData : CData {}
+pub unsafe trait StableCData: CData {}

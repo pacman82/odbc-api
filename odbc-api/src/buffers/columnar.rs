@@ -651,7 +651,7 @@ unsafe impl ParameterRefCollection for &ColumnarRowSet {
         *self.num_rows
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
         for &(parameter_number, ref buffer) in &self.columns {
             stmt.bind_input_parameter(parameter_number, buffer)
                 .into_result(stmt)?;

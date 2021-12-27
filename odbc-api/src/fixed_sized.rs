@@ -1,6 +1,6 @@
 use crate::{
     handles::{CData, DataType, HasDataType},
-    parameter::{InputParameter, StableCData}
+    parameter::{InputParameter, StableCData},
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{ffi::c_void, ptr::null};

@@ -258,7 +258,7 @@ unsafe impl ParameterRefCollection for &TextRowSet {
         *self.num_rows
     }
 
-    unsafe fn bind_parameters_to(self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
         let mut parameter_number = 1;
         for column in &self.buffers {
             stmt.bind_input_parameter(parameter_number, column)
