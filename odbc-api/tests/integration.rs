@@ -2716,7 +2716,9 @@ fn row_array_size_66536(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer_on_stack(profile: &Profile) {
+fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer_on_stack(
+    profile: &Profile,
+) {
     let table_name = "ModifyingBoundParamBufferOnStack";
     let conn = profile
         .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
@@ -2733,9 +2735,7 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer_on_st
     // Stack allocated parameter. Used for both query executions.
     let mut b = 1;
 
-    let mut prebound = unsafe {
-        Prebound::new(stmt, &mut b).unwrap()
-    };
+    let mut prebound = unsafe { Prebound::new(stmt, &mut b).unwrap() };
 
     let cursor = prebound.execute().unwrap().unwrap();
 
@@ -2771,9 +2771,7 @@ fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
     // Stack allocated parameter. Used for both query executions.
     let b = Box::new(1);
 
-    let mut prebound = unsafe {
-        Prebound::new(stmt, b).unwrap()
-    };
+    let mut prebound = unsafe { Prebound::new(stmt, b).unwrap() };
 
     let cursor = prebound.execute().unwrap().unwrap();
 

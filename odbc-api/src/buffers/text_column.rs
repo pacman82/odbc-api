@@ -110,7 +110,7 @@ impl<C> TextColumn<C> {
     ///
     /// * `new_max_str_len`: New maximum string length without terminating zero.
     /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize)
+    pub fn resize_max_str(&mut self, new_max_str_len: usize, num_rows: usize)
     where
         C: Default + Copy,
     {
@@ -184,7 +184,7 @@ impl<C> TextColumn<C> {
         if let Some(text) = text {
             if text.len() > self.max_str_len {
                 let new_max_str_len = (text.len() as f64 * 1.2) as usize;
-                self.rebind(new_max_str_len, index)
+                self.resize_max_str(new_max_str_len, index)
             }
 
             let offset = index * (self.max_str_len + 1);
@@ -419,7 +419,7 @@ where
     ///   contained values after `num_rows` their indicator values remain, but their values will be
     ///   all zeroes.
     pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize) {
-        self.column.rebind(new_max_str_len, num_rows)
+        self.column.resize_max_str(new_max_str_len, num_rows)
     }
 
     /// Change a single value in the column at the specified index.

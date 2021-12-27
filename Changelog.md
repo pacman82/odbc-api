@@ -6,6 +6,7 @@
 * Renamed `Parameter` to `ParameterRef`
 * Renamed `Parameter::bind_parameter` to `ParameterRef::bind_to`
 * Renamed `Output` to `OutputParameter`
+* Renamed `TextColumn::rebind` to `TextColumn::resize_max_str`.
 * `InputParameter` is now longer exported in the top level namespace, but only as `parameter::InputParameter`.
 * `ParameterRefCollection::bind_to_statement` now takes `&mut self` rather than `self`.
 

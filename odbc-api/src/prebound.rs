@@ -62,7 +62,9 @@ pub unsafe trait StableMutRef {
     fn as_mut(&mut self) -> &mut Self::Mut;
 }
 
-unsafe impl<T> StableMutRef for &mut T where T: StableCData,
+unsafe impl<T> StableMutRef for &mut T
+where
+    T: StableCData,
 {
     type Mut = T;
 
@@ -71,7 +73,9 @@ unsafe impl<T> StableMutRef for &mut T where T: StableCData,
     }
 }
 
-unsafe impl<T> StableMutRef for Box<T> where T: StableCData,
+unsafe impl<T> StableMutRef for Box<T>
+where
+    T: StableCData,
 {
     type Mut = T;
 
