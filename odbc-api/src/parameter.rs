@@ -390,6 +390,21 @@ where
     }
 }
 
+/// Bind mutable references as input parameters.
+unsafe impl<T: ?Sized> ParameterRef for &mut T
+where
+    T: InputParameter,
+{
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_input_parameter(parameter_number, *self)
+            .into_result(stmt)
+    }
+}
+
 /// Bind mutable references as input/output parameter.
 unsafe impl<'a, T> ParameterRef for InOut<'a, T>
 where

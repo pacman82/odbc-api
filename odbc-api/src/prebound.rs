@@ -1,7 +1,8 @@
 use crate::{
     execute::execute,
     handles::{Statement, StatementImpl},
-    CursorImpl, Error, ParameterCollection,
+    parameter::StableCData,
+    CursorImpl, Error, ParameterRefCollection,
 };
 
 /// A prepared statement with prebound parameters.
@@ -17,7 +18,7 @@ pub struct Prebound<'open_connection, Parameters> {
 
 impl<'o, P> Prebound<'o, P>
 where
-    P: ParameterCollection,
+    P: ParameterRefCollection + StableMutRef,
 {
     /// # Safety
     ///
@@ -27,6 +28,8 @@ where
     ///   binding.
     pub unsafe fn new(mut statement: StatementImpl<'o>, mut parameters: P) -> Result<Self, Error> {
         statement.reset_parameters().into_result(&statement)?;
+        let paramset_size = parameters.parameter_set_size();
+        statement.set_paramset_size(paramset_size);
         parameters.bind_parameters_to(&mut statement)?;
         Ok(Self {
             statement,
@@ -39,8 +42,31 @@ where
         unsafe { execute(&mut self.statement, None) }
     }
 
-    /// Provides write access to the bound parameters
-    pub fn params_mut(&mut self) -> &mut P {
-        &mut self.parameters
+    /// Provides write access to the bound parameters. Used to change arguments betwenn statement
+    /// executions.
+    pub fn params_mut(&mut self) -> &mut P::Mut {
+        self.parameters.as_mut()
+    }
+}
+
+/// # Safety
+///
+/// The changes made through the reference returned by `as_mut` may not invalidate the parameter
+/// pointers bound to a statement.
+pub unsafe trait StableMutRef {
+    /// Mutable projection used to change parameter values in between statement executions.
+    type Mut;
+
+    /// Acquire a mutable projection of the parameters to change values between executions of the
+    /// statement.
+    fn as_mut(&mut self) -> &mut Self::Mut;
+}
+
+unsafe impl<T> StableMutRef for &mut T where T: StableCData,
+{
+    type Mut = T;
+
+    fn as_mut(&mut self) -> &mut T {
+        self
     }
 }
