@@ -426,6 +426,27 @@ fn bind_varchar_to_wchar(profile: &Profile) {
     );
 }
 
+/// utf16 to utf8 conversion
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
+fn nvarchar_to_text(profile: &Profile) {
+    let table_name = "NvarcharToText";
+    let conn = profile
+        .setup_empty_table(table_name, &["NVARCHAR(1)"])
+        .unwrap();
+    // Trade mark sign (`™`) is longer in utf-8 (3 Bytes) than in utf-16 (2 Bytes).
+    let insert_sql = format!("INSERT INTO {} (a) VALUES ('™');", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let text = cursor_to_string(cursor);
+
+    assert_eq!("™", text);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
