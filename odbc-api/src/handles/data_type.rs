@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use odbc_sys::SqlDataType;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -273,6 +275,25 @@ impl DataType {
         }
     }
 
+    /// Precision of the data type, if available
+    pub fn precision(&self) -> Option<usize> {
+        match self {
+            DataType::Numeric {
+                precision,
+                scale: _,
+            }
+            | DataType::Decimal {
+                precision,
+                scale: _,
+            }
+            | DataType::Float { precision } => Some(*precision),
+            DataType::Time { precision } | DataType::Timestamp { precision } => {
+                Some((*precision).try_into().unwrap())
+            }
+            _ => None,
+        }
+    }
+
     /// The maximum number of characters needed to display data in character form.
     ///
     /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size>
@@ -339,54 +360,6 @@ impl DataType {
             DataType::TinyInt => Some(4),
             // 1 digit.
             DataType::Bit => Some(1),
-        }
-    }
-
-    /// The maximum length of the UTF-8 representation in bytes.
-    ///
-    /// ```
-    /// use odbc_api::DataType;
-    /// // Character set data types length is multiplied by four.
-    /// assert_eq!(DataType::Varchar { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::Char { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::WVarchar { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::WChar { length: 10 }.utf8_len(), Some(40));
-    /// // For other types return value is identical to display size as they are assumed to be
-    /// // entirely representable with ASCII characters.
-    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), Some(10 + 2));
-    /// ```
-    pub fn utf8_len(&self) -> Option<usize> {
-        match self {
-            // One character may need up to four bytes to be represented in utf-8.
-            DataType::Varchar { length }
-            | DataType::WVarchar { length }
-            | DataType::WChar { length }
-            | DataType::Char { length } => Some(length * 4),
-            other => other.display_size(),
-        }
-    }
-
-    /// The maximum length of the UTF-16 representation in 2-Byte characters.
-    ///
-    /// ```
-    /// use odbc_api::DataType;
-    /// // Character set data types length is multiplied by two.
-    /// assert_eq!(DataType::Varchar { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::Char { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::WVarchar { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::WChar { length: 10 }.utf16_len(), Some(20));
-    /// // For other types return value is identical to display size as they are assumed to be
-    /// // entirely representable with ASCII characters.
-    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), Some(10 + 2));
-    /// ```
-    pub fn utf16_len(&self) -> Option<usize> {
-        match self {
-            // One character may need up to two u16 to be represented in utf-16.
-            DataType::Varchar { length }
-            | DataType::WVarchar { length }
-            | DataType::WChar { length }
-            | DataType::Char { length } => Some(length * 2),
-            other => other.display_size(),
         }
     }
 }

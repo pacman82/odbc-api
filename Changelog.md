@@ -9,6 +9,7 @@
 * Renamed `TextColumn::rebind` to `TextColumn::resize_max_str`.
 * `InputParameter` is now longer exported in the top level namespace, but only as `parameter::InputParameter`.
 * `ParameterRefCollection::bind_to_statement` now takes `&mut self` rather than `self`.
+* `DataType::utf8_len` has been removed. Instead there is now `ResultSetMetadata::utf8_len`. This has been done due to the ambiguity of the precise meaning of column size in SQL and ODBC for text columns. `ResultSetMetadata::utf8_len` can query the precise octet length, to arrive at the correct value and prevent allocating uneccessary large buffers.
 
 ## 0.32.0
 

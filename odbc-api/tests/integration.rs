@@ -2787,6 +2787,48 @@ fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
     assert_eq!("2", cursor_to_string(cursor));
 }
 
+#[test_case(MSSQL, 1, 3; "Microsoft SQL Server")]
+#[test_case(MARIADB, 4, 4; "Maria DB")]
+#[test_case(SQLITE_3, 3, 3; "SQLite 3")]
+fn utf8_len(profile: &Profile, expected_varchar_size: usize, expected_nvarchar_size: usize) {
+    let table_name = "Utf8Len";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(1)", "INTEGER", "NVARCHAR(1)"])
+        .unwrap();
+    let query = format!("SELECT a, b, c FROM {};", table_name);
+    let prepared = conn.prepare(&query).unwrap();
+
+    // Varchar(1)
+    assert_eq!(expected_varchar_size, prepared.utf8_len(1, None).unwrap());
+
+    // NVarchar
+    assert_eq!(expected_nvarchar_size, prepared.utf8_len(3, None).unwrap());
+
+    // Integer
+    assert_eq!(11, prepared.utf8_len(2, None).unwrap());
+}
+
+#[test_case(MSSQL, 1, 1; "Microsoft SQL Server")]
+#[test_case(MARIADB, 4, 4; "Maria DB")]
+#[test_case(SQLITE_3, 1, 1; "SQLite 3")]
+fn utf16_len(profile: &Profile, expected_varchar_size: usize, expected_nvarchar_size: usize) {
+    let table_name = "Utf16Len";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(1)", "INTEGER", "NVARCHAR(1)"])
+        .unwrap();
+    let query = format!("SELECT a, b, c FROM {};", table_name);
+    let prepared = conn.prepare(&query).unwrap();
+
+    // Varchar(1)
+    assert_eq!(expected_varchar_size, prepared.utf16_len(1, None).unwrap());
+
+    // NVarchar
+    assert_eq!(expected_nvarchar_size, prepared.utf16_len(3, None).unwrap());
+
+    // Integer
+    assert_eq!(11, prepared.utf16_len(2, None).unwrap());
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

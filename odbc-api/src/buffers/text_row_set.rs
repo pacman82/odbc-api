@@ -115,12 +115,7 @@ impl TextRowSet {
         let buffers = (1..(num_cols + 1))
             .map(|col_index| {
                 // Ask driver for buffer length
-                let reported_len =
-                    if let Some(encoded_len) = cursor.col_data_type(col_index as u16)?.utf8_len() {
-                        encoded_len
-                    } else {
-                        cursor.col_display_size(col_index as u16)? as usize
-                    };
+                let reported_len = cursor.utf8_len(col_index as u16, None)?;
                 // Apply upper bound if specified
                 let max_str_len = max_str_len
                     .map(|limit| min(limit, reported_len))
