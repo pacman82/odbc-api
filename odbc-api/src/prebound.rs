@@ -18,14 +18,14 @@ pub struct Prebound<'open_connection, Parameters> {
 
 impl<'o, P> Prebound<'o, P>
 where
-    P: ParameterRefCollection + StableMutRef,
+    P: ParameterMutCollection,
 {
     /// # Safety
     ///
-    /// * `statement` must be a prepared statement without any parameters bound.
-    /// * `parameters` bound to statement. Must not be invalidated by moving. Nor should any
-    ///   operations which can be performed through a mutable reference be able to invalide the
-    ///   binding.
+    /// * `statement` must be a prepared statement.
+    /// * `parameters` will be bound to statement. Must not be invalidated by moving. Nor should any
+    ///   operations which can be performed through a mutable reference be able to invalidate the
+    ///   bindings.
     pub unsafe fn new(mut statement: StatementImpl<'o>, mut parameters: P) -> Result<Self, Error> {
         statement.reset_parameters().into_result(&statement)?;
         let paramset_size = parameters.parameter_set_size();
@@ -53,7 +53,7 @@ where
 ///
 /// The changes made through the reference returned by `as_mut` may not invalidate the parameter
 /// pointers bound to a statement.
-pub unsafe trait StableMutRef {
+pub unsafe trait ParameterMutCollection: ParameterRefCollection {
     /// Mutable projection used to change parameter values in between statement executions.
     type Mut;
 
@@ -62,9 +62,10 @@ pub unsafe trait StableMutRef {
     fn as_mut(&mut self) -> &mut Self::Mut;
 }
 
-unsafe impl<T> StableMutRef for &mut T
+unsafe impl<T> ParameterMutCollection for &mut T
 where
     T: StableCData,
+    for<'a> &'a mut T: ParameterRefCollection,
 {
     type Mut = T;
 
@@ -73,9 +74,10 @@ where
     }
 }
 
-unsafe impl<T> StableMutRef for Box<T>
+unsafe impl<T> ParameterMutCollection for Box<T>
 where
     T: StableCData,
+    Box<T>: ParameterRefCollection,
 {
     type Mut = T;
 
