@@ -17,7 +17,7 @@ use odbc_api::{
     parameter::InputParameter,
     parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
     sys, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable, Out,
-    Prebound, ResultSetMetadata, U16String,
+    ResultSetMetadata, U16String,
 };
 use std::{
     convert::TryInto,
@@ -2751,13 +2751,10 @@ fn execute_query_twice_with_different_args_by_modifying_bound_param_buffer_on_st
     let query = format!("SELECT a FROM {} WHERE b=?;", table_name);
     let prepared = conn.prepare(&query).unwrap();
 
-    // Prepared statement has not yet any abstraction to keep parameters bound between execution.
-    let stmt = prepared.into_statement();
-
     // Stack allocated parameter. Used for both query executions.
     let mut b = 1;
 
-    let mut prebound = unsafe { Prebound::new(stmt, &mut b).unwrap() };
+    let mut prebound = prepared.bind_parameters(&mut b).unwrap();
 
     let cursor = prebound.execute().unwrap().unwrap();
 
@@ -2787,13 +2784,10 @@ fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
     let query = format!("SELECT a FROM {} WHERE b=?;", table_name);
     let prepared = conn.prepare(&query).unwrap();
 
-    // Prepared statement has not yet any abstraction to keep parameters bound between execution.
-    let stmt = prepared.into_statement();
-
     // Stack allocated parameter. Used for both query executions.
     let b = Box::new(1);
 
-    let mut prebound = unsafe { Prebound::new(stmt, b).unwrap() };
+    let mut prebound = prepared.bind_parameters(b).unwrap();
 
     let cursor = prebound.execute().unwrap().unwrap();
 

@@ -1,7 +1,8 @@
 use crate::{
     execute::execute_with_parameters,
     handles::{ParameterDescription, Statement, StatementImpl},
-    CursorImpl, Error, ParameterRefCollection, ResultSetMetadata,
+    prebound::ParameterMutCollection,
+    CursorImpl, Error, ParameterRefCollection, Prebound, ResultSetMetadata,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -51,6 +52,14 @@ impl<'o> Prepared<'o> {
         self.statement
             .describe_param(parameter_number)
             .into_result(&self.statement)
+    }
+
+    pub fn bind_parameters<P>(self, parameters: P) -> Result<Prebound<'o, P>, Error>
+    where
+        P: ParameterMutCollection,
+    {
+        // We know that statement is a prepared statement.
+        unsafe { Prebound::new(self.statement, parameters) }
     }
 }
 
