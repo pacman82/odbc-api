@@ -3,7 +3,7 @@ use crate::{
     DataType,
 };
 
-use super::{Indicator, ColumnProjections, ColumnBuffer};
+use super::{ColumnBuffer, ColumnProjections, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
@@ -316,7 +316,10 @@ unsafe impl<'a, C: 'static> ColumnProjections<'a> for TextColumn<C> {
     type ViewMut = TextColumnWriter<'a, C>;
 }
 
-unsafe impl<C: 'static> ColumnBuffer for TextColumn<C> where TextColumn<C>: CDataMut + HasDataType {
+unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
+where
+    TextColumn<C>: CDataMut + HasDataType,
+{
     unsafe fn view(&self, valid_rows: usize) -> TextColumnIt<'_, C> {
         self.iter(valid_rows)
     }
