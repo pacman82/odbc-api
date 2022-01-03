@@ -212,7 +212,7 @@ where
 
 unsafe impl<C> ParameterRefCollection for &ColumnarBuffer<C>
 where
-    C: ColumnBuffer,
+    C: ColumnBuffer + HasDataType,
 {
     fn parameter_set_size(&self) -> usize {
         *self.num_rows
@@ -253,7 +253,7 @@ pub struct ColumnarBuffer<C> {
 ///
 /// Views must not allow access to unintialized / invalid rows.
 pub unsafe trait ColumnBuffer:
-    for<'a> ColumnProjections<'a> + CDataMut + HasDataType
+    for<'a> ColumnProjections<'a> + CDataMut
 {
     /// # Safety
     ///
