@@ -325,7 +325,7 @@ This crate also provides two implementation of the [`crate::RowSetBuffer`] trait
 used in safe code:
 
 * [`crate::buffers::TextRowSet`]
-* [`crate::buffers::ColumnarRowSet`]
+* [`crate::buffers::ColumnarBuffer`]
 
 ### Fetching results row by row without binding buffers upfront.
 
@@ -354,7 +354,7 @@ fn get_large_text(name: &str, conn: &mut Connection<'_>) -> Result<Option<String
 }
 ```
 
-### Fetching results column wise with `ColumnarRowSet`.
+### Fetching results column wise with `ColumnarBuffer`.
 
 Consider querying a table with two columns `year` and `name`.
 
@@ -422,16 +422,12 @@ have an easier time with the borrow checker.
 use odbc_api::{
     Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
     buffers::{
-        AnyColumnBuffer,
-        BufferDescription,
-        BufferKind,
-        buffer_from_description,
-        ColumnarRowSet
+        AnyColumnBuffer, BufferDescription, BufferKind, buffer_from_description, ColumnarBuffer
     }
 };
 
 fn get_birthdays<'a>(conn: &'a mut Connection)
-    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarRowSet<AnyColumnBuffer>>, Error>
+    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarBuffer<AnyColumnBuffer>>, Error>
 {
     let cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
     let mut column_description = Default::default();
@@ -475,7 +471,7 @@ fn insert_birth_year(conn: &Connection, name: &str, year: i16) -> Result<(), Err
 
 Inserting values row by row can introduce a lot of overhead. ODBC allows you to perform either
 row or column wise bulk inserts. Especially in pipelines for data science you may already have
-buffers in a columnar layout at hand. [`crate::buffers::ColumnarRowSet`] can be used for bulk
+buffers in a columnar layout at hand. [`crate::buffers::ColumnarBuffer`] can be used for bulk
 inserts.
 
 ```no_run

@@ -8,7 +8,7 @@ use crate::Bit;
 /// buffered type is known at compile time.
 pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
-    /// instantiate a [`super::ColumnarRowSet`].
+    /// instantiate a [`super::ColumnarBuffer`].
     const BUFFER_KIND: BufferKind;
 
     /// Extract the array type from an [`AnyColumnView`].

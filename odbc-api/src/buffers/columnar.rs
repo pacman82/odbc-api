@@ -30,7 +30,7 @@ pub unsafe trait ColumnProjections<'a> {
     type ViewMut;
 }
 
-impl<C: ColumnBuffer> ColumnarRowSet<C> {
+impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
     /// minimum capacity of the columns.
     pub fn new(columns: Vec<(u16, C)>) -> Self {
@@ -58,7 +58,7 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
     /// * Indices must be unique
     /// * Columns all must have enough `capacity`.
     pub unsafe fn new_unchecked(capacity: usize, columns: Vec<(u16, C)>) -> Self {
-        ColumnarRowSet {
+        ColumnarBuffer {
             num_rows: Box::new(0),
             row_capacity: capacity,
             columns,
@@ -102,7 +102,7 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
     ///
     /// # Example
     ///
-    /// This method is intend to be called if using [`ColumnarRowSet`] for column wise bulk inserts.
+    /// This method is intend to be called if using [`ColumnarBuffer`] for column wise bulk inserts.
     ///
     /// ```no_run
     /// use odbc_api::{
@@ -178,7 +178,7 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
     }
 }
 
-unsafe impl<C> RowSetBuffer for ColumnarRowSet<C>
+unsafe impl<C> RowSetBuffer for ColumnarBuffer<C>
 where
     C: ColumnBuffer,
 {
@@ -205,7 +205,7 @@ where
     }
 }
 
-unsafe impl<C> ParameterRefCollection for &ColumnarRowSet<C>
+unsafe impl<C> ParameterRefCollection for &ColumnarBuffer<C>
 where
     C: ColumnBuffer,
 {
@@ -231,10 +231,10 @@ where
 /// provide array input parameters those maximum size is not known in advance.
 ///
 /// Most applications should find the overhead negligible, especially if instances are reused.
-pub struct ColumnarRowSet<C> {
+pub struct ColumnarBuffer<C> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
-    /// invalidated, even if the `ColumnarRowSet` instance is moved in memory.
+    /// invalidated, even if the `ColumnarBuffer` instance is moved in memory.
     num_rows: Box<usize>,
     /// aka: batch size, row array size
     row_capacity: usize,
@@ -242,7 +242,7 @@ pub struct ColumnarRowSet<C> {
     columns: Vec<(u16, C)>,
 }
 
-/// A buffer able to be used together with [`ColumnarRowSet`].
+/// A buffer able to be used together with [`ColumnarBuffer`].
 ///
 /// # Safety
 ///
@@ -346,7 +346,7 @@ pub unsafe trait ColumnBuffer:
 ///     Ok(())
 /// }
 /// ```
-pub type TextRowSet = ColumnarRowSet<TextColumn<u8>>;
+pub type TextRowSet = ColumnarBuffer<TextColumn<u8>>;
 
 impl TextRowSet {
     /// The resulting text buffer is not in any way tied to the cursor, other than that its buffer

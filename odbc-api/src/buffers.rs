@@ -16,7 +16,7 @@ pub use self::{
     },
     bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
-    columnar::{ColumnBuffer, ColumnProjections, ColumnarRowSet, TextRowSet},
+    columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
     item::Item,

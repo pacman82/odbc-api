@@ -77,7 +77,7 @@ where
 }
 
 /// Iterates over the elements of a column buffer. Returned by
-/// [`crate::buffers::ColumnarRowSet::column`] as part of an [`crate::buffers::AnyColumnView`].
+/// [`crate::buffers::ColumnarBuffer::column`] as part of an [`crate::buffers::AnyColumnView`].
 #[derive(Debug)]
 pub struct NullableSlice<'a, T> {
     indicators: &'a [isize],
@@ -183,7 +183,7 @@ where
     }
 }
 
-/// Used to fill a column buffer with an iterator. Returned by [`super::ColumnarRowSet::column_mut`]
+/// Used to fill a column buffer with an iterator. Returned by [`super::ColumnarBuffer::column_mut`]
 /// as part of an [`crate::buffers::AnyColumnViewMut`].
 #[derive(Debug)]
 pub struct NullableSliceMut<'a, T> {

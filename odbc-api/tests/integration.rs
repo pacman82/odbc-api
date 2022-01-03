@@ -66,7 +66,7 @@ const MARIADB: &Profile = &Profile {
     blob_type: "BLOB",
 };
 
-/// Verify writer panics if too large elements are inserted into a binary column of ColumnarRowSet
+/// Verify writer panics if too large elements are inserted into a binary column of ColumnarBuffer
 /// buffer.
 #[test]
 #[should_panic]
@@ -83,7 +83,7 @@ fn insert_too_large_element_in_bin_column() {
     }
 }
 
-/// Verify writer panics if too large elements are inserted into a text column of ColumnarRowSet
+/// Verify writer panics if too large elements are inserted into a text column of `ColumnarBuffer`
 /// buffer.
 #[test]
 #[should_panic]

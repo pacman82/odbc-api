@@ -14,7 +14,7 @@ use super::{
     },
     columnar::{ColumnBuffer, ColumnProjections},
     BinColumn, BinColumnIt, BinColumnWriter, BufferDescription, BufferKind, CharColumn,
-    ColumnarRowSet, NullableSlice, NullableSliceMut, TextColumn, TextColumnIt, TextColumnWriter,
+    ColumnarBuffer, NullableSlice, NullableSliceMut, TextColumn, TextColumnIt, TextColumnWriter,
     WCharColumn,
 };
 
@@ -261,11 +261,11 @@ impl HasDataType for AnyColumnBuffer {
     }
 }
 
-/// Convinience function allocating a ColumnarRowSet fitting the buffer descriptions.
+/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions.
 pub fn buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
-) -> ColumnarRowSet<AnyColumnBuffer> {
+) -> ColumnarBuffer<AnyColumnBuffer> {
     let mut column_index = 0;
     let columns = descs
         .map(move |desc| {
@@ -276,7 +276,7 @@ pub fn buffer_from_description(
             )
         })
         .collect();
-    unsafe { ColumnarRowSet::new_unchecked(capacity, columns) }
+    unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
 }
 
 /// Allows you to pass the buffer descriptions together with a one based column index referring the
@@ -286,7 +286,7 @@ pub fn buffer_from_description(
 pub fn buffer_from_description_and_indices(
     max_rows: usize,
     description: impl Iterator<Item = (u16, BufferDescription)>,
-) -> ColumnarRowSet<AnyColumnBuffer> {
+) -> ColumnarBuffer<AnyColumnBuffer> {
     let columns: Vec<_> = description
         .map(|(col_index, buffer_desc)| {
             (
@@ -305,10 +305,10 @@ pub fn buffer_from_description_and_indices(
         panic!("Column indices must be unique.")
     }
 
-    ColumnarRowSet::new(columns)
+    ColumnarBuffer::new(columns)
 }
 
-/// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarRowSet`].
+/// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
 /// the slice is offered. Buffers over nullable columns can be accessed via an iterator over
@@ -344,7 +344,7 @@ pub enum AnyColumnView<'a> {
     NullableBit(NullableSlice<'a, Bit>),
 }
 
-/// A mutable borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarRowSet`].
+/// A mutable borrowed view on the valid rows in a column of a [`ColumnarBuffer`].
 ///
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
 /// the slice is offered. Buffers over nullable columns can be accessed via an iterator over

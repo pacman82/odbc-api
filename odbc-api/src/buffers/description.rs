@@ -4,7 +4,7 @@ use odbc_sys::{Date, Time, Timestamp};
 
 use crate::{Bit, DataType};
 
-/// Used to describe a column of a [`crate::buffers::ColumnarRowSet`].
+/// Used to describe a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// While related to to the [`crate::DataType`] of the column this is bound to, the Buffer type is
 /// different as it does not describe the type of the data source but the format the data is going
