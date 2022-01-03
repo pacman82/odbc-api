@@ -306,7 +306,7 @@ impl<'a> BinColumnWriter<'a> {
     ///
     /// ```
     /// # use odbc_api::buffers::{
-    ///     ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView
+    ///     BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView, default_buffer
     /// };
     /// # use std::iter;
     /// #
@@ -326,7 +326,7 @@ impl<'a> BinColumnWriter<'a> {
     ///     Some(&[7,8,9,10,11,12]),
     /// ];
     ///
-    /// let mut buffer = ColumnarRowSet::new(input.len(), iter::once(desc));
+    /// let mut buffer = default_buffer(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {

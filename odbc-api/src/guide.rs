@@ -361,7 +361,7 @@ Consider querying a table with two columns `year` and `name`.
 ```no_run
 use odbc_api::{
     Environment, Cursor,
-    buffers::{AnyColumnView, ColumnarRowSet, BufferDescription, BufferKind, Item},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, default_buffer},
 };
 
 let env = Environment::new()?;
@@ -379,7 +379,12 @@ let buffer_description = [
         nullable: false,
     }
 ];
-let mut buffer = ColumnarRowSet::new(batch_size, buffer_description.iter().copied());
+
+/// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
+let mut buffer = default_buffer(
+    batch_size,
+    buffer_description.iter().copied()
+);
 
 let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
@@ -416,11 +421,11 @@ have an easier time with the borrow checker.
 ```no_run
 use odbc_api::{
     Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
-    buffers::{ColumnarRowSet, BufferDescription, BufferKind}
+    buffers::{ColumnarRowSet, AnyColumnBuffer, BufferDescription, BufferKind}
 };
 
 fn get_birthdays<'a>(conn: &'a mut Connection)
-    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarRowSet>, Error>
+    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarRowSet<AnyColumnBuffer>>, Error>
 {
     let cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
     let mut column_description = Default::default();
@@ -435,7 +440,7 @@ fn get_birthdays<'a>(conn: &'a mut Connection)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = ColumnarRowSet::new(5000, buffer_description.into_iter());
+    let buffer = ColumnarRowSet::from_buffer_descriptions(5000, buffer_description.into_iter());
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }
@@ -470,7 +475,7 @@ inserts.
 ```no_run
 use odbc_api::{
     Connection, Error, IntoParameter,
-    buffers::{ColumnarRowSet, BufferDescription, BufferKind, AnyColumnViewMut, Item}
+    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, default_buffer}
 };
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
@@ -489,7 +494,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
             nullable: false,
         },
     ];
-    let mut buffer = ColumnarRowSet::new(
+    let mut buffer = default_buffer(
         names.len(),
         buffer_description.iter().copied()
     );

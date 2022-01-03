@@ -11,7 +11,7 @@ mod text_row_set;
 pub use self::{
     bin_column::{BinColumnIt, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
-    columnar::{AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
+    columnar::{default_buffer, AnyColumnBuffer, AnyColumnView, AnyColumnViewMut, ColumnarRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
     item::Item,
