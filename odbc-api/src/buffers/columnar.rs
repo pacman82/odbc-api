@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     handles::{CDataMut, HasDataType, Statement},
-    Cursor, Error, ParameterRefCollection, RowSetBuffer,
+    Cursor, Error, ParameterRefCollection, RowSetBuffer, ResultSetMetadata,
 };
 
 use super::{Indicator, TextColumn};
@@ -175,6 +175,11 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
             }
         }
         *self.num_rows = num_rows;
+    }
+
+    /// Sets the number of rows in the buffer to zero.
+    pub fn clear(&mut self) {
+        *self.num_rows = 0;
     }
 }
 
@@ -364,7 +369,7 @@ impl TextRowSet {
     ///   upper bound for the length of character data.
     pub fn for_cursor(
         batch_size: usize,
-        cursor: &impl Cursor,
+        cursor: &impl ResultSetMetadata,
         max_str_len: Option<usize>,
     ) -> Result<TextRowSet, Error> {
         let num_cols: u16 = cursor.num_result_cols()?.try_into().unwrap();
@@ -475,11 +480,6 @@ impl TextRowSet {
         }
 
         *self.num_rows += 1;
-    }
-
-    /// Sets the number of rows in the buffer to zero.
-    pub fn clear(&mut self) {
-        *self.num_rows = 0;
     }
 }
 
