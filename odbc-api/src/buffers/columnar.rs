@@ -246,7 +246,7 @@ pub struct ColumnarRowSet<C> {
     columns: Vec<(u16, C)>,
 }
 
-/// A buffer able to be used together with [`ColumnBuffer`].
+/// A buffer able to be used together with [`ColumnarRowSet`].
 ///
 /// # Safety
 ///
