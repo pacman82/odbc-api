@@ -292,6 +292,11 @@ impl<C> TextColumn<C> {
             to: n,
         }
     }
+
+    /// Maximum number of text strings this column may hold.
+    pub fn capacity(&self) -> usize {
+        self.indicators.len()
+    }
 }
 
 impl WCharColumn {
@@ -442,7 +447,9 @@ where
     /// # Example
     ///
     /// ```
-    /// # use odbc_api::buffers::{BufferDescription, BufferKind, AnyColumnViewMut, default_buffer};
+    /// # use odbc_api::buffers::{
+    /// #   BufferDescription, BufferKind, AnyColumnViewMut, buffer_from_description
+    /// # };
     /// # use std::iter;
     /// #
     /// let desc = BufferDescription {
@@ -461,7 +468,7 @@ where
     ///     Some(&b"Hello, World!"[..]),
     /// ];
     ///
-    /// let mut buffer = default_buffer(input.len(), iter::once(desc));
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {

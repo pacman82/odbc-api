@@ -144,7 +144,7 @@ impl BinColumn {
     ///
     /// * `new_max_len`: New maximum element length in bytes.
     /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn rebind(&mut self, new_max_len: usize, num_rows: usize) {
+    pub fn resize_max_element_length(&mut self, new_max_len: usize, num_rows: usize) {
         debug!(
             "Rebinding binary column buffer with {} elements. Maximum length {} => {}",
             num_rows, self.max_len, new_max_len
@@ -193,7 +193,7 @@ impl BinColumn {
         if let Some(bytes) = bytes {
             if bytes.len() > self.max_len {
                 let new_max_len = (bytes.len() as f64 * 1.2) as usize;
-                self.rebind(new_max_len, index)
+                self.resize_max_element_length(new_max_len, index)
             }
 
             let offset = index * self.max_len;
@@ -203,6 +203,11 @@ impl BinColumn {
         } else {
             self.indicators[index] = NULL_DATA;
         }
+    }
+
+    /// Maximum number of elements this buffer can hold.
+    pub fn capacity(&self) -> usize {
+        self.indicators.len()
     }
 }
 
@@ -286,8 +291,8 @@ impl<'a> BinColumnWriter<'a> {
     ///
     /// * `new_max_len`: New maximum element length.
     /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn rebind(&mut self, new_max_len: usize, num_rows: usize) {
-        self.column.rebind(new_max_len, num_rows)
+    pub fn resize_max_element_length(&mut self, new_max_len: usize, num_rows: usize) {
+        self.column.resize_max_element_length(new_max_len, num_rows)
     }
 
     /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum element
@@ -306,7 +311,7 @@ impl<'a> BinColumnWriter<'a> {
     ///
     /// ```
     /// # use odbc_api::buffers::{
-    ///     BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView, default_buffer
+    ///     BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView, buffer_from_description
     /// };
     /// # use std::iter;
     /// #
@@ -326,7 +331,7 @@ impl<'a> BinColumnWriter<'a> {
     ///     Some(&[7,8,9,10,11,12]),
     /// ];
     ///
-    /// let mut buffer = default_buffer(input.len(), iter::once(desc));
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {

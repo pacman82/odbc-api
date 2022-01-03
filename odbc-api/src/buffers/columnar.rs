@@ -5,8 +5,6 @@ use crate::{
     Cursor, Error, ParameterRefCollection, RowSetBuffer,
 };
 
-use super::BufferDescription;
-
 /// Projections for ColumnBuffers, allowing for reading writing data while bound as a rowset or
 /// parameter buffer without invalidating invariants of the type.
 ///
@@ -26,36 +24,15 @@ pub unsafe trait ColumnProjections<'a> {
 }
 
 impl<C: ColumnBuffer> ColumnarRowSet<C> {
-    /// Allocates for each buffer description a buffer large enough to hold `max_rows`.
-    pub fn from_buffer_descriptions(
-        max_rows: usize,
-        description: impl Iterator<Item = BufferDescription>,
-    ) -> Self {
-        let mut column_index = 0;
-        let columns = description
-            .map(move |desc| {
-                column_index += 1;
-                (column_index, C::from_description(max_rows, desc))
-            })
-            .collect();
-        ColumnarRowSet {
-            num_rows: Box::new(0),
-            max_rows,
-            columns,
-        }
-    }
-
-    /// Allows you to pass the buffer descriptions together with a one based column index referring
-    /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
-    /// result set, by not binding them at all. There is no restriction on the order of column
-    /// indices passed, but the function will panic, if the indices are not unique.
-    pub fn with_column_indices(
-        max_rows: usize,
-        description: impl Iterator<Item = (u16, BufferDescription)>,
-    ) -> Self {
-        let columns: Vec<_> = description
-            .map(|(col_index, buffer_desc)| (col_index, C::from_description(max_rows, buffer_desc)))
-            .collect();
+    /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
+    /// minimum capacity of the columns.
+    pub fn new(columns: Vec<(u16, C)>) -> Self {
+        // Assert capacity
+        let capacity = columns
+            .iter()
+            .map(|(_, col)| col.capacity())
+            .min()
+            .unwrap_or(0);
 
         // Assert uniqueness of indices
         let mut indices = HashSet::new();
@@ -66,9 +43,17 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
             panic!("Column indices must be unique.")
         }
 
+        unsafe { Self::new_unchecked(capacity, columns) }
+    }
+
+    /// # Safety
+    ///
+    /// * Indices must be unique
+    /// * Columns all must have enough `capacity`.
+    pub unsafe fn new_unchecked(capacity: usize, columns: Vec<(u16, C)>) -> Self {
         ColumnarRowSet {
             num_rows: Box::new(0),
-            max_rows,
+            max_rows: capacity,
             columns,
         }
     }
@@ -110,7 +95,7 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
     /// ```no_run
     /// use odbc_api::{
     ///     Connection, Error, IntoParameter,
-    ///     buffers::{BufferDescription, BufferKind, AnyColumnViewMut, default_buffer}
+    ///     buffers::{BufferDescription, BufferKind, AnyColumnViewMut, buffer_from_description}
     /// };
     ///
     /// fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16])
@@ -131,7 +116,10 @@ impl<C: ColumnBuffer> ColumnarRowSet<C> {
     ///             nullable: false,
     ///         },
     ///     ];
-    ///     let mut buffer = default_buffer(names.len(), buffer_description.iter().copied());
+    ///     let mut buffer = buffer_from_description(
+    ///         names.len(),
+    ///         buffer_description.iter().copied()
+    ///     );
     ///
     ///     // Fill the buffer with values column by column
     ///     match buffer.column_mut(0) {
@@ -225,10 +213,9 @@ where
 #[cfg(test)]
 mod tests {
 
-    use super::{
-        super::{AnyColumnBuffer, BufferKind},
-        BufferDescription, ColumnarRowSet,
-    };
+    use crate::buffers::buffer_from_description_and_indices;
+
+    use super::super::{BufferDescription, BufferKind};
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]
@@ -237,10 +224,7 @@ mod tests {
             nullable: false,
             kind: BufferKind::I32,
         };
-        ColumnarRowSet::<AnyColumnBuffer>::with_column_indices(
-            1,
-            [(1, bd), (2, bd), (1, bd)].iter().cloned(),
-        );
+        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 }
 
@@ -270,8 +254,6 @@ pub struct ColumnarRowSet<C> {
 pub unsafe trait ColumnBuffer:
     for<'a> ColumnProjections<'a> + CDataMut + HasDataType
 {
-    fn from_description(capacity: usize, desc: BufferDescription) -> Self;
-
     /// # Safety
     ///
     /// Underlying buffer may not know how many elements have been written to it by the last ODBC
@@ -288,4 +270,7 @@ pub unsafe trait ColumnBuffer:
 
     /// Fills the column with the default representation of values, between `from` and `to` index.
     fn fill_default(&mut self, from: usize, to: usize);
+
+    /// Current capacity of the column
+    fn capacity(&self) -> usize;
 }
