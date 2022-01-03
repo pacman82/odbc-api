@@ -1,8 +1,9 @@
 use crate::{
-    buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
     DataType,
 };
+
+use super::{Indicator, ColumnProjections, ColumnBuffer};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
@@ -292,11 +293,6 @@ impl<C> TextColumn<C> {
             to: n,
         }
     }
-
-    /// Maximum number of text strings this column may hold.
-    pub fn capacity(&self) -> usize {
-        self.indicators.len()
-    }
 }
 
 impl WCharColumn {
@@ -311,6 +307,31 @@ impl WCharColumn {
     /// equal to the maximum number of elements in the buffer.
     pub unsafe fn ustr_at(&self, row_index: usize) -> Option<&U16Str> {
         self.value_at(row_index).map(U16Str::from_slice)
+    }
+}
+
+unsafe impl<'a, C: 'static> ColumnProjections<'a> for TextColumn<C> {
+    type View = TextColumnIt<'a, C>;
+
+    type ViewMut = TextColumnWriter<'a, C>;
+}
+
+unsafe impl<C: 'static> ColumnBuffer for TextColumn<C> where TextColumn<C>: CDataMut + HasDataType {
+    unsafe fn view(&self, valid_rows: usize) -> TextColumnIt<'_, C> {
+        self.iter(valid_rows)
+    }
+
+    unsafe fn view_mut(&mut self, valid_rows: usize) -> TextColumnWriter<'_, C> {
+        self.writer_n(valid_rows)
+    }
+
+    fn fill_default(&mut self, from: usize, to: usize) {
+        self.fill_null(from, to)
+    }
+
+    /// Maximum number of text strings this column may hold.
+    fn capacity(&self) -> usize {
+        self.indicators.len()
     }
 }
 
