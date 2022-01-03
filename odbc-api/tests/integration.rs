@@ -1429,7 +1429,7 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let mut prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
-    let mut params = TextRowSet::new(5, [50].iter().copied());
+    let mut params = TextRowSet::from_max_str_lens(5, [50].iter().copied());
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
     params.append(["France"].iter().map(|s| Some(s.as_bytes())));
     params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
@@ -2822,7 +2822,7 @@ fn many_diagnostic_messages() {
     let batch_size = 2 << 15;
 
     // Fill each row in the buffer with two letters.
-    let mut buffer = TextRowSet::new(batch_size, iter::once(2));
+    let mut buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2));
 
     for _ in 0..batch_size {
         buffer.append([Some(&b"ab"[..])].iter().cloned());
@@ -2832,7 +2832,7 @@ fn many_diagnostic_messages() {
     conn.execute(&insert_sql, &buffer).unwrap();
 
     let query_sql = format!("SELECT a FROM {}", table_name);
-    buffer = TextRowSet::new(batch_size, iter::once(1));
+    buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1));
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
 

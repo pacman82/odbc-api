@@ -8,7 +8,6 @@ mod description;
 mod indicator;
 mod item;
 mod text_column;
-mod text_row_set;
 
 pub use self::{
     any_column_buffer::{
@@ -17,10 +16,10 @@ pub use self::{
     },
     bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
-    columnar::{ColumnBuffer, ColumnarRowSet, ColumnProjections},
+    columnar::{ColumnBuffer, ColumnProjections, ColumnarRowSet, TextRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
     item::Item,
     text_column::{CharColumn, TextColumn, TextColumnIt, TextColumnWriter, WCharColumn},
-    text_row_set::TextRowSet,
+    // text_row_set::TextRowSet,
 };
