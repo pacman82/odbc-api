@@ -361,7 +361,7 @@ Consider querying a table with two columns `year` and `name`.
 ```no_run
 use odbc_api::{
     Environment, Cursor,
-    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, default_buffer},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, buffer_from_description},
 };
 
 let env = Environment::new()?;
@@ -381,7 +381,7 @@ let buffer_description = [
 ];
 
 /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-let mut buffer = default_buffer(
+let mut buffer = buffer_from_description(
     batch_size,
     buffer_description.iter().copied()
 );
@@ -421,7 +421,13 @@ have an easier time with the borrow checker.
 ```no_run
 use odbc_api::{
     Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
-    buffers::{ColumnarRowSet, AnyColumnBuffer, BufferDescription, BufferKind}
+    buffers::{
+        AnyColumnBuffer,
+        BufferDescription,
+        BufferKind,
+        buffer_from_description,
+        ColumnarRowSet
+    }
 };
 
 fn get_birthdays<'a>(conn: &'a mut Connection)
@@ -440,7 +446,7 @@ fn get_birthdays<'a>(conn: &'a mut Connection)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = ColumnarRowSet::from_buffer_descriptions(5000, buffer_description.into_iter());
+    let buffer = buffer_from_description(5000, buffer_description.into_iter());
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }
@@ -475,7 +481,7 @@ inserts.
 ```no_run
 use odbc_api::{
     Connection, Error, IntoParameter,
-    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, default_buffer}
+    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, buffer_from_description}
 };
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
@@ -494,7 +500,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
             nullable: false,
         },
     ];
-    let mut buffer = default_buffer(
+    let mut buffer = buffer_from_description(
         names.len(),
         buffer_description.iter().copied()
     );

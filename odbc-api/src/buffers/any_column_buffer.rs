@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::{collections::HashSet, ffi::c_void};
 
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
@@ -59,7 +59,7 @@ pub enum AnyColumnBuffer {
 
 impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
-    pub fn new(max_rows: usize, desc: BufferDescription) -> Self {
+    pub fn from_description(max_rows: usize, desc: BufferDescription) -> Self {
         match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
                 AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
@@ -262,11 +262,50 @@ impl HasDataType for AnyColumnBuffer {
 }
 
 /// Convinience function allocating a ColumnarRowSet fitting the buffer descriptions.
-pub fn default_buffer(
+pub fn buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
 ) -> ColumnarRowSet<AnyColumnBuffer> {
-    ColumnarRowSet::from_buffer_descriptions(capacity, descs)
+    let mut column_index = 0;
+    let columns = descs
+        .map(move |desc| {
+            column_index += 1;
+            (
+                column_index,
+                AnyColumnBuffer::from_description(capacity, desc),
+            )
+        })
+        .collect();
+    unsafe { ColumnarRowSet::new_unchecked(capacity, columns) }
+}
+
+/// Allows you to pass the buffer descriptions together with a one based column index referring the
+/// column, the buffer is supposed to bind to. This allows you also to ignore columns in a result
+/// set, by not binding them at all. There is no restriction on the order of column indices passed,
+/// but the function will panic, if the indices are not unique.
+pub fn buffer_from_description_and_indices(
+    max_rows: usize,
+    description: impl Iterator<Item = (u16, BufferDescription)>,
+) -> ColumnarRowSet<AnyColumnBuffer> {
+    let columns: Vec<_> = description
+        .map(|(col_index, buffer_desc)| {
+            (
+                col_index,
+                AnyColumnBuffer::from_description(max_rows, buffer_desc),
+            )
+        })
+        .collect();
+
+    // Assert uniqueness of indices
+    let mut indices = HashSet::new();
+    if columns
+        .iter()
+        .any(move |&(col_index, _)| !indices.insert(col_index))
+    {
+        panic!("Column indices must be unique.")
+    }
+
+    ColumnarRowSet::new(columns)
 }
 
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarRowSet`].
@@ -348,8 +387,34 @@ unsafe impl<'a> ColumnProjections<'a> for AnyColumnBuffer {
 }
 
 unsafe impl ColumnBuffer for AnyColumnBuffer {
-    fn from_description(capacity: usize, desc: BufferDescription) -> Self {
-        Self::new(capacity, desc)
+    fn capacity(&self) -> usize {
+        match self {
+            AnyColumnBuffer::Binary(col) => col.capacity(),
+            AnyColumnBuffer::Text(col) => col.capacity(),
+            AnyColumnBuffer::WText(col) => col.capacity(),
+            AnyColumnBuffer::Date(col) => col.capacity(),
+            AnyColumnBuffer::Time(col) => col.capacity(),
+            AnyColumnBuffer::Timestamp(col) => col.capacity(),
+            AnyColumnBuffer::F64(col) => col.capacity(),
+            AnyColumnBuffer::F32(col) => col.capacity(),
+            AnyColumnBuffer::I8(col) => col.capacity(),
+            AnyColumnBuffer::I16(col) => col.capacity(),
+            AnyColumnBuffer::I32(col) => col.capacity(),
+            AnyColumnBuffer::I64(col) => col.capacity(),
+            AnyColumnBuffer::U8(col) => col.capacity(),
+            AnyColumnBuffer::Bit(col) => col.capacity(),
+            AnyColumnBuffer::NullableDate(col) => col.capacity(),
+            AnyColumnBuffer::NullableTime(col) => col.capacity(),
+            AnyColumnBuffer::NullableTimestamp(col) => col.capacity(),
+            AnyColumnBuffer::NullableF64(col) => col.capacity(),
+            AnyColumnBuffer::NullableF32(col) => col.capacity(),
+            AnyColumnBuffer::NullableI8(col) => col.capacity(),
+            AnyColumnBuffer::NullableI16(col) => col.capacity(),
+            AnyColumnBuffer::NullableI32(col) => col.capacity(),
+            AnyColumnBuffer::NullableI64(col) => col.capacity(),
+            AnyColumnBuffer::NullableU8(col) => col.capacity(),
+            AnyColumnBuffer::NullableBit(col) => col.capacity(),
+        }
     }
 
     unsafe fn view(&self, valid_rows: usize) -> AnyColumnView {

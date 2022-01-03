@@ -69,6 +69,11 @@ where
             values: &mut self.values[0..n],
         }
     }
+
+    /// Maximum number elements which the column may hold.
+    pub fn capacity(&self) -> usize {
+        self.indicators.len()
+    }
 }
 
 /// Iterates over the elements of a column buffer. Returned by

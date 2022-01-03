@@ -11,7 +11,10 @@ mod text_column;
 mod text_row_set;
 
 pub use self::{
-    any_column_buffer::{default_buffer, AnyColumnBuffer, AnyColumnView, AnyColumnViewMut},
+    any_column_buffer::{
+        buffer_from_description, buffer_from_description_and_indices, AnyColumnBuffer,
+        AnyColumnView, AnyColumnViewMut,
+    },
     bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::ColumnarRowSet,

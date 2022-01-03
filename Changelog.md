@@ -9,7 +9,8 @@
 * Renamed `TextColumn::rebind` to `TextColumn::resize_max_str`.
 * `InputParameter` is now longer exported in the top level namespace, but only as `parameter::InputParameter`.
 * `ParameterRefCollection::bind_to_statement` now takes `&mut self` rather than `self`.
-* `ColumnarRowSet::new` is now `ColumnarRowSet::buffer_descriptions`.
+* `ColumnarRowSet` is now generic over columns.
+* `ColumnarRowSet::new` is now `buffer_from_descriptions`.
 
 ## 0.32.0
 
