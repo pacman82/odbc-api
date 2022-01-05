@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     handles::{CDataMut, HasDataType, Statement},
-    Cursor, Error, ParameterRefCollection, RowSetBuffer, ResultSetMetadata,
+    Cursor, Error, ParameterRefCollection, RowSetBuffer, ResultSetMetadata, parameter::WithDataType,
 };
 
 use super::{Indicator, TextColumn};
@@ -274,6 +274,30 @@ pub unsafe trait ColumnBuffer:
 
     /// Current capacity of the column
     fn capacity(&self) -> usize;
+}
+
+unsafe impl<'a, T> ColumnProjections<'a> for WithDataType<T> where T: ColumnProjections<'a>{
+    type View = T::View;
+
+    type ViewMut = T::ViewMut;
+}
+
+unsafe impl<T> ColumnBuffer for WithDataType<T> where T: ColumnBuffer{
+    unsafe fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
+        self.value.view(valid_rows)
+    }
+
+    unsafe fn view_mut(&mut self, valid_rows: usize) -> <T as ColumnProjections>::ViewMut {
+        self.value.view_mut(valid_rows)
+    }
+
+    fn fill_default(&mut self, from: usize, to: usize) {
+        self.value.fill_default(from, to)
+    }
+
+    fn capacity(&self) -> usize {
+        self.value.capacity()
+    }
 }
 
 /// This row set binds a string buffer to each column, which is large enough to hold the maximum

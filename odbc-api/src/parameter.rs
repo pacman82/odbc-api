@@ -546,6 +546,16 @@ where
     }
 }
 
+unsafe impl<T> CDataMut for WithDataType<T> where T: CDataMut {
+    fn mut_indicator_ptr(&mut self) -> *mut isize {
+        self.value.mut_indicator_ptr()
+    }
+
+    fn mut_value_ptr(&mut self) -> *mut c_void {
+        self.value.mut_value_ptr()
+    }
+}
+
 impl<T> HasDataType for WithDataType<T>
 where
     T: HasDataType,

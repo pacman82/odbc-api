@@ -11,11 +11,11 @@ use common::{
 use odbc_api::{
     buffers::{
         buffer_from_description, buffer_from_description_and_indices, AnyColumnView,
-        AnyColumnViewMut, BufferDescription, BufferKind, Indicator, Item, TextRowSet,
+        AnyColumnViewMut, BufferDescription, BufferKind, Indicator, Item, TextRowSet, TextColumn, ColumnarBuffer
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
-    parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice},
+    parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType},
     sys, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable, Out,
     ResultSetMetadata, U16String,
 };
@@ -884,6 +884,55 @@ fn columnar_insert_varchar(profile: &Profile) {
     let expected = "Hello\nWorld\nNULL\nHello, World!";
     assert_eq!(expected, actual);
 }
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn columnar_insert_text_as_sql_integer(profile: &Profile) {
+    let table_name = "ColumnarInsertTextAsSqlInteger";
+    // Setup
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
+
+    let column_buffer = WithDataType {
+        value: TextColumn::new(4, 5),
+        data_type: DataType::Integer,
+    };
+
+    // Fill buffer with values
+    let mut buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
+
+    // Input values to insert.
+    let input = [
+        Some(&b"1"[..]),
+        Some(&b"2"[..]),
+        None,
+        Some(&b"4"[..]),
+    ];
+
+    buffer.set_num_rows(input.len());
+    let mut writer = buffer.column_mut(0);
+    
+    writer.write(input.iter().copied());
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    let expected = "1\n2\nNULL\n4";
+    assert_eq!(expected, actual);
+}
+
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
