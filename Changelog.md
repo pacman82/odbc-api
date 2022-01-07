@@ -11,6 +11,7 @@
 * `ParameterRefCollection::bind_to_statement` now takes `&mut self` rather than `self`.
 * `ColumnarRowSet` and `TextRowSetBuffer` are now `ColumnarBuffer`, which is generic over columns.
 * `ColumnarRowSet::new` is now `buffer_from_descriptions`.
+* Removed `SqlResult::log_diagnostics`.
 
 ## 0.32.0
 

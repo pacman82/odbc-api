@@ -1,4 +1,3 @@
-use super::{as_handle::AsHandle, logging::log_diagnostics};
 use odbc_sys::SqlReturn;
 
 /// Result of an ODBC function call. Variants hold the same meaning as the constants associated with
@@ -30,13 +29,6 @@ impl SqlResult<()> {
 }
 
 impl<T> SqlResult<T> {
-    /// Logs diagonstics of `handle` if variant is either `Error` or `SuccessWithInfo`.
-    pub fn log_diagnostics(&self, handle: &dyn AsHandle) {
-        match self {
-            SqlResult::Error { .. } | SqlResult::SuccessWithInfo(_) => log_diagnostics(handle),
-            _ => (),
-        }
-    }
 
     /// `True` if variant is [`SqlResult::Error`].
     pub fn is_err(&self) -> bool {
