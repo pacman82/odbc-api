@@ -1,0 +1,69 @@
+name: Coverage
+
+on: [push, pull_request]
+
+jobs:
+
+  coverage:
+    name: Generate & upload coverage report
+    runs-on: ubuntu-latest
+
+    # Database services used for testing
+    services:
+      # Microsoft SQL Server
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
+        ports:
+        - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: <YourStrong@Passw0rd>
+
+      # Maria DB test stopped working on Ubuntu after driver update
+
+      # Maria DB
+      # mariadb:
+      #   image: mariadb
+      #   ports:
+      #   - 3306:3306
+      #   env:
+      #     MYSQL_ROOT_PASSWORD: my-secret-pw
+      #     MYSQL_DATABASE: test_db
+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # LLVM tools preview is a requirement of cargo-llvm-cov
+      - name: Install llvm-tools-preview
+        run: rustup toolchain install nightly --component llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      # We currently do not test against PostgreSQL, but the time will come leave this
+      # in for reference
+      # - name: Install PostgreSQL Driver
+      #   run: |
+      #     sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
+      - name: Install ODBC Drivers
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+          apt-get update
+          ACCEPT_EULA=Y apt-get install -y msodbcsql17
+          ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
+          apt-get install -y sqlite3 libsqliteodbc
+          sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
+          sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
+          # apt-get install -y odbc-mariadb
+        shell: sudo bash {0}
+      - name: Copy test expectations
+        run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
+      # Maria DB test currently do not run due to a packaging error of their odbc driver
+      - name: Generate coverage report
+        run: cargo llvm-cov --lcov --output-path lcov.info -- --skip maria_db
+      - name: Push coverage results to Coveralls
+        uses: coverallsapp/github-action@v1.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: "lcov.info"
