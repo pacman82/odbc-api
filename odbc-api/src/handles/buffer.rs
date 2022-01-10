@@ -63,11 +63,9 @@ impl OutputStringBuffer {
 
     /// Length of the internal buffer in characters excluding the terminating zero.
     pub fn buf_len(&self) -> i16 {
-        if self.buffer.is_empty() {
-            0
-        } else {
-            (self.buffer.len() - 1).try_into().unwrap()
-        }
+        // Since buffer must always be able to hold at least one element, substracting `1` is always
+        // defined
+        (self.buffer.len() - 1).try_into().unwrap()
     }
 
     /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
