@@ -2833,7 +2833,7 @@ fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
     let query = format!("SELECT a FROM {} WHERE b=?;", table_name);
     let prepared = conn.prepare(&query).unwrap();
 
-    // Stack allocated parameter. Used for both query executions.
+    // Heap allocated parameter. Used for both query executions.
     let b = Box::new(1);
 
     let mut prebound = prepared.bind_parameters(b).unwrap();

@@ -54,12 +54,51 @@ impl<'o> Prepared<'o> {
             .into_result(&self.statement)
     }
 
+    /// Bind parameter buffers to the statement. Your motivation for doing so would be that in order
+    /// to execute the statement multiple times with different arguments it is now enough to modify
+    /// the parameters in the buffer, rather than repeatedly binding new parameters to the
+    /// statement. You now need fewer (potentially costly) odbc api calls for the same result.
+    /// However in some situations (depending on the size of the paramteres) modifying the buffers
+    /// and coping their contents might be more costly than rebinding to a different source. Also
+    /// the requirements for these permantent buffers are higher, as they may not become invalid
+    /// after the statment is executed, and if the [`Prebound`] instance is moved.
+    /// 
+    /// ```
+    /// use odbc_api::{Connection, Error, Prebound};
+    /// use std::io::{self, stdin, Read};
+    ///
+    /// fn make_query<'a>(conn: &'a Connection<'_>) -> Result<Prebound<'a, Box<i32>>, Error>{
+    ///     let mut query = "SELECT title FROM Movies WHERE year=?;";
+    ///     let prepared = conn.prepare(query)?;
+    ///     // We allocate the year parameter on the heap so it's not invalidated once we transfer
+    ///     // ownership of the prepared statement + parameter to the caller of the function. Of
+    ///     // course the compiler would catch it, if we missed this by mistake.
+    ///     let year = Box::new(0);
+    ///     let prebound = prepared.bind_parameters(year)?;
+    ///     Ok(prebound)
+    /// }
+    /// 
+    /// // Later we may execute the query like this
+    /// fn use_query(movies_by_year: &mut Prebound<'_, Box<i32>>) -> Result<(), Error> {
+    ///     // Let's say we are interested in Movie titles released in 2021. Modify the parameter
+    ///     // buffer accordingly.
+    ///     *movies_by_year.params_mut() = 2021;
+    ///     // and execute. Note that we do not specify the parameter here, since it is already 
+    ///     // bound.
+    ///     let cursor = movies_by_year.execute()?;
+    /// 
+    ///     // ... process cursor ...
+    /// 
+    ///     Ok(())
+    /// }
+    /// ```
+    /// 
     pub fn bind_parameters<P>(self, parameters: P) -> Result<Prebound<'o, P>, Error>
     where
         P: ParameterMutCollection,
     {
         // We know that statement is a prepared statement.
-        unsafe { Prebound::new(self.statement, parameters) }
+        unsafe { Prebound::new(self.into_statement(), parameters) }
     }
 }
 
