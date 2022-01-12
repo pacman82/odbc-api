@@ -108,3 +108,17 @@ impl_input_fixed_sized!(i64, DataType::BigInt);
 
 // Support for fixed size types, which are not unsigned. Time, Date and timestamp types could be
 // supported, implementation DataType would need to take an instance into account.
+
+#[cfg(test)]
+mod test {
+
+    use super::Bit;
+
+    /// `as_bool` should panic if bit is neither 0 or 1.
+    #[test]
+    #[should_panic(expected = "Invalid boolean representation in Bit.")]
+    fn invalid_bit() {    
+        let bit = Bit(2);
+        bit.as_bool();
+    }
+}

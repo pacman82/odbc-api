@@ -11,13 +11,16 @@ use common::{
 use odbc_api::{
     buffers::{
         buffer_from_description, buffer_from_description_and_indices, AnyColumnView,
-        AnyColumnViewMut, BufferDescription, BufferKind, Indicator, Item, TextRowSet, TextColumn, ColumnarBuffer
+        AnyColumnViewMut, BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item,
+        TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
-    parameter::{Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType},
-    sys, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable, Out,
-    ResultSetMetadata, U16String,
+    parameter::{
+        Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
+    },
+    sys, Bit, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable,
+    Out, ResultSetMetadata, U16String,
 };
 use std::{
     convert::TryInto,
@@ -356,6 +359,27 @@ fn bind_char_to_wchar(profile: &Profile) {
     drop(row_set_cursor);
 
     assert_eq!(Some(U16String::from_str("Hello").as_ustr()), buf.ustr_at(0));
+}
+
+/// Bind a BIT column to a Bit buffer.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_bit(profile: &Profile) {
+    let table_name = "BindBit";
+
+    let conn = profile.setup_empty_table(table_name, &["BIT"]).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (0),(1);", table_name);
+    conn.execute(&insert_sql, ()).unwrap();
+
+    let sql = format!("SELECT a FROM {};", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut buf = SingleColumnRowSetBuffer::new(3);
+    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
+    row_set_cursor.fetch().unwrap();
+    drop(row_set_cursor);
+
+    assert_eq!(&[Bit(0), Bit(1)][..], buf.get());
 }
 
 /// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
@@ -891,9 +915,7 @@ fn columnar_insert_varchar(profile: &Profile) {
 fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let table_name = "ColumnarInsertTextAsSqlInteger";
     // Setup
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let column_buffer = WithDataType {
         value: TextColumn::new(4, 5),
@@ -904,16 +926,11 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let mut buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
 
     // Input values to insert.
-    let input = [
-        Some(&b"1"[..]),
-        Some(&b"2"[..]),
-        None,
-        Some(&b"4"[..]),
-    ];
+    let input = [Some(&b"1"[..]), Some(&b"2"[..]), None, Some(&b"4"[..])];
 
     buffer.set_num_rows(input.len());
     let mut writer = buffer.column_mut(0);
-    
+
     writer.write(input.iter().copied());
 
     // Bind buffer and insert values.
@@ -932,7 +949,6 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let expected = "1\n2\nNULL\n4";
     assert_eq!(expected, actual);
 }
-
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
