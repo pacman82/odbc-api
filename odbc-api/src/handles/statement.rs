@@ -16,7 +16,6 @@ use odbc_sys::{
     SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{
-    convert::TryInto,
     ffi::c_void,
     marker::PhantomData,
     mem::ManuallyDrop,

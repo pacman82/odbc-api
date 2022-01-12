@@ -11,7 +11,7 @@ use odbc_sys::{
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
     SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
 };
-use std::{convert::TryInto, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
+use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
 
 /// The connection handle references storage of all information about the connection to the data

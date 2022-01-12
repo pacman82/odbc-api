@@ -23,7 +23,6 @@ use odbc_api::{
     Out, ResultSetMetadata, U16String,
 };
 use std::{
-    convert::TryInto,
     ffi::CString,
     io::{self, Write},
     iter, str, thread,

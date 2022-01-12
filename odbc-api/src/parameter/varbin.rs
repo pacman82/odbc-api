@@ -1,6 +1,5 @@
 use std::{
     borrow::{Borrow, BorrowMut},
-    convert::TryInto,
     ffi::c_void,
 };
 
