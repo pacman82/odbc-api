@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.33.0 (next)
+## 0.33.0
 
 * Uses Rust Edition 2021
 * Mutable references `&mut T` are no longer implicitly bound as input / output Parameters, but must be wrapped with `InOut` instead. This has been done to make the decision between `Out` and `InOut` explicit, and also help to avoid binding parameters as `InOut` by accident. Shared references `&T` are still implicitly bound as input parameters however.
