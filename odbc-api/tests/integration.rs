@@ -374,12 +374,13 @@ fn bind_bit(profile: &Profile) {
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let mut buf = SingleColumnRowSetBuffer::new(3);
+    let mut buf = SingleColumnRowSetBuffer::<Vec<Bit>>::new(3);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
     drop(row_set_cursor);
 
-    assert_eq!(&[Bit(0), Bit(1)][..], buf.get());
+    assert!(!buf.get()[0].as_bool());
+    assert!(buf.get()[1].as_bool());
 }
 
 /// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
