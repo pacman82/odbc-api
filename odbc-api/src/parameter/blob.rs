@@ -5,7 +5,6 @@ use crate::{
     DataType, Error, ParameterRef,
 };
 use std::{
-    convert::TryInto,
     ffi::c_void,
     fs::File,
     io::{self, BufRead, BufReader},

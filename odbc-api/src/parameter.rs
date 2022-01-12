@@ -546,7 +546,10 @@ where
     }
 }
 
-unsafe impl<T> CDataMut for WithDataType<T> where T: CDataMut {
+unsafe impl<T> CDataMut for WithDataType<T>
+where
+    T: CDataMut,
+{
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.value.mut_indicator_ptr()
     }

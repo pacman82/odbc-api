@@ -2,7 +2,7 @@
 name = "odbc-api"
 version = "0.32.0"
 authors = ["Markus Klein"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pacman82/odbc-api"
 documentation = "https://docs.rs/odbc-api/"

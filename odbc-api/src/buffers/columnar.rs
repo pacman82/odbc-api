@@ -1,13 +1,13 @@
 use std::{
     cmp::min,
     collections::HashSet,
-    convert::TryInto,
     str::{from_utf8, Utf8Error},
 };
 
 use crate::{
     handles::{CDataMut, HasDataType, Statement},
-    Cursor, Error, ParameterRefCollection, RowSetBuffer, ResultSetMetadata, parameter::WithDataType,
+    parameter::WithDataType,
+    Cursor, Error, ParameterRefCollection, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -252,9 +252,7 @@ pub struct ColumnarBuffer<C> {
 /// # Safety
 ///
 /// Views must not allow access to unintialized / invalid rows.
-pub unsafe trait ColumnBuffer:
-    for<'a> ColumnProjections<'a> + CDataMut
-{
+pub unsafe trait ColumnBuffer: for<'a> ColumnProjections<'a> + CDataMut {
     /// # Safety
     ///
     /// Underlying buffer may not know how many elements have been written to it by the last ODBC
@@ -276,13 +274,19 @@ pub unsafe trait ColumnBuffer:
     fn capacity(&self) -> usize;
 }
 
-unsafe impl<'a, T> ColumnProjections<'a> for WithDataType<T> where T: ColumnProjections<'a>{
+unsafe impl<'a, T> ColumnProjections<'a> for WithDataType<T>
+where
+    T: ColumnProjections<'a>,
+{
     type View = T::View;
 
     type ViewMut = T::ViewMut;
 }
 
-unsafe impl<T> ColumnBuffer for WithDataType<T> where T: ColumnBuffer{
+unsafe impl<T> ColumnBuffer for WithDataType<T>
+where
+    T: ColumnBuffer,
+{
     unsafe fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
         self.value.view(valid_rows)
     }

@@ -8,7 +8,7 @@ use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
     HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr,
 };
-use std::{convert::TryInto, ptr::null_mut};
+use std::ptr::null_mut;
 
 /// An `Environment` is a global context, in which to access data.
 ///

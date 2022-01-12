@@ -3,7 +3,7 @@ use super::{
     buffer::{clamp_small_int, mut_buf_ptr},
 };
 use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZE};
-use std::{convert::TryInto, fmt};
+use std::fmt;
 use widestring::U16Str;
 
 /// A buffer large enough to hold an `SOLState` for diagnostics

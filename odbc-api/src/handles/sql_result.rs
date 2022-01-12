@@ -29,7 +29,6 @@ impl SqlResult<()> {
 }
 
 impl<T> SqlResult<T> {
-
     /// `True` if variant is [`SqlResult::Error`].
     pub fn is_err(&self) -> bool {
         matches!(self, SqlResult::Error { .. })

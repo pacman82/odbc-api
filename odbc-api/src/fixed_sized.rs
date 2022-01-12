@@ -117,7 +117,7 @@ mod test {
     /// `as_bool` should panic if bit is neither 0 or 1.
     #[test]
     #[should_panic(expected = "Invalid boolean representation in Bit.")]
-    fn invalid_bit() {    
+    fn invalid_bit() {
         let bit = Bit(2);
         bit.as_bool();
     }

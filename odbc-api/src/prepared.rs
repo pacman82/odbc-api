@@ -62,7 +62,7 @@ impl<'o> Prepared<'o> {
     /// and coping their contents might be more costly than rebinding to a different source. Also
     /// the requirements for these permantent buffers are higher, as they may not become invalid
     /// after the statment is executed, and if the [`Prebound`] instance is moved.
-    /// 
+    ///
     /// ```
     /// use odbc_api::{Connection, Error, Prebound};
     /// use std::io::{self, stdin, Read};
@@ -77,22 +77,22 @@ impl<'o> Prepared<'o> {
     ///     let prebound = prepared.bind_parameters(year)?;
     ///     Ok(prebound)
     /// }
-    /// 
+    ///
     /// // Later we may execute the query like this
     /// fn use_query(movies_by_year: &mut Prebound<'_, Box<i32>>) -> Result<(), Error> {
     ///     // Let's say we are interested in Movie titles released in 2021. Modify the parameter
     ///     // buffer accordingly.
     ///     *movies_by_year.params_mut() = 2021;
-    ///     // and execute. Note that we do not specify the parameter here, since it is already 
+    ///     // and execute. Note that we do not specify the parameter here, since it is already
     ///     // bound.
     ///     let cursor = movies_by_year.execute()?;
-    /// 
+    ///
     ///     // ... process cursor ...
-    /// 
+    ///
     ///     Ok(())
     /// }
     /// ```
-    /// 
+    ///
     pub fn bind_parameters<P>(self, parameters: P) -> Result<Prebound<'o, P>, Error>
     where
         P: ParameterMutCollection,

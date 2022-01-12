@@ -2,7 +2,7 @@
 name = "odbcsv"
 version = "0.3.55"
 authors = ["Markus Klein"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/pacman82/odbc-api/tree/master/odbcsv"
 documentation = "https://docs.rs/odbcsv/"

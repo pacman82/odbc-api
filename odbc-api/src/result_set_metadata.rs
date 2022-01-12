@@ -1,4 +1,4 @@
-use std::{char::REPLACEMENT_CHARACTER, convert::TryInto};
+use std::char::REPLACEMENT_CHARACTER;
 
 use odbc_sys::SqlDataType;
 use widestring::decode_utf16;

@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use odbc_sys::{NO_TOTAL, NULL_DATA};
 
 /// Indicates existence and length of a value.

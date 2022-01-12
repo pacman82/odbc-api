@@ -4,7 +4,6 @@ use crate::{
 };
 use odbc_sys::{Date, Time, Timestamp, NULL_DATA};
 use std::{
-    convert::TryInto,
     ffi::c_void,
     mem::size_of,
     ptr::{null, null_mut},
