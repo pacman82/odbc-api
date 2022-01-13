@@ -2780,6 +2780,52 @@ fn list_tables(profile: &Profile, expected: &str) {
     assert_eq!(expected, actual);
 }
 
+/// List tables for various data sources, using a preallocated statement
+#[test_case(MSSQL, "master,dbo,ListTablesPreallocated,TABLE,NULL"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "test_db,NULL,ListTablesPreallocated,TABLE,"; "Maria DB")]
+#[test_case(SQLITE_3, "NULL,NULL,ListTablesPreallocated,TABLE,NULL"; "SQLite 3")]
+fn list_tables_preallocated(profile: &Profile, expected: &str) {
+    let table_name = "ListTablesPreallocated";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let mut preallocated = conn.preallocate().unwrap();
+
+    let cursor = preallocated
+        .tables(None, None, Some(table_name), None)
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
+}
+
+/// List columns for various data sources
+#[test_case(MSSQL, "master,dbo,ListColumns,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "test_db,NULL,ListColumns,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
+#[test_case(SQLITE_3, ",,ListColumns,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
+fn list_columns(profile: &Profile, expected: &str) {
+    let table_name = "ListColumns";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+
+    let cursor = conn.columns("", "", table_name, "a").unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
+}
+
+/// List columns for various data sources, using a preallocated statement
+#[test_case(MSSQL, "master,dbo,ListColumnsPreallocated,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "test_db,NULL,ListColumnsPreallocated,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
+#[test_case(SQLITE_3, ",,ListColumnsPreallocated,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
+fn list_columns_preallocated(profile: &Profile, expected: &str) {
+    let table_name = "ListColumnsPreallocated";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let mut preallocated = conn.preallocate().unwrap();
+
+    let cursor = preallocated.columns("", "", table_name, "a").unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
+}
+
 /// Some drivers seem to have trouble binding buffers beyond `u16::MAX`. This has been seen failing
 /// in the wild with SAP anywhere, but that ODBC driver is not part of this test suite.
 #[test_case(MSSQL; "Microsoft SQL Server")]
