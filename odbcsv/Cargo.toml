@@ -37,7 +37,7 @@ structopt = "0.3.25"
 log = "0.4.14"
 
 [dev-dependencies]
-assert_cmd = "2.0.3"
+assert_cmd = "2.0.4"
 lazy_static = "1.4.0"
 tempfile = "3.2.0"
 
