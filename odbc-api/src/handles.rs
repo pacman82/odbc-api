@@ -47,7 +47,7 @@ pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
             // Avoid panicking, if we already have a panic. We don't want to mask the
             // original error.
             if !panicking() {
-                panic!("Unexpected return value of SQLFreeHandle: {:?}", other)
+                panic!("SQLFreeHandle failed with error code: {:?}", other.0)
             }
         }
     }

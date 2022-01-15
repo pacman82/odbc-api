@@ -2914,6 +2914,38 @@ fn modifying_bound_param_buffer_on_heap(profile: &Profile) {
     assert_eq!("2", cursor_to_string(cursor));
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[should_panic(expected = "SQLFreeHandle failed with error code: -1")]
+fn should_panic_if_connection_cannot_be_freed(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+
+    // Since the types with their invariants in this crate helpfully prevent us from freeing a
+    // connected handles, we have to abandon the saftey rails in order to provoke the error.
+    let conn = conn.into_handle();
+
+    // We drop the connection, but it is still connected. => This is a programming error, we want
+    // the drop handler to panic.
+    drop(conn);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[should_panic(expected = "original error")]
+fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+
+    // Since the types with their invariants in this crate helpfully prevent us from freeing a
+    // connected handles, we have to abandon the saftey rails in order to provoke the error.
+    let _conn = conn.into_handle();
+
+    // If this error is propagated upwards, the above connections drop handler will be called and
+    // fail. This tests wants to ensure the original error is not masked by that.
+    panic!("original error")
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

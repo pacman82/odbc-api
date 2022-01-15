@@ -67,6 +67,17 @@ impl<'c> Connection<'c> {
         ManuallyDrop::new(self).connection.as_sys()
     }
 
+    /// Transfer ownership of this open connection to a wrapper around the raw ODBC pointer. The
+    /// wrapper allows you to call ODBC functions on the handle, but doesn't care if the connection
+    /// is in the right state.
+    /// 
+    /// You should not have a need to call this method if your usecase is covered by this library,
+    /// but, in case it is not, this may help you to break out of the type structure which might be
+    /// to rigid for you, while simultaniously abondoning its safeguards.
+    pub fn into_handle(self) -> handles::Connection<'c> {
+        unsafe { handles::Connection::new(ManuallyDrop::new(self).connection.as_sys()) }
+    }
+
     /// Executes an sql statement using a wide string. See [`Self::execute`].
     pub fn execute_utf16(
         &self,
