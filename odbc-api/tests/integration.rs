@@ -2826,6 +2826,28 @@ fn list_columns_preallocated(profile: &Profile, expected: &str) {
     assert_eq!(expected, actual);
 }
 
+/// This test documents the amount of memory needed to hold the maximum row of the columns table
+/// as described by the result sets metadata.
+#[test_case(MSSQL, 10039; "Microsoft SQL Server")]
+#[test_case(MARIADB, 537068874; "Maria DB")]
+#[test_case(SQLITE_3, 986; "SQLite 3")]
+fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
+    let conn = profile.connection().unwrap();
+
+    let cursor = conn.columns("", "", "", "").unwrap();
+    let mut column_description = ColumnDescription::default();
+    let mut size_of_row = 0;
+    for index in 0..cursor.num_result_cols().unwrap() {
+        cursor.describe_col(index as u16 + 1, &mut column_description).unwrap();
+        let buffer_description = BufferDescription {
+            kind: BufferKind::from_data_type(column_description.data_type).unwrap(),
+            nullable: column_description.could_be_nullable()
+        };
+        size_of_row += buffer_description.bytes_per_row();
+    }
+    assert_eq!(expected_row_size_in_bytes, size_of_row)
+}
+
 /// Some drivers seem to have trouble binding buffers beyond `u16::MAX`. This has been seen failing
 /// in the wild with SAP anywhere, but that ODBC driver is not part of this test suite.
 #[test_case(MSSQL; "Microsoft SQL Server")]
