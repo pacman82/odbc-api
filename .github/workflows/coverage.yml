@@ -58,7 +58,7 @@ jobs:
           # apt-get install -y odbc-mariadb
         shell: sudo bash {0}
       - name: Copy test expectations
-        run: cp odbcsv/tests/list-drivers-dev.txt odbcsv/tests/list-drivers.txt
+        run: cp odbcsv/tests/list-drivers-linux.txt odbcsv/tests/list-drivers.txt
       # Maria DB test currently do not run due to a packaging error of their odbc driver
       - name: Generate coverage report
         run: cargo llvm-cov --lcov --output-path lcov.info -- --skip maria_db
