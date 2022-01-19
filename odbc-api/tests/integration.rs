@@ -57,7 +57,7 @@ const MARIADB_CONNECTION: &str = "Driver={MariaDB ODBC 3.1 Driver};\
 // Use 127.0.0.1 instead of localhost so the system uses the TCP/IP connector instead of the socket
 // connector. Prevents error message: 'Can't connect to local MySQL server through socket'.
 #[cfg(not(target_os = "windows"))]
-const MARIADB_CONNECTION: &str = "Driver={/usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so};\
+const MARIADB_CONNECTION: &str = "Driver={MariaDB 3.1 Driver};\
     Server=127.0.0.1;DB=test_db;\
     UID=root;PWD=my-secret-pw;\
     Port=3306";
@@ -2655,10 +2655,10 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
     assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-fn columns_query(profile: &Profile) {
+#[test_case(MSSQL, "dbo"; "Microsoft SQL Server")]
+#[test_case(MARIADB, ""; "Maria DB")]
+#[test_case(SQLITE_3, "dbo"; "SQLite 3")]
+fn columns_query(profile: &Profile, schema: &str) {
     let table_name = "ColumnsQuery";
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(10)"])
@@ -2670,8 +2670,9 @@ fn columns_query(profile: &Profile) {
             .unwrap()
             .into_iter(),
     );
+    // Mariadb does not support schemas
     let columns = conn
-        .columns(&conn.current_catalog().unwrap(), "dbo", table_name, "a")
+        .columns(&conn.current_catalog().unwrap(), schema, table_name, "a")
         .unwrap();
 
     let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
@@ -2767,6 +2768,7 @@ fn no_data(profile: &Profile) {
 }
 
 /// List tables for various data sources
+/// Table name comparison is insensitive on Windows
 #[test_case(MSSQL, "master,dbo,ListTables,TABLE,NULL"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListTables,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTables,TABLE,NULL"; "SQLite 3")]
@@ -2775,12 +2777,12 @@ fn list_tables(profile: &Profile, expected: &str) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let cursor = conn.tables(None, None, Some(table_name), None).unwrap();
-    let actual = cursor_to_string(cursor);
-
-    assert_eq!(expected, actual);
+    let actual = cursor_to_string(cursor).to_lowercase();
+    assert_eq!(expected.to_lowercase(), actual);
 }
 
 /// List tables for various data sources, using a preallocated statement
+/// Table name comparison is insensitive on Windows
 #[test_case(MSSQL, "master,dbo,ListTablesPreallocated,TABLE,NULL"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListTablesPreallocated,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTablesPreallocated,TABLE,NULL"; "SQLite 3")]
@@ -2792,9 +2794,9 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
     let cursor = preallocated
         .tables(None, None, Some(table_name), None)
         .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = cursor_to_string(cursor).to_lowercase();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected.to_lowercase(), actual);
 }
 
 /// List columns for various data sources
@@ -2806,9 +2808,9 @@ fn list_columns(profile: &Profile, expected: &str) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let cursor = conn.columns("", "", table_name, "a").unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = cursor_to_string(cursor).to_lowercase();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected.to_lowercase(), actual);
 }
 
 /// List columns for various data sources, using a preallocated statement
@@ -2821,9 +2823,9 @@ fn list_columns_preallocated(profile: &Profile, expected: &str) {
     let mut preallocated = conn.preallocate().unwrap();
 
     let cursor = preallocated.columns("", "", table_name, "a").unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = cursor_to_string(cursor).to_lowercase();
 
-    assert_eq!(expected, actual);
+    assert_eq!(expected.to_lowercase(), actual);
 }
 
 /// This test documents the amount of memory needed to hold the maximum row of the columns table
@@ -2838,10 +2840,12 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
     let mut column_description = ColumnDescription::default();
     let mut size_of_row = 0;
     for index in 0..cursor.num_result_cols().unwrap() {
-        cursor.describe_col(index as u16 + 1, &mut column_description).unwrap();
+        cursor
+            .describe_col(index as u16 + 1, &mut column_description)
+            .unwrap();
         let buffer_description = BufferDescription {
             kind: BufferKind::from_data_type(column_description.data_type).unwrap(),
-            nullable: column_description.could_be_nullable()
+            nullable: column_description.could_be_nullable(),
         };
         size_of_row += buffer_description.bytes_per_row();
     }

@@ -297,16 +297,35 @@ fn insert_with_nulls() {
 /// with a different set of drivers installed.
 #[test]
 fn list_drivers() {
-    if let Ok(mut expectation) = File::open("tests/list-drivers.txt") {
-        let mut buf = String::new();
-        expectation.read_to_string(&mut buf).unwrap();
+    if let Ok(mut expectation_file) = File::open("tests/list-drivers.txt") {
+        let mut expectations = String::new();
+        expectation_file.read_to_string(&mut expectations).unwrap();
 
-        Command::cargo_bin("odbcsv")
-            .unwrap()
-            .args(&["-vvvv", "list-drivers"])
-            .assert()
-            .success()
-            .stdout(buf);
+        let mut command = Command::cargo_bin("odbcsv").unwrap();
+        let odbcsv = command.args(&["-vvvv", "list-drivers"]);
+        odbcsv.assert().success();
+        let output = String::from_utf8(odbcsv.output().unwrap().stdout).unwrap();
+
+        let installed_drivers: Vec<&str> = output
+            .lines()
+            .filter(|&maybe_driver| {
+                // Only look at the driver names, no need to check for descriptions (parameters are indented)
+                !maybe_driver.is_empty() && !maybe_driver.starts_with([' ', '\t'])
+            })
+            .collect();
+
+        let not_configured_drivers: Vec<&str> = expectations
+            .trim_end()
+            .lines()
+            .filter(|driver| !installed_drivers.contains(driver))
+            .collect();
+
+        if !not_configured_drivers.is_empty() {
+            panic!(
+                "'{}' drivers are not configured in the system",
+                not_configured_drivers.join(", ")
+            );
+        }
     }
 }
 
