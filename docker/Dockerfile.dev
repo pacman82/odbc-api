@@ -1,3 +1,5 @@
+# Docker image intended for local development using vscode
+
 # See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.163.1/containers/debian/.devcontainer/base.Dockerfile
 
 # [Choice] Debian version: buster, stretch

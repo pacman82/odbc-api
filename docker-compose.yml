@@ -32,13 +32,3 @@ services:
 
     # Allows accessing dbs through the port forwardings. dev container behaves like host for networking
     network_mode: host
-
-  test_linux:
-    build: .
-    # Firing up the databases will take a while, fortunately so does compilating the library
-    depends_on:
-      - mssql
-      - mariadb
-    network_mode: host
-    environment:
-      RUST_LOG: DEBUG
