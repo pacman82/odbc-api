@@ -1,0 +1,31 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - 1433:1433
+    environment:
+      - MSSQL_SA_PASSWORD=<YourStrong@Passw0rd>
+    command:
+      [
+        "/opt/mssql/bin/sqlservr",
+        "--accept-eula",
+        "--reset-sa-password"
+      ]
+
+  mariadb:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: my-secret-pw
+      MYSQL_DATABASE: test_db
+    ports:
+      - 3306:3306
+
+  test_linux:
+    build: .
+    # Firing up the databases will take a while, fortunately so does compilating the library
+    depends_on:
+      - mssql
+      - mariadb
+    network_mode: host
+    environment:
+      RUST_LOG: DEBUG

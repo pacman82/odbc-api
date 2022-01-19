@@ -310,7 +310,7 @@ fn list_drivers() {
             .lines()
             .filter(|&maybe_driver| {
                 // Only look at the driver names, no need to check for descriptions (parameters are indented)
-                !maybe_driver.is_empty() && !maybe_driver.starts_with([' ', '\t'])
+                !maybe_driver.is_empty() && !maybe_driver.starts_with(&[' ', '\t'][..])
             })
             .collect();
 
