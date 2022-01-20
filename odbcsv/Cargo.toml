@@ -1,6 +1,6 @@
 [package]
 name = "odbcsv"
-version = "0.3.56"
+version = "0.3.57"
 authors = ["Markus Klein"]
 edition = "2021"
 license = "MIT"
@@ -29,7 +29,7 @@ readme = "Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = { version = "0.33.0", path = "../odbc-api" }
+odbc-api = { version = "0.33.1", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.52"
 stderrlog = "0.5.1"
@@ -39,5 +39,5 @@ log = "0.4.14"
 [dev-dependencies]
 assert_cmd = "2.0.4"
 lazy_static = "1.4.0"
-tempfile = "3.2.0"
+tempfile = "3.3.0"
 
