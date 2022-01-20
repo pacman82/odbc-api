@@ -11,6 +11,20 @@ use tempfile::NamedTempFile;
 const MSSQL: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
 
+#[cfg(target_os = "windows")]
+const MARIADB: &str = "Driver={MariaDB ODBC 3.1 Driver};\
+    Server=localhost;DB=test_db;\
+    UID=root;PWD=my-secret-pw;\
+    Port=3306";
+
+// Use 127.0.0.1 instead of localhost so the system uses the TCP/IP connector instead of the socket
+// connector. Prevents error message: 'Can't connect to local MySQL server through socket'.
+#[cfg(not(target_os = "windows"))]
+const MARIADB: &str = "Driver={MariaDB 3.1 Driver};\
+    Server=127.0.0.1;DB=test_db;\
+    UID=root;PWD=my-secret-pw;\
+    Port=3306";
+
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {
     static ref ENV: Environment = Environment::new().unwrap();
@@ -435,4 +449,21 @@ fn fetch_with_query_read_from_file() {
         .assert()
         .success()
         .stdout(csv);
+}
+
+#[test]
+fn list_columns_with_maria_db() {
+
+    // Maria DB driver reports very large column sizes, likely to cause an out of memory if just
+    // allocated.
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "list-columns",
+            "--connection-string",
+            MARIADB,
+        ])
+        .assert()
+        .success();
 }

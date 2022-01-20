@@ -488,7 +488,10 @@ fn tables(environment: &Environment, table_opt: &ListTablesOpt) -> Result<(), Er
     let out = hold_stdout.lock();
     let mut writer = csv::Writer::from_writer(out);
 
-    cursor_to_csv(cursor, &mut writer, 100, None)?;
+    // Limit the amount of memory allocated for each column element in case some driver decides to
+    // report crazy max column lengths (e.g. MariaDB on Windows)
+    let max_str_len = Some(4096);
+    cursor_to_csv(cursor, &mut writer, 100, max_str_len)?;
     Ok(())
 }
 
@@ -513,7 +516,10 @@ fn columns(environment: &Environment, columns_opt: &ListColumnsOpt) -> Result<()
     let out = hold_stdout.lock();
     let mut writer = csv::Writer::from_writer(out);
 
-    cursor_to_csv(cursor, &mut writer, 100, None)?;
+    // Limit the amount of memory allocated for each column element in case some driver decides to
+    // report crazy max column lengths (e.g. MariaDB on Windows)
+    let max_str_len = Some(4096);
+    cursor_to_csv(cursor, &mut writer, 100, max_str_len)?;
     Ok(())
 }
 
