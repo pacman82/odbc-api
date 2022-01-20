@@ -37,7 +37,7 @@ jobs:
 
       # LLVM tools preview is a requirement of cargo-llvm-cov
       - name: Install llvm-tools-preview
-        run: rustup toolchain install nightly --component llvm-tools-preview
+        run: rustup toolchain install nightly-2022-01-06 --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       # We currently do not test against PostgreSQL, but the time will come leave this
@@ -61,7 +61,7 @@ jobs:
         run: cp odbcsv/tests/list-drivers-linux.txt odbcsv/tests/list-drivers.txt
       # Maria DB test currently do not run due to a packaging error of their odbc driver
       - name: Generate coverage report
-        run: cargo llvm-cov --lcov --output-path lcov.info -- --skip maria_db
+        run: cargo +nightly-2022-01-06 llvm-cov --lcov --output-path lcov.info -- --skip maria_db
       - name: Push coverage results to Coveralls
         uses: coverallsapp/github-action@v1.0.1
         with:
