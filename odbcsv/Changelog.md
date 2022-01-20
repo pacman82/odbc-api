@@ -1,9 +1,13 @@
 # Changelog
 
-## 0.3.57
+## 0.3.58
 
 * Updated dependencies
 * Fix: Out of memory then listing columns for a MariaDB source on Windows
+
+## 0.3.57
+
+* Updated dependencies
 
 ## 0.3.56
 

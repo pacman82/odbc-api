@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.33.2
+
+* No changes (Release is currently tied to odbcsv)
+
 ## 0.33.1
 
 * No changes (Release is currently tied to odbcsv)
