@@ -33,8 +33,8 @@ odbc-api = { version = "0.33.2", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.52"
 stderrlog = "0.5.1"
-structopt = "0.3.26"
 log = "0.4.14"
+clap = { version = "3.0.10", features = ["derive", "env"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.4"

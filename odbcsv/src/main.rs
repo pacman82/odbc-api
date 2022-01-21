@@ -9,43 +9,44 @@ use std::{
     io::{stdin, stdout, Read, Write},
     path::PathBuf,
 };
-use structopt::StructOpt;
+use clap::{Parser, Args};
 
 /// Query an ODBC data source and output the result as CSV.
-#[derive(StructOpt)]
+#[derive(Parser)]
+#[clap(version)]
 struct Cli {
     /// Verbose mode (-v, -vv, -vvv, etc)
-    #[structopt(short = "v", long, parse(from_occurrences))]
+    #[clap(short = 'v', long, parse(from_occurrences))]
     verbose: usize,
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     command: Command,
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 enum Command {
     /// Query a data source and write the result as csv. This is the deprecated version of `fetch`.
     Query {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         query_opt: QueryOpt,
     },
     /// Query a data source and write the result as csv.
     Fetch {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         fetch_opt: FetchOpt,
     },
     /// Read the content of a csv and insert it into a table.
     Insert {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         insert_opt: InsertOpt,
     },
     /// List tables, schemas, views and catalogs provided by the datasource.
     ListTables {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         table_opt: ListTablesOpt,
     },
     /// List columns
     ListColumns {
-        #[structopt(flatten)]
+        #[clap(flatten)]
         columns_opt: ListColumnsOpt,
     },
     /// List available drivers. Useful to find out which exact driver name to specify in the
@@ -57,47 +58,47 @@ enum Command {
 
 // Attention: This has overwritten some help messages for the enduser if turned into a docstring:
 // Command line arguments used to establish a connection with the ODBC data source
-#[derive(StructOpt)]
+#[derive(Args)]
 struct ConnectOpts {
-    #[structopt(long, conflicts_with = "dsn")]
+    #[clap(long, conflicts_with = "dsn")]
     /// Prompts the user for missing information from the connection string. Only supported on
     /// windows platform.
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
-    #[structopt(long, short = "c")]
+    #[clap(long, short = 'c')]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
-    #[structopt(long, conflicts_with = "connection-string")]
+    #[clap(long, conflicts_with = "connection-string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn. Should you specify a connection string
     /// instead of a Data Source Name the user name is going to be appended at the end of it as the
     /// `UID` attribute.
-    #[structopt(long, short = "u", env = "ODBC_USER")]
+    #[clap(long, short = 'u', env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string. Should you specify a Connection string instead of a Data Source Name the
     /// password is going to be appended at the end of it as the `PWD` attribute.
-    #[structopt(long, short = "p", env = "ODBC_PASSWORD", hide_env_values = true)]
+    #[clap(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 struct QueryOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[structopt(long, default_value = "5000")]
+    #[clap(long, default_value = "5000")]
     batch_size: usize,
     /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
-    #[structopt(long, short = "m")]
+    #[clap(long, short = 'm')]
     max_str_len: Option<usize>,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
-    #[structopt(long, short = "o")]
+    #[clap(long, short = 'o')]
     output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
@@ -107,94 +108,94 @@ struct QueryOpt {
     parameters: Vec<String>,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 struct FetchOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[structopt(long, default_value = "5000")]
+    #[clap(long, default_value = "5000")]
     batch_size: usize,
     /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
-    #[structopt(long, short = "m")]
+    #[clap(long, short = 'm')]
     max_str_len: Option<usize>,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
-    #[structopt(long, short = "o")]
+    #[clap(long, short = 'o')]
     output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Within the SQL text Question marks (`?`) can be
     /// used as placeholders for positional parameters.
-    #[structopt(long, short = "q", conflicts_with = "sql_file")]
+    #[clap(long, short = 'q', conflicts_with = "sql_file")]
     query: Option<String>,
     /// Read the SQL query from a file, rather than a literal passed at the command line. Argument
     /// specifies path to that file. Within the SQL text question marks (`?`) can be used as
     /// placeholders for positional parameters.
-    #[structopt(long, short = "f", conflicts_with = "query")]
+    #[clap(long, short = 'f', conflicts_with = "query")]
     sql_file: Option<PathBuf>,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
     parameters: Vec<String>,
 }
-#[derive(StructOpt)]
+#[derive(Args)]
 struct InsertOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[structopt(long, default_value = "5000")]
+    #[clap(long, default_value = "5000")]
     batch_size: usize,
     /// Path to the input csv file which is used to fill the database table with values. If
     /// omitted standard input is used.
-    #[structopt(long, short = "i")]
+    #[clap(long, short = 'i')]
     input: Option<PathBuf>,
     /// Name of the table to insert the values into. No precautions against SQL injection are
     /// taken.
     table: String,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 struct ListTablesOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
     /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
-    #[structopt(long)]
+    #[clap(long)]
     catalog: Option<String>,
     /// Filter result by schema. Accepts patterns in the same way as `catalog`.
-    #[structopt(long)]
+    #[clap(long)]
     schema: Option<String>,
     /// Filter result by table name. Accepts patterns in the same way as `catalog`.
-    #[structopt(long)]
+    #[clap(long)]
     name: Option<String>,
     /// Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a comma separeted
     /// list of table types. Ommit it to not filter the result by table type at all.
-    #[structopt(long = "type")]
+    #[clap(long = "type")]
     type_: Option<String>,
 }
 
-#[derive(StructOpt)]
+#[derive(Args)]
 struct ListColumnsOpt {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     connect_opts: ConnectOpts,
     /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
     /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
-    #[structopt(long)]
+    #[clap(long)]
     catalog: Option<String>,
     /// Filter result by schema. Accepts patterns in the same way as `catalog`.
-    #[structopt(long)]
+    #[clap(long)]
     schema: Option<String>,
     /// Filter result by table name. Accepts patterns in the same way as `catalog`.
-    #[structopt(long)]
+    #[clap(long)]
     table: Option<String>,
     /// Filter result by column name. Accepts patterns in the same way as `catalog`.
-    #[structopt(long)]
+    #[clap(long)]
     column: Option<String>,
 }
 
 fn main() -> Result<(), Error> {
-    // Parse arguments from command line interface
-    let opt = Cli::from_args_safe()?;
+    // Parse arguments from command line interface. Exit on Error
+    let opt = Cli::parse();
 
     // Initialize logging.
     stderrlog::new()
