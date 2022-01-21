@@ -126,7 +126,7 @@ struct FetchOpt {
     output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Within the SQL text Question marks (`?`) can be
     /// used as placeholders for positional parameters.
-    #[clap(long, short = 'q', conflicts_with = "sql_file")]
+    #[clap(long, short = 'q', conflicts_with = "sql-file")]
     query: Option<String>,
     /// Read the SQL query from a file, rather than a literal passed at the command line. Argument
     /// specifies path to that file. Within the SQL text question marks (`?`) can be used as
