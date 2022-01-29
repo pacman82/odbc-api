@@ -16,6 +16,7 @@ mod environment;
 mod logging;
 mod sql_result;
 mod statement;
+mod sql_char;
 
 pub use {
     as_handle::AsHandle,
@@ -29,6 +30,7 @@ pub use {
     logging::log_diagnostics,
     sql_result::SqlResult,
     statement::{ParameterDescription, Statement, StatementImpl},
+    sql_char::{truncate_slice_to_sql_c_str, c_str_to_string, to_sql_text, text_ref},
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

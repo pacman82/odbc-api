@@ -1,10 +1,9 @@
-use crate::sql_char::SqlChar;
-
 use super::{
     as_handle::AsHandle,
     drop_handle,
     sql_result::{ExtSqlReturn, SqlResult},
     Connection,
+    sql_char::SqlChar,
 };
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,

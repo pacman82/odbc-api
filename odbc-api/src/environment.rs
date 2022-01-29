@@ -1,8 +1,11 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State},
-    Connection, DriverCompleteOption, Error, sql_char::{truncate_slice_to_sql_c_str, c_str_to_string},
+    handles::{
+        self, c_str_to_string, log_diagnostics, text_ref, to_sql_text, truncate_slice_to_sql_c_str,
+        OutputStringBuffer, SqlResult, State,
+    },
+    Connection, DriverCompleteOption, Error,
 };
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
@@ -195,35 +198,13 @@ impl Environment {
         user: &str,
         pwd: &str,
     ) -> Result<Connection<'_>, Error> {
-        let data_source_name = U16String::from_str(data_source_name);
-        let user = U16String::from_str(user);
-        let pwd = U16String::from_str(pwd);
-        self.connect_utf16(&data_source_name, &user, &pwd)
-    }
+        let data_source_name = to_sql_text(data_source_name);
+        let user = to_sql_text(user);
+        let pwd = to_sql_text(pwd);
 
-    /// Allocates a connection handle and establishes connections to a driver and a data source.
-    ///
-    /// * See [Connecting with SQLConnect][1]
-    /// * See [SQLConnectFunction][2]
-    ///
-    /// # Arguments
-    ///
-    /// * `data_source_name` - Data source name. The data might be located on the same computer as
-    /// the program, or on another computer somewhere on a network.
-    /// * `user` - User identifier.
-    /// * `pwd` - Authentication string (typically the password).
-    ///
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
-    /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
-    pub fn connect_utf16(
-        &self,
-        data_source_name: &U16Str,
-        user: &U16Str,
-        pwd: &U16Str,
-    ) -> Result<Connection<'_>, Error> {
         let mut connection = self.allocate_connection()?;
         connection
-            .connect(data_source_name, user, pwd)
+            .connect(text_ref(&data_source_name), text_ref(&user), text_ref(&pwd))
             .into_result(&connection)?;
         Ok(Connection::new(connection))
     }
