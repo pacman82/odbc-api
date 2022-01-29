@@ -28,6 +28,21 @@ readme = "../Readme.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+# Experimental feature to enabling narrow function calls.
+#
+# Many functions which accept string arguments in the ODBC C API come in two different flavours. For
+# example `SQLConnect` and `SQLConnectW`. The former are called narrow function calls and the latter
+# are called wide. They differ in the type they used to encode characters (`u8` vs `u16`). Sadly
+# narrow may not always be assumed to be UTF-8 as it is dependend on the system locale which is
+# usually not UTF-8 on windows system. The wide function calls could be relied upon to always be
+# UTF-16 on any platform, but do not seem to work well with iodbc.
+#
+# Currently this library uses wide function call exclusively. This feature can be enabled to cause
+# compliation against narrow functions, but it is not fully implemented yet.
+narrow=[]
+# default=["narrow"]
+
 [dependencies]
 odbc-sys = "0.21.0"
 thiserror = "1.0.30"

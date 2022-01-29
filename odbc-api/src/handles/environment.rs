@@ -1,3 +1,5 @@
+use crate::sql_char::SqlChar;
+
 use super::{
     as_handle::AsHandle,
     drop_handle,
@@ -6,9 +8,15 @@ use super::{
 };
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
-    HandleType, SQLAllocHandle, SQLDataSourcesW, SQLDriversW, SQLSetEnvAttr,
+    HandleType, SQLAllocHandle, SQLSetEnvAttr,
 };
 use std::ptr::null_mut;
+
+#[cfg(feature = "narrow")]
+use odbc_sys::{SQLDataSources as sql_data_source, SQLDrivers as sql_drivers};
+
+#[cfg(not(feature = "narrow"))]
+use odbc_sys::{SQLDataSourcesW as sql_data_source, SQLDriversW as sql_drivers};
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -159,14 +167,14 @@ impl Environment {
     pub unsafe fn drivers_buffer_fill(
         &self,
         direction: FetchOrientation,
-        buffer_description: &mut Vec<u16>,
-        buffer_attributes: &mut Vec<u16>,
+        buffer_description: &mut Vec<SqlChar>,
+        buffer_attributes: &mut Vec<SqlChar>,
     ) -> Option<SqlResult<()>> {
         // Use full capacity
         buffer_description.resize(buffer_description.capacity(), 0);
         buffer_attributes.resize(buffer_attributes.capacity(), 0);
 
-        SQLDriversW(
+        sql_drivers(
             self.handle,
             direction,
             buffer_description.as_mut_ptr(),
@@ -176,7 +184,7 @@ impl Environment {
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_opt_sql_result("SQLDriversW")
+        .into_opt_sql_result("SQLDrivers")
     }
 
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and
@@ -211,7 +219,7 @@ impl Environment {
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
         // Determine required buffer size
-        SQLDriversW(
+        sql_drivers(
             self.handle,
             direction,
             null_mut(),
@@ -221,7 +229,7 @@ impl Environment {
             0,
             &mut length_attributes,
         )
-        .into_opt_sql_result("SQLDriversW")
+        .into_opt_sql_result("SQLDrivers")
         .map(|res| res.on_success(|| (length_description, length_attributes)))
     }
 
@@ -291,14 +299,14 @@ impl Environment {
     pub unsafe fn data_source_buffer_fill(
         &self,
         direction: FetchOrientation,
-        buffer_name: &mut Vec<u16>,
-        buffer_description: &mut Vec<u16>,
+        buffer_name: &mut Vec<SqlChar>,
+        buffer_description: &mut Vec<SqlChar>,
     ) -> Option<SqlResult<()>> {
         // Use full capacity
         buffer_name.resize(buffer_name.capacity(), 0);
         buffer_description.resize(buffer_description.capacity(), 0);
 
-        SQLDataSourcesW(
+        sql_data_source(
             self.handle,
             direction,
             buffer_name.as_mut_ptr(),
@@ -308,6 +316,6 @@ impl Environment {
             buffer_description.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_opt_sql_result("SQLDataSourceW")
+        .into_opt_sql_result("SQLDataSource")
     }
 }

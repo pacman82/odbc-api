@@ -2,11 +2,11 @@ use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
     handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State},
-    Connection, DriverCompleteOption, Error,
+    Connection, DriverCompleteOption, Error, sql_char::{truncate_slice_to_sql_c_str, c_str_to_string},
 };
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
-use widestring::{U16CStr, U16Str, U16String};
+use widestring::{U16Str, U16String};
 
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
@@ -501,11 +501,11 @@ impl Environment {
                 .transpose()?
                 .is_some()
             {
-                let description = U16CStr::from_slice_truncate(&desc_buf).unwrap();
-                let attributes = U16CStr::from_slice_truncate(&attr_buf).unwrap();
+                let description = truncate_slice_to_sql_c_str(&desc_buf);
+                let attributes = truncate_slice_to_sql_c_str(&attr_buf);
 
-                let description = description.to_string().unwrap();
-                let attributes = attributes.to_string().unwrap();
+                let description = c_str_to_string(description);
+                let attributes = c_str_to_string(attributes);
                 let attributes = attributes_iter(&attributes).collect();
 
                 driver_info.push(DriverInfo {
@@ -612,11 +612,11 @@ impl Environment {
                 .is_some();
 
             while not_empty {
-                let server_name = U16CStr::from_slice_truncate(&server_name_buf).unwrap();
-                let driver = U16CStr::from_slice_truncate(&driver_buf).unwrap();
+                let server_name = truncate_slice_to_sql_c_str(&server_name_buf);
+                let driver = truncate_slice_to_sql_c_str(&driver_buf);
 
-                let server_name = server_name.to_string().unwrap();
-                let driver = driver.to_string().unwrap();
+                let server_name = c_str_to_string(server_name);
+                let driver = c_str_to_string(driver);
 
                 data_source_info.push(DataSourceInfo {
                     server_name,
