@@ -1,5 +1,9 @@
 # Changelog
 
+## (next)
+
+* Removed `Environment::connect_utf16`.
+
 ## 0.33.2
 
 * No changes (Release is currently tied to odbcsv)

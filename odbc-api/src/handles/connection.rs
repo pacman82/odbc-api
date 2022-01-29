@@ -5,14 +5,21 @@ use super::{
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
     SqlResult,
+    sql_char::{SqlStr, text_ptr},
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLConnectW, SQLDisconnect, SQLDriverConnectW,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLDriverConnectW,
     SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
+
+#[cfg(feature = "narrow")]
+use odbc_sys::SQLConnect as sql_connect;
+
+#[cfg(not(feature = "narrow"))]
+use odbc_sys::SQLConnectW as sql_connect;
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
@@ -71,21 +78,21 @@ impl<'c> Connection<'c> {
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
     pub fn connect(
         &mut self,
-        data_source_name: &U16Str,
-        user: &U16Str,
-        pwd: &U16Str,
+        data_source_name: &SqlStr,
+        user: &SqlStr,
+        pwd: &SqlStr,
     ) -> SqlResult<()> {
         unsafe {
-            SQLConnectW(
+            sql_connect(
                 self.handle,
-                buf_ptr(data_source_name.as_slice()),
+                text_ptr(data_source_name),
                 data_source_name.len().try_into().unwrap(),
-                buf_ptr(user.as_slice()),
+                text_ptr(user),
                 user.len().try_into().unwrap(),
-                buf_ptr(pwd.as_slice()),
+                text_ptr(pwd),
                 pwd.len().try_into().unwrap(),
             )
-            .into_sql_result("SQLConnectW")
+            .into_sql_result("SQLConnect")
         }
     }
 

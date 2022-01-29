@@ -20,7 +20,6 @@ mod prebound;
 mod prepared;
 mod result_set_metadata;
 mod statement_connection;
-mod sql_char;
 
 pub mod buffers;
 pub mod guide;

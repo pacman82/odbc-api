@@ -40,6 +40,9 @@ readme = "../Readme.md"
 #
 # Currently this library uses wide function call exclusively. This feature can be enabled to cause
 # compliation against narrow functions, but it is not fully implemented yet.
+#
+# Note that this is the encoding used for statement text and other string arguments, not for the
+# payload of VARCHAR columns, or other column types in the result set.
 narrow=[]
 # default=["narrow"]
 
