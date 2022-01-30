@@ -1,10 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
-    handles::{
-        self, c_str_to_string, log_diagnostics, text_ref, to_sql_text, truncate_slice_to_sql_c_str,
-        OutputStringBuffer, SqlResult, State,
-    },
+    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State, SzBuffer, SqlText},
     Connection, DriverCompleteOption, Error,
 };
 use log::debug;
@@ -198,13 +195,13 @@ impl Environment {
         user: &str,
         pwd: &str,
     ) -> Result<Connection<'_>, Error> {
-        let data_source_name = to_sql_text(data_source_name);
-        let user = to_sql_text(user);
-        let pwd = to_sql_text(pwd);
+        let data_source_name = SqlText::new(data_source_name);
+        let user = SqlText::new(user);
+        let pwd = SqlText::new(pwd);
 
         let mut connection = self.allocate_connection()?;
         connection
-            .connect(text_ref(&data_source_name), text_ref(&user), text_ref(&pwd))
+            .connect(&data_source_name, &user, &pwd)
             .into_result(&connection)?;
         Ok(Connection::new(connection))
     }
@@ -472,21 +469,23 @@ impl Environment {
             }
 
             // Allocate +1 character extra for terminating zero
-            let mut desc_buf = vec![0; desc_len as usize + 1];
-            let mut attr_buf = vec![0; attr_len as usize + 1];
+            let mut desc_buf = SzBuffer::with_capacity(desc_len as usize);
+            let mut attr_buf = SzBuffer::with_capacity(attr_len as usize);
 
             while self
                 .environment
-                .drivers_buffer_fill(FetchOrientation::Next, &mut desc_buf, &mut attr_buf)
+                .drivers_buffer_fill(
+                    FetchOrientation::Next,
+                    desc_buf.mut_buf(),
+                    attr_buf.mut_buf(),
+                )
                 .map(|res| res.into_result(&self.environment))
                 .transpose()?
                 .is_some()
             {
-                let description = truncate_slice_to_sql_c_str(&desc_buf);
-                let attributes = truncate_slice_to_sql_c_str(&attr_buf);
+                let description = desc_buf.to_utf8();
+                let attributes = attr_buf.to_utf8();
 
-                let description = c_str_to_string(description);
-                let attributes = c_str_to_string(attributes);
                 let attributes = attributes_iter(&attributes).collect();
 
                 driver_info.push(DriverInfo {
@@ -582,22 +581,19 @@ impl Environment {
             }
 
             // Allocate +1 character extra for terminating zero
-            let mut server_name_buf = vec![0; server_name_len as usize + 1];
-            let mut driver_buf = vec![0; driver_len as usize + 1];
+            let mut server_name_buf = SzBuffer::with_capacity(server_name_len as usize);
+            let mut driver_buf = SzBuffer::with_capacity(driver_len as usize);
 
             let mut not_empty = self
                 .environment
-                .data_source_buffer_fill(direction, &mut server_name_buf, &mut driver_buf)
+                .data_source_buffer_fill(direction, server_name_buf.mut_buf(), driver_buf.mut_buf())
                 .map(|res| res.into_result(&self.environment))
                 .transpose()?
                 .is_some();
 
             while not_empty {
-                let server_name = truncate_slice_to_sql_c_str(&server_name_buf);
-                let driver = truncate_slice_to_sql_c_str(&driver_buf);
-
-                let server_name = c_str_to_string(server_name);
-                let driver = c_str_to_string(driver);
+                let server_name = server_name_buf.to_utf8();
+                let driver = driver_buf.to_utf8();
 
                 data_source_info.push(DataSourceInfo {
                     server_name,
@@ -607,8 +603,8 @@ impl Environment {
                     .environment
                     .data_source_buffer_fill(
                         FetchOrientation::Next,
-                        &mut server_name_buf,
-                        &mut driver_buf,
+                        server_name_buf.mut_buf(),
+                        driver_buf.mut_buf(),
                     )
                     .map(|res| res.into_result(&self.environment))
                     .transpose()?

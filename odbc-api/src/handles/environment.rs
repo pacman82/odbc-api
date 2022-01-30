@@ -166,13 +166,10 @@ impl Environment {
     pub unsafe fn drivers_buffer_fill(
         &self,
         direction: FetchOrientation,
-        buffer_description: &mut Vec<SqlChar>,
-        buffer_attributes: &mut Vec<SqlChar>,
+        buffer_description: &mut [SqlChar],
+        buffer_attributes: &mut [SqlChar],
     ) -> Option<SqlResult<()>> {
-        // Use full capacity
-        buffer_description.resize(buffer_description.capacity(), 0);
-        buffer_attributes.resize(buffer_attributes.capacity(), 0);
-
+        
         sql_drivers(
             self.handle,
             direction,
@@ -298,13 +295,9 @@ impl Environment {
     pub unsafe fn data_source_buffer_fill(
         &self,
         direction: FetchOrientation,
-        buffer_name: &mut Vec<SqlChar>,
-        buffer_description: &mut Vec<SqlChar>,
+        buffer_name: &mut [SqlChar],
+        buffer_description: &mut [SqlChar],
     ) -> Option<SqlResult<()>> {
-        // Use full capacity
-        buffer_name.resize(buffer_name.capacity(), 0);
-        buffer_description.resize(buffer_description.capacity(), 0);
-
         sql_data_source(
             self.handle,
             direction,
