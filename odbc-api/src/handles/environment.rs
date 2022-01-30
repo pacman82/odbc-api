@@ -12,10 +12,10 @@ use odbc_sys::{
 use std::ptr::null_mut;
 
 #[cfg(feature = "narrow")]
-use odbc_sys::{SQLDataSources as sql_data_source, SQLDrivers as sql_drivers};
+use odbc_sys::{SQLDataSources as sql_data_sources, SQLDrivers as sql_drivers};
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::{SQLDataSourcesW as sql_data_source, SQLDriversW as sql_drivers};
+use odbc_sys::{SQLDataSourcesW as sql_data_sources, SQLDriversW as sql_drivers};
 
 /// An `Environment` is a global context, in which to access data.
 ///
@@ -297,7 +297,7 @@ impl Environment {
         buffer_name: &mut [SqlChar],
         buffer_description: &mut [SqlChar],
     ) -> Option<SqlResult<()>> {
-        sql_data_source(
+        sql_data_sources(
             self.handle,
             direction,
             buffer_name.as_mut_ptr(),
@@ -307,6 +307,6 @@ impl Environment {
             buffer_description.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_opt_sql_result("SQLDataSource")
+        .into_opt_sql_result("SQLDataSources")
     }
 }

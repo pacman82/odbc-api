@@ -124,9 +124,9 @@ impl SzBuffer {
         c_str.to_string_lossy().into_owned()
     }
 
-    /// Length in characters excluding terminating zero
-    pub fn len_char(&self) -> i16 {
-        (self.buffer.len() - 1).try_into().unwrap()
+    /// Length in characters including space for terminating zero
+    pub fn len_buf(&self) -> i16 {
+        self.buffer.len().try_into().unwrap()
     }
 
     pub fn mut_ptr(&mut self) -> *mut SqlChar {
@@ -158,11 +158,11 @@ impl OutputStringBuffer {
         self.buffer.mut_ptr()
     }
 
-    /// Length of the internal buffer in characters excluding the terminating zero.
+    /// Length of the internal buffer in characters including the terminating zero.
     pub fn buf_len(&self) -> i16 {
         // Since buffer must always be able to hold at least one element, substracting `1` is always
         // defined
-        self.buffer.len_char()
+        self.buffer.len_buf()
     }
 
     /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
@@ -177,6 +177,6 @@ impl OutputStringBuffer {
 
     /// True if the buffer had not been large enough to hold the string.
     pub fn is_truncated(&self) -> bool {
-        self.actual_length > self.buffer.len_char()
+        self.actual_length >= self.buffer.len_buf()
     }
 }
