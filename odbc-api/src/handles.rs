@@ -14,23 +14,22 @@ mod data_type;
 mod diagnostics;
 mod environment;
 mod logging;
+mod sql_char;
 mod sql_result;
 mod statement;
-mod sql_char;
 
 pub use {
     as_handle::AsHandle,
     bind::{CData, CDataMut, DelayedInput, HasDataType},
-    buffer::OutputStringBuffer,
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
     diagnostics::{Record, State},
     environment::Environment,
     logging::log_diagnostics,
+    sql_char::{OutputStringBuffer, SqlText, SzBuffer},
     sql_result::SqlResult,
     statement::{ParameterDescription, Statement, StatementImpl},
-    sql_char::{SzBuffer, SqlText},
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

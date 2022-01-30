@@ -1,9 +1,9 @@
 use super::{
     as_handle::AsHandle,
     drop_handle,
+    sql_char::SqlChar,
     sql_result::{ExtSqlReturn, SqlResult},
     Connection,
-    sql_char::SqlChar,
 };
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
@@ -169,7 +169,6 @@ impl Environment {
         buffer_description: &mut [SqlChar],
         buffer_attributes: &mut [SqlChar],
     ) -> Option<SqlResult<()>> {
-        
         sql_drivers(
             self.handle,
             direction,

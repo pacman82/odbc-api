@@ -453,17 +453,11 @@ fn fetch_with_query_read_from_file() {
 
 #[test]
 fn list_columns_with_maria_db() {
-
     // Maria DB driver reports very large column sizes, likely to cause an out of memory if just
     // allocated.
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
-            "-vvvv",
-            "list-columns",
-            "--connection-string",
-            MARIADB,
-        ])
+        .args(&["-vvvv", "list-columns", "--connection-string", MARIADB])
         .assert()
         .success();
 }
