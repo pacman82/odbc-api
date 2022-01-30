@@ -10,7 +10,7 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeColW,
+    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW,
     SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
     SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW,
     SqlDataType, SqlReturn, StatementAttribute, ULen,
@@ -22,6 +22,12 @@ use std::{
     ptr::{null, null_mut},
 };
 use widestring::U16Str;
+
+#[cfg(feature = "narrow")]
+use odbc_sys::{SQLDescribeCol as sql_describe_col};
+
+#[cfg(not(feature = "narrow"))]
+use odbc_sys::{SQLDescribeColW as sql_describe_col};
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
 pub struct StatementImpl<'s> {
@@ -181,7 +187,7 @@ pub trait Statement: AsHandle {
         let mut nullable = odbc_sys::Nullability::UNKNOWN;
 
         let res = unsafe {
-            SQLDescribeColW(
+            sql_describe_col(
                 self.as_sys(),
                 column_number,
                 mut_buf_ptr(name),
@@ -192,7 +198,7 @@ pub trait Statement: AsHandle {
                 &mut decimal_digits,
                 &mut nullable,
             )
-            .into_sql_result("SQLDescribeColW")
+            .into_sql_result("SQLDescribeCol")
         };
 
         if res.is_err() {

@@ -4,10 +4,13 @@
 use super::buffer::{buf_ptr, mut_buf_ptr};
 
 #[cfg(feature = "narrow")]
-use std::ffi::CStr;
+use std::{ffi::CStr, string::FromUtf8Error};
 
 #[cfg(not(feature = "narrow"))]
-use std::marker::PhantomData;
+use std::{
+    char::{decode_utf16, DecodeUtf16Error},
+    marker::PhantomData,
+};
 
 #[cfg(not(feature = "narrow"))]
 use widestring::{U16CStr, U16String};
@@ -16,6 +19,20 @@ use widestring::{U16CStr, U16String};
 pub type SqlChar = u8;
 #[cfg(not(feature = "narrow"))]
 pub type SqlChar = u16;
+
+#[cfg(feature = "narrow")]
+pub type DecodingError = FromUtf8Error;
+#[cfg(not(feature = "narrow"))]
+pub type DecodingError = DecodeUtf16Error;
+
+#[cfg(feature = "narrow")]
+pub fn vec_to_utf8(text: &[u8]) -> Result<String, FromUtf8Error> {
+    String::from_utf8(text.to_owned())
+}
+#[cfg(not(feature = "narrow"))]
+pub fn vec_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
+    decode_utf16(text.iter().copied()).collect()
+}
 
 /// Handles conversion from UTF-8 string slices to ODBC SQL char encoding. Depending on the
 /// conditional compiliation due to feature flags, the UTF-8 strings are either passed without
