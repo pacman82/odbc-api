@@ -1,7 +1,7 @@
 //! The idea is to handle most of the conditional compilation around different SQL character types
 //! in this module, so the rest of the crate doesn't have to.
 
-use super::buffer::buf_ptr;
+use super::buffer::{buf_ptr, mut_buf_ptr};
 
 #[cfg(feature = "narrow")]
 use std::ffi::CStr;
@@ -59,12 +59,9 @@ impl<'a> SqlText<'a> {
         buf_ptr(self.text.as_bytes())
     }
 
-    pub fn len(&self) -> i16 {
+    /// Length in characters
+    pub fn len_char(&self) -> i16 {
         self.text.len().try_into().unwrap()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.text.is_empty()
     }
 }
 
@@ -98,7 +95,8 @@ impl SzBuffer {
     #[cfg(feature = "narrow")]
     pub fn to_utf8(&self) -> String {
         // Truncate slice at first zero.
-        let end = self.buffer
+        let end = self
+            .buffer
             .iter()
             .enumerate()
             .find(|(_index, &character)| character == b'\0')
@@ -106,5 +104,61 @@ impl SzBuffer {
             .0;
         let c_str = unsafe { CStr::from_bytes_with_nul_unchecked(&self.buffer[..=end]) };
         c_str.to_string_lossy().into_owned()
+    }
+
+    /// Length in characters excluding terminating zero
+    pub fn len_char(&self) -> i16 {
+        (self.buffer.len() - 1).try_into().unwrap()
+    }
+
+    pub fn mut_ptr(&mut self) -> *mut SqlChar {
+        mut_buf_ptr(&mut self.buffer)
+    }
+}
+
+/// We use this as an output buffer for strings. Allows for detecting truncation.
+pub struct OutputStringBuffer {
+    /// Buffer holding the string. Must also contains space for a terminating zero.
+    buffer: SzBuffer,
+    /// After the buffer has been filled, this should contain the actual length of the string. Can
+    /// be used to detect truncation.
+    actual_length: i16,
+}
+
+impl OutputStringBuffer {
+    /// Creates a new instance of an output string buffer which can hold strings up to a size of
+    /// `max_str_len` characters.
+    pub fn with_buffer_size(max_str_len: usize) -> Self {
+        Self {
+            buffer: SzBuffer::with_capacity(max_str_len),
+            actual_length: 0,
+        }
+    }
+
+    /// Ptr to the internal buffer. Used by ODBC API calls to fill the buffer.
+    pub fn mut_buf_ptr(&mut self) -> *mut SqlChar {
+        self.buffer.mut_ptr()
+    }
+
+    /// Length of the internal buffer in characters excluding the terminating zero.
+    pub fn buf_len(&self) -> i16 {
+        // Since buffer must always be able to hold at least one element, substracting `1` is always
+        // defined
+        self.buffer.len_char()
+    }
+
+    /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
+    pub fn mut_actual_len_ptr(&mut self) -> *mut i16 {
+        &mut self.actual_length as *mut i16
+    }
+
+    /// Call this method to extract string from buffer after ODBC has filled it.
+    pub fn to_utf8(&self) -> String {
+        self.buffer.to_utf8()
+    }
+
+    /// True if the buffer had not been large enough to hold the string.
+    pub fn is_truncated(&self) -> bool {
+        self.actual_length > self.buffer.len_char()
     }
 }

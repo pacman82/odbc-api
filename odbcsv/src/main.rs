@@ -1,4 +1,5 @@
 use anyhow::{bail, Error};
+use clap::{Args, Parser};
 use log::info;
 use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, Connection, Cursor, DriverCompleteOption,
@@ -9,7 +10,6 @@ use std::{
     io::{stdin, stdout, Read, Write},
     path::PathBuf,
 };
-use clap::{Parser, Args};
 
 /// Query an ODBC data source and output the result as CSV.
 #[derive(Parser)]

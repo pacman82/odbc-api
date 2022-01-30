@@ -1,25 +1,24 @@
 use super::{
     as_handle::AsHandle,
-    buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
+    buffer::{clamp_int, clamp_small_int, mut_buf_ptr},
     drop_handle,
     sql_char::SqlText,
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
-    SqlResult,
+    OutputStringBuffer, SqlResult,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
-    SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLGetConnectAttrW,
+    SQLGetInfoW, SQLSetConnectAttrW,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
-use widestring::U16Str;
 
 #[cfg(feature = "narrow")]
-use odbc_sys::SQLConnect as sql_connect;
+use odbc_sys::{SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect};
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::SQLConnectW as sql_connect;
+use odbc_sys::{SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect};
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
@@ -76,16 +75,21 @@ impl<'c> Connection<'c> {
     ///
     /// [1]: https://docs.microsoft.com//sql/odbc/reference/develop-app/connecting-with-sqlconnect
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
-    pub fn connect(&mut self, data_source_name: &SqlText, user: &SqlText, pwd: &SqlText) -> SqlResult<()> {
+    pub fn connect(
+        &mut self,
+        data_source_name: &SqlText,
+        user: &SqlText,
+        pwd: &SqlText,
+    ) -> SqlResult<()> {
         unsafe {
             sql_connect(
                 self.handle,
                 data_source_name.ptr(),
-                data_source_name.len(),
+                data_source_name.len_char(),
                 user.ptr(),
-                user.len(),
+                user.len_char(),
                 pwd.ptr(),
-                pwd.len(),
+                pwd.len_char(),
             )
             .into_sql_result("SQLConnect")
         }
@@ -94,7 +98,7 @@ impl<'c> Connection<'c> {
     /// An alternative to `connect`. It supports data sources that require more connection
     /// information than the three arguments in `connect` and data sources that are not defined in
     /// the system information.
-    pub fn connect_with_connection_string(&mut self, connection_string: &U16Str) -> SqlResult<()> {
+    pub fn connect_with_connection_string(&mut self, connection_string: &SqlText) -> SqlResult<()> {
         unsafe {
             let parent_window = null_mut();
             let completed_connection_string = None;
@@ -122,7 +126,7 @@ impl<'c> Connection<'c> {
     /// `parent_window` must either be a valid window handle or `NULL`.
     pub unsafe fn driver_connect(
         &mut self,
-        connection_string: &U16Str,
+        connection_string: &SqlText,
         parent_window: HWnd,
         mut completed_connection_string: Option<&mut OutputStringBuffer>,
         driver_completion: DriverConnectOption,
@@ -132,17 +136,17 @@ impl<'c> Connection<'c> {
             .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
             .unwrap_or((null_mut(), 0, null_mut()));
 
-        SQLDriverConnectW(
+        sql_driver_connect(
             self.handle,
             parent_window,
-            buf_ptr(connection_string.as_slice()),
-            connection_string.len().try_into().unwrap(),
+            connection_string.ptr(),
+            connection_string.len_char(),
             out_connection_string,
             out_buf_len,
             actual_len_ptr,
             driver_completion,
         )
-        .into_opt_sql_result("SQLDriverConnectW")
+        .into_opt_sql_result("SQLDriverConnect")
     }
 
     /// Disconnect from an ODBC data source.

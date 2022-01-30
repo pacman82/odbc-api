@@ -1,12 +1,11 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, State, SzBuffer, SqlText},
+    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer},
     Connection, DriverCompleteOption, Error,
 };
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
-use widestring::{U16Str, U16String};
 
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
@@ -235,24 +234,10 @@ impl Environment {
         &self,
         connection_string: &str,
     ) -> Result<Connection<'_>, Error> {
-        let connection_string = U16String::from_str(connection_string);
-        self.connect_with_connection_string_utf16(&connection_string)
-    }
-
-    /// Allocates a connection handle and establishes connections to a driver and a data source.
-    ///
-    /// An alternative to `connect`. It supports data sources that require more connection
-    /// information than the three arguments in `connect` and data sources that are not defined in
-    /// the system information.
-    ///
-    /// To find out your connection string try: <https://www.connectionstrings.com/>
-    pub fn connect_with_connection_string_utf16(
-        &self,
-        connection_string: &U16Str,
-    ) -> Result<Connection<'_>, Error> {
+        let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
         connection
-            .connect_with_connection_string(connection_string)
+            .connect_with_connection_string(&connection_string)
             .into_result(&connection)?;
         Ok(Connection::new(connection))
     }
@@ -411,7 +396,7 @@ impl Environment {
         parent_window: HWnd,
     ) -> Result<Connection<'_>, Error> {
         let mut connection = self.allocate_connection()?;
-        let connection_string = U16String::from_str(connection_string);
+        let connection_string = SqlText::new(connection_string);
 
         connection
             .driver_connect(

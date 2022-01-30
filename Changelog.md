@@ -3,6 +3,7 @@
 ## (next)
 
 * Removed `Environment::connect_utf16`.
+* Removed `OutputStringBuffer::ucstr`.
 
 ## 0.33.2
 
