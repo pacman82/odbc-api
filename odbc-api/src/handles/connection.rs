@@ -2,15 +2,15 @@ use super::{
     as_handle::AsHandle,
     buffer::{buf_ptr, clamp_int, clamp_small_int, mut_buf_ptr, OutputStringBuffer},
     drop_handle,
+    sql_char::SqlText,
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
     SqlResult,
-    sql_char::{SqlStr, text_ptr},
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLDriverConnectW,
-    SQLEndTran, SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLDriverConnectW, SQLEndTran,
+    SQLGetConnectAttrW, SQLGetInfoW, SQLSetConnectAttrW,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 use widestring::U16Str;
@@ -76,21 +76,16 @@ impl<'c> Connection<'c> {
     ///
     /// [1]: https://docs.microsoft.com//sql/odbc/reference/develop-app/connecting-with-sqlconnect
     /// [2]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqlconnect-function
-    pub fn connect(
-        &mut self,
-        data_source_name: &SqlStr,
-        user: &SqlStr,
-        pwd: &SqlStr,
-    ) -> SqlResult<()> {
+    pub fn connect(&mut self, data_source_name: &SqlText, user: &SqlText, pwd: &SqlText) -> SqlResult<()> {
         unsafe {
             sql_connect(
                 self.handle,
-                text_ptr(data_source_name),
-                data_source_name.len().try_into().unwrap(),
-                text_ptr(user),
-                user.len().try_into().unwrap(),
-                text_ptr(pwd),
-                pwd.len().try_into().unwrap(),
+                data_source_name.ptr(),
+                data_source_name.len(),
+                user.ptr(),
+                user.len(),
+                pwd.ptr(),
+                pwd.len(),
             )
             .into_sql_result("SQLConnect")
         }
