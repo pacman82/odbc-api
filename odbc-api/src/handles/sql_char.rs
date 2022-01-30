@@ -94,7 +94,8 @@ impl SzBuffer {
     /// terminating zero, so the caller should not factor it into the size of capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            buffer: vec![0; capacity],
+            // Allocate +1 character extra for terminating zero
+            buffer: vec![0; capacity + 1],
         }
     }
 
