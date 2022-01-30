@@ -565,7 +565,6 @@ impl Environment {
                 driver_len = max(candidate_decs_len, driver_len);
             }
 
-            // Allocate +1 character extra for terminating zero
             let mut server_name_buf = SzBuffer::with_capacity(server_name_len as usize);
             let mut driver_buf = SzBuffer::with_capacity(driver_len as usize);
 
