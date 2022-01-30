@@ -118,6 +118,15 @@ fn connect_to_db(profile: &Profile) {
 
 #[test]
 fn describe_columns() {
+    #[cfg(feature = "narrow")]
+    pub fn utf8_to_vec_char(text: &str) -> Vec<u8> {
+        text.to_owned().into_bytes()
+    }
+    #[cfg(not(feature = "narrow"))]
+    pub fn utf8_to_vec_char(text: &str) -> Vec<u16> {
+        U16String::from_str(text).into_vec()
+    }
+
     let conn = MSSQL.connection().unwrap();
     setup_empty_table(
         &conn,
@@ -145,7 +154,7 @@ fn describe_columns() {
     let mut actual = ColumnDescription::default();
 
     let desc = |name, data_type, nullability| ColumnDescription {
-        name: U16String::from_str(name).into_vec(),
+        name: utf8_to_vec_char(name),
         data_type,
         nullability,
     };
