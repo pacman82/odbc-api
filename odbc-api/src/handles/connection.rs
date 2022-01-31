@@ -10,7 +10,7 @@ use super::{
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLGetInfoW,
-    SQLSetConnectAttrW,
+    SQLSetConnectAttrW, IS_UINTEGER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -344,7 +344,7 @@ impl<'c> Connection<'c> {
     /// the connection is still active.
     pub fn is_dead(&self) -> SqlResult<bool> {
         unsafe {
-            self.numeric_attribute(ConnectionAttribute::ConnectionDead)
+            self.attribute_u32(ConnectionAttribute::ConnectionDead)
                 .map(|v| match v {
                     0 => false,
                     1 => true,
@@ -356,13 +356,13 @@ impl<'c> Connection<'c> {
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.
-    unsafe fn numeric_attribute(&self, attribute: ConnectionAttribute) -> SqlResult<usize> {
-        let mut out: usize = 0;
+    unsafe fn attribute_u32(&self, attribute: ConnectionAttribute) -> SqlResult<u32> {
+        let mut out: u32 = 0;
         sql_get_connect_attr(
             self.handle,
             attribute,
-            &mut out as *mut usize as *mut c_void,
-            0,
+            &mut out as *mut u32 as *mut c_void,
+            IS_UINTEGER,
             null_mut(),
         )
         .into_sql_result("SQLGetConnectAttr")
