@@ -26,11 +26,11 @@ pub type DecodingError = FromUtf8Error;
 pub type DecodingError = DecodeUtf16Error;
 
 #[cfg(feature = "narrow")]
-pub fn vec_to_utf8(text: &[u8]) -> Result<String, FromUtf8Error> {
+pub fn slice_to_utf8(text: &[u8]) -> Result<String, FromUtf8Error> {
     String::from_utf8(text.to_owned())
 }
 #[cfg(not(feature = "narrow"))]
-pub fn vec_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
+pub fn slice_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
     decode_utf16(text.iter().copied()).collect()
 }
 
@@ -85,10 +85,11 @@ impl<'a> SqlText<'a> {
 /// Use this buffer type to fetch zero terminated strings from the ODBC API. Either allocates a
 /// buffer for wide or narrow strings dependend on the features set.
 pub struct SzBuffer {
-    pub buffer: Vec<SqlChar>,
+    buffer: Vec<SqlChar>,
 }
 
 impl SzBuffer {
+
     /// Creates a buffer which can hold at least `capacity` characters, excluding the terminating
     /// zero. Or phrased differently. It will allocate one additional character to hold the
     /// terminating zero, so the caller should not factor it into the size of capacity.
@@ -125,8 +126,8 @@ impl SzBuffer {
     }
 
     /// Length in characters including space for terminating zero
-    pub fn len_buf(&self) -> i16 {
-        self.buffer.len().try_into().unwrap()
+    pub fn len_buf(&self) -> usize {
+        self.buffer.len()
     }
 
     pub fn mut_ptr(&mut self) -> *mut SqlChar {
@@ -162,7 +163,7 @@ impl OutputStringBuffer {
     pub fn buf_len(&self) -> i16 {
         // Since buffer must always be able to hold at least one element, substracting `1` is always
         // defined
-        self.buffer.len_buf()
+        self.buffer.len_buf().try_into().unwrap()
     }
 
     /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
@@ -177,6 +178,6 @@ impl OutputStringBuffer {
 
     /// True if the buffer had not been large enough to hold the string.
     pub fn is_truncated(&self) -> bool {
-        self.actual_length >= self.buffer.len_buf()
+        self.actual_length >= self.buffer.len_buf().try_into().unwrap()
     }
 }
