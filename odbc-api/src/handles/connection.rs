@@ -2,23 +2,29 @@ use super::{
     as_handle::AsHandle,
     buffer::{clamp_int, clamp_small_int, mut_buf_ptr},
     drop_handle,
-    sql_char::SqlText,
+    sql_char::{SqlChar, SqlText},
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
     OutputStringBuffer, SqlResult,
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLGetConnectAttrW,
-    SQLGetInfoW, SQLSetConnectAttrW,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLGetInfoW,
+    SQLSetConnectAttrW,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
 #[cfg(feature = "narrow")]
-use odbc_sys::{SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect};
+use odbc_sys::{
+    SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect,
+    SQLGetConnectAttr as sql_get_connect_attr,
+};
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::{SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect};
+use odbc_sys::{
+    SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect,
+    SQLGetConnectAttrW as sql_get_connect_attr,
+};
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
@@ -284,36 +290,44 @@ impl<'c> Connection<'c> {
 
     /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
-    pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> SqlResult<()> {
+    pub fn fetch_current_catalog(&self, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i32 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
+        // Size of charactor in bytes
+        let sc = size_of::<SqlChar>();
+        // and as an i32 so we don't have to cast every time we use it
+        let sci = sc as i32;
+        // Buffer length in bytes
+        let buffer_length = (buf.len() * sc).try_into().unwrap();
 
         unsafe {
-            let mut res = SQLGetConnectAttrW(
+            let mut res = sql_get_connect_attr(
                 self.handle,
                 ConnectionAttribute::CurrentCatalog,
                 mut_buf_ptr(buf) as Pointer,
-                (buf.len() * 2).try_into().unwrap(),
+                buffer_length,
                 &mut string_length_in_bytes as *mut i32,
             )
-            .into_sql_result("SQLGetConnectAttrW");
+            .into_sql_result("SQLGetConnectAttr");
 
             if res.is_err() {
                 return res;
             }
 
-            if clamp_int(buf.len() * 2) < string_length_in_bytes + 2 {
-                buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
-                res = SQLGetConnectAttrW(
+            let is_truncated = clamp_int(buf.len() * sc) < string_length_in_bytes + sci;
+            if is_truncated {
+                buf.resize((string_length_in_bytes / sci + 1).try_into().unwrap(), 0);
+                let buffer_length = (buf.len() * sc).try_into().unwrap();
+                res = sql_get_connect_attr(
                     self.handle,
                     ConnectionAttribute::CurrentCatalog,
                     mut_buf_ptr(buf) as Pointer,
-                    (buf.len() * 2).try_into().unwrap(),
+                    buffer_length,
                     &mut string_length_in_bytes as *mut i32,
                 )
-                .into_sql_result("SQLGetConnectAttrW");
+                .into_sql_result("SQLGetConnectAttr");
             }
 
             if res.is_err() {
@@ -321,7 +335,7 @@ impl<'c> Connection<'c> {
             }
 
             // Resize buffer to exact string length without terminal zero
-            buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+            buf.resize((string_length_in_bytes / sci).try_into().unwrap(), 0);
             res
         }
     }
@@ -344,14 +358,14 @@ impl<'c> Connection<'c> {
     /// Caller must ensure connection attribute is numeric.
     unsafe fn numeric_attribute(&self, attribute: ConnectionAttribute) -> SqlResult<usize> {
         let mut out: usize = 0;
-        SQLGetConnectAttrW(
+        sql_get_connect_attr(
             self.handle,
             attribute,
             &mut out as *mut usize as *mut c_void,
             0,
             null_mut(),
         )
-        .into_sql_result("SQLGetConnectAttrW")
+        .into_sql_result("SQLGetConnectAttr")
         .on_success(|| out)
     }
 }

@@ -4,6 +4,8 @@
 
 * Removed `Environment::connect_utf16`.
 * Removed `OutputStringBuffer::ucstr`.
+* Removed `Connection::fetch_current_catalog`.
+* updated to `odbc-sys 0.21.0`
 
 ## 0.33.2
 

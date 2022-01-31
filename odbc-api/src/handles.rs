@@ -27,7 +27,7 @@ pub use {
     diagnostics::{Record, State},
     environment::Environment,
     logging::log_diagnostics,
-    sql_char::{OutputStringBuffer, SqlText, SzBuffer},
+    sql_char::{OutputStringBuffer, SqlText, SzBuffer, slice_to_utf8},
     sql_result::SqlResult,
     statement::{ParameterDescription, Statement, StatementImpl},
 };

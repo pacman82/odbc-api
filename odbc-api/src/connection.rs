@@ -1,7 +1,7 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
     execute::{execute_columns, execute_tables, execute_with_parameters},
-    handles::{self, State, Statement, StatementImpl},
+    handles::{self, slice_to_utf8, State, Statement, StatementImpl},
     parameter_collection::ParameterRefCollection,
     statement_connection::StatementConnection,
     CursorImpl, Error, Preallocated, Prepared,
@@ -363,20 +363,14 @@ impl<'c> Connection<'c> {
             .into_result(&self.connection)
     }
 
-    /// Fetch the name of the current catalog being used by the connection and store it into the
-    /// provided `buf`.
-    pub fn fetch_current_catalog(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.connection
-            .fetch_current_catalog(buf)
-            .into_result(&self.connection)
-    }
-
     /// Get the name of the current catalog being used by the connection.
     pub fn current_catalog(&self) -> Result<String, Error> {
         let mut buf = Vec::new();
-        self.fetch_current_catalog(&mut buf)?;
-        let name = U16String::from_vec(buf);
-        Ok(name.to_string().unwrap())
+        self.connection
+            .fetch_current_catalog(&mut buf)
+            .into_result(&self.connection)?;
+        let name = slice_to_utf8(&buf).expect("Return catalog must be correctly encoded");
+        Ok(name)
     }
 
     /// A cursor describing columns of all tables matching the patterns. Patterns support as
