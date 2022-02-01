@@ -319,20 +319,14 @@ impl<'c> Connection<'c> {
         force_send_sync::Send::new(self)
     }
 
-    /// Fetch the name of the database management system used by the connection and store it into
-    /// the provided `buf`.
-    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> Result<(), Error> {
-        self.connection
-            .fetch_database_management_system_name(buf)
-            .into_result(&self.connection)
-    }
-
     /// Get the name of the database management system used by the connection.
     pub fn database_management_system_name(&self) -> Result<String, Error> {
         let mut buf = Vec::new();
-        self.fetch_database_management_system_name(&mut buf)?;
-        let name = U16String::from_vec(buf);
-        Ok(name.to_string().unwrap())
+        self.connection
+            .fetch_database_management_system_name(&mut buf)
+            .into_result(&self.connection)?;
+        let name = slice_to_utf8(&buf).unwrap();
+        Ok(name)
     }
 
     /// Maximum length of catalog names.
