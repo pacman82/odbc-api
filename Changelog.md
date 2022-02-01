@@ -2,9 +2,14 @@
 
 ## (next)
 
+Removed public higher level methods directly dealing with utf16. Similar functions using unicode
+remain in the API. This has been done in order better support building against narrow ODBC function
+calls on some platforms while keeping complexity in check.
+
 * Removed `Environment::connect_utf16`.
 * Removed `OutputStringBuffer::ucstr`.
 * Removed `Connection::fetch_current_catalog`.
+* Removed `Connection::fetch_database_management_system_name`.
 * updated to `odbc-sys 0.21.0`
 
 ## 0.33.2

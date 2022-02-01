@@ -9,21 +9,21 @@ use super::{
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLGetInfoW,
-    SQLSetConnectAttrW, IS_UINTEGER,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLSetConnectAttrW,
+    IS_UINTEGER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
 #[cfg(feature = "narrow")]
 use odbc_sys::{
     SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect,
-    SQLGetConnectAttr as sql_get_connect_attr,
+    SQLGetConnectAttr as sql_get_connect_attr, SQLGetInfo as sql_get_info,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect,
-    SQLGetConnectAttrW as sql_get_connect_attr,
+    SQLGetConnectAttrW as sql_get_connect_attr, SQLGetInfoW as sql_get_info,
 };
 
 /// The connection handle references storage of all information about the connection to the data
@@ -205,38 +205,41 @@ impl<'c> Connection<'c> {
 
     /// Fetch the name of the database management system used by the connection and store it into
     /// the provided `buf`.
-    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<u16>) -> SqlResult<()> {
+    pub fn fetch_database_management_system_name(&self, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
 
+        // Size of a character (used to calculate translate characters to bytes)
+        let sc = size_of::<SqlChar>();
+
         unsafe {
-            let mut res = SQLGetInfoW(
+            let mut res = sql_get_info(
                 self.handle,
                 InfoType::DbmsName,
                 mut_buf_ptr(buf) as Pointer,
-                (buf.len() * 2).try_into().unwrap(),
+                (buf.len() * sc).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
             )
-            .into_sql_result("SQLGetInfoW");
+            .into_sql_result("SQLGetInfo");
 
             if res.is_err() {
                 return res;
             }
 
             // Call has been a success but let's check if the buffer had been large enough.
-            if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
+            if clamp_small_int(buf.len() * sc) < string_length_in_bytes + sc as i16 {
                 // It seems we must try again with a large enough buffer.
-                buf.resize((string_length_in_bytes / 2 + 1).try_into().unwrap(), 0);
-                res = SQLGetInfoW(
+                buf.resize((string_length_in_bytes / sc as i16 + 1) as usize, 0);
+                res = sql_get_info(
                     self.handle,
                     InfoType::DbmsName,
                     mut_buf_ptr(buf) as Pointer,
-                    (buf.len() * 2).try_into().unwrap(),
+                    (buf.len() * sc).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                 )
-                .into_sql_result("SQLGetInfoW");
+                .into_sql_result("SQLGetInfo");
 
                 if res.is_err() {
                     return res;
@@ -244,7 +247,7 @@ impl<'c> Connection<'c> {
             }
 
             // Resize buffer to exact string length without terminal zero
-            buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+            buf.resize(string_length_in_bytes as usize / sc, 0);
             res
         }
     }
@@ -252,7 +255,7 @@ impl<'c> Connection<'c> {
     fn info_u16(&self, info_type: InfoType) -> SqlResult<u16> {
         unsafe {
             let mut value = 0u16;
-            SQLGetInfoW(
+            sql_get_info(
                 self.handle,
                 info_type,
                 &mut value as *mut u16 as Pointer,
@@ -263,7 +266,7 @@ impl<'c> Connection<'c> {
                 size_of::<*mut u16>() as i16,
                 null_mut(),
             )
-            .into_sql_result("SQLGetInfoW")
+            .into_sql_result("SQLGetInfo")
             .on_success(|| value)
         }
     }
