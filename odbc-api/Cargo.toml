@@ -44,7 +44,7 @@ readme = "../Readme.md"
 # Note that this is the encoding used for statement text and other string arguments, not for the
 # payload of VARCHAR columns, or other column types in the result set.
 narrow=[]
-default=["narrow"]
+# default=["narrow"]
 
 [dependencies]
 odbc-sys = "0.21.0"

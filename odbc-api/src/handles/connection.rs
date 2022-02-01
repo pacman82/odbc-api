@@ -9,8 +9,7 @@ use super::{
 };
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, SQLSetConnectAttrW,
-    IS_UINTEGER,
+    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, IS_UINTEGER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -18,12 +17,14 @@ use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 use odbc_sys::{
     SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect,
     SQLGetConnectAttr as sql_get_connect_attr, SQLGetInfo as sql_get_info,
+    SQLSetConnectAttr as sql_set_connect_attr,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect,
     SQLGetConnectAttrW as sql_get_connect_attr, SQLGetInfoW as sql_get_info,
+    SQLSetConnectAttrW as sql_set_connect_attr,
 };
 
 /// The connection handle references storage of all information about the connection to the data
@@ -177,13 +178,13 @@ impl<'c> Connection<'c> {
     pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
         let val = if enabled { 1u32 } else { 0u32 };
         unsafe {
-            SQLSetConnectAttrW(
+            sql_set_connect_attr(
                 self.handle,
                 ConnectionAttribute::AutoCommit,
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
             )
-            .into_sql_result("SQLSetConnectAttrW")
+            .into_sql_result("SQLSetConnectAttr")
         }
     }
 
