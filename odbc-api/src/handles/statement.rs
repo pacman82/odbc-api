@@ -10,10 +10,10 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW,
-    SQLDescribeParam, SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData,
-    SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW,
-    SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeParam,
+    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData,
+    SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW, SqlDataType, SqlReturn,
+    StatementAttribute, ULen,
 };
 use std::{
     ffi::c_void,
@@ -24,10 +24,10 @@ use std::{
 use widestring::U16Str;
 
 #[cfg(feature = "narrow")]
-use odbc_sys::{SQLDescribeCol as sql_describe_col};
+use odbc_sys::SQLDescribeCol as sql_describe_col;
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::{SQLDescribeColW as sql_describe_col};
+use odbc_sys::SQLDescribeColW as sql_describe_col;
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
 pub struct StatementImpl<'s> {

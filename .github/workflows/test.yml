@@ -11,16 +11,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install latest rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          override: true
-
-      - name: Build
-        run: cargo build --release
-
       - name: Install MariaDB drivers
         run: |
          Invoke-WebRequest https://dlm.mariadb.com/1936453/Connectors/odbc/connector-odbc-3.1.15/mariadb-connector-odbc-3.1.15-win64.msi -OutFile C:\mariadb_connector.msi
@@ -57,7 +47,9 @@ jobs:
         run: cp odbcsv/tests/list-drivers-windows.txt odbcsv/tests/list-drivers.txt
 
       - name: Test
-        run: cargo test --release
+        run: |
+          cargo test --release
+          cargo test --features narrow --release
 
   win32:
     name: Build Win32
@@ -98,7 +90,7 @@ jobs:
 
   linux:
     name: Build & Test Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
