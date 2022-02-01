@@ -61,7 +61,10 @@ jobs:
         run: cp odbcsv/tests/list-drivers-coverage.txt odbcsv/tests/list-drivers.txt
       # Maria DB test currently do not run due to a packaging error of their odbc driver
       - name: Generate coverage report
-        run: cargo +nightly-2022-01-06 llvm-cov --lcov --output-path lcov.info -- --skip maria_db
+        run: | 
+          cargo +nightly-2022-01-06 llvm-cov --no-report -- --skip maria_db
+          cargo +nightly-2022-01-06 llvm-cov --features narrow --no-report -- --skip maria_db
+          cargo +nightly-2022-01-06 llvm-cov --no-run --lcov --output-path lcov.info
       - name: Push coverage results to Coveralls
         uses: coverallsapp/github-action@v1.0.1
         with:

@@ -46,4 +46,4 @@ WORKDIR /workspace
 COPY . .
 RUN cp odbcsv/tests/list-drivers-linux.txt odbcsv/tests/list-drivers.txt
 
-CMD ~/.cargo/bin/cargo test --release
+CMD ~/.cargo/bin/cargo test --release & ~/.cargo/bin/cargo test --release --features narrow

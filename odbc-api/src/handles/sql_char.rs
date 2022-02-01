@@ -89,7 +89,6 @@ pub struct SzBuffer {
 }
 
 impl SzBuffer {
-
     /// Creates a buffer which can hold at least `capacity` characters, excluding the terminating
     /// zero. Or phrased differently. It will allocate one additional character to hold the
     /// terminating zero, so the caller should not factor it into the size of capacity.

@@ -1,4 +1,7 @@
-use super::{data_type::DataType, sql_char::{SqlChar, DecodingError, slice_to_utf8}};
+use super::{
+    data_type::DataType,
+    sql_char::{slice_to_utf8, DecodingError, SqlChar},
+};
 
 /// Indication of whether a column is nullable or not.
 #[derive(Clone, Copy, Hash, Debug, Eq, PartialEq)]
@@ -41,7 +44,6 @@ pub struct ColumnDescription {
 }
 
 impl ColumnDescription {
-
     /// Converts the internal UTF16 representation of the column name into UTF8 and returns the
     /// result as a `String`.
     pub fn name_to_string(&self) -> Result<String, DecodingError> {
