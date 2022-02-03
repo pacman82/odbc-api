@@ -44,10 +44,10 @@ readme = "../Readme.md"
 # Note that this is the encoding used for statement text and other string arguments, not for the
 # payload of VARCHAR columns, or other column types in the result set.
 narrow=[]
-# default=["narrow"]
+default=["narrow"]
 
 [dependencies]
-odbc-sys = "0.21.0"
+odbc-sys = "0.21.1"
 thiserror = "1.0.30"
 log = "0.4.14"
 widestring = "0.5.1"

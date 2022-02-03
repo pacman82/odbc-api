@@ -14,7 +14,7 @@ use odbc_api::{
         AnyColumnViewMut, BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item,
         TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, Statement},
+    handles::{OutputStringBuffer, Statement, slice_to_utf8},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -319,13 +319,12 @@ fn column_name(profile: &Profile) {
     let mut buf = Vec::new();
 
     cursor.col_name(1, &mut buf).unwrap();
-    let buf = U16String::from_vec(buf);
-    assert_eq!("a", buf.to_string().unwrap());
+    let name = slice_to_utf8(&buf).unwrap();
+    assert_eq!("a", name);
 
-    let mut buf = buf.into_vec();
     cursor.col_name(2, &mut buf).unwrap();
-    let name = U16String::from_vec(buf);
-    assert_eq!("b", name.to_string().unwrap());
+    let name = slice_to_utf8(&buf).unwrap();
+    assert_eq!("b", name);
 }
 
 /// Bind a CHAR column to a character buffer.
