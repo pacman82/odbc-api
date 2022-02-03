@@ -2,6 +2,7 @@
 //! in this module, so the rest of the crate doesn't have to.
 
 use super::buffer::{buf_ptr, mut_buf_ptr};
+use std::mem::size_of;
 
 #[cfg(feature = "narrow")]
 use std::{ffi::CStr, string::FromUtf8Error};
@@ -32,6 +33,34 @@ pub fn slice_to_utf8(text: &[u8]) -> Result<String, FromUtf8Error> {
 #[cfg(not(feature = "narrow"))]
 pub fn slice_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
     decode_utf16(text.iter().copied()).collect()
+}
+
+/// Buffer length in bytes, not characters
+pub fn binary_length(buffer: &[SqlChar]) -> usize {
+    buffer.len() * size_of::<SqlChar>()
+}
+
+/// `true` if the buffer has not been large enough to hold the entire string.
+///
+/// # Parameters
+///
+/// - `actuel_length_bin`: Actual length in bytes, but excluding the terminating zero.
+pub fn is_truncated_bin(buffer: &[SqlChar], actual_length_bin: usize) -> bool {
+    buffer.len() * size_of::<SqlChar>() <= actual_length_bin
+}
+
+/// Resizes the underlying buffer to fit the size required to hold the entire string including
+/// terminating zero. Required length is provided in bytes (not characters), excluding the
+/// terminating zero.
+pub fn resize_to_fit_with_tz(buffer: &mut Vec<SqlChar>, required_binary_length: usize) {
+    buffer.resize((required_binary_length / size_of::<SqlChar>()) + 1, 0);
+}
+
+/// Resizes the underlying buffer to fit the size required to hold the entire string excluding
+/// terminating zero. Required length is provided in bytes (not characters), excluding the
+/// terminating zero.
+pub fn resize_to_fit_without_tz(buffer: &mut Vec<SqlChar>, required_binary_length: usize) {
+    buffer.resize(required_binary_length / size_of::<SqlChar>(), 0);
 }
 
 /// Handles conversion from UTF-8 string slices to ODBC SQL char encoding. Depending on the
