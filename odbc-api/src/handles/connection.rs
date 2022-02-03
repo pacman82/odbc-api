@@ -1,6 +1,6 @@
 use super::{
     as_handle::AsHandle,
-    buffer::{clamp_int, mut_buf_ptr},
+    buffer::mut_buf_ptr,
     drop_handle,
     sql_char::{
         binary_length, is_truncated_bin, resize_to_fit_with_tz, resize_to_fit_without_tz, SqlChar,
