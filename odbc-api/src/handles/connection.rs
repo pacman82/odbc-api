@@ -1,8 +1,11 @@
 use super::{
     as_handle::AsHandle,
-    buffer::{clamp_int, clamp_small_int, mut_buf_ptr},
+    buffer::{clamp_int, mut_buf_ptr},
     drop_handle,
-    sql_char::{SqlChar, SqlText},
+    sql_char::{
+        binary_length, is_truncated_bin, resize_to_fit_with_tz, resize_to_fit_without_tz, SqlChar,
+        SqlText,
+    },
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
     OutputStringBuffer, SqlResult,
@@ -212,15 +215,12 @@ impl<'c> Connection<'c> {
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
 
-        // Size of a character (used to calculate translate characters to bytes)
-        let sc = size_of::<SqlChar>();
-
         unsafe {
             let mut res = sql_get_info(
                 self.handle,
                 InfoType::DbmsName,
                 mut_buf_ptr(buf) as Pointer,
-                (buf.len() * sc).try_into().unwrap(),
+                binary_length(buf).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
             )
             .into_sql_result("SQLGetInfo");
@@ -230,14 +230,14 @@ impl<'c> Connection<'c> {
             }
 
             // Call has been a success but let's check if the buffer had been large enough.
-            if clamp_small_int(buf.len() * sc) < string_length_in_bytes + sc as i16 {
+            if is_truncated_bin(buf, string_length_in_bytes.try_into().unwrap()) {
                 // It seems we must try again with a large enough buffer.
-                buf.resize((string_length_in_bytes / sc as i16 + 1) as usize, 0);
+                resize_to_fit_with_tz(buf, string_length_in_bytes.try_into().unwrap());
                 res = sql_get_info(
                     self.handle,
                     InfoType::DbmsName,
                     mut_buf_ptr(buf) as Pointer,
-                    (buf.len() * sc).try_into().unwrap(),
+                    binary_length(buf).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                 )
                 .into_sql_result("SQLGetInfo");
@@ -248,7 +248,7 @@ impl<'c> Connection<'c> {
             }
 
             // Resize buffer to exact string length without terminal zero
-            buf.resize(string_length_in_bytes as usize / sc, 0);
+            resize_to_fit_without_tz(buf, string_length_in_bytes.try_into().unwrap());
             res
         }
     }
@@ -294,24 +294,18 @@ impl<'c> Connection<'c> {
 
     /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
-    pub fn fetch_current_catalog(&self, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
+    pub fn fetch_current_catalog(&self, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i32 = 0;
         // Let's utilize all of `buf`s capacity.
-        buf.resize(buf.capacity(), 0);
-        // Size of charactor in bytes
-        let sc = size_of::<SqlChar>();
-        // and as an i32 so we don't have to cast every time we use it
-        let sci = sc as i32;
-        // Buffer length in bytes
-        let buffer_length = (buf.len() * sc).try_into().unwrap();
+        buffer.resize(buffer.capacity(), 0);
 
         unsafe {
             let mut res = sql_get_connect_attr(
                 self.handle,
                 ConnectionAttribute::CurrentCatalog,
-                mut_buf_ptr(buf) as Pointer,
-                buffer_length,
+                mut_buf_ptr(buffer) as Pointer,
+                binary_length(buffer).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i32,
             )
             .into_sql_result("SQLGetConnectAttr");
@@ -320,15 +314,13 @@ impl<'c> Connection<'c> {
                 return res;
             }
 
-            let is_truncated = clamp_int(buf.len() * sc) < string_length_in_bytes + sci;
-            if is_truncated {
-                buf.resize((string_length_in_bytes / sci + 1).try_into().unwrap(), 0);
-                let buffer_length = (buf.len() * sc).try_into().unwrap();
+            if is_truncated_bin(buffer, string_length_in_bytes.try_into().unwrap()) {
+                resize_to_fit_with_tz(buffer, string_length_in_bytes.try_into().unwrap());
                 res = sql_get_connect_attr(
                     self.handle,
                     ConnectionAttribute::CurrentCatalog,
-                    mut_buf_ptr(buf) as Pointer,
-                    buffer_length,
+                    mut_buf_ptr(buffer) as Pointer,
+                    binary_length(buffer).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i32,
                 )
                 .into_sql_result("SQLGetConnectAttr");
@@ -339,7 +331,7 @@ impl<'c> Connection<'c> {
             }
 
             // Resize buffer to exact string length without terminal zero
-            buf.resize((string_length_in_bytes / sci).try_into().unwrap(), 0);
+            resize_to_fit_without_tz(buffer, string_length_in_bytes.try_into().unwrap());
             res
         }
     }
