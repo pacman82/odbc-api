@@ -1,9 +1,6 @@
-use std::char::REPLACEMENT_CHARACTER;
-
 use odbc_sys::SqlDataType;
-use widestring::decode_utf16;
 
-use crate::{handles::Statement, ColumnDescription, DataType, Error};
+use crate::{handles::{Statement, SqlChar, slice_to_utf8}, ColumnDescription, DataType, Error};
 
 /// Provides Metadata of the resulting the result set. Implemented by `Cursor` types and prepared
 /// queries. Fetching metadata from a prepared query might be expensive (driver dependent), so your
@@ -101,7 +98,7 @@ pub trait ResultSetMetadata {
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> Result<(), Error> {
+    fn col_name(&self, column_number: u16, buf: &mut Vec<SqlChar>) -> Result<(), Error> {
         let stmt = self.stmt_ref();
         stmt.col_name(column_number, buf).into_result(stmt)
     }
@@ -188,7 +185,7 @@ pub trait ResultSetMetadata {
 /// [`ResultSetMetada::column_names`].
 pub struct ColumnNamesIt<'c, C: ?Sized> {
     cursor: &'c C,
-    buffer: Vec<u16>,
+    buffer: Vec<SqlChar>,
     column: u16,
     num_cols: u16,
 }
@@ -219,9 +216,7 @@ where
                 .cursor
                 .col_name(self.column, &mut self.buffer)
                 .map(|()| {
-                    decode_utf16(self.buffer.iter().copied())
-                        .map(|decoding_result| decoding_result.unwrap_or(REPLACEMENT_CHARACTER))
-                        .collect()
+                    slice_to_utf8(&self.buffer).unwrap()
                 });
             self.column += 1;
             Some(result)

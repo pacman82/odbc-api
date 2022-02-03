@@ -6,11 +6,11 @@ use super::{
     data_type::DataType,
     drop_handle,
     sql_result::ExtSqlReturn,
-    CData, SqlResult,
+    CData, SqlResult, SqlChar,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColAttributeW, SQLColumnsW, SQLDescribeParam,
+    SQLBindParameter, SQLCloseCursor, SQLColumnsW, SQLDescribeParam,
     SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData,
     SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW, SqlDataType, SqlReturn,
     StatementAttribute, ULen,
@@ -19,15 +19,15 @@ use std::{
     ffi::c_void,
     marker::PhantomData,
     mem::ManuallyDrop,
-    ptr::{null, null_mut},
+    ptr::{null, null_mut}, mem::size_of,
 };
 use widestring::U16Str;
 
 #[cfg(feature = "narrow")]
-use odbc_sys::SQLDescribeCol as sql_describe_col;
+use odbc_sys::{SQLDescribeCol as sql_describe_col, SQLColAttribute as sql_col_attribute};
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::SQLDescribeColW as sql_describe_col;
+use odbc_sys::{SQLDescribeColW as sql_describe_col, SQLColAttributeW as sql_col_attribute};
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
 pub struct StatementImpl<'s> {
@@ -524,47 +524,49 @@ pub trait Statement: AsHandle {
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<u16>) -> SqlResult<()> {
+    fn col_name(&self, column_number: u16, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
+        // Character size in bytes
+        let sc = size_of::<SqlChar>();
         // Let's utilize all of `buf`s capacity.
         buf.resize(buf.capacity(), 0);
         unsafe {
-            let mut res = SQLColAttributeW(
+            let mut res = sql_col_attribute(
                 self.as_sys(),
                 column_number,
                 Desc::Name,
                 mut_buf_ptr(buf) as Pointer,
-                (buf.len() * 2).try_into().unwrap(),
+                (buf.len() * sc).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
                 null_mut(),
             )
-            .into_sql_result("SQLColAttributeW");
+            .into_sql_result("SQLColAttribute");
 
             if res.is_err() {
                 return res;
             }
 
-            if clamp_small_int(buf.len() * 2) < string_length_in_bytes + 2 {
+            if clamp_small_int(buf.len() * sc) < string_length_in_bytes + sc as i16 {
                 // If we could rely on every ODBC driver sticking to the specifcation it would
                 // probably best to resize by `string_length_in_bytes / 2 + 1`. Yet i.e. SQLite
                 // seems to report the length in characters, so to work with a wide range of DB
                 // systems, and since buffers for names are not expected to become super large we
                 // ommit the division by two here.
                 buf.resize((string_length_in_bytes + 1).try_into().unwrap(), 0);
-                res = SQLColAttributeW(
+                res = sql_col_attribute(
                     self.as_sys(),
                     column_number,
                     Desc::Name,
                     mut_buf_ptr(buf) as Pointer,
-                    (buf.len() * 2).try_into().unwrap(),
+                    (buf.len() * sc).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                     null_mut(),
                 )
-                .into_sql_result("SQLColAttributeW");
+                .into_sql_result("SQLColAttribute");
             }
             // Resize buffer to exact string length without terminal zero
-            buf.resize(((string_length_in_bytes + 1) / 2).try_into().unwrap(), 0);
+            buf.resize((string_length_in_bytes / sc as i16).try_into().unwrap(), 0);
 
             res
         }
@@ -575,7 +577,7 @@ pub trait Statement: AsHandle {
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
     unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
         let mut out: Len = 0;
-        SQLColAttributeW(
+        sql_col_attribute(
             self.as_sys(),
             column_number,
             attribute,
@@ -584,7 +586,7 @@ pub trait Statement: AsHandle {
             null_mut(),
             &mut out as *mut Len,
         )
-        .into_sql_result("SQLColAttributeW")
+        .into_sql_result("SQLColAttribute")
         .on_success(|| out)
     }
 
