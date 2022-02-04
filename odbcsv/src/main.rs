@@ -479,10 +479,10 @@ fn tables(environment: &Environment, table_opt: &ListTablesOpt) -> Result<(), Er
     let conn = open_connection(environment, connect_opts)?;
 
     let cursor = conn.tables(
-        catalog.as_deref(),
-        schema.as_deref(),
-        name.as_deref(),
-        type_.as_deref(),
+        catalog.as_deref().unwrap_or_default(),
+        schema.as_deref().unwrap_or_default(),
+        name.as_deref().unwrap_or_default(),
+        type_.as_deref().unwrap_or_default(),
     )?;
 
     let hold_stdout = stdout();

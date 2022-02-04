@@ -8,7 +8,6 @@ use crate::{
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
-use widestring::U16String;
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -392,8 +391,8 @@ impl<'c> Connection<'c> {
     /// use odbc_api::{Connection, Cursor, Error, ResultSetMetadata, buffers::TextRowSet};
     ///
     /// fn print_all_tables(conn: &Connection<'_>) -> Result<(), Error> {
-    ///     // Set all filters to None, to really print all tables
-    ///     let cursor = conn.tables(None, None, None, None)?;
+    ///     // Set all filters to an empty string, to really print all tables
+    ///     let cursor = conn.tables("", "", "", "")?;
     ///
     ///     // The column are gonna be TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS, but may
     ///     // also contain additional driver specific columns.
@@ -431,23 +430,19 @@ impl<'c> Connection<'c> {
     /// ```
     pub fn tables(
         &self,
-        catalog_name: Option<&str>,
-        schema_name: Option<&str>,
-        table_name: Option<&str>,
-        table_type: Option<&str>,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        table_type: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let statement = self.allocate_statement()?;
 
-        let catalog_name = catalog_name.map(U16String::from_str);
-        let schema_name = schema_name.map(U16String::from_str);
-        let table_name = table_name.map(U16String::from_str);
-        let table_type = table_type.map(U16String::from_str);
         execute_tables(
             statement,
-            catalog_name.as_deref(),
-            schema_name.as_deref(),
-            table_name.as_deref(),
-            table_type.as_deref(),
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(table_type),
         )
     }
 

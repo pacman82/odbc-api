@@ -2,10 +2,9 @@
 
 ## (next)
 
-Removed public higher level methods directly dealing with utf16. Similar functions using unicode
-remain in the API. This has been done in order better support building against narrow ODBC function
-calls on some platforms while keeping complexity in check.
+Removed public higher level methods directly dealing with utf16. Similar functions using unicode remain in the API. This has been done in order better support building against narrow ODBC function calls on some platforms while keeping complexity in check.
 
+* Removed `Connection::tables` now takes `&str` instead of `Option<&str>` arguments. Use `""` instead of none
 * Removed `Environment::connect_utf16`.
 * Removed `Preallocated::execute_utf16`.
 * Removed `Connection::execute_utf16`.

@@ -1,5 +1,3 @@
-use widestring::U16String;
-
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{SqlText, StatementImpl},
@@ -117,17 +115,17 @@ impl<'o> Preallocated<'o> {
     ///   all.
     pub fn tables(
         &mut self,
-        catalog_name: Option<&str>,
-        schema_name: Option<&str>,
-        table_name: Option<&str>,
-        table_type: Option<&str>,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        table_type: &str,
     ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
         execute_tables(
             &mut self.statement,
-            catalog_name.map(U16String::from_str).as_deref(),
-            schema_name.map(U16String::from_str).as_deref(),
-            table_name.map(U16String::from_str).as_deref(),
-            table_type.map(U16String::from_str).as_deref(),
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(table_type),
         )
     }
 

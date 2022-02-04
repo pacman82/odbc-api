@@ -1,7 +1,7 @@
 use super::{
     as_handle::AsHandle,
     bind::{CDataMut, DelayedInput, HasDataType},
-    buffer::{buf_ptr, clamp_small_int, mut_buf_ptr},
+    buffer::{clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
@@ -12,29 +12,23 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLTablesW,
-    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
+    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SqlDataType, SqlReturn,
+    StatementAttribute, IS_POINTER,
 };
-use std::{
-    ffi::c_void,
-    marker::PhantomData,
-    mem::ManuallyDrop,
-    ptr::{null, null_mut},
-};
-use widestring::U16Str;
+use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
 #[cfg(feature = "narrow")]
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc, SQLPrepare as sql_prepare,
-    SQLSetStmtAttr as sql_set_stmt_attr
+    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
-    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr
+    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -167,8 +161,13 @@ pub trait Statement: AsHandle {
         let value = num_rows
             .map(|r| r as *mut usize as Pointer)
             .unwrap_or_else(null_mut);
-        sql_set_stmt_attr(self.as_sys(), StatementAttribute::RowsFetchedPtr, value, IS_POINTER)
-            .into_sql_result("SQLSetStmtAttr")
+        sql_set_stmt_attr(
+            self.as_sys(),
+            StatementAttribute::RowsFetchedPtr,
+            value,
+            IS_POINTER,
+        )
+        .into_sql_result("SQLSetStmtAttr")
     }
 
     /// Fetch a column description using the column index.
@@ -681,38 +680,24 @@ pub trait Statement: AsHandle {
     /// otherwise a NulPointer error is emitted.
     fn tables(
         &mut self,
-        catalog_name: Option<&U16Str>,
-        schema_name: Option<&U16Str>,
-        table_name: Option<&U16Str>,
-        table_type: Option<&U16Str>,
+        catalog_name: &SqlText,
+        schema_name: &SqlText,
+        table_name: &SqlText,
+        table_type: &SqlText,
     ) -> SqlResult<()> {
-        // Convert each filter into a pair of buffer pointer and buffer length.
-        let to_buf = |filter: Option<&U16Str>| {
-            if let Some(text) = filter {
-                (buf_ptr(text.as_slice()), text.len().try_into().unwrap())
-            } else {
-                (null(), 0i16)
-            }
-        };
-
-        let catalog = to_buf(catalog_name);
-        let schema = to_buf(schema_name);
-        let table = to_buf(table_name);
-        let type_ = to_buf(table_type);
-
         unsafe {
-            SQLTablesW(
+            sql_tables(
                 self.as_sys(),
-                catalog.0,
-                catalog.1,
-                schema.0,
-                schema.1,
-                table.0,
-                table.1,
-                type_.0,
-                type_.1,
+                catalog_name.ptr(),
+                catalog_name.len_char().try_into().unwrap(),
+                schema_name.ptr(),
+                schema_name.len_char().try_into().unwrap(),
+                table_name.ptr(),
+                table_name.len_char().try_into().unwrap(),
+                table_type.ptr(),
+                table_type.len_char().try_into().unwrap(),
             )
-            .into_sql_result("SQLTablesW")
+            .into_sql_result("SQLTables")
         }
     }
 
