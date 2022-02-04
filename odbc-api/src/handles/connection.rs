@@ -344,7 +344,7 @@ impl<'c> Connection<'c> {
                 .map(|v| match v {
                     0 => false,
                     1 => true,
-                    other => panic!("Unexpected result value from SQLGetConnectAttrW: {}", other),
+                    other => panic!("Unexpected result value from SQLGetConnectAttr: {}", other),
                 })
         }
     }

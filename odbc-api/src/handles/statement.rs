@@ -339,7 +339,7 @@ pub trait Statement: AsHandle {
             size as Pointer,
             0,
         )
-        .into_sql_result("SQLSetStmtAttrW")
+        .into_sql_result("SQLSetStmtAttr")
     }
 
     /// Sets the binding type to columnar binding for batch cursors.
@@ -358,7 +358,7 @@ pub trait Statement: AsHandle {
             row_size as Pointer,
             0,
         )
-        .into_sql_result("SQLSetStmtAttrW")
+        .into_sql_result("SQLSetStmtAttr")
     }
 
     fn set_metadata_id(&mut self, metadata_id: bool) -> SqlResult<()> {
@@ -369,7 +369,7 @@ pub trait Statement: AsHandle {
                 metadata_id as usize as Pointer,
                 0,
             )
-            .into_sql_result("SQLSetStmtAttrW")
+            .into_sql_result("SQLSetStmtAttr")
         }
     }
 

@@ -256,7 +256,7 @@ impl Environment {
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
         // Determine required buffer size
-        odbc_sys::SQLDataSourcesW(
+        sql_data_sources(
             self.handle,
             direction,
             null_mut(),
@@ -266,7 +266,7 @@ impl Environment {
             0,
             &mut length_description,
         )
-        .into_opt_sql_result("SQLDataSourceW")
+        .into_opt_sql_result("SQLDataSources")
         .map(|res| res.on_success(|| (length_name, length_description)))
     }
 
