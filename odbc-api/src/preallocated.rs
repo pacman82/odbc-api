@@ -1,8 +1,8 @@
-use widestring::{U16Str, U16String};
+use widestring::U16String;
 
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
-    handles::StatementImpl,
+    handles::{SqlText, StatementImpl},
     CursorImpl, Error, ParameterRefCollection,
 };
 
@@ -39,15 +39,6 @@ pub struct Preallocated<'open_connection> {
 impl<'o> Preallocated<'o> {
     pub(crate) fn new(statement: StatementImpl<'o>) -> Self {
         Self { statement }
-    }
-
-    /// Executes an sql statement using a wide string. See [`Self::execute`].
-    pub fn execute_utf16(
-        &mut self,
-        query: &U16Str,
-        params: impl ParameterRefCollection,
-    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
-        execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
     }
 
     /// Executes a statement. This is the fastest way to sequentially execute different SQL
@@ -95,8 +86,8 @@ impl<'o> Preallocated<'o> {
         query: &str,
         params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
-        let query = U16String::from_str(query);
-        self.execute_utf16(&query, params)
+        let query = SqlText::new(query);
+        execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.

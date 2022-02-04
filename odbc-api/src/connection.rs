@@ -1,7 +1,7 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
     execute::{execute_columns, execute_tables, execute_with_parameters},
-    handles::{self, slice_to_utf8, State, Statement, StatementImpl},
+    handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     parameter_collection::ParameterRefCollection,
     statement_connection::StatementConnection,
     CursorImpl, Error, Preallocated, Prepared,
@@ -78,16 +78,6 @@ impl<'c> Connection<'c> {
         unsafe { handles::Connection::new(ManuallyDrop::new(self).connection.as_sys()) }
     }
 
-    /// Executes an sql statement using a wide string. See [`Self::execute`].
-    pub fn execute_utf16(
-        &self,
-        query: &U16Str,
-        params: impl ParameterRefCollection,
-    ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
-        let lazy_statement = move || self.allocate_statement();
-        execute_with_parameters(lazy_statement, Some(query), params)
-    }
-
     /// Executes an SQL statement. This is the fastest way to submit an SQL statement for one-time
     /// execution.
     ///
@@ -122,8 +112,9 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
-        let query = U16String::from_str(query);
-        self.execute_utf16(&query, params)
+        let query = SqlText::new(query);
+        let lazy_statement = move || self.allocate_statement();
+        execute_with_parameters(lazy_statement, Some(query), params)
     }
 
     /// In some use cases there you only execute a single statement, or the time to open a
