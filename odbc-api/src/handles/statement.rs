@@ -11,9 +11,9 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
-    SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData,
-    SQLSetStmtAttrW, SQLTablesW, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
+    SQLGetData, SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW,
+    SQLTablesW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{
     ffi::c_void,
@@ -25,14 +25,14 @@ use widestring::U16Str;
 
 #[cfg(feature = "narrow")]
 use odbc_sys::{
-    SQLColAttribute as sql_col_attribute, SQLDescribeCol as sql_describe_col,
-    SQLExecDirect as sql_exec_direc, SQLColumns as sql_columns
+    SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
+    SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
-    SQLColAttributeW as sql_col_attribute, SQLDescribeColW as sql_describe_col,
-    SQLExecDirectW as sql_exec_direc, SQLColumnsW as sql_columns
+    SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
+    SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
 };
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
