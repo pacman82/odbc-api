@@ -1,10 +1,20 @@
+use crate::handles::slice_to_cow_utf8;
+
 use super::{
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
+    SqlChar,
 };
-use odbc_sys::{SQLGetDiagRecW, SqlReturn, SQLSTATE_SIZE};
+use odbc_sys::{SqlReturn, SQLSTATE_SIZE};
 use std::fmt;
-use widestring::U16Str;
+
+// Starting with odbc 5 we may be able to specify utf8 encoding. until then, we may need to fall
+// back on the 'W' wide function calls.
+#[cfg(not(feature = "narrow"))]
+use odbc_sys::SQLGetDiagRecW as sql_get_diag_rec;
+
+#[cfg(feature = "narrow")]
+use odbc_sys::SQLGetDiagRec as sql_get_diag_rec;
 
 /// A buffer large enough to hold an `SOLState` for diagnostics
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -16,9 +26,11 @@ impl State {
     /// Given the specified Attribute value, an invalid value was specified in ValuePtr.
     pub const INVALID_ATTRIBUTE_VALUE: State = State(*b"HY024");
 
-    /// `SQLGetDiagRecW` returns ODBC state as wide characters. This constructor converts the wide
-    /// characters to narrow and drops the terminating zero.
-    pub fn from_wide_chars_with_nul(code: &[u16; SQLSTATE_SIZE + 1]) -> Self {
+    /// Drops terminating zero and changes char type, if required
+    pub fn from_chars_with_nul(code: &[SqlChar; SQLSTATE_SIZE + 1]) -> Self {
+        // `SQLGetDiagRecW` returns ODBC state as wide characters. This constructor converts the
+        //  wide characters to narrow and drops the terminating zero.
+
         let mut ascii = [0; SQLSTATE_SIZE];
         for (index, letter) in code[..SQLSTATE_SIZE].iter().copied().enumerate() {
             ascii[index] = letter as u8;
@@ -74,7 +86,7 @@ pub struct DiagnosticResult {
 pub fn diagnostics(
     handle: &dyn AsHandle,
     rec_number: i16,
-    message_text: &mut Vec<u16>,
+    message_text: &mut Vec<SqlChar>,
 ) -> Option<DiagnosticResult> {
     assert!(rec_number > 0);
 
@@ -88,9 +100,7 @@ pub fn diagnostics(
     let mut state = [0; SQLSTATE_SIZE + 1];
     let mut native_error = 0;
     let ret = unsafe {
-        // Starting with odbc 5 we may be able to specify utf8 encoding. until then, we may need to
-        // fall back on the 'W' wide function calls.
-        SQLGetDiagRecW(
+        sql_get_diag_rec(
             handle.handle_type(),
             handle.as_handle(),
             rec_number,
@@ -102,7 +112,7 @@ pub fn diagnostics(
         )
     };
     let result = DiagnosticResult {
-        state: State::from_wide_chars_with_nul(&state),
+        state: State::from_chars_with_nul(&state),
         native_error,
     };
     let mut text_length: usize = text_length.try_into().unwrap();
@@ -153,7 +163,7 @@ pub struct Record {
     pub native_error: i32,
     /// Buffer containing the error message. The buffer already has the correct size, and there is
     /// no terminating zero at the end.
-    pub message: Vec<u16>,
+    pub message: Vec<SqlChar>,
 }
 
 impl Record {
@@ -176,14 +186,14 @@ impl Record {
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = U16Str::from_slice(&self.message);
+        let message = slice_to_cow_utf8(&self.message);
 
         write!(
             f,
             "State: {}, Native error: {}, Message: {}",
             self.state.as_str(),
             self.native_error,
-            message.to_string_lossy(),
+            message,
         )
     }
 }
@@ -201,12 +211,20 @@ mod test {
 
     use super::Record;
 
+    #[cfg(not(feature = "narrow"))]
+    fn to_vec_sql_char(text: &str) -> Vec<u16> {
+        text.encode_utf16().collect()
+    }
+
+    #[cfg(feature = "narrow")]
+    fn to_vec_sql_char(text: &str) -> Vec<u8> {
+        text.bytes().collect()
+    }
+
     #[test]
     fn formatting() {
         // build diagnostic record
-        let message: Vec<_> = "[Microsoft][ODBC Driver Manager] Function sequence error"
-            .encode_utf16()
-            .collect();
+        let message = to_vec_sql_char("[Microsoft][ODBC Driver Manager] Function sequence error");
         let rec = Record {
             state: State(*b"HY010"),
             message,

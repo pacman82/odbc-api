@@ -2,7 +2,7 @@
 //! in this module, so the rest of the crate doesn't have to.
 
 use super::buffer::{buf_ptr, mut_buf_ptr};
-use std::mem::size_of;
+use std::{borrow::Cow, mem::size_of};
 
 #[cfg(feature = "narrow")]
 use std::{ffi::CStr, string::FromUtf8Error};
@@ -33,6 +33,16 @@ pub fn slice_to_utf8(text: &[u8]) -> Result<String, FromUtf8Error> {
 #[cfg(not(feature = "narrow"))]
 pub fn slice_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
     decode_utf16(text.iter().copied()).collect()
+}
+
+#[cfg(feature = "narrow")]
+pub fn slice_to_cow_utf8(text: &[u8]) -> Cow<str> {
+    String::from_utf8_lossy(text)
+}
+#[cfg(not(feature = "narrow"))]
+pub fn slice_to_cow_utf8(text: &[u16]) -> Cow<str> {
+    let text: Result<String, _> = decode_utf16(text.iter().copied()).collect();
+    text.unwrap().into()
 }
 
 #[cfg(not(feature = "narrow"))]
