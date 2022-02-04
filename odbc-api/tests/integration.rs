@@ -1342,7 +1342,7 @@ fn non_ascii_char(profile: &Profile) {
 }
 
 // UTF-8 local not present on CI
-// #[test_case(MSSQL; "Microsoft SQL Server")] 
+// #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn wchar(profile: &Profile) {
@@ -2794,7 +2794,7 @@ fn list_tables(profile: &Profile, expected: &str) {
     let table_name = "ListTables";
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
-    let cursor = conn.tables(None, None, Some(table_name), None).unwrap();
+    let cursor = conn.tables("", "", table_name, "").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
     assert_eq!(expected.to_lowercase(), actual);
 }
@@ -2809,9 +2809,7 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
-    let cursor = preallocated
-        .tables(None, None, Some(table_name), None)
-        .unwrap();
+    let cursor = preallocated.tables("", "", table_name, "").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
 
     assert_eq!(expected.to_lowercase(), actual);

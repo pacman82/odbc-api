@@ -1,7 +1,5 @@
 use std::intrinsics::transmute;
 
-use widestring::U16Str;
-
 use crate::{
     borrow_mut_statement::BorrowMutStatement,
     handles::{SqlText, Statement},
@@ -120,10 +118,10 @@ where
 /// [`crate::Preallocated`].
 pub fn execute_tables<S>(
     mut statement: S,
-    catalog_name: Option<&U16Str>,
-    schema_name: Option<&U16Str>,
-    table_name: Option<&U16Str>,
-    column_name: Option<&U16Str>,
+    catalog_name: &SqlText,
+    schema_name: &SqlText,
+    table_name: &SqlText,
+    column_name: &SqlText,
 ) -> Result<CursorImpl<S>, Error>
 where
     S: BorrowMutStatement,
