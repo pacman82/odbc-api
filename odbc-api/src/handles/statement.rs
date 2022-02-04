@@ -12,8 +12,8 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLSetStmtAttrW, SQLTablesW,
-    SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLTablesW,
+    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{
     ffi::c_void,
@@ -27,13 +27,14 @@ use widestring::U16Str;
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc, SQLPrepare as sql_prepare,
+    SQLSetStmtAttr as sql_set_stmt_attr
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
-    SQLPrepareW as sql_prepare,
+    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr
 };
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -162,12 +163,12 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut ULen>) -> SqlResult<()> {
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut usize>) -> SqlResult<()> {
         let value = num_rows
-            .map(|r| r as *mut ULen as Pointer)
+            .map(|r| r as *mut usize as Pointer)
             .unwrap_or_else(null_mut);
-        SQLSetStmtAttrW(self.as_sys(), StatementAttribute::RowsFetchedPtr, value, 0)
-            .into_sql_result("SQLSetStmtAttrW")
+        sql_set_stmt_attr(self.as_sys(), StatementAttribute::RowsFetchedPtr, value, IS_POINTER)
+            .into_sql_result("SQLSetStmtAttr")
     }
 
     /// Fetch a column description using the column index.
@@ -314,13 +315,13 @@ pub trait Statement: AsHandle {
     /// specified amount of rows.
     unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
-        SQLSetStmtAttrW(
+        sql_set_stmt_attr(
             self.as_sys(),
             StatementAttribute::RowArraySize,
             size as Pointer,
             0,
         )
-        .into_sql_result("SQLSetStmtAttrW")
+        .into_sql_result("SQLSetStmtAttr")
     }
 
     /// Specifies the number of values for each parameter. If it is greater than 1, the data and
@@ -333,7 +334,7 @@ pub trait Statement: AsHandle {
     /// statement is executed.
     unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
-        SQLSetStmtAttrW(
+        sql_set_stmt_attr(
             self.as_sys(),
             StatementAttribute::ParamsetSize,
             size as Pointer,
@@ -352,7 +353,7 @@ pub trait Statement: AsHandle {
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
     unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()> {
-        SQLSetStmtAttrW(
+        sql_set_stmt_attr(
             self.as_sys(),
             StatementAttribute::RowBindType,
             row_size as Pointer,
@@ -363,10 +364,10 @@ pub trait Statement: AsHandle {
 
     fn set_metadata_id(&mut self, metadata_id: bool) -> SqlResult<()> {
         unsafe {
-            SQLSetStmtAttrW(
+            sql_set_stmt_attr(
                 self.as_sys(),
                 StatementAttribute::MetadataId,
-                metadata_id as u8 as Pointer,
+                metadata_id as usize as Pointer,
                 0,
             )
             .into_sql_result("SQLSetStmtAttrW")
