@@ -4,6 +4,7 @@
 
 Removed public higher level methods directly dealing with utf16. Similar functions using unicode remain in the API. This has been done in order better support building against narrow ODBC function calls on some platforms while keeping complexity in check.
 
+* `ResultSetMetadata::col_name` now returns `Result<String, Error>`.
 * Removed `Connection::tables` now takes `&str` instead of `Option<&str>` arguments. Use `""` instead of none
 * Removed `Environment::connect_utf16`.
 * Removed `Preallocated::execute_utf16`.
