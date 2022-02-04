@@ -5,29 +5,36 @@ use super::{
     column_description::{ColumnDescription, Nullability},
     data_type::DataType,
     drop_handle,
+    sql_char::{binary_length, is_truncated_bin, resize_to_fit_without_tz},
     sql_result::ExtSqlReturn,
-    CData, SqlResult, SqlChar,
+    CData, SqlChar, SqlResult, SqlText,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLColumnsW, SQLDescribeParam,
-    SQLExecDirectW, SQLExecute, SQLFetch, SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData,
-    SQLPrepareW, SQLPutData, SQLSetStmtAttrW, SQLTablesW, SqlDataType, SqlReturn,
-    StatementAttribute, ULen,
+    SQLBindParameter, SQLCloseCursor, SQLColumnsW, SQLDescribeParam, SQLExecute, SQLFetch,
+    SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData,
+    SQLSetStmtAttrW, SQLTablesW, SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{
     ffi::c_void,
     marker::PhantomData,
+    mem::size_of,
     mem::ManuallyDrop,
-    ptr::{null, null_mut}, mem::size_of,
+    ptr::{null, null_mut},
 };
 use widestring::U16Str;
 
 #[cfg(feature = "narrow")]
-use odbc_sys::{SQLDescribeCol as sql_describe_col, SQLColAttribute as sql_col_attribute};
+use odbc_sys::{
+    SQLColAttribute as sql_col_attribute, SQLDescribeCol as sql_describe_col,
+    SQLExecDirect as sql_exec_direc,
+};
 
 #[cfg(not(feature = "narrow"))]
-use odbc_sys::{SQLDescribeColW as sql_describe_col, SQLColAttributeW as sql_col_attribute};
+use odbc_sys::{
+    SQLColAttributeW as sql_col_attribute, SQLDescribeColW as sql_describe_col,
+    SQLExecDirectW as sql_exec_direc,
+};
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
 pub struct StatementImpl<'s> {
@@ -232,17 +239,17 @@ pub trait Statement: AsHandle {
     /// # Return
     ///
     /// Returns `true` if execution requires additional data from delayed parameters.
-    unsafe fn exec_direct(&mut self, statement_text: &U16Str) -> SqlResult<bool> {
-        match SQLExecDirectW(
+    unsafe fn exec_direct(&mut self, statement: &SqlText) -> SqlResult<bool> {
+        match sql_exec_direc(
             self.as_sys(),
-            buf_ptr(statement_text.as_slice()),
-            statement_text.len().try_into().unwrap(),
+            statement.ptr(),
+            statement.len_char().try_into().unwrap(),
         ) {
             SqlReturn::NEED_DATA => SqlResult::Success(true),
             // A searched update or delete statement that does not affect any rows at the data
             // source.
             SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result("SQLExecDirectW").on_success(|| false),
+            other => other.into_sql_result("SQLExecDirect").on_success(|| false),
         }
     }
 
@@ -524,20 +531,20 @@ pub trait Statement: AsHandle {
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
+    fn col_name(&self, column_number: u16, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
         // Character size in bytes
         let sc = size_of::<SqlChar>();
         // Let's utilize all of `buf`s capacity.
-        buf.resize(buf.capacity(), 0);
+        buffer.resize(buffer.capacity(), 0);
         unsafe {
             let mut res = sql_col_attribute(
                 self.as_sys(),
                 column_number,
                 Desc::Name,
-                mut_buf_ptr(buf) as Pointer,
-                (buf.len() * sc).try_into().unwrap(),
+                mut_buf_ptr(buffer) as Pointer,
+                binary_length(buffer).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i16,
                 null_mut(),
             )
@@ -547,26 +554,27 @@ pub trait Statement: AsHandle {
                 return res;
             }
 
-            if clamp_small_int(buf.len() * sc) < string_length_in_bytes + sc as i16 {
+            if is_truncated_bin(buffer, string_length_in_bytes.try_into().unwrap()) {
                 // If we could rely on every ODBC driver sticking to the specifcation it would
-                // probably best to resize by `string_length_in_bytes / 2 + 1`. Yet i.e. SQLite
+                // probably best to resize by `string_length_in_bytes / 2 + 1`. Yet e.g. SQLite
                 // seems to report the length in characters, so to work with a wide range of DB
                 // systems, and since buffers for names are not expected to become super large we
                 // ommit the division by two here.
-                buf.resize((string_length_in_bytes + 1).try_into().unwrap(), 0);
+                buffer.resize((string_length_in_bytes + 1).try_into().unwrap(), 0);
+
                 res = sql_col_attribute(
                     self.as_sys(),
                     column_number,
                     Desc::Name,
-                    mut_buf_ptr(buf) as Pointer,
-                    (buf.len() * sc).try_into().unwrap(),
+                    mut_buf_ptr(buffer) as Pointer,
+                    (buffer.len() * sc).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i16,
                     null_mut(),
                 )
                 .into_sql_result("SQLColAttribute");
             }
             // Resize buffer to exact string length without terminal zero
-            buf.resize((string_length_in_bytes / sc as i16).try_into().unwrap(), 0);
+            resize_to_fit_without_tz(buffer, string_length_in_bytes.try_into().unwrap());
 
             res
         }

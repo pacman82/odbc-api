@@ -7,6 +7,8 @@ remain in the API. This has been done in order better support building against n
 calls on some platforms while keeping complexity in check.
 
 * Removed `Environment::connect_utf16`.
+* Removed `Preallocated::execute_utf16`.
+* Removed `Connection::execute_utf16`.
 * Removed `OutputStringBuffer::ucstr`.
 * Removed `Connection::fetch_current_catalog`.
 * Removed `Connection::fetch_database_management_system_name`.

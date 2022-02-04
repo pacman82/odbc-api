@@ -3,8 +3,10 @@ use std::intrinsics::transmute;
 use widestring::U16Str;
 
 use crate::{
-    borrow_mut_statement::BorrowMutStatement, handles::Statement, parameter::Blob, CursorImpl,
-    Error, ParameterRefCollection,
+    borrow_mut_statement::BorrowMutStatement,
+    handles::{SqlText, Statement},
+    parameter::Blob,
+    CursorImpl, Error, ParameterRefCollection,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],
@@ -20,7 +22,7 @@ use crate::{
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
-    query: Option<&U16Str>,
+    query: Option<SqlText>,
     mut params: impl ParameterRefCollection,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
@@ -53,14 +55,14 @@ where
 /// * Furthermore all bound delayed parameters must be of type `*mut &mut dyn Blob`.
 pub unsafe fn execute<S>(
     mut statement: S,
-    query: Option<&U16Str>,
+    query: Option<SqlText>,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: BorrowMutStatement,
 {
     let stmt = statement.borrow_mut();
     let need_data = if let Some(sql) = query {
-        stmt.exec_direct(sql).into_result(stmt)?
+        stmt.exec_direct(&sql).into_result(stmt)?
     } else {
         stmt.execute().into_result(stmt)?
     };

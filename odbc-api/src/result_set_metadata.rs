@@ -1,6 +1,9 @@
 use odbc_sys::SqlDataType;
 
-use crate::{handles::{Statement, SqlChar, slice_to_utf8}, ColumnDescription, DataType, Error};
+use crate::{
+    handles::{slice_to_utf8, SqlChar, Statement},
+    ColumnDescription, DataType, Error,
+};
 
 /// Provides Metadata of the resulting the result set. Implemented by `Cursor` types and prepared
 /// queries. Fetching metadata from a prepared query might be expensive (driver dependent), so your
@@ -215,9 +218,7 @@ where
             let result = self
                 .cursor
                 .col_name(self.column, &mut self.buffer)
-                .map(|()| {
-                    slice_to_utf8(&self.buffer).unwrap()
-                });
+                .map(|()| slice_to_utf8(&self.buffer).unwrap());
             self.column += 1;
             Some(result)
         } else {

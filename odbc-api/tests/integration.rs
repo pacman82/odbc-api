@@ -14,7 +14,7 @@ use odbc_api::{
         AnyColumnViewMut, BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item,
         TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, Statement, slice_to_utf8},
+    handles::{slice_to_utf8, OutputStringBuffer, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
