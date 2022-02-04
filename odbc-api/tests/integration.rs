@@ -1384,11 +1384,15 @@ fn wchar_as_char() {
     let conn = ENV
         .connect_with_connection_string(MSSQL.connection_string)
         .unwrap();
-    // NVARCHAR(2) <- NVARCHAR(1) would be enough to held the character, but we de not allocate
-    // enough memory on the client side to hold the entire string.
+    
     setup_empty_table(&conn, MSSQL.index_type, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
 
-    conn.execute("INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');", ())
+    // With the wide character ODBC function calls passing the arguments as literals worked but with
+    // the narrow version "INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');" fails. It erroneously
+    // assumes the data wouldn't fit into the column, probably because the binary length is 2. As
+    // such confusing character and binary length.
+
+    conn.execute("INSERT INTO WCharAsChar (a) VALUES (?), (?);", (&"A".into_parameter(), &"Ü".into_parameter()))
         .unwrap();
 
     let sql = "SELECT a FROM WCharAsChar ORDER BY id;";
