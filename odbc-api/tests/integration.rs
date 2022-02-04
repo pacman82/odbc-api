@@ -470,8 +470,8 @@ fn nvarchar_to_text(profile: &Profile) {
         .setup_empty_table(table_name, &["NVARCHAR(1)"])
         .unwrap();
     // Trade mark sign (`™`) is longer in utf-8 (3 Bytes) than in utf-16 (2 Bytes).
-    let insert_sql = format!("INSERT INTO {} (a) VALUES ('™');", table_name);
-    conn.execute(&insert_sql, ()).unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    conn.execute(&insert_sql, &"™".into_parameter()).unwrap();
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -1330,8 +1330,8 @@ fn non_ascii_char(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
-        (),
+        &format!("INSERT INTO {} (a) VALUES (?), (?);", table_name),
+        (&"A".into_parameter(), &"Ü".into_parameter()),
     )
     .unwrap();
 
@@ -1351,8 +1351,8 @@ fn wchar(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES ('A'), ('Ü');", table_name),
-        (),
+        &format!("INSERT INTO {} (a) VALUES (?), (?);", table_name),
+        (&"A".into_parameter(), &"Ü".into_parameter()),
     )
     .unwrap();
 
@@ -1384,7 +1384,7 @@ fn wchar_as_char() {
     let conn = ENV
         .connect_with_connection_string(MSSQL.connection_string)
         .unwrap();
-    
+
     setup_empty_table(&conn, MSSQL.index_type, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
 
     // With the wide character ODBC function calls passing the arguments as literals worked but with
@@ -1392,8 +1392,11 @@ fn wchar_as_char() {
     // assumes the data wouldn't fit into the column, probably because the binary length is 2. As
     // such confusing character and binary length.
 
-    conn.execute("INSERT INTO WCharAsChar (a) VALUES (?), (?);", (&"A".into_parameter(), &"Ü".into_parameter()))
-        .unwrap();
+    conn.execute(
+        "INSERT INTO WCharAsChar (a) VALUES (?), (?);",
+        (&"A".into_parameter(), &"Ü".into_parameter()),
+    )
+    .unwrap();
 
     let sql = "SELECT a FROM WCharAsChar ORDER BY id;";
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
