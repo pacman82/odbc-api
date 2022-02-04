@@ -9,6 +9,7 @@ calls on some platforms while keeping complexity in check.
 * Removed `Environment::connect_utf16`.
 * Removed `Preallocated::execute_utf16`.
 * Removed `Connection::execute_utf16`.
+* Removed `Connection::prepare_utf16`.
 * Removed `OutputStringBuffer::ucstr`.
 * Removed `Connection::fetch_current_catalog`.
 * Removed `Connection::fetch_database_management_system_name`.

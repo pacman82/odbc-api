@@ -8,7 +8,7 @@ use crate::{
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
-use widestring::{U16Str, U16String};
+use widestring::U16String;
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -170,22 +170,11 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
-    pub fn prepare_utf16(&self, query: &U16Str) -> Result<Prepared<'_>, Error> {
-        let mut stmt = self.allocate_statement()?;
-        stmt.prepare(query).into_result(&stmt)?;
-        Ok(Prepared::new(stmt))
-    }
-
-    /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
-    ///
-    /// # Parameters
-    ///
-    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
-    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
-    ///   execution.
     pub fn prepare(&self, query: &str) -> Result<Prepared<'_>, Error> {
-        let query = U16String::from_str(query);
-        self.prepare_utf16(&query)
+        let query = SqlText::new(query);
+        let mut stmt = self.allocate_statement()?;
+        stmt.prepare(&query).into_result(&stmt)?;
+        Ok(Prepared::new(stmt))
     }
 
     /// Allocates an SQL statement handle. This is recommended if you want to sequentially execute
