@@ -2582,7 +2582,7 @@ fn varchar_null(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_full_connection_string(profile: &Profile) {
-    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1023);
+    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1024);
     ENV.driver_connect(
         profile.connection_string,
         Some(&mut completed_connection_string),
@@ -2594,6 +2594,8 @@ fn get_full_connection_string(profile: &Profile) {
 
     let completed_connection_string = completed_connection_string.to_utf8();
 
+    eprintln!("Completed Connection String: {completed_connection_string}");
+
     // Additional attributes should make the string larger.
     assert!(profile.connection_string.len() <= completed_connection_string.len());
 }
@@ -2604,7 +2606,7 @@ fn get_full_connection_string(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] STATUS_STACK_BUFFER_OVERRUN
 // #[test_case(SQLITE_3; "SQLite 3")] Does not write truncated connection string at all
 fn get_full_connection_string_truncated(profile: &Profile) {
-    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1);
+    let mut completed_connection_string = OutputStringBuffer::with_buffer_size(2);
     ENV.driver_connect(
         profile.connection_string,
         Some(&mut completed_connection_string),

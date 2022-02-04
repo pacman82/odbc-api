@@ -35,6 +35,24 @@ pub fn slice_to_utf8(text: &[u16]) -> Result<String, DecodeUtf16Error> {
     decode_utf16(text.iter().copied()).collect()
 }
 
+#[cfg(not(feature = "narrow"))]
+fn sz_to_utf8(buffer: &[u16]) -> String {
+    let c_str = U16CStr::from_slice_truncate(buffer).unwrap();
+    c_str.to_string_lossy()
+}
+#[cfg(feature = "narrow")]
+fn sz_to_utf8(buffer: &[u8]) -> String {
+    // Truncate slice at first zero.
+    let end = buffer
+        .iter()
+        .enumerate()
+        .find(|(_index, &character)| character == b'\0')
+        .expect("Buffer must contain terminating zero.")
+        .0;
+    let c_str = unsafe { CStr::from_bytes_with_nul_unchecked(&buffer[..=end]) };
+    c_str.to_string_lossy().into_owned()
+}
+
 /// Buffer length in bytes, not characters
 pub fn binary_length(buffer: &[SqlChar]) -> usize {
     buffer.len() * size_of::<SqlChar>()
@@ -134,23 +152,9 @@ impl SzBuffer {
         &mut self.buffer
     }
 
-    #[cfg(not(feature = "narrow"))]
+    /// Create an owned utf-8 string from the internal buffer representation.
     pub fn to_utf8(&self) -> String {
-        let c_str = U16CStr::from_slice_truncate(&self.buffer).unwrap();
-        c_str.to_string_lossy()
-    }
-    #[cfg(feature = "narrow")]
-    pub fn to_utf8(&self) -> String {
-        // Truncate slice at first zero.
-        let end = self
-            .buffer
-            .iter()
-            .enumerate()
-            .find(|(_index, &character)| character == b'\0')
-            .expect("Buffer must contain terminating zero.")
-            .0;
-        let c_str = unsafe { CStr::from_bytes_with_nul_unchecked(&self.buffer[..=end]) };
-        c_str.to_string_lossy().into_owned()
+        sz_to_utf8(&self.buffer)
     }
 
     /// Length in characters including space for terminating zero
@@ -166,7 +170,7 @@ impl SzBuffer {
 /// We use this as an output buffer for strings. Allows for detecting truncation.
 pub struct OutputStringBuffer {
     /// Buffer holding the string. Must also contains space for a terminating zero.
-    buffer: SzBuffer,
+    buffer: Vec<SqlChar>,
     /// After the buffer has been filled, this should contain the actual length of the string. Can
     /// be used to detect truncation.
     actual_length: i16,
@@ -174,24 +178,24 @@ pub struct OutputStringBuffer {
 
 impl OutputStringBuffer {
     /// Creates a new instance of an output string buffer which can hold strings up to a size of
-    /// `max_str_len` characters.
+    /// `max_str_len - 1` characters. `-1 because one place is needed for the terminating zero.
     pub fn with_buffer_size(max_str_len: usize) -> Self {
         Self {
-            buffer: SzBuffer::with_capacity(max_str_len),
+            buffer: vec![0; max_str_len + 1],
             actual_length: 0,
         }
     }
 
     /// Ptr to the internal buffer. Used by ODBC API calls to fill the buffer.
     pub fn mut_buf_ptr(&mut self) -> *mut SqlChar {
-        self.buffer.mut_ptr()
+        mut_buf_ptr(&mut self.buffer)
     }
 
     /// Length of the internal buffer in characters including the terminating zero.
     pub fn buf_len(&self) -> i16 {
         // Since buffer must always be able to hold at least one element, substracting `1` is always
         // defined
-        self.buffer.len_buf().try_into().unwrap()
+        self.buffer.len().try_into().unwrap()
     }
 
     /// Mutable pointer to actual output string length. Used by ODBC API calls to report truncation.
@@ -201,11 +205,24 @@ impl OutputStringBuffer {
 
     /// Call this method to extract string from buffer after ODBC has filled it.
     pub fn to_utf8(&self) -> String {
-        self.buffer.to_utf8()
+        if self.buffer.is_empty() {
+            return String::new();
+        }
+
+        if self.is_truncated() {
+            // If the string is truncated we return the entire buffer excluding the terminating
+            // zero.
+            slice_to_utf8(&self.buffer[0..(self.buffer.len() - 1)]).unwrap()
+        } else {
+            // If the string is not truncated, we return not the entire buffer, but only the slice
+            // containing the actual string.
+            let actual_length: usize = self.actual_length.try_into().unwrap();
+            slice_to_utf8(&self.buffer[0..actual_length]).unwrap()
+        }
     }
 
     /// True if the buffer had not been large enough to hold the string.
     pub fn is_truncated(&self) -> bool {
-        self.actual_length >= self.buffer.len_buf().try_into().unwrap()
+        self.actual_length >= self.buffer.len().try_into().unwrap()
     }
 }
