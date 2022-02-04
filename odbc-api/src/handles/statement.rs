@@ -12,8 +12,8 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLNumResultCols, SQLParamData, SQLPrepareW, SQLPutData, SQLSetStmtAttrW,
-    SQLTablesW, SqlDataType, SqlReturn, StatementAttribute, ULen,
+    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLSetStmtAttrW, SQLTablesW,
+    SqlDataType, SqlReturn, StatementAttribute, ULen,
 };
 use std::{
     ffi::c_void,
@@ -26,13 +26,14 @@ use widestring::U16Str;
 #[cfg(feature = "narrow")]
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
-    SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
+    SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc, SQLPrepare as sql_prepare,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
+    SQLPrepareW as sql_prepare,
 };
 
 /// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
@@ -260,15 +261,15 @@ pub trait Statement: AsHandle {
     /// Send an SQL statement to the data source for preparation. The application can include one or
     /// more parameter markers in the SQL statement. To include a parameter marker, the application
     /// embeds a question mark (?) into the SQL string at the appropriate position.
-    fn prepare(&mut self, statement_text: &U16Str) -> SqlResult<()> {
+    fn prepare(&mut self, statement: &SqlText) -> SqlResult<()> {
         unsafe {
-            SQLPrepareW(
+            sql_prepare(
                 self.as_sys(),
-                buf_ptr(statement_text.as_slice()),
-                statement_text.len().try_into().unwrap(),
+                statement.ptr(),
+                statement.len_char().try_into().unwrap(),
             )
         }
-        .into_sql_result("SQLPrepareW")
+        .into_sql_result("SQLPrepare")
     }
 
     /// Executes a statement prepared by `prepare`. After the application processes or discards the
@@ -659,13 +660,13 @@ pub trait Statement: AsHandle {
             sql_columns(
                 self.as_sys(),
                 catalog_name.ptr(),
-                catalog_name.len_char(),
+                catalog_name.len_char().try_into().unwrap(),
                 schema_name.ptr(),
-                schema_name.len_char(),
+                schema_name.len_char().try_into().unwrap(),
                 table_name.ptr(),
-                table_name.len_char(),
+                table_name.len_char().try_into().unwrap(),
                 column_name.ptr(),
-                column_name.len_char(),
+                column_name.len_char().try_into().unwrap(),
             )
             .into_sql_result("SQLColumns")
         }

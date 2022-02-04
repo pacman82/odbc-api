@@ -95,11 +95,11 @@ impl<'c> Connection<'c> {
             sql_connect(
                 self.handle,
                 data_source_name.ptr(),
-                data_source_name.len_char(),
+                data_source_name.len_char().try_into().unwrap(),
                 user.ptr(),
-                user.len_char(),
+                user.len_char().try_into().unwrap(),
                 pwd.ptr(),
-                pwd.len_char(),
+                pwd.len_char().try_into().unwrap(),
             )
             .into_sql_result("SQLConnect")
         }
@@ -150,7 +150,7 @@ impl<'c> Connection<'c> {
             self.handle,
             parent_window,
             connection_string.ptr(),
-            connection_string.len_char(),
+            connection_string.len_char().try_into().unwrap(),
             out_connection_string,
             out_buf_len,
             actual_len_ptr,

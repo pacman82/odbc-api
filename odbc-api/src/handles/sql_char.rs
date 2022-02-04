@@ -124,8 +124,8 @@ impl<'a> SqlText<'a> {
     }
 
     /// Length in characters
-    pub fn len_char(&self) -> i16 {
-        self.text.len().try_into().unwrap()
+    pub fn len_char(&self) -> usize {
+        self.text.len()
     }
 }
 
