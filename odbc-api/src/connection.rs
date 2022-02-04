@@ -114,7 +114,7 @@ impl<'c> Connection<'c> {
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = SqlText::new(query);
         let lazy_statement = move || self.allocate_statement();
-        execute_with_parameters(lazy_statement, Some(query), params)
+        execute_with_parameters(lazy_statement, Some(&query), params)
     }
 
     /// In some use cases there you only execute a single statement, or the time to open a
@@ -376,10 +376,10 @@ impl<'c> Connection<'c> {
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         execute_columns(
             self.allocate_statement()?,
-            &U16String::from_str(catalog_name),
-            &U16String::from_str(schema_name),
-            &U16String::from_str(table_name),
-            &U16String::from_str(column_name),
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(column_name),
         )
     }
 

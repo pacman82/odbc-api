@@ -87,7 +87,7 @@ impl<'o> Preallocated<'o> {
         params: impl ParameterRefCollection,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         let query = SqlText::new(query);
-        execute_with_parameters(move || Ok(&mut self.statement), Some(query), params)
+        execute_with_parameters(move || Ok(&mut self.statement), Some(&query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.
@@ -149,10 +149,10 @@ impl<'o> Preallocated<'o> {
     ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
         execute_columns(
             &mut self.statement,
-            &U16String::from_str(catalog_name),
-            &U16String::from_str(schema_name),
-            &U16String::from_str(table_name),
-            &U16String::from_str(column_name),
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(column_name),
         )
     }
 }

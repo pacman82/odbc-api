@@ -47,7 +47,7 @@ narrow=[]
 # default=["narrow"]
 
 [dependencies]
-odbc-sys = "0.21.1"
+odbc-sys = "0.21.2"
 thiserror = "1.0.30"
 log = "0.4.14"
 widestring = "0.5.1"

@@ -22,7 +22,7 @@ use crate::{
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
-    query: Option<SqlText>,
+    query: Option<&SqlText>,
     mut params: impl ParameterRefCollection,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
@@ -55,14 +55,14 @@ where
 /// * Furthermore all bound delayed parameters must be of type `*mut &mut dyn Blob`.
 pub unsafe fn execute<S>(
     mut statement: S,
-    query: Option<SqlText>,
+    query: Option<&SqlText>,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: BorrowMutStatement,
 {
     let stmt = statement.borrow_mut();
     let need_data = if let Some(sql) = query {
-        stmt.exec_direct(&sql).into_result(stmt)?
+        stmt.exec_direct(sql).into_result(stmt)?
     } else {
         stmt.execute().into_result(stmt)?
     };
@@ -95,10 +95,10 @@ where
 /// [`crate::Preallocated`].
 pub fn execute_columns<S>(
     mut statement: S,
-    catalog_name: &U16Str,
-    schema_name: &U16Str,
-    table_name: &U16Str,
-    column_name: &U16Str,
+    catalog_name: &SqlText,
+    schema_name: &SqlText,
+    table_name: &SqlText,
+    column_name: &SqlText,
 ) -> Result<CursorImpl<S>, Error>
 where
     S: BorrowMutStatement,
