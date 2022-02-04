@@ -101,9 +101,11 @@ pub trait ResultSetMetadata {
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buf: &mut Vec<SqlChar>) -> Result<(), Error> {
+    fn col_name(&self, column_number: u16) -> Result<String, Error> {
         let stmt = self.stmt_ref();
-        stmt.col_name(column_number, buf).into_result(stmt)
+        let mut buf = vec![0; 1024];
+        stmt.col_name(column_number, &mut buf).into_result(stmt)?;
+        Ok(slice_to_utf8(&buf).unwrap())
     }
 
     /// Use this if you want to iterate over all column names and allocate a `String` for each one.
@@ -215,9 +217,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.column <= self.num_cols {
-            let result = self
-                .cursor
+            // stmt instead of cursor.col_name, so we can efficently reuse the buffer and avoid
+            // extra allocations.
+            let stmt = self.cursor.stmt_ref();
+
+            let result = stmt
                 .col_name(self.column, &mut self.buffer)
+                .into_result(stmt)
                 .map(|()| slice_to_utf8(&self.buffer).unwrap());
             self.column += 1;
             Some(result)

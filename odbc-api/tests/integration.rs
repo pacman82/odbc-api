@@ -14,7 +14,7 @@ use odbc_api::{
         AnyColumnViewMut, BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item,
         TextColumn, TextRowSet,
     },
-    handles::{slice_to_utf8, OutputStringBuffer, Statement},
+    handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -316,15 +316,20 @@ fn column_name(profile: &Profile) {
     let sql = format!("SELECT a, b FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
-    let mut buf = Vec::new();
-
-    cursor.col_name(1, &mut buf).unwrap();
-    let name = slice_to_utf8(&buf).unwrap();
+    let name = cursor.col_name(1).unwrap();
     assert_eq!("a", name);
 
-    cursor.col_name(2, &mut buf).unwrap();
-    let name = slice_to_utf8(&buf).unwrap();
+    let name = cursor.col_name(2).unwrap();
     assert_eq!("b", name);
+
+    // Test the same using column descriptions
+    let mut desc = ColumnDescription::default();
+
+    cursor.describe_col(1, &mut desc).unwrap();
+    assert_eq!("a", desc.name_to_string().unwrap());
+
+    cursor.describe_col(2, &mut desc).unwrap();
+    assert_eq!("b", desc.name_to_string().unwrap());
 }
 
 /// Bind a CHAR column to a character buffer.
