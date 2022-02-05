@@ -31,10 +31,11 @@ RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libs
 RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
 
 # Install MariaDB driver from tar bundle
-COPY docker/mariadb-connector-odbc-3.1.11-debian-buster-amd64.tar.gz .
+COPY docker/mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz .
 COPY docker/mariadb_odbc_template.ini .
-RUN tar -xf mariadb-connector-odbc-3.1.11-debian-buster-amd64.tar.gz
-RUN cp mariadb-connector-odbc-3.1.11-debian-buster-amd64/lib/mariadb/libmaodbc.so /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
+RUN tar -xf mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz
+RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmaodbc.so /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
+RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmariadb.so.3 /usr/lib/x86_64-linux-gnu/
 RUN odbcinst -i -d -f mariadb_odbc_template.ini
 
 # There is also a rust devcontainer, yet this way we get a toolchain
