@@ -281,7 +281,7 @@ impl Environment {
     /// let mut output_buffer = OutputStringBuffer::with_buffer_size(1024);
     /// let connection = env.driver_connect(
     ///     "",
-    ///     Some(&mut output_buffer),
+    ///     &mut output_buffer,
     ///     DriverCompleteOption::Prompt,
     /// )?;
     ///
@@ -308,7 +308,7 @@ impl Environment {
     /// let without_uid_or_pwd = "DSN=SomeSharedDatabase;";
     /// let connection = env.driver_connect(
     ///     &without_uid_or_pwd,
-    ///     Some(&mut output_buffer),
+    ///     &mut output_buffer,
     ///     DriverCompleteOption::Complete,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
@@ -331,7 +331,7 @@ impl Environment {
     /// let already_sufficient = "DSN=MicrosoftAccessFile;";
     /// let connection = env.driver_connect(
     ///    &already_sufficient,
-    ///    Some(&mut output_buffer),
+    ///    &mut output_buffer,
     ///    DriverCompleteOption::NoPrompt,
     /// )?;
     /// let connection_string = output_buffer.to_utf8();
@@ -343,7 +343,7 @@ impl Environment {
     pub fn driver_connect(
         &self,
         connection_string: &str,
-        completed_connection_string: Option<&mut OutputStringBuffer>,
+        completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverCompleteOption,
     ) -> Result<Connection<'_>, Error> {
         #[cfg(target_os = "windows")]
@@ -391,7 +391,7 @@ impl Environment {
     pub unsafe fn driver_connect_with_hwnd(
         &self,
         connection_string: &str,
-        completed_connection_string: Option<&mut OutputStringBuffer>,
+        completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverCompleteOption,
         parent_window: HWnd,
     ) -> Result<Connection<'_>, Error> {

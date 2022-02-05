@@ -178,11 +178,18 @@ pub struct OutputStringBuffer {
 }
 
 impl OutputStringBuffer {
+    /// Creates an empty string buffer. Useful if you want to e.g. use a prompt to complete the
+    /// connection string, but are not interessted in the actual completed connection string.
+    pub fn empty() -> Self {
+        Self::with_buffer_size(0)
+    }
+
     /// Creates a new instance of an output string buffer which can hold strings up to a size of
     /// `max_str_len - 1` characters. `-1 because one place is needed for the terminating zero.
+    /// To hold a connection string the size should be at least 1024.
     pub fn with_buffer_size(max_str_len: usize) -> Self {
         Self {
-            buffer: vec![0; max_str_len + 1],
+            buffer: vec![0; max_str_len],
             actual_length: 0,
         }
     }

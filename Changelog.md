@@ -5,6 +5,7 @@
 * Introduces `narrow` feature, allowing to compile this library against narrow ODBC function calls. This is optional now, but may become default behaviour in the future on non-windows platforms (because those typically have UTF-8 locale by default.)
 * Removed public higher level methods directly dealing with utf16. Similar functions using unicode remain in the API. This has been done in order better support building against narrow ODBC function calls on some platforms while keeping complexity in check.
 * `ResultSetMetadata::col_name` now returns `Result<String, Error>`.
+* `Environment::driver_connect` now takes `&mut OutputStringBuffer` instead of `Option<&mut OutputStringBuffer>`. Use `OutputStringBuffer::empty()` instead of `None`.
 * Removed `Connection::tables` now takes `&str` instead of `Option<&str>` arguments. Use `""` instead of none
 * Removed `Environment::connect_utf16`.
 * Removed `Preallocated::execute_utf16`.

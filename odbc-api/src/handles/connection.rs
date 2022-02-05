@@ -111,12 +111,12 @@ impl<'c> Connection<'c> {
     pub fn connect_with_connection_string(&mut self, connection_string: &SqlText) -> SqlResult<()> {
         unsafe {
             let parent_window = null_mut();
-            let completed_connection_string = None;
+            let mut completed_connection_string = OutputStringBuffer::empty();
 
             self.driver_connect(
                 connection_string,
                 parent_window,
-                completed_connection_string,
+                &mut completed_connection_string,
                 DriverConnectOption::NoPrompt,
             )
             // Since we did pass NoPrompt we know the user can not abort the prompt.
@@ -138,22 +138,17 @@ impl<'c> Connection<'c> {
         &mut self,
         connection_string: &SqlText,
         parent_window: HWnd,
-        mut completed_connection_string: Option<&mut OutputStringBuffer>,
+        completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverConnectOption,
     ) -> Option<SqlResult<()>> {
-        let (out_connection_string, out_buf_len, actual_len_ptr) = completed_connection_string
-            .as_mut()
-            .map(|osb| (osb.mut_buf_ptr(), osb.buf_len(), osb.mut_actual_len_ptr()))
-            .unwrap_or((null_mut(), 0, null_mut()));
-
         sql_driver_connect(
             self.handle,
             parent_window,
             connection_string.ptr(),
             connection_string.len_char().try_into().unwrap(),
-            out_connection_string,
-            out_buf_len,
-            actual_len_ptr,
+            completed_connection_string.mut_buf_ptr(),
+            completed_connection_string.buf_len(),
+            completed_connection_string.mut_actual_len_ptr(),
             driver_completion,
         )
         .into_opt_sql_result("SQLDriverConnect")

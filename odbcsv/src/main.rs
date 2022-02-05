@@ -3,7 +3,7 @@ use clap::{Args, Parser};
 use log::info;
 use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, Connection, Cursor, DriverCompleteOption,
-    Environment, IntoParameter,
+    Environment, IntoParameter, handles::OutputStringBuffer,
 };
 use std::{
     fs::{read_to_string, File},
@@ -306,8 +306,11 @@ fn open_connection<'e>(
         bail!("Either DSN, connection string or prompt must be specified.")
     }
 
+    // We are not interessted in the actual string used, lets create an empty buffer.
+    let mut completed_connection_string = OutputStringBuffer::empty();
+
     environment
-        .driver_connect(&cs, None, driver_completion)
+        .driver_connect(&cs, &mut completed_connection_string, driver_completion)
         .map_err(|e| e.into())
 }
 

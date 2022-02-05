@@ -2591,7 +2591,7 @@ fn get_full_connection_string(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1024);
     ENV.driver_connect(
         profile.connection_string,
-        Some(&mut completed_connection_string),
+        &mut completed_connection_string,
         odbc_api::DriverCompleteOption::NoPrompt,
     )
     .unwrap();
@@ -2615,7 +2615,7 @@ fn get_full_connection_string_truncated(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(2);
     ENV.driver_connect(
         profile.connection_string,
-        Some(&mut completed_connection_string),
+        &mut completed_connection_string,
         odbc_api::DriverCompleteOption::NoPrompt,
     )
     .unwrap();
@@ -2626,6 +2626,24 @@ fn get_full_connection_string_truncated(profile: &Profile) {
     );
 
     assert!(completed_connection_string.is_truncated());
+}
+
+/// We must be able to detect truncation in case we provide a buffer too small to hold the output
+/// connection string
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn driver_connect_with_empty_out_connection_sring(profile: &Profile) {
+    let mut completed_connection_string = OutputStringBuffer::empty();
+    ENV.driver_connect(
+        profile.connection_string,
+        &mut completed_connection_string,
+        odbc_api::DriverCompleteOption::NoPrompt,
+    )
+    .unwrap();
+
+    assert!(completed_connection_string.is_truncated());
+    assert!(completed_connection_string.to_utf8().is_empty());
 }
 
 #[test_case(MSSQL, "Microsoft SQL Server"; "Microsoft SQL Server")]
