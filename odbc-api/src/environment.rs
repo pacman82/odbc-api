@@ -644,7 +644,7 @@ fn attributes_iter(attributes: &str) -> impl Iterator<Item = (String, String)> +
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use super::*;
 

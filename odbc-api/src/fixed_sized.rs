@@ -110,7 +110,7 @@ impl_input_fixed_sized!(i64, DataType::BigInt);
 // supported, implementation DataType would need to take an instance into account.
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use super::Bit;
 

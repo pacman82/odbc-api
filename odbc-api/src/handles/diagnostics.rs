@@ -205,7 +205,7 @@ impl fmt::Debug for Record {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use crate::handles::diagnostics::State;
 

@@ -27,7 +27,7 @@ impl Nullability {
             odbc_sys::Nullability::UNKNOWN => Nullability::Unknown,
             odbc_sys::Nullability::NO_NULLS => Nullability::NoNulls,
             odbc_sys::Nullability::NULLABLE => Nullability::Nullable,
-            other => panic!("ODBC returned invalid value for Nullable: {:?}", other),
+            other => panic!("ODBC returned invalid value for Nullable: {}", other.0),
         }
     }
 }
@@ -57,5 +57,18 @@ impl ColumnDescription {
             Nullability::Nullable | Nullability::Unknown => true,
             Nullability::NoNulls => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Nullability;
+
+
+    /// Application should panic if ODBC driver returns unsupported value for nullable
+    #[test]
+    #[should_panic(expected = "ODBC returned invalid value for Nullable: 5")]
+    fn invalid_nullable_representation(){
+        Nullability::new(odbc_sys::Nullability(5));
     }
 }
