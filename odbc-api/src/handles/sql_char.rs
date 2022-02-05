@@ -166,15 +166,6 @@ impl SzBuffer {
     pub fn to_utf8(&self) -> String {
         sz_to_utf8(&self.buffer)
     }
-
-    /// Length in characters including space for terminating zero
-    pub fn len_buf(&self) -> usize {
-        self.buffer.len()
-    }
-
-    pub fn mut_ptr(&mut self) -> *mut SqlChar {
-        mut_buf_ptr(&mut self.buffer)
-    }
 }
 
 /// We use this as an output buffer for strings. Allows for detecting truncation.
