@@ -23,7 +23,7 @@ cargo install odbcsv
 ```shell
 odbcsv query \
 --output query.csv \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;" \
 "SELECT title, year from Movies"
 ```
 
@@ -34,7 +34,7 @@ odbcsv query \
 --output query.csv \
 --connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;" \
 --user "SA" \
---password "<YourStrong@Passw0rd>" \
+--password "My@Test@Password1" \
 "SELECT title, year from Movies"
 ```
 
@@ -46,7 +46,7 @@ Alternatively you may also specify the `ODBC_USER` and `ODBC_PASSWORD` environme
 odbcsv query \
 --output query.csv \
 --dsn my_db \
---password "<YourStrong@Passw0rd>" \
+--password "My@Test@Password1" \
 --user "SA" \
 "SELECT * FROM Birthdays"
 ```
@@ -56,7 +56,7 @@ odbcsv query \
 ```shell
 odbcsv query \
 --output query.csv \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;" \
 "SELECT * FROM Birthdays WHERE year > ? and year < ?" \
 1990 2010
 ```
@@ -66,7 +66,7 @@ odbcsv query \
 ```shell
 odbcsv insert \
 --input birthdays.csv \
---connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;" \
+--connection-string "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;" \
 Birthdays \
 ```
 

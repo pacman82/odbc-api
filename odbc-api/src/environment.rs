@@ -182,7 +182,7 @@ impl Environment {
     ///
     /// let env = Environment::new()?;
     ///
-    /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+    /// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
     ///
@@ -224,7 +224,7 @@ impl Environment {
     ///     Driver={ODBC Driver 17 for SQL Server};\
     ///     Server=localhost;\
     ///     UID=SA;\
-    ///     PWD=<YourStrong@Passw0rd>;\
+    ///     PWD=My@Test@Password1;\
     /// ";
     ///
     /// let mut conn = env.connect_with_connection_string(connection_string)?;
@@ -314,7 +314,7 @@ impl Environment {
     /// let connection_string = output_buffer.to_utf8();
     ///
     /// // Now `connection_string` might be something like
-    /// // `DSN=SomeSharedDatabase;UID=SA;PWD=<YourStrong@Passw0rd>;`
+    /// // `DSN=SomeSharedDatabase;UID=SA;PWD=My@Test@Password1;`
     /// # Ok(()) }
     /// ```
     ///

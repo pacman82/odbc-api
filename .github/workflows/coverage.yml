@@ -17,7 +17,7 @@ jobs:
         - 1433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: <YourStrong@Passw0rd>
+          SA_PASSWORD: My@Test@Password1
 
       # Maria DB test stopped working on Ubuntu after driver update
 

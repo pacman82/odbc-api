@@ -4,7 +4,7 @@ services:
     ports:
       - 1433:1433
     environment:
-      - MSSQL_SA_PASSWORD=<YourStrong@Passw0rd>
+      - MSSQL_SA_PASSWORD=My@Test@Password1
     command:
       [
         "/opt/mssql/bin/sqlservr",

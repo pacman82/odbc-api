@@ -6,7 +6,7 @@ use odbc_api::Environment;
 use odbc_sys::{AttrConnectionPooling, AttrCpMatch};
 
 const MSSQL_CONNECTION: &str =
-    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
 lazy_static! {

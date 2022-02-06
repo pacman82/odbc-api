@@ -32,7 +32,7 @@ jobs:
         uses: potatoqualitee/mssqlsuite@v1
         with:
           install: sqlengine, sqlclient
-          sa-password: <YourStrong@Passw0rd>
+          sa-password: My@Test@Password1
           show-log: true
 
       - name: Run MariaDB

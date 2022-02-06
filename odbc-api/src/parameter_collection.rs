@@ -16,7 +16,7 @@ mod tuple;
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 /// let year = 1980;
 /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 ///     // Use cursor to process query results.
@@ -31,7 +31,7 @@ mod tuple;
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 /// let too_old = 1980;
 /// let too_young = 2000;
 /// if let Some(cursor) = conn.execute(
@@ -50,7 +50,7 @@ mod tuple;
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 /// let params = [1980, 2000];
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",

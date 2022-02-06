@@ -234,7 +234,7 @@ where
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year FROM Birthdays WHERE name=?;",
 ///     &"Bernd".into_parameter())?

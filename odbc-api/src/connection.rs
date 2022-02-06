@@ -100,7 +100,7 @@ impl<'c> Connection<'c> {
     ///
     /// let env = Environment::new()?;
     ///
-    /// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+    /// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
     /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
     ///     // Use cursor to process query results.  
     /// }
@@ -131,7 +131,7 @@ impl<'c> Connection<'c> {
     /// const CONNECTION_STRING: &str =
     ///     "Driver={ODBC Driver 17 for SQL Server};\
     ///     Server=localhost;UID=SA;\
-    ///     PWD=<YourStrong@Passw0rd>;";
+    ///     PWD=My@Test@Password1;";
     ///
     /// fn execute_query(query: &str) -> Result<Option<impl Cursor>, Error> {
     ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
@@ -259,7 +259,7 @@ impl<'c> Connection<'c> {
     ///     "Driver={ODBC Driver 17 for SQL Server};\
     ///     Server=localhost;\
     ///     UID=SA;\
-    ///     PWD=<YourStrong@Passw0rd>;\
+    ///     PWD=My@Test@Password1;\
     /// ";
     ///
     /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();

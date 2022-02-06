@@ -23,7 +23,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! let year = 1980;
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 //!     // Use cursor to process query results.
@@ -46,7 +46,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! let year = WithDataType{
 //!    value: 1980,
 //!    data_type: DataType::Varchar {length: 4}
@@ -73,7 +73,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! let too_old = 1980;
 //! let too_young = 2000;
 //! if let Some(cursor) = conn.execute(
@@ -95,7 +95,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! let params = [1980, 2000];
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
@@ -157,7 +157,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //!
 //! let mut ret = Nullable::<i32>::null();
 //! let mut param = Nullable::<i32>::new(7);
@@ -285,7 +285,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! // conn.execute("SELECT year FROM Birthdays WHERE name=?;", "Bernd")?; // <- compiler error.
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
@@ -298,7 +298,7 @@
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year FROM Birthdays WHERE name=?;",
 //!     &"Bernd".into_parameter())?
@@ -445,7 +445,7 @@ where
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 ///
 /// let mut ret = Nullable::<i32>::null();
 /// let mut param = Nullable::new(7);
@@ -468,7 +468,7 @@ pub struct InOut<'a, T>(pub &'a mut T);
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 ///
 /// let mut ret = Nullable::<i32>::null();
 /// let mut param = Nullable::new(7);
@@ -506,7 +506,7 @@ where
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "<YourStrong@Passw0rd>")?;
+/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 /// // Bind year as VARCHAR(4) rather than integer.
 /// let year = WithDataType{
 ///    value: 1980,

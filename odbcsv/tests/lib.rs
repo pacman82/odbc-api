@@ -9,7 +9,7 @@ use odbc_api::{Connection, Environment};
 use tempfile::NamedTempFile;
 
 const MSSQL: &str =
-    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
 
 #[cfg(target_os = "windows")]
 const MARIADB: &str = "Driver={MariaDB ODBC 3.1 Driver};\
@@ -102,7 +102,7 @@ fn append_user_and_password_to_connection_string() {
             "--user",
             "SA",
             "--password",
-            "<YourStrong@Passw0rd>",
+            "My@Test@Password1",
             "SELECT 42",
         ])
         .assert()

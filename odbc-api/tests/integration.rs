@@ -29,7 +29,7 @@ use std::{
 };
 
 const MSSQL_CONNECTION: &str =
-    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=<YourStrong@Passw0rd>;";
+    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
 
 const MSSQL: &Profile = &Profile {
     connection_string: MSSQL_CONNECTION,
