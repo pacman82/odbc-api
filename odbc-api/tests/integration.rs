@@ -507,6 +507,28 @@ fn bind_numeric_to_float(profile: &Profile) {
     assert!((1.23f64 - actual[0]).abs() < f64::EPSILON);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bind_numeric_to_i64(profile: &Profile) {
+    // Setup table
+    let table_name = "BindNumericToI64";
+    let conn = profile
+        .setup_empty_table(table_name, &["NUMERIC(10,0)"])
+        .unwrap();
+    let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    conn.execute(&insert_sql, &1234567890i64).unwrap();
+
+    let sql = format!("SELECT a FROM {}", table_name);
+    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let buf: SingleColumnRowSetBuffer<Vec<i64>> = SingleColumnRowSetBuffer::new(1);
+    let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
+
+    let actual = row_set_cursor.fetch().unwrap().unwrap().get();
+    assert_eq!(1, actual.len());
+    assert_eq!(1234567890, actual[0]);
+}
+
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // Convert syntax is different
