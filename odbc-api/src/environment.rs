@@ -11,6 +11,12 @@ use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 // Currently only windows driver manager supports prompt.
 use winit::{event_loop::EventLoop, platform::windows::WindowExtWindows, window::WindowBuilder};
 
+#[cfg(not(feature="odbc_version_3_5"))]
+const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
+
+#[cfg(feature="odbc_version_3_5")]
+const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3;
+
 /// An ODBC 3.8 environment.
 ///
 /// Associated with an `Environment` is any information that is global in nature, such as:
@@ -140,7 +146,7 @@ impl Environment {
         debug!("ODBC Environment created.");
 
         let result = environment
-            .declare_version(AttrOdbcVersion::Odbc3_80)
+            .declare_version(ODBC_API_VERSION)
             .into_result(&environment);
 
         // Translate invalid attribute into a more meaningful error, provided the additional

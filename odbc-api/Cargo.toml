@@ -44,10 +44,19 @@ readme = "../Readme.md"
 # Note that this is the encoding used for statement text and other string arguments, not for the
 # payload of VARCHAR columns, or other column types in the result set.
 narrow=[]
-# default=["narrow"]
+
+# Sets the the version of ODBC to be declared as 3. This is something you may want to do if you are
+# using iodbc, since iodbc currently only supports 3.5.
+odbc_version_3_5 = ["odbc-sys/odbc_version_3_50"]
+
+# The ODBC version your application should declare if it runs on windows, or on linux using
+# UnixOdbc.
+odbc_version_3_80 = ["odbc-sys/odbc_version_3_80"]
+
+default=["odbc_version_3_80"]
 
 [dependencies]
-odbc-sys = "0.21.2"
+odbc-sys = { version = "0.21.2", default-features = false }
 thiserror = "1.0.30"
 log = "0.4.14"
 widestring = "0.5.1"
