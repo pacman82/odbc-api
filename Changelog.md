@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.34.1
+
+* Introduce feature `odbc_version_3_5`. Decalaring ODBC version 3.80 is still default behaviour. The flag has mainly been introduced to achieve compatibility with iODBC.
+
 ## 0.34.0
 
 * Introduces `narrow` feature, allowing to compile this library against narrow ODBC function calls. This is optional now, but may become default behaviour in the future on non-windows platforms (because those typically have UTF-8 locale by default.)
