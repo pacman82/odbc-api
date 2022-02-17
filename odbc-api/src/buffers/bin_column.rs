@@ -219,6 +219,18 @@ pub struct BinColumnIt<'c> {
     col: &'c BinColumn,
 }
 
+impl<'c> BinColumnIt<'c> {
+    /// Returns the values buffer of this [`BinColumnIt`].
+    pub fn values(&self) -> &[u8] {
+        &self.col.values
+    }
+
+    /// Returns the indicators buffer of this [`BinColumnIt`].
+    pub fn indicators(&self) -> &[isize] {
+        &self.col.indicators
+    }
+}
+
 impl<'c> Iterator for BinColumnIt<'c> {
     type Item = Option<&'c [u8]>;
 

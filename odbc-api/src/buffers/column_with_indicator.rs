@@ -93,6 +93,16 @@ impl<'a, T> NullableSlice<'a, T> {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+
+    /// Returns the values buffer of this [`NullableSlice`].
+    pub fn values(&self) -> &[T] {
+        self.values
+    }
+
+    /// Returns the indicators buffer of this [`NullableSlice`].
+    pub fn indicators(&self) -> &[isize] {
+        self.indicators
+    }
 }
 
 impl<'a, T> Iterator for NullableSlice<'a, T> {
