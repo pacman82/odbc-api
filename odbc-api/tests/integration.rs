@@ -570,10 +570,15 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     } else {
         panic!("Column View expected to be binary")
     };
+
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
     assert_eq!(None, col_it.next()); // Expecting iterator end.
+
+    assert_eq!(&col_it.values()[0..5], b"Hello");
+    assert_eq!(&col_it.values()[10..10 + 5], b"World"); // 10 due to Varbinary(10)
+    assert_eq!(col_it.lengths(), &[5, 5]);
 }
 
 /// Bind a columnar buffer to a BINARY(5) column and fetch data.
@@ -667,44 +672,44 @@ fn columnar_fetch_timestamp(profile: &Profile) {
     } else {
         panic!("Column View expected to be binary")
     };
-    assert_eq!(
-        Some(&Timestamp {
-            year: 2021,
-            month: 3,
-            day: 20,
-            hour: 15,
-            minute: 24,
-            second: 12,
-            fraction: 120_000_000,
-        }),
-        col_it.next().unwrap()
-    );
-    assert_eq!(
-        Some(&Timestamp {
-            year: 2020,
-            month: 3,
-            day: 20,
-            hour: 15,
-            minute: 24,
-            second: 12,
-            fraction: 0,
-        }),
-        col_it.next().unwrap()
-    );
-    assert_eq!(
-        Some(&Timestamp {
-            year: 1970,
-            month: 1,
-            day: 1,
-            hour: 0,
-            minute: 0,
-            second: 0,
-            fraction: 0,
-        }),
-        col_it.next().unwrap()
-    );
+
+    let v1 = Timestamp {
+        year: 2021,
+        month: 3,
+        day: 20,
+        hour: 15,
+        minute: 24,
+        second: 12,
+        fraction: 120_000_000,
+    };
+
+    let v2 = Timestamp {
+        year: 2020,
+        month: 3,
+        day: 20,
+        hour: 15,
+        minute: 24,
+        second: 12,
+        fraction: 0,
+    };
+
+    let v3 = Timestamp {
+        year: 1970,
+        month: 1,
+        day: 1,
+        hour: 0,
+        minute: 0,
+        second: 0,
+        fraction: 0,
+    };
+
+    assert_eq!(Some(&v1), col_it.next().unwrap());
+    assert_eq!(Some(&v2), col_it.next().unwrap());
+    assert_eq!(Some(&v3), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
     assert_eq!(None, col_it.next()); // Expecting iterator end.
+
+    assert_eq!(&col_it.values()[..3], &[v1, v2, v3])
 }
 
 /// Insert values into a DATETIME2 column using a columnar buffer

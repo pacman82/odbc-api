@@ -220,14 +220,40 @@ pub struct BinColumnIt<'c> {
 }
 
 impl<'c> BinColumnIt<'c> {
+    /// The maximum length (in bytes) of an individual item of this iterator.
+    pub fn max_len(&self) -> usize {
+        self.col.max_len()
+    }
+
     /// Returns the values buffer of this [`BinColumnIt`].
+    ///
+    /// The values in this slice are only determined for specified slices.
+    /// Specifically, row `index` is the slice `[offset..offset + lengths[index]]`
+    /// of this slice, where
+    /// * `offset = index * self.max_len();`
+    /// * `lengths = self.lengths()`
+    ///
+    /// In other words, this slice has a fix spacing given by `max_len`, and the number of
+    /// valid items in each space is given by `self.lengths()[index]`.
+    ///
+    /// Note that there is no guarantee that `offset + lengths[index]` is smaller than
+    /// this slice's length; i.e. _do_ perform boundary checks.
+    ///
+    /// `max_len`, `lengths` and this function can be used to reconstruct the individual
+    /// slices.
     pub fn values(&self) -> &[u8] {
         &self.col.values
     }
 
-    /// Returns the indicators buffer of this [`BinColumnIt`].
-    pub fn indicators(&self) -> &[isize] {
-        &self.col.indicators
+    /// Returns the lengths of this [`BinColumnIt`].
+    ///
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// A value in this slice is:
+    /// * `-1` when the row is null
+    /// * a positive number denoting the rows' length in all other cases.
+    pub fn lengths(&self) -> &[isize] {
+        &self.col.indicators[..self.num_rows]
     }
 }
 

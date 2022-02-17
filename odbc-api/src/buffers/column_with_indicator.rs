@@ -94,12 +94,22 @@ impl<'a, T> NullableSlice<'a, T> {
         self.values.len()
     }
 
-    /// Returns the values buffer of this [`NullableSlice`].
+    /// Returns the values of this [`NullableSlice`].
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// Item `index` of this slice is only determined for indexes whose row is not null
+    /// (see `indicators`).
     pub fn values(&self) -> &[T] {
         self.values
     }
 
-    /// Returns the indicators buffer of this [`NullableSlice`].
+    /// Returns the indicators of this [`NullableSlice`].
+    ///
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// A value in this slice is:
+    /// * `-1` when the row is null
+    /// * any other number corresponds to a valid row
     pub fn indicators(&self) -> &[isize] {
         self.indicators
     }
