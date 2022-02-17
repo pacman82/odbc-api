@@ -1794,6 +1794,8 @@ fn read_into_columnar_buffer(profile: &Profile) {
 
     match batch.column(1) {
         AnyColumnView::Text(mut col) => {
+            assert_eq!(col.lengths(), &[13]);
+            assert_eq!(&col.values()[0..13], b"Hello, World!");
             assert_eq!(Some(&b"Hello, World!"[..]), col.next().unwrap())
         }
         _ => panic!("Unexpected buffer type"),

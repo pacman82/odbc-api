@@ -251,6 +251,7 @@ impl<'c> BinColumnIt<'c> {
     ///
     /// A value in this slice is:
     /// * `-1` when the row is null
+    /// * `-4` when the length is unknown, meaning that the buffer is too small to hold all the data from the row
     /// * a positive number denoting the rows' length in all other cases.
     pub fn lengths(&self) -> &[isize] {
         &self.col.indicators[..self.num_rows]

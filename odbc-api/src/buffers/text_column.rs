@@ -356,6 +356,44 @@ impl<'c, C> TextColumnIt<'c, C> {
             ret
         }
     }
+
+    /// The maximum length (in bytes) of an individual item of this iterator.
+    pub fn max_len(&self) -> usize {
+        self.col.max_len()
+    }
+
+    /// Returns the values buffer of this [`TextColumnIt`].
+    ///
+    /// The values in this slice are only determined for specified slices.
+    /// Specifically, row `index` is the slice `[offset..offset + lengths[index]]`
+    /// of this slice, where
+    /// * `offset = index * self.max_len();`
+    /// * `lengths = self.lengths()`
+    ///
+    /// In other words, this slice has a fix spacing given by `max_len`, and the number of
+    /// valid items in each space is given by `self.lengths()[index]`.
+    ///
+    /// Note that there is no guarantee that `offset + lengths[index]` is smaller than
+    /// this slice's length; i.e. _do_ perform boundary checks.
+    /// Furthermore, valid slices are not necessarily valid utf8.
+    ///
+    /// `max_len`, `lengths` and this function can be used to reconstruct the individual
+    /// slices.
+    pub fn values(&self) -> &[C] {
+        &self.col.values
+    }
+
+    /// Returns the lengths of this [`TextColumnIt`].
+    ///
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// A value in this slice is:
+    /// * `-1` when the row is null
+    /// * `-4` when the length is unknown, meaning that the buffer is too small to hold all the data from the row
+    /// * a positive number denoting the rows' length in all other cases.
+    pub fn lengths(&self) -> &[isize] {
+        &self.col.indicators[..self.num_rows]
+    }
 }
 
 impl<'c> Iterator for TextColumnIt<'c, u8> {
