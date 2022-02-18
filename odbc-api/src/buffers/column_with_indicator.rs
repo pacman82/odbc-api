@@ -235,4 +235,20 @@ impl<'a, T> NullableSliceMut<'a, T> {
             }
         }
     }
+
+    /// Returns the values of this [`NullableSliceMut`].
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// ODBC drivers will only read values whose corresponding indicator is different from -1.
+    pub fn values(&mut self) -> &mut [T] {
+        self.values
+    }
+
+    /// Returns the indicators of this [`NullableSliceMut`].
+    /// This slice is guaranteed to have a length equal to the number of rows of this view.
+    ///
+    /// Write `-1` to it to indicate a null row, and anything else to indicate a valid row
+    pub fn indicators(&mut self) -> &mut [isize] {
+        self.indicators
+    }
 }
