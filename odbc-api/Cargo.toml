@@ -45,8 +45,10 @@ readme = "../Readme.md"
 # payload of VARCHAR columns, or other column types in the result set.
 narrow=[]
 
-# Sets the the version of ODBC to be declared as 3. This is something you may want to do if you are
-# using iodbc, since iodbc currently only supports 3.5.
+# `odbc-api` uses ODBC 3.80 by default, which is well supported both in windows and on linux through
+# `UnixODBC`. Yet iodbc, for now does only support ODBC 3.5, so you can set this flag in order to
+# include only symbols available in ODBC 3.5 and create an environment which declares the ODBC
+# version to be 3.0 which works together with the iodbc driver manager.
 odbc_version_3_5 = ["odbc-sys/odbc_version_3_50"]
 
 # The ODBC version your application should declare if it runs on windows, or on linux using
