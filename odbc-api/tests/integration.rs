@@ -578,7 +578,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
 
     assert_eq!(&col_it.values()[0..5], b"Hello");
     assert_eq!(&col_it.values()[10..10 + 5], b"World"); // 10 due to Varbinary(10)
-    assert_eq!(col_it.lengths(), &[5, 5]);
+    assert_eq!(col_it.lengths(), &[5, 5, -1]);
 }
 
 /// Bind a columnar buffer to a BINARY(5) column and fetch data.
@@ -703,13 +703,14 @@ fn columnar_fetch_timestamp(profile: &Profile) {
         fraction: 0,
     };
 
+    assert_eq!(&col_it.values()[..3], &[v1, v2, v3]);
+    assert_eq!(col_it.indicators()[3], -1);
+
     assert_eq!(Some(&v1), col_it.next().unwrap());
     assert_eq!(Some(&v2), col_it.next().unwrap());
     assert_eq!(Some(&v3), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
     assert_eq!(None, col_it.next()); // Expecting iterator end.
-
-    assert_eq!(&col_it.values()[..3], &[v1, v2, v3])
 }
 
 /// Insert values into a DATETIME2 column using a columnar buffer
