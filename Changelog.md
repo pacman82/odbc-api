@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.35.0 (next)
+## 0.35.0
 
 * Better error for Oracle users, then trying to fetch data into 64 Bit Buffers. Added variant `OracleOdbcDriverDoesNotSupport64Bit` to error type in order to achieve this.
 
