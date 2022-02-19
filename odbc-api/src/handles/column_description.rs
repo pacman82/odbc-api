@@ -64,11 +64,10 @@ impl ColumnDescription {
 mod tests {
     use crate::Nullability;
 
-
     /// Application should panic if ODBC driver returns unsupported value for nullable
     #[test]
     #[should_panic(expected = "ODBC returned invalid value for Nullable: 5")]
-    fn invalid_nullable_representation(){
+    fn invalid_nullable_representation() {
         Nullability::new(odbc_sys::Nullability(5));
     }
 }

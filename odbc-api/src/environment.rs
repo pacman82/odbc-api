@@ -11,10 +11,10 @@ use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 // Currently only windows driver manager supports prompt.
 use winit::{event_loop::EventLoop, platform::windows::WindowExtWindows, window::WindowBuilder};
 
-#[cfg(not(feature="odbc_version_3_5"))]
+#[cfg(not(feature = "odbc_version_3_5"))]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
 
-#[cfg(feature="odbc_version_3_5")]
+#[cfg(feature = "odbc_version_3_5")]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3;
 
 /// An ODBC 3.8 environment.

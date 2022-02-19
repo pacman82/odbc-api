@@ -2,8 +2,8 @@ use anyhow::{bail, Error};
 use clap::{Args, Parser};
 use log::info;
 use odbc_api::{
-    buffers::TextRowSet, escape_attribute_value, Connection, Cursor, DriverCompleteOption,
-    Environment, IntoParameter, handles::OutputStringBuffer,
+    buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection, Cursor,
+    DriverCompleteOption, Environment, IntoParameter,
 };
 use std::{
     fs::{read_to_string, File},

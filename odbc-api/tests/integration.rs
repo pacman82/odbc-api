@@ -2904,7 +2904,13 @@ const MARIADB_EXPECTED_ROW_SIZE_IN_BYTES: usize = 537068874;
 fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
     let conn = profile.connection().unwrap();
 
-    let cursor = conn.columns("", "", "", "").unwrap();
+    // This filter does not change the assertions, but makes the tests run so much faster for
+    // Microsoft Sql Server (which seems to lock each table listed). This also likely prevents a
+    // deadlock or transaction collision with other tests. Since the other tests destroy and create
+    // tables a lot, listing them in parallel is dangerous. This filter gets rid of most of the
+    // weirdness.
+    let table_name = "table_does_not_exist";
+    let cursor = conn.columns("", "", table_name, "").unwrap();
     let mut column_description = ColumnDescription::default();
     let mut size_of_row = 0;
     for index in 0..cursor.num_result_cols().unwrap() {
