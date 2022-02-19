@@ -25,6 +25,9 @@ impl State {
     pub const INVALID_STATE_TRANSACTION: State = State(*b"25000");
     /// Given the specified Attribute value, an invalid value was specified in ValuePtr.
     pub const INVALID_ATTRIBUTE_VALUE: State = State(*b"HY024");
+    /// An invalid data type has been bound to a statement. Is also returned by SQLFetch if trying
+    /// to fetch into a 64Bit Integer Buffer.
+    pub const INVALID_SQL_DATA_TYPE: State = State(*b"HY004");
 
     /// Drops terminating zero and changes char type, if required
     pub fn from_chars_with_nul(code: &[SqlChar; SQLSTATE_SIZE + 1]) -> Self {

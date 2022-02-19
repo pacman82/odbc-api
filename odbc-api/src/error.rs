@@ -63,6 +63,48 @@ pub enum Error {
         record: DiagnosticRecord,
         size: usize,
     },
+    /// There are plenty of issues in the net about Oracle ODBC driver not supporting 64Bit. This
+    /// message, should make it easier identify what is going on, since the message emmitted by,
+    /// Oracles ODBC driver is a bit cryptic: `[Oracle][ODBC]Invalid SQL data type <-25>`.
+    #[error(
+        "SQLFetch came back with an error indicating you specified an invalid SQL Type. You very
+        likely did not do that however. Actually SQLFetch is not supposed to return that error type. 
+        You should have received it back than you were still binding columns or parameters. All this
+        is circumstancial evidence that you are using an Oracle Database and want to use 64Bit
+        integers, which are not supported by Oracles ODBC driver manager. In case this diagnose is
+        wrong the original error is:\n{0}."
+    )]
+    OracleOdbcDriverDoesNotSupport64Bit(DiagnosticRecord),
+}
+
+impl Error {
+    /// Allows for mapping the error variant from the "catch all" diagnostic to a more specific one
+    /// offering the oppertunity to provide context in the error message.
+    fn provide_context_for_diagnostic<F>(self, f: F) -> Self
+    where
+        F: FnOnce(DiagnosticRecord, &'static str) -> Error,
+    {
+        if let Error::Diagnostics { record, function } = self {
+            f(record, function)
+        } else {
+            self
+        }
+    }
+}
+
+/// Convinience for easily providing more context to errors without an additional call to `map_err`
+pub (crate) trait ExtendResult {
+    fn provide_context_for_diagnostic<F>(self, f: F) -> Self
+    where
+        F: FnOnce(DiagnosticRecord, &'static str) -> Error;
+}
+
+impl<T> ExtendResult for Result<T, Error> {
+    fn provide_context_for_diagnostic<F>(self, f: F) -> Self
+    where
+        F: FnOnce(DiagnosticRecord, &'static str) -> Error {
+        self.map_err(|error| error.provide_context_for_diagnostic(f))
+    }
 }
 
 // Define that here rather than in `sql_result` mod to keep the `handles` modlue entirely agnostic
@@ -83,6 +125,10 @@ impl<T> SqlResult<T> {
                     log_diagnostics(handle);
                     Err(Error::Diagnostics { record, function })
                 } else {
+                    // Anecdotal ways to reach this code paths:
+                    //
+                    // * Inserting a 64Bit integers into an Oracle Database.
+                    // * Specifying invalid drivers (e.g. missing .so the driver itself depends on)
                     Err(Error::NoDiagnostics { function })
                 }
             }

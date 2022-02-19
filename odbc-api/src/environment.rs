@@ -1,6 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
+    error::ExtendResult,
     handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer},
     Connection, DriverCompleteOption, Error,
 };
@@ -151,15 +152,11 @@ impl Environment {
 
         // Translate invalid attribute into a more meaningful error, provided the additional
         // context that we know we tried to set version number.
-        result.map_err(|error| {
-            if let Error::Diagnostics { record, function } = error {
-                if record.state == State::INVALID_STATE_TRANSACTION {
-                    Error::UnsupportedOdbcApiVersion(record)
-                } else {
-                    Error::Diagnostics { record, function }
-                }
+        result.provide_context_for_diagnostic(|record, function| {
+            if record.state == State::INVALID_STATE_TRANSACTION {
+                Error::UnsupportedOdbcApiVersion(record)
             } else {
-                error
+                Error::Diagnostics { record, function }
             }
         })?;
 

@@ -3,6 +3,7 @@ use odbc_sys::HStmt;
 use crate::{
     borrow_mut_statement::BorrowMutStatement,
     buffers::Indicator,
+    error::ExtendResult,
     handles::{State, Statement},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
@@ -256,13 +257,12 @@ where
                 // SAP anywhere has been seen to return with an "invalid attribute" error instead of
                 // a success with "option value changed" info. Let us map invalid attributes during
                 // setting row set array size to something more precise.
-                .map_err(|error| match error {
-                    Error::Diagnostics { record, .. }
-                        if record.state == State::INVALID_ATTRIBUTE_VALUE =>
-                    {
+                .provide_context_for_diagnostic(|record, function| {
+                    if record.state == State::INVALID_ATTRIBUTE_VALUE {
                         Error::InvalidRowArraySize { record, size }
+                    } else {
+                        Error::Diagnostics { record, function }
                     }
-                    error => error,
                 })?;
             stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
                 .into_result(stmt)?;
@@ -370,8 +370,20 @@ where
     /// reference to the internal buffer otherwise.
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
         unsafe {
-            if let Some(res) = self.cursor.stmt_mut().fetch() {
-                res.into_result(self.cursor.stmt_mut())?;
+            if let Some(sql_result) = self.cursor.stmt_mut().fetch() {
+                sql_result
+                    .into_result(self.cursor.stmt_mut())
+                    // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
+                    // tell the it to the user than binding parameters, but rather now then we fetch
+                    // results. The error code retruned is `HY004` rather then `HY003` which should
+                    // be used to indicate invalid buffer types.
+                    .provide_context_for_diagnostic(|record, function| {
+                        if record.state == State::INVALID_SQL_DATA_TYPE {
+                            Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+                        } else {
+                            Error::Diagnostics { record, function }
+                        }
+                    })?;
                 Ok(Some(&self.buffer))
             } else {
                 Ok(None)

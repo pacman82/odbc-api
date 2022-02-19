@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.0 (next)
+
+* Better error for Oracle users, then trying to fetch data into 64 Bit Buffers. Added variant `OracleOdbcDriverDoesNotSupport64Bit` to error type in order to achieve this.
+
 ## 0.34.1
 
 * Introduce feature `odbc_version_3_5`. Decalaring ODBC version 3.80 is still default behaviour. The flag has mainly been introduced to achieve compatibility with iODBC.
