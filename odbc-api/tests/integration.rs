@@ -3046,6 +3046,60 @@ fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
     panic!("original error")
 }
 
+/// Arrow uses the same binary format for the values of nullable slices, though null are represented
+/// as bitmask. Make it possible for bindings to efficiently copy the values array out of a
+/// nullable slice.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn memcopy_values_from_nullable_slice(profile: &Profile) {
+    // Given
+    let table_name = "MemcopyValuesFromNullableSlice";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (42), (NULL), (5);"),
+        (),
+    )
+    .unwrap();
+
+    // When
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), ())
+        .unwrap() // Unwrap Result
+        .unwrap(); // Unwrap Option, we know a select statement to produce a cursor.
+    let buffer = buffer_from_description(
+        3,
+        iter::once(BufferDescription {
+            kind: BufferKind::I32,
+            nullable: true,
+        }),
+    );
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let nullable_slice = match batch.column(0) {
+        AnyColumnView::NullableI32(nullable_slice) => nullable_slice,
+        _ => panic!("Expected View type to be a nullable i32"),
+    };
+    let (values, indicators) = nullable_slice.raw_values();
+    // Memcopy values.
+    let values = values.to_vec();
+    // Create array of bools indicating null values.
+    let nulls: Vec<bool> = indicators
+        .iter()
+        .map(|&indicator| indicator == sys::NULL_DATA)
+        .collect();
+
+    // Then
+    assert!(!nulls[0]);
+    assert_eq!(values[0], 42);
+    assert!(nulls[1]);
+    // We explicitly don't give any guarantees about the value of #values[1]`.
+    assert!(!nulls[2]);
+    assert_eq!(values[2], 5);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
