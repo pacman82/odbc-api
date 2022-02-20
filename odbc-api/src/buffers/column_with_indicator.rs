@@ -93,6 +93,37 @@ impl<'a, T> NullableSlice<'a, T> {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+
+    /// Read access to the underlying raw value and indicator buffer.
+    /// 
+    /// The number of elements in the buffer is equal to the number of rows returned in the current
+    /// result set. Yet the content of any value, those associated value in the indicator buffer is
+    /// [`crate::sys::NULL_DATA`] is undefined.
+    /// 
+    /// This method is useful for writing performant bindings to datastructures with similar binary
+    /// layout, as it allows for using memcopy rather than iterating over individual values.
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use odbc_api::{buffers::NullableSlice, sys::NULL_DATA};
+    /// 
+    /// // Memcopy the values out of the buffer, and make a mask of bools indicating the NULL
+    /// // values.
+    /// fn copy_values_and_make_mask(odbc_slice: NullableSlice<i32>) -> (Vec<i32>, Vec<bool>) {
+    ///     let (values, indicators) = odbc_slice.raw_values();
+    ///     let values = values.to_vec();
+    ///     // Create array of bools indicating null values.
+    ///     let mask: Vec<bool> = indicators
+    ///         .iter()
+    ///         .map(|&indicator| indicator != NULL_DATA)
+    ///         .collect();
+    ///     (values, mask)
+    /// }
+    /// ```
+    pub fn raw_values(&self) -> (&'a [T], &'a [isize]) {
+        (self.values, self.indicators)
+    }
 }
 
 impl<'a, T> Iterator for NullableSlice<'a, T> {
