@@ -9,6 +9,9 @@
 * `BinColumn::value_at` is no longer `unsafe`.
 * `BinColumn::iter` is no longer `unsafe`.
 
+Thanks to @jorgecarleitao for providing all the input about safety and discovering performance\
+bottlenecks in the buffer interfaces.
+
 ## 0.35.0
 
 * Better error for Oracle users, then trying to fetch data into 64 Bit Buffers. Added variant `OracleOdbcDriverDoesNotSupport64Bit` to error type in order to achieve this.
