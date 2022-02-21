@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.35.1
+
+* Allow direct access to raw buffers of `NullableSlice`.
+* `ColumnWithIndicator::iter` is no longer `unsafe`
+* `TextColumn::indicator_at` is no longer `unsafe`
+* `TextColumn::value_at` is no longer `unsafe`
+* `BinColumn::value_at` is no longer `unsafe`.
+* `BinColumn::iter` is no longer `unsafe`.
+
 ## 0.35.0
 
 * Better error for Oracle users, then trying to fetch data into 64 Bit Buffers. Added variant `OracleOdbcDriverDoesNotSupport64Bit` to error type in order to achieve this.

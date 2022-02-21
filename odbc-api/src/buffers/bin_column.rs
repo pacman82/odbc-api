@@ -36,13 +36,11 @@ impl BinColumn {
 
     /// Return the value for the given row index.
     ///
-    /// # Safety
-    ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[u8]> {
+    pub fn value_at(&self, row_index: usize) -> Option<&[u8]> {
         let len = self.indicators[row_index];
         if len == NULL_DATA {
             None
@@ -77,14 +75,12 @@ impl BinColumn {
 
     /// Iterator over the first `num_rows` values of a binary column.
     ///
-    /// # Safety
-    ///
     /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub unsafe fn iter(&self, num_rows: usize) -> BinColumnIt<'_> {
+    pub fn iter(&self, num_rows: usize) -> BinColumnIt<'_> {
         BinColumnIt {
             pos: 0,
             num_rows,
@@ -226,7 +222,7 @@ impl<'c> Iterator for BinColumnIt<'c> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.value_at(self.pos)) };
+            let ret = Some(self.col.value_at(self.pos));
             self.pos += 1;
             ret
         }

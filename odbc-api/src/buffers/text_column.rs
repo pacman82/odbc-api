@@ -55,13 +55,11 @@ impl<C> TextColumn<C> {
     /// Bytes of string at the specified position. Includes interior nuls, but excludes the
     /// terminating nul.
     ///
-    /// # Safety
-    ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn value_at(&self, row_index: usize) -> Option<&[C]> {
+    pub fn value_at(&self, row_index: usize) -> Option<&[C]> {
         match self.indicator_at(row_index) {
             Indicator::Null => None,
             // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
@@ -85,13 +83,11 @@ impl<C> TextColumn<C> {
 
     /// Indicator value at the specified position. Useful to detect truncation of data.
     ///
-    /// # Safety
-    ///
     /// The column buffer does not know how many elements were in the last row group, and therefore
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn indicator_at(&self, row_index: usize) -> Indicator {
+    pub fn indicator_at(&self, row_index: usize) -> Indicator {
         Indicator::from_isize(self.indicators[row_index])
     }
 
@@ -351,7 +347,7 @@ impl<'c, C> TextColumnIt<'c, C> {
         if self.pos == self.num_rows {
             None
         } else {
-            let ret = unsafe { Some(self.col.value_at(self.pos)) };
+            let ret = Some(self.col.value_at(self.pos));
             self.pos += 1;
             ret
         }

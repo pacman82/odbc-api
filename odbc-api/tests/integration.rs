@@ -3055,9 +3055,7 @@ fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
 fn memcopy_values_from_nullable_slice(profile: &Profile) {
     // Given
     let table_name = "MemcopyValuesFromNullableSlice";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (42), (NULL), (5);"),
         (),

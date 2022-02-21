@@ -93,7 +93,7 @@ impl Error {
 }
 
 /// Convinience for easily providing more context to errors without an additional call to `map_err`
-pub (crate) trait ExtendResult {
+pub(crate) trait ExtendResult {
     fn provide_context_for_diagnostic<F>(self, f: F) -> Self
     where
         F: FnOnce(DiagnosticRecord, &'static str) -> Error;
@@ -102,7 +102,8 @@ pub (crate) trait ExtendResult {
 impl<T> ExtendResult for Result<T, Error> {
     fn provide_context_for_diagnostic<F>(self, f: F) -> Self
     where
-        F: FnOnce(DiagnosticRecord, &'static str) -> Error {
+        F: FnOnce(DiagnosticRecord, &'static str) -> Error,
+    {
         self.map_err(|error| error.provide_context_for_diagnostic(f))
     }
 }

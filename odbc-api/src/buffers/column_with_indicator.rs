@@ -41,13 +41,11 @@ where
 
     /// Access the value at a specific row index.
     ///
-    /// # Safety
-    ///
     /// The buffer size is not automatically adjusted to the size of the last row set. It is the
     /// callers responsibility to ensure, a value has been written to the indexed position by
-    /// `Cursor::fetch` using the value bound to the cursor with
-    /// `Cursor::set_num_result_rows_fetched`.
-    pub unsafe fn iter(&self, num_rows: usize) -> NullableSlice<'_, T> {
+    /// [`crate::Cursor::fetch`] using the value bound to the cursor with
+    /// [`crate::Cursor::set_num_result_rows_fetched`].
+    pub fn iter(&self, num_rows: usize) -> NullableSlice<'_, T> {
         NullableSlice {
             indicators: &self.indicators[0..num_rows],
             values: &self.values[0..num_rows],
@@ -95,19 +93,19 @@ impl<'a, T> NullableSlice<'a, T> {
     }
 
     /// Read access to the underlying raw value and indicator buffer.
-    /// 
+    ///
     /// The number of elements in the buffer is equal to the number of rows returned in the current
     /// result set. Yet the content of any value, those associated value in the indicator buffer is
     /// [`crate::sys::NULL_DATA`] is undefined.
-    /// 
+    ///
     /// This method is useful for writing performant bindings to datastructures with similar binary
     /// layout, as it allows for using memcopy rather than iterating over individual values.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// use odbc_api::{buffers::NullableSlice, sys::NULL_DATA};
-    /// 
+    ///
     /// // Memcopy the values out of the buffer, and make a mask of bools indicating the NULL
     /// // values.
     /// fn copy_values_and_make_mask(odbc_slice: NullableSlice<i32>) -> (Vec<i32>, Vec<bool>) {

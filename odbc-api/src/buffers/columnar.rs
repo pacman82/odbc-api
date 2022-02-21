@@ -449,7 +449,7 @@ impl TextRowSet {
     /// Access the element at the specified position in the row set.
     pub fn at(&self, buffer_index: usize, row_index: usize) -> Option<&[u8]> {
         assert!(row_index < *self.num_rows as usize);
-        unsafe { self.columns[buffer_index].1.value_at(row_index) }
+        self.columns[buffer_index].1.value_at(row_index)
     }
 
     /// Access the element at the specified position in the row set.
@@ -480,7 +480,7 @@ impl TextRowSet {
     /// ```
     pub fn indicator_at(&self, buf_index: usize, row_index: usize) -> Indicator {
         assert!(row_index < *self.num_rows as usize);
-        unsafe { self.columns[buf_index].1.indicator_at(row_index) }
+        self.columns[buf_index].1.indicator_at(row_index)
     }
 
     /// Maximum length in bytes of elements in a column.
