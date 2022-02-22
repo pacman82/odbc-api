@@ -28,6 +28,10 @@ readme = "../Readme.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "odbc_api"
+bench = false
+
 [features]
 # Experimental feature to enabling narrow function calls.
 #
@@ -72,3 +76,8 @@ anyhow = "1.0.53"
 csv = "1.1.6"
 test-case = "1.2.3"
 tempfile = "3.3.0"
+criterion = "*"
+
+[[bench]]
+name = "slices_iterator"
+harness = false

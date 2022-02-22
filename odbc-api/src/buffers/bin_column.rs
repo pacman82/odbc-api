@@ -15,12 +15,12 @@ use std::{cmp::min, ffi::c_void};
 #[derive(Debug)]
 pub struct BinColumn {
     /// Maximum element length.
-    max_len: usize,
-    values: Vec<u8>,
+    pub max_len: usize,
+    pub values: Vec<u8>,
     /// Elements in this buffer are either `NULL_DATA` or hold the length of the element in value
     /// with the same index. Please note that this value may be larger than `max_len` if the value
     /// has been truncated.
-    indicators: Vec<isize>,
+    pub indicators: Vec<isize>,
 }
 
 impl BinColumn {
@@ -214,9 +214,9 @@ impl BinColumn {
 /// Iterator over a binary column. See [`crate::buffers::AnyColumnView`]
 #[derive(Debug)]
 pub struct BinColumnIt<'c> {
-    pos: usize,
-    num_rows: usize,
-    col: &'c BinColumn,
+    pub pos: usize,
+    pub num_rows: usize,
+    pub col: &'c BinColumn,
 }
 
 impl<'c> Iterator for BinColumnIt<'c> {
