@@ -2330,8 +2330,7 @@ fn insert_truncated_value(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// 'inconclusive' <= magic keyword used by test_case
-#[test_case(MARIADB; "Maria DB expected fail inconclusive")]
+#[test_case(MARIADB => inconclusive; "Maria DB expected fail inconclusive")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_var_char_array(profile: &Profile) {
     let table_name = "InsertedTruncatedVarCharArray";
