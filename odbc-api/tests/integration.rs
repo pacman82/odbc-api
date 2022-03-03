@@ -1,6 +1,7 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
+use sys::NULL_DATA;
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
@@ -766,6 +767,51 @@ fn columnar_insert_timestamp(profile: &Profile) {
     // Query values and compare with expectation
     let actual = table_to_string(&conn, table_name, &["a"]);
     let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
+    assert_eq!(expected, actual);
+}
+
+/// Insert values into a i32 column using a columnar buffer's raw values
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
+// #[test_case(SQLITE_3; "SQLite 3")] default precision of 3 instead 7
+fn columnar_insert_int_raw(profile: &Profile) {
+    let table_name = "Int";
+    // Setup
+    let conn = profile.setup_empty_table(table_name, &["INT"]).unwrap();
+
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::I32,
+        nullable: true,
+    };
+    let mut buffer = buffer_from_description(10, iter::once(desc));
+
+    // Input values to insert.
+    let input_values = [1, 0, 3];
+    let mask = [true, false, true];
+
+    buffer.set_num_rows(input_values.len());
+    if let AnyColumnViewMut::NullableI32(mut writer) = buffer.column_mut(0) {
+        let (values, indicators) = writer.raw_values();
+        values.copy_from_slice(&input_values);
+        indicators
+            .iter_mut()
+            .zip(mask.iter())
+            .for_each(|(indicator, &mask)| *indicator = if mask { 1 } else { NULL_DATA })
+    } else {
+        panic!("Expected i32 column writer");
+    };
+
+    // Bind buffer and insert values.
+    conn.execute(
+        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &buffer,
+    )
+    .unwrap();
+
+    // Query values and compare with expectation
+    let actual = table_to_string(&conn, table_name, &["a"]);
+    let expected = "1\nNULL\n3";
     assert_eq!(expected, actual);
 }
 
