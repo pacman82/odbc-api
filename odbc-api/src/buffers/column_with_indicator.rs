@@ -229,6 +229,37 @@ impl<'a, T> NullableSliceMut<'a, T> {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+
+    /// Write access to the underlying raw value and indicator buffer.
+    ///
+    /// The number of elements in the buffer is equal to `len`.
+    ///
+    /// This method is useful for writing performant bindings to datastructures with similar binary
+    /// layout, as it allows for using memcopy rather than iterating over individual values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use odbc_api::{buffers::NullableSliceMut, sys::NULL_DATA};
+    ///
+    /// // Memcopy the values into the buffer, and set indicators according to mask
+    /// // values.
+    /// fn copy_values_and_make_mask(new_values: &[i32], mask: &[bool], odbc_slice: &mut NullableSliceMut<i32>) {
+    ///     let (values, indicators) = odbc_slice.raw_values();
+    ///     values.copy_from_slice(new_values);
+    ///     // Create array of bools indicating null values.
+    ///     indicators.iter_mut().zip(mask.iter()).for_each(|(indicator, &mask)| {
+    ///         *indicator = if mask {
+    ///             1
+    ///         } else {
+    ///             NULL_DATA
+    ///         }
+    ///     });
+    /// }
+    /// ```
+    pub fn raw_values(&mut self) -> (&mut [T], &mut [isize]) {
+        (&mut self.values, &mut self.indicators)
+    }
 }
 
 impl<'a, T> NullableSliceMut<'a, T> {
