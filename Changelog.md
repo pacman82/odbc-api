@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.2
+
+* Allow direct access to raw buffers of `NullableSliceMut`.
+
 ## 0.35.1
 
 * Allow direct access to raw buffers of `NullableSlice`.
