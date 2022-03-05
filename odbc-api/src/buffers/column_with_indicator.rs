@@ -244,13 +244,17 @@ impl<'a, T> NullableSliceMut<'a, T> {
     ///
     /// // Memcopy the values into the buffer, and set indicators according to mask
     /// // values.
-    /// fn copy_values_and_make_mask(new_values: &[i32], mask: &[bool], odbc_slice: &mut NullableSliceMut<i32>) {
+    /// fn copy_values_and_make_mask(
+    ///     new_values: &[i32],
+    ///     mask: &[bool],
+    ///     odbc_slice: &mut NullableSliceMut<i32>)
+    /// {
     ///     let (values, indicators) = odbc_slice.raw_values();
     ///     values.copy_from_slice(new_values);
     ///     // Create array of bools indicating null values.
     ///     indicators.iter_mut().zip(mask.iter()).for_each(|(indicator, &mask)| {
     ///         *indicator = if mask {
-    ///             1
+    ///             0
     ///         } else {
     ///             NULL_DATA
     ///         }
@@ -258,7 +262,7 @@ impl<'a, T> NullableSliceMut<'a, T> {
     /// }
     /// ```
     pub fn raw_values(&mut self) -> (&mut [T], &mut [isize]) {
-        (&mut self.values, &mut self.indicators)
+        (self.values, self.indicators)
     }
 }
 

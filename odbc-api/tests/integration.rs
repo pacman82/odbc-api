@@ -772,12 +772,12 @@ fn columnar_insert_timestamp(profile: &Profile) {
 
 /// Insert values into a i32 column using a columnar buffer's raw values
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
-// #[test_case(SQLITE_3; "SQLite 3")] default precision of 3 instead 7
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_int_raw(profile: &Profile) {
-    let table_name = "Int";
+    let table_name = "ColumnarInsertIntRaw";
     // Setup
-    let conn = profile.setup_empty_table(table_name, &["INT"]).unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -797,7 +797,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
         indicators
             .iter_mut()
             .zip(mask.iter())
-            .for_each(|(indicator, &mask)| *indicator = if mask { 1 } else { NULL_DATA })
+            .for_each(|(indicator, &mask)| *indicator = if mask { 0 } else { NULL_DATA })
     } else {
         panic!("Expected i32 column writer");
     };
