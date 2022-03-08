@@ -70,7 +70,7 @@ winit = "0.26.1"
 [dev-dependencies]
 lazy_static = "1.4.0"
 env_logger = "0.9.0"
-anyhow = "1.0.55"
+anyhow = "1.0.56"
 csv = "1.1.6"
 test-case = "2.0.0"
 tempfile = "3.3.0"
