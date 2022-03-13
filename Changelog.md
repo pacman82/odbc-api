@@ -2,7 +2,8 @@
 
 ## (next)
 
-* Introduce `AnyColumnView::TextColumn` now holds a `TextColumnView` instead of a `TextColumnIt`. To get the iterator you can just call `iter()` on the `TextColumnView`.
+* Introduce `AnyColumnView::Text` and `AnyColumnView::WText` now holds a `TextColumnView` instead of a `TextColumnIt`. To get the iterator you can just call `iter()` on the `TextColumnView`.
+* Introduce `AnyColumnView::Binary` now holds a `BinColumnView` instead of a `BinColumnIt`.
 
 ## 0.35.2
 

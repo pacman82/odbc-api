@@ -3149,6 +3149,76 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
     assert_eq!(values[2], 5);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn text_column_view_should_allow_for_efficiently_filling_arrow_arrays(profile: &Profile) {
+    // Given
+
+    let table_name = "TextColumnViewShouldAllowForEfficientlyFillingArrowArrays";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .unwrap();
+    conn.execute(
+        &format!(
+            "INSERT INTO {table_name} (a) VALUES \
+                ('abcd'), \
+                (NULL), \
+                ('efghij'), \
+                ('klm'), \
+                ('npqrstu')"
+        ),
+        (),
+    )
+    .unwrap();
+
+    // When
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), ())
+        .unwrap()
+        .unwrap();
+
+    let columnar_buffer = buffer_from_description(
+        10,
+        iter::once(BufferDescription {
+            kind: BufferKind::Text { max_str_len: 50 },
+            nullable: true,
+        }),
+    );
+
+    let mut cursor = cursor.bind_buffer(columnar_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let any_column = batch.column(0);
+
+    let view = match any_column {
+        AnyColumnView::Text(view) => view,
+        _ => panic!("Expected text column"),
+    };
+
+    let mut valid = Vec::with_capacity(view.len());
+    let mut offsets = Vec::with_capacity(view.len() + 1);
+    offsets.push(0);
+
+    let mut offset: usize = 0;
+    for value in view.iter() {
+        if let Some(slice) = value {
+            offset += slice.len()
+        }
+        valid.push(value.is_some());
+        offsets.push(offset);
+    }
+
+    let mut values = Vec::with_capacity(*offsets.last().unwrap());
+    for text in view.iter().flatten() {
+        values.extend_from_slice(text)
+    }
+
+    // Then
+    assert_eq!(valid, [true, false, true, true, true]);
+    assert_eq!(offsets, [0, 4, 4, 10, 13, 20]);
+    assert_eq!(values, b"abcdefghijklmnpqrstu");
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
