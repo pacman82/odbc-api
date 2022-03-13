@@ -11,9 +11,8 @@ use common::{
 
 use odbc_api::{
     buffers::{
-        buffer_from_description, buffer_from_description_and_indices, AnyColumnView,
-        AnyColumnViewMut, BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item,
-        TextColumn, TextRowSet,
+        buffer_from_description, buffer_from_description_and_indices, AnyColumnViewMut,
+        BufferDescription, BufferKind, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
@@ -565,12 +564,8 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     let row_set_buffer = odbc_api::buffers::buffer_from_description(10, iter::once(buffer_desc));
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let col_view = batch.column(0);
-    let mut col_it = if let AnyColumnView::Binary(col_view) = col_view {
-        col_view.iter()
-    } else {
-        panic!("Column View expected to be binary")
-    };
+    let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
+
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
@@ -611,12 +606,7 @@ fn columnar_fetch_binary(profile: &Profile) {
     let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc));
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let col_view = batch.column(0);
-    let mut col_it = if let AnyColumnView::Binary(col_it) = col_view {
-        col_it.iter()
-    } else {
-        panic!("Column View expected to be binary")
-    };
+    let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
@@ -662,12 +652,7 @@ fn columnar_fetch_timestamp(profile: &Profile) {
     let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc));
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let col_view = batch.column(0);
-    let mut col_it = if let AnyColumnView::NullableTimestamp(col_it) = col_view {
-        col_it
-    } else {
-        panic!("Column View expected to be binary")
-    };
+    let mut col_it = batch.column(0).as_nullable_slice().unwrap();
     assert_eq!(
         Some(&Timestamp {
             year: 2021,
@@ -1441,10 +1426,7 @@ fn wchar(profile: &Profile) {
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let col = batch.column(0);
-    let wtext_col = match col {
-        AnyColumnView::WText(col) => col,
-        _ => panic!("Unexpected column type"),
-    };
+    let wtext_col = col.as_w_text_view().unwrap();
     assert_eq!(2, wtext_col.len());
     assert_eq!(
         &U16String::from_str("A"),
@@ -1837,14 +1819,10 @@ fn read_into_columnar_buffer(profile: &Profile) {
 
     let mut col = i32::as_nullable_slice(batch.column(0)).unwrap();
     assert_eq!(Some(&42), col.next().unwrap());
-
-    match batch.column(1) {
-        AnyColumnView::Text(col) => {
-            assert_eq!(Some(&b"Hello, World!"[..]), col.get(0))
-        }
-        _ => panic!("Unexpected buffer type"),
-    }
-
+    assert_eq!(
+        Some(&b"Hello, World!"[..]),
+        batch.column(1).as_text_view().unwrap().get(0)
+    );
     // Assert that there is no second batch.
     assert!(cursor.fetch().unwrap().is_none());
 }
@@ -2791,10 +2769,7 @@ fn columns_query(profile: &Profile, schema: &str) {
     let batch = cursor.fetch().unwrap().unwrap();
 
     const COLUMN_NAME_INDEX: usize = 3;
-    let column_names = match batch.column(COLUMN_NAME_INDEX) {
-        AnyColumnView::Text(col) => col,
-        _ => panic!("expected text"),
-    };
+    let column_names = batch.column(COLUMN_NAME_INDEX).as_text_view().unwrap();
 
     const COLUMN_SIZE_INDEX: usize = 6;
     let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
@@ -2842,10 +2817,7 @@ fn fill_vec_of_rows(profile: &Profile) {
 
     while let Some(batch) = cursor.fetch().unwrap() {
         // Extract first column known to contain text
-        let col_a = match batch.column(0) {
-            AnyColumnView::Text(col) => col,
-            _ => panic!("First column is supposed to be text"),
-        };
+        let col_a = batch.column(0).as_text_view().unwrap();
 
         // Extract second column known to contain non nullable i32
         let col_b = i32::as_slice(batch.column(1)).unwrap();
@@ -3127,10 +3099,7 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
     );
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let nullable_slice = match batch.column(0) {
-        AnyColumnView::NullableI32(nullable_slice) => nullable_slice,
-        _ => panic!("Expected View type to be a nullable i32"),
-    };
+    let nullable_slice = batch.column(0).as_nullable_slice::<i32>().unwrap();
     let (values, indicators) = nullable_slice.raw_values();
     // Memcopy values.
     let values = values.to_vec();
@@ -3152,10 +3121,10 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn text_column_view_should_allow_for_efficiently_filling_arrow_arrays(profile: &Profile) {
+fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
     // Given
 
-    let table_name = "TextColumnViewShouldAllowForEfficientlyFillingArrowArrays";
+    let table_name = "TextColumnViewShouldAllowForFillingArrowArrays";
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(50)"])
         .unwrap();
@@ -3188,12 +3157,7 @@ fn text_column_view_should_allow_for_efficiently_filling_arrow_arrays(profile: &
 
     let mut cursor = cursor.bind_buffer(columnar_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let any_column = batch.column(0);
-
-    let view = match any_column {
-        AnyColumnView::Text(view) => view,
-        _ => panic!("Expected text column"),
-    };
+    let view = batch.column(0).as_text_view().unwrap();
 
     let mut valid = Vec::with_capacity(view.len());
     let mut offsets = Vec::with_capacity(view.len() + 1);

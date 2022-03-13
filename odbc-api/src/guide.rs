@@ -401,11 +401,13 @@ if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
             // Iterate over `Option<i16>` with it ..
         }
         // Process names in row set
-        match row_set.column(1) {
-            AnyColumnView::Text(it) => {
-                // Iterate over `Option<&CStr> with it ..
-            }
-            _ => panic!("Name column buffer expected to be text")
+        let name_col = row_set.column(1);
+        for name in name_col
+            .as_text_view()
+            .expect("Name column buffer expected to be text")
+            .iter()
+        {
+            // Iterate over `Option<&CStr> ..
         }
     }
 }

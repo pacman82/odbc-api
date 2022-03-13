@@ -14,8 +14,8 @@ use super::{
     },
     columnar::{ColumnBuffer, ColumnProjections},
     BinColumn, BinColumnView, BinColumnWriter, BufferDescription, BufferKind, CharColumn,
-    ColumnarBuffer, NullableSlice, NullableSliceMut, TextColumn, TextColumnView, TextColumnWriter,
-    WCharColumn,
+    ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView,
+    TextColumnWriter, WCharColumn,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -313,7 +313,7 @@ pub fn buffer_from_description_and_indices(
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
 /// the slice is offered. Buffers over nullable columns can be accessed via an iterator over
 /// options.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AnyColumnView<'a> {
     /// Nullable character data in the system encoding.
     Text(TextColumnView<'a, u8>),
@@ -342,6 +342,48 @@ pub enum AnyColumnView<'a> {
     NullableI64(NullableSlice<'a, i64>),
     NullableU8(NullableSlice<'a, u8>),
     NullableBit(NullableSlice<'a, Bit>),
+}
+
+impl<'a> AnyColumnView<'a> {
+    /// This method is useful if you expect the variant to be [`AnyColumnView::Text`]. It allows you
+    /// to unwrap the inner column view without explictly matching it.
+    pub fn as_text_view(self) -> Option<TextColumnView<'a, u8>> {
+        if let Self::Text(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// This method is useful if you expect the variant to be [`AnyColumnView::WText`]. It allows
+    /// you to unwrap the inner column view without explictly matching it.
+    pub fn as_w_text_view(self) -> Option<TextColumnView<'a, u16>> {
+        if let Self::WText(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// This method is useful if you expect the variant to be [`AnyColumnView::Binary`]. It allows
+    /// you to unwrap the inner column view without explictly matching it.
+    pub fn as_bin_view(self) -> Option<BinColumnView<'a>> {
+        if let Self::Binary(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// Extract the array type from an [`AnyColumnView`].
+    pub fn as_slice<I: Item>(self) -> Option<&'a [I]> {
+        I::as_slice(self)
+    }
+
+    /// Extract the typed nullable buffer from an [`AnyColumnView`].
+    pub fn as_nullable_slice<I: Item>(self) -> Option<NullableSlice<'a, I>> {
+        I::as_nullable_slice(self)
+    }
 }
 
 /// A mutable borrowed view on the valid rows in a column of a [`ColumnarBuffer`].

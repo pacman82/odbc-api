@@ -206,7 +206,7 @@ impl BinColumn {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct BinColumnView<'c> {
     num_rows: usize,
     col: &'c BinColumn,
@@ -369,16 +369,13 @@ impl<'a> BinColumnWriter<'a> {
     ///     panic!("Expected binary column writer");
     /// }
     ///
-    /// if let AnyColumnView::Binary(col_view) = buffer.column(0) {
-    ///     assert!(
-    ///         col_view
-    ///             .iter()
-    ///             .zip(input.iter().copied())
-    ///             .all(|(expected, actual)| expected == actual)
-    ///     )
-    /// } else {
-    ///     panic!("Expected binary column slice");   
-    /// }
+    /// let col_view = buffer.column(0).as_bin_view().expect("Expected binary column slice");
+    /// assert!(
+    ///     col_view
+    ///         .iter()
+    ///         .zip(input.iter().copied())
+    ///         .all(|(expected, actual)| expected == actual)
+    /// )
     /// ```
     pub fn append(&mut self, index: usize, bytes: Option<&[u8]>) {
         self.column.append(index, bytes)

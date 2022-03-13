@@ -4,6 +4,10 @@
 
 * Introduce `AnyColumnView::Text` and `AnyColumnView::WText` now holds a `TextColumnView` instead of a `TextColumnIt`. To get the iterator you can just call `iter()` on the `TextColumnView`.
 * Introduce `AnyColumnView::Binary` now holds a `BinColumnView` instead of a `BinColumnIt`.
+* Add `AnyColumnView::as_text_view`.
+* Add `AnyColumnView::as_w_text_view`.
+* Add `AnyColumnView::as_slice`.
+* Add `AnyColumnView::as_nullable_slice`.
 
 ## 0.35.2
 

@@ -341,7 +341,7 @@ where
 /// number is maintained on the level of the entire column buffer. So a text column knows the number
 /// of valid rows, in addition to holding a reference to the buffer, in order to guarantee, that
 /// every element acccessed through it, is valid.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TextColumnView<'c, C> {
     num_rows: usize,
     col: &'c TextColumn<C>,

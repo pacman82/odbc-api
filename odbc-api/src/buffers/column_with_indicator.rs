@@ -75,7 +75,7 @@ where
 
 /// Iterates over the elements of a column buffer. Returned by
 /// [`crate::buffers::ColumnarBuffer::column`] as part of an [`crate::buffers::AnyColumnView`].
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct NullableSlice<'a, T> {
     indicators: &'a [isize],
     values: &'a [T],
