@@ -1,5 +1,9 @@
 # Changelog
 
+## (next)
+
+* Introduce `AnyColumnView::TextColumn` now holds a `TextColumnView` instead of a `TextColumnIt`. To get the iterator you can just call `iter()` on the `TextColumnView`.
+
 ## 0.35.2
 
 * Allow direct access to raw buffers of `NullableSliceMut`.

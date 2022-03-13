@@ -195,7 +195,7 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// Iterator over the first `num_rows` values of a text column.
+    /// View of the first `num_rows` values of a text column.
     ///
     /// # Safety
     ///
@@ -204,9 +204,8 @@ impl<C> TextColumn<C> {
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub unsafe fn iter(&self, num_rows: usize) -> TextColumnIt<'_, C> {
-        TextColumnIt {
-            pos: 0,
+    pub unsafe fn view(&self, num_rows: usize) -> TextColumnView<'_, C> {
+        TextColumnView {
             num_rows,
             col: self,
         }
@@ -307,7 +306,7 @@ impl WCharColumn {
 }
 
 unsafe impl<'a, C: 'static> ColumnProjections<'a> for TextColumn<C> {
-    type View = TextColumnIt<'a, C>;
+    type View = TextColumnView<'a, C>;
 
     type ViewMut = TextColumnWriter<'a, C>;
 }
@@ -316,8 +315,8 @@ unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
 where
     TextColumn<C>: CDataMut + HasDataType,
 {
-    unsafe fn view(&self, valid_rows: usize) -> TextColumnIt<'_, C> {
-        self.iter(valid_rows)
+    unsafe fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
+        self.view(valid_rows)
     }
 
     unsafe fn view_mut(&mut self, valid_rows: usize) -> TextColumnWriter<'_, C> {
@@ -334,7 +333,47 @@ where
     }
 }
 
-/// Iterator over a text column. See [`TextColumn::iter`]
+/// Allows read only access to the valid part of a text column.
+///
+/// You may ask, why is this type required, should we not just be able to use `&TextColumn`? The
+/// problem with `TextColumn` is, that it is a buffer, but it has no idea how many of its members
+/// are actually valid, and have been returned with the last row group of the the result set. That
+/// number is maintained on the level of the entire column buffer. So a text column knows the number
+/// of valid rows, in addition to holding a reference to the buffer, in order to guarantee, that
+/// every element acccessed through it, is valid.
+#[derive(Debug)]
+pub struct TextColumnView<'c, C> {
+    num_rows: usize,
+    col: &'c TextColumn<C>,
+}
+
+impl<'c, C> TextColumnView<'c, C> {
+    /// The number of valid elements in the text column.
+    pub fn len(&self) -> usize {
+        self.num_rows
+    }
+
+    /// True if, and only if there are no valid rows in the column buffer.
+    pub fn is_empty(&self) -> bool {
+        self.num_rows == 0
+    }
+
+    /// Slice of text at the specified row index without terminating zero.
+    pub fn get(&self, index: usize) -> Option<&'c [C]> {
+        self.col.value_at(index)
+    }
+
+    /// Iterator over the valid elements of the text buffer
+    pub fn iter(&self) -> TextColumnIt<'c, C> {
+        TextColumnIt {
+            pos: 0,
+            num_rows: self.num_rows,
+            col: self.col,
+        }
+    }
+}
+
+/// Iterator over a text column. See [`TextColumnView::iter`]
 #[derive(Debug)]
 pub struct TextColumnIt<'c, C> {
     pos: usize,

@@ -20,6 +20,8 @@ pub use self::{
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
     item::Item,
-    text_column::{CharColumn, TextColumn, TextColumnIt, TextColumnWriter, WCharColumn},
+    text_column::{
+        CharColumn, TextColumn, TextColumnIt, TextColumnView, TextColumnWriter, WCharColumn,
+    },
     // text_row_set::TextRowSet,
 };

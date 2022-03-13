@@ -14,7 +14,7 @@ use super::{
     },
     columnar::{ColumnBuffer, ColumnProjections},
     BinColumn, BinColumnIt, BinColumnWriter, BufferDescription, BufferKind, CharColumn,
-    ColumnarBuffer, NullableSlice, NullableSliceMut, TextColumn, TextColumnIt, TextColumnWriter,
+    ColumnarBuffer, NullableSlice, NullableSliceMut, TextColumn, TextColumnView, TextColumnWriter,
     WCharColumn,
 };
 
@@ -316,9 +316,9 @@ pub fn buffer_from_description_and_indices(
 #[derive(Debug)]
 pub enum AnyColumnView<'a> {
     /// Nullable character data in the system encoding.
-    Text(TextColumnIt<'a, u8>),
+    Text(TextColumnView<'a, u8>),
     /// Nullable character data encoded in UTF-16.
-    WText(TextColumnIt<'a, u16>),
+    WText(TextColumnView<'a, u16>),
     Binary(BinColumnIt<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
@@ -420,8 +420,8 @@ unsafe impl ColumnBuffer for AnyColumnBuffer {
     unsafe fn view(&self, valid_rows: usize) -> AnyColumnView {
         match self {
             AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.iter(valid_rows)),
-            AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.iter(valid_rows)),
-            AnyColumnBuffer::WText(col) => AnyColumnView::WText(col.iter(valid_rows)),
+            AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.view(valid_rows)),
+            AnyColumnBuffer::WText(col) => AnyColumnView::WText(col.view(valid_rows)),
             AnyColumnBuffer::Date(col) => AnyColumnView::Date(&col[0..valid_rows]),
             AnyColumnBuffer::Time(col) => AnyColumnView::Time(&col[0..valid_rows]),
             AnyColumnBuffer::Timestamp(col) => AnyColumnView::Timestamp(&col[0..valid_rows]),

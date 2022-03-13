@@ -21,7 +21,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable,
-    Out, ResultSetMetadata, U16String,
+    Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -1414,8 +1414,7 @@ fn non_ascii_char(profile: &Profile) {
     assert_eq!("A\nÜ", output);
 }
 
-// UTF-8 local not present on CI
-// #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn wchar(profile: &Profile) {
@@ -1441,14 +1440,19 @@ fn wchar(profile: &Profile) {
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let col = batch.column(0);
-    let mut wtext_col = match col {
+    let wtext_col = match col {
         AnyColumnView::WText(col) => col,
         _ => panic!("Unexpected column type"),
     };
     assert_eq!(2, wtext_col.len());
-    assert_eq!(U16String::from_str("A"), wtext_col.next().unwrap().unwrap());
-    assert_eq!(U16String::from_str("Ü"), wtext_col.next().unwrap().unwrap());
-    assert!(wtext_col.next().is_none());
+    assert_eq!(
+        &U16String::from_str("A"),
+        &U16Str::from_slice(wtext_col.get(0).unwrap())
+    );
+    assert_eq!(
+        &U16String::from_str("Ü"),
+        &U16Str::from_slice(wtext_col.get(1).unwrap())
+    );
     assert!(row_set_cursor.fetch().unwrap().is_none());
 }
 
@@ -1834,8 +1838,8 @@ fn read_into_columnar_buffer(profile: &Profile) {
     assert_eq!(Some(&42), col.next().unwrap());
 
     match batch.column(1) {
-        AnyColumnView::Text(mut col) => {
-            assert_eq!(Some(&b"Hello, World!"[..]), col.next().unwrap())
+        AnyColumnView::Text(col) => {
+            assert_eq!(Some(&b"Hello, World!"[..]), col.get(0))
         }
         _ => panic!("Unexpected buffer type"),
     }
@@ -2795,6 +2799,7 @@ fn columns_query(profile: &Profile, schema: &str) {
     let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
 
     let column_has_name_a_and_size_10 = column_names
+        .iter()
         .zip(column_sizes)
         .any(|(name, size)| str::from_utf8(name.unwrap()).unwrap() == "a" && *size.unwrap() == 10);
 
@@ -2836,7 +2841,7 @@ fn fill_vec_of_rows(profile: &Profile) {
 
     while let Some(batch) = cursor.fetch().unwrap() {
         // Extract first column known to contain text
-        let mut col_a = match batch.column(0) {
+        let col_a = match batch.column(0) {
             AnyColumnView::Text(col) => col,
             _ => panic!("First column is supposed to be text"),
         };
@@ -2846,6 +2851,7 @@ fn fill_vec_of_rows(profile: &Profile) {
 
         for &b in col_b {
             let a = col_a
+                .iter()
                 .next()
                 .unwrap()
                 .map(|bytes| str::from_utf8(bytes).unwrap().to_owned());
