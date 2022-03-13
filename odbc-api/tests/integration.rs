@@ -566,8 +566,8 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let col_view = batch.column(0);
-    let mut col_it = if let AnyColumnView::Binary(col_it) = col_view {
-        col_it
+    let mut col_it = if let AnyColumnView::Binary(col_view) = col_view {
+        col_view.iter()
     } else {
         panic!("Column View expected to be binary")
     };
@@ -613,7 +613,7 @@ fn columnar_fetch_binary(profile: &Profile) {
     let batch = cursor.fetch().unwrap().unwrap();
     let col_view = batch.column(0);
     let mut col_it = if let AnyColumnView::Binary(col_it) = col_view {
-        col_it
+        col_it.iter()
     } else {
         panic!("Column View expected to be binary")
     };
@@ -1414,7 +1414,8 @@ fn non_ascii_char(profile: &Profile) {
     assert_eq!("A\nÜ", output);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
+// This test will not work in CI on windows, due to non UTF local
+// #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn wchar(profile: &Profile) {

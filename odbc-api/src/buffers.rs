@@ -14,7 +14,7 @@ pub use self::{
         buffer_from_description, buffer_from_description_and_indices, AnyColumnBuffer,
         AnyColumnView, AnyColumnViewMut,
     },
-    bin_column::{BinColumn, BinColumnIt, BinColumnWriter},
+    bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
     description::{BufferDescription, BufferKind},
@@ -23,5 +23,4 @@ pub use self::{
     text_column::{
         CharColumn, TextColumn, TextColumnIt, TextColumnView, TextColumnWriter, WCharColumn,
     },
-    // text_row_set::TextRowSet,
 };

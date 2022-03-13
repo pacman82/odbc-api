@@ -73,16 +73,15 @@ impl BinColumn {
         self.max_len
     }
 
-    /// Iterator over the first `num_rows` values of a binary column.
+    /// View of the first `num_rows` values of a binary column.
     ///
     /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub fn iter(&self, num_rows: usize) -> BinColumnIt<'_> {
-        BinColumnIt {
-            pos: 0,
+    pub fn view(&self, num_rows: usize) -> BinColumnView<'_> {
+        BinColumnView {
             num_rows,
             col: self,
         }
@@ -204,6 +203,38 @@ impl BinColumn {
     /// Maximum number of elements this buffer can hold.
     pub fn capacity(&self) -> usize {
         self.indicators.len()
+    }
+}
+
+#[derive(Debug)]
+pub struct BinColumnView<'c> {
+    num_rows: usize,
+    col: &'c BinColumn,
+}
+
+impl<'c> BinColumnView<'c> {
+    /// The number of valid elements in the text column.
+    pub fn len(&self) -> usize {
+        self.num_rows
+    }
+
+    /// True if, and only if there are no valid rows in the column buffer.
+    pub fn is_empty(&self) -> bool {
+        self.num_rows == 0
+    }
+
+    /// Slice of text at the specified row index without terminating zero.
+    pub fn get(&self, index: usize) -> Option<&'c [u8]> {
+        self.col.value_at(index)
+    }
+
+    /// Iterator over the valid elements of the text buffer
+    pub fn iter(&self) -> BinColumnIt<'c> {
+        BinColumnIt {
+            pos: 0,
+            num_rows: self.num_rows,
+            col: self.col,
+        }
     }
 }
 
@@ -338,8 +369,13 @@ impl<'a> BinColumnWriter<'a> {
     ///     panic!("Expected binary column writer");
     /// }
     ///
-    /// if let AnyColumnView::Binary(col) = buffer.column(0) {
-    ///     assert!(col.zip(input.iter().copied()).all(|(expected, actual)| expected == actual))
+    /// if let AnyColumnView::Binary(col_view) = buffer.column(0) {
+    ///     assert!(
+    ///         col_view
+    ///             .iter()
+    ///             .zip(input.iter().copied())
+    ///             .all(|(expected, actual)| expected == actual)
+    ///     )
     /// } else {
     ///     panic!("Expected binary column slice");   
     /// }
