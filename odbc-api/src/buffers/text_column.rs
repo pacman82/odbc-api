@@ -195,22 +195,6 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// View of the first `num_rows` values of a text column.
-    ///
-    /// # Safety
-    ///
-    /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
-    /// column buffer does not know how many elements were in the last row group, and therefore can
-    /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
-    /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
-    /// to the maximum number of elements in the buffer.
-    pub unsafe fn view(&self, num_rows: usize) -> TextColumnView<'_, C> {
-        TextColumnView {
-            num_rows,
-            col: self,
-        }
-    }
-
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `input` must be specified without the terminating zero.
@@ -315,8 +299,11 @@ unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
 where
     TextColumn<C>: CDataMut + HasDataType,
 {
-    unsafe fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
-        self.view(valid_rows)
+    fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
+        TextColumnView {
+            num_rows: valid_rows,
+            col: self,
+        }
     }
 
     unsafe fn view_mut(&mut self, valid_rows: usize) -> TextColumnWriter<'_, C> {

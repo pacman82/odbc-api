@@ -459,7 +459,7 @@ unsafe impl ColumnBuffer for AnyColumnBuffer {
         }
     }
 
-    unsafe fn view(&self, valid_rows: usize) -> AnyColumnView {
+    fn view(&self, valid_rows: usize) -> AnyColumnView {
         match self {
             AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.view(valid_rows)),
             AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.view(valid_rows)),

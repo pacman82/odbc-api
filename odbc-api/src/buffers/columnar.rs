@@ -86,7 +86,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///   the buffer, in the same order in which they are enumerated in the result set, the
     ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
     pub fn column(&self, buffer_index: usize) -> <C as ColumnProjections<'_>>::View {
-        unsafe { self.columns[buffer_index].1.view(*self.num_rows) }
+        self.columns[buffer_index].1.view(*self.num_rows)
     }
 
     /// Use this method to gain write access to the actual column data.
@@ -253,13 +253,11 @@ pub struct ColumnarBuffer<C> {
 ///
 /// Views must not allow access to unintialized / invalid rows.
 pub unsafe trait ColumnBuffer: for<'a> ColumnProjections<'a> + CDataMut {
-    /// # Safety
-    ///
-    /// Underlying buffer may not know how many elements have been written to it by the last ODBC
-    /// function call. So we tell it how many, and get a save to use view in Return. Specifying an
-    /// erroneous value for `valid_rows`, may therfore result in the construced view giving us
-    /// access to invalid rows in a safe abstraction, which of course would be a Bug.
-    unsafe fn view(&self, valid_rows: usize) -> <Self as ColumnProjections<'_>>::View;
+    /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
+    /// column buffer does not know how many elements were in the last row group, and therefore can
+    /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
+    /// on accessing an undefined element.
+    fn view(&self, valid_rows: usize) -> <Self as ColumnProjections<'_>>::View;
 
     /// # Safety
     ///
@@ -287,7 +285,7 @@ unsafe impl<T> ColumnBuffer for WithDataType<T>
 where
     T: ColumnBuffer,
 {
-    unsafe fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
+    fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
         self.value.view(valid_rows)
     }
 
