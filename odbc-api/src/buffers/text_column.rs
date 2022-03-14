@@ -7,7 +7,7 @@ use super::{ColumnBuffer, ColumnProjections, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void, mem::size_of};
+use std::{cmp::min, ffi::c_void, mem::size_of, ops::Index};
 use widestring::U16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
@@ -60,20 +60,10 @@ impl<C> TextColumn<C> {
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
     pub fn value_at(&self, row_index: usize) -> Option<&[C]> {
-        match self.indicator_at(row_index) {
-            Indicator::Null => None,
-            // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
-            Indicator::NoTotal => {
-                let offset = row_index * (self.max_str_len + 1);
-                Some(&self.values[offset..offset + self.max_str_len])
-            }
-            Indicator::Length(length_in_bytes) => {
-                let offset = row_index * (self.max_str_len + 1);
-                let length_in_chars = length_in_bytes / size_of::<C>();
-                let length = min(self.max_str_len, length_in_chars);
-                Some(&self.values[offset..offset + length])
-            }
-        }
+        self.content_length_at(row_index).map(|length| {
+            let offset = row_index * (self.max_str_len + 1);
+            &self.values[offset..offset + length]
+        })
     }
 
     /// Maximum length of elements
@@ -89,6 +79,24 @@ impl<C> TextColumn<C> {
     /// equal to the maximum number of elements in the buffer.
     pub fn indicator_at(&self, row_index: usize) -> Indicator {
         Indicator::from_isize(self.indicators[row_index])
+    }
+
+    /// Length of value at the specified position. This is different from an indicator as it refers
+    /// to the length of the value in the buffer, not to the length of the value in the datasource.
+    /// The two things are different for truncated values.
+    pub fn content_length_at(&self, row_index: usize) -> Option<usize> {
+        match self.indicator_at(row_index) {
+            Indicator::Null => None,
+            // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
+            Indicator::NoTotal => {
+                Some(self.max_str_len)
+            }
+            Indicator::Length(length_in_bytes) => {
+                let length_in_chars = length_in_bytes / size_of::<C>();
+                let length = min(self.max_str_len, length_in_chars);
+                Some(length)
+            }
+        }
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find

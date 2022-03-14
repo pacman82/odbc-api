@@ -41,14 +41,34 @@ impl BinColumn {
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
     pub fn value_at(&self, row_index: usize) -> Option<&[u8]> {
-        let len = self.indicators[row_index];
-        if len == NULL_DATA {
-            None
-        } else {
+        self.content_length_at(row_index).map(|length| {
             let offset = row_index * self.max_len;
-            // Indicator value might be larger than max_len.
-            let length = min(self.max_len, len as usize);
-            Some(&self.values[offset..offset + length])
+            &self.values[offset..offset + length]
+        })
+    }
+
+    /// Indicator value at the specified position. Useful to detect truncation of data.
+    ///
+    /// The column buffer does not know how many elements were in the last row group, and therefore
+    /// can not guarantee the accessed element to be valid and in a defined state. It also can not
+    /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
+    /// equal to the maximum number of elements in the buffer.
+    pub fn indicator_at(&self, row_index: usize) -> Indicator {
+        Indicator::from_isize(self.indicators[row_index])
+    }
+
+    /// Length of value at the specified position. This is different from an indicator as it refers
+    /// to the length of the value in the buffer, not to the length of the value in the datasource.
+    /// The two things are different for truncated values.
+    pub fn content_length_at(&self, row_index: usize) -> Option<usize> {
+        match self.indicator_at(row_index) {
+            Indicator::Null => None,
+            // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
+            Indicator::NoTotal => Some(self.max_len),
+            Indicator::Length(length) => {
+                let length = min(self.max_len, length);
+                Some(length)
+            }
         }
     }
 
