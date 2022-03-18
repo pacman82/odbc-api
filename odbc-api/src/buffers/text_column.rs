@@ -7,7 +7,7 @@ use super::{ColumnBuffer, ColumnProjections, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void, mem::size_of, ops::Index};
+use std::{cmp::min, ffi::c_void, mem::size_of};
 use widestring::U16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
