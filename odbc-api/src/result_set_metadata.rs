@@ -51,6 +51,9 @@ pub trait ResultSetMetadata {
     /// Number of columns in result set. Can also be used to see wether execting a prepared
     /// Statement ([`crate::Prepared`]) would yield a result set, as this would return `0` if it
     /// does not.
+    /// 
+    /// See also:
+    /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnumresultcols-function>
     fn num_result_cols(&self) -> Result<i16, Error> {
         let stmt = self.stmt_ref();
         stmt.num_result_cols().into_result(stmt)
