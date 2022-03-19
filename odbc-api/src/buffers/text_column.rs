@@ -366,6 +366,13 @@ impl<'c, C> TextColumnView<'c, C> {
             col: self.col,
         }
     }
+
+    /// Length of value at the specified position. This is different from an indicator as it refers
+    /// to the length of the value in the buffer, not to the length of the value in the datasource.
+    /// The two things are different for truncated values.
+    pub fn content_length_at(&self, row_index: usize) -> Option<usize> {
+        self.col.content_length_at(row_index)
+    }
 }
 
 /// Iterator over a text column. See [`TextColumnView::iter`]

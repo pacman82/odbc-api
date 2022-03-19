@@ -3164,11 +3164,13 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
     offsets.push(0);
 
     let mut offset: usize = 0;
-    for value in view.iter() {
-        if let Some(slice) = value {
-            offset += slice.len()
+    for index in 0..view.len() {
+        if let Some(len) = view.content_length_at(index) {
+            valid.push(true);
+            offset += len
+        } else {
+            valid.push(false);
         }
-        valid.push(value.is_some());
         offsets.push(offset);
     }
 
