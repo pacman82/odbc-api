@@ -3161,28 +3161,34 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
 
     let mut valid = Vec::with_capacity(view.len());
     let mut offsets = Vec::with_capacity(view.len() + 1);
-    offsets.push(0);
 
     let mut offset: usize = 0;
     for index in 0..view.len() {
+        offset += view.content_length_at(index).unwrap_or(0)
+    }
+
+    let mut consequtives_values = Vec::with_capacity(offset);
+    let raw_values_odbc = view.raw_value_buffer();
+    offset = 0;
+    for index in 0..view.len() {
+        offsets.push(offset);
         if let Some(len) = view.content_length_at(index) {
             valid.push(true);
-            offset += len
+            offset += len;
+            let start_index = index * (view.max_len() + 1);
+            consequtives_values.extend_from_slice(
+                &raw_values_odbc
+                    [start_index..(start_index + len)],
+            )
         } else {
             valid.push(false);
         }
-        offsets.push(offset);
-    }
-
-    let mut values = Vec::with_capacity(*offsets.last().unwrap());
-    for text in view.iter().flatten() {
-        values.extend_from_slice(text)
     }
 
     // Then
     assert_eq!(valid, [true, false, true, true, true]);
-    assert_eq!(offsets, [0, 4, 4, 10, 13, 20]);
-    assert_eq!(values, b"abcdefghijklmnpqrstu");
+    assert_eq!(offsets, [0, 4, 4, 10, 13]);
+    assert_eq!(consequtives_values, b"abcdefghijklmnpqrstu");
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

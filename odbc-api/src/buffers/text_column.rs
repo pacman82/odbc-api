@@ -7,7 +7,7 @@ use super::{ColumnBuffer, ColumnProjections, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void, mem::size_of};
+use std::{cmp::min, ffi::c_void, mem::size_of, panic};
 use widestring::U16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
@@ -280,6 +280,18 @@ impl<C> TextColumn<C> {
             to: n,
         }
     }
+
+    /// Provides access to the raw underlying value buffer. Normal applications should have little
+    /// reason to call this method. Yet it may be useful for writing bindings which copy directly
+    /// from the ODBC in memory representation into other kinds of buffers.
+    /// 
+    /// The buffer contains the bytes for every non null valid element, padded to the maximum string
+    /// length. The content of the padding bytes is undefined. Usually ODBC drivers write a
+    /// terminating zero at the end of each string. For the actual value length call
+    /// [`Self::conten_length_at`]. Any element starts at index * ([`Self::max_len`] + 1).
+    pub fn raw_value_buffer(&self, num_valid_rows: usize) -> &[C] {
+        &self.values[..(self.max_str_len + 1) * num_valid_rows]
+    }
 }
 
 impl WCharColumn {
@@ -371,7 +383,26 @@ impl<'c, C> TextColumnView<'c, C> {
     /// to the length of the value in the buffer, not to the length of the value in the datasource.
     /// The two things are different for truncated values.
     pub fn content_length_at(&self, row_index: usize) -> Option<usize> {
+        if row_index >= self.num_rows {
+            panic!("Row index points beyond the range of valid values.")
+        }
         self.col.content_length_at(row_index)
+    }
+
+    /// Provides access to the raw underlying value buffer. Normal applications should have little
+    /// reason to call this method. Yet it may be useful for writing bindings which copy directly
+    /// from the ODBC in memory representation into other kinds of buffers.
+    /// 
+    /// The buffer contains the bytes for every non null valid element, padded to the maximum string
+    /// length. The content of the padding bytes is undefined. Usually ODBC drivers write a
+    /// terminating zero at the end of each string. For the actual value length call
+    /// [`Self::conten_length_at`]. Any element starts at index * ([`Self::max_len`] + 1).
+    pub fn raw_value_buffer(&self) -> &'c [C] {
+        self.col.raw_value_buffer(self.num_rows)
+    }
+
+    pub fn max_len(&self) -> usize {
+        self.col.max_len()
     }
 }
 
