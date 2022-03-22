@@ -33,7 +33,7 @@ odbc-api = { version = "0.36.0", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.56"
 stderrlog = "0.5.1"
-log = "0.4.14"
+log = "0.4.16"
 clap = { version = "3.1.6", features = ["derive", "env"] }
 
 [dev-dependencies]
