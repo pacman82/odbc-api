@@ -152,12 +152,16 @@ impl Environment {
 
         // Translate invalid attribute into a more meaningful error, provided the additional
         // context that we know we tried to set version number.
-        result.provide_context_for_diagnostic(|record, function| {
-            if record.state == State::INVALID_STATE_TRANSACTION {
+        result.provide_context_for_diagnostic(|record, function| match record.state {
+            // INVALID_STATE_TRANSACTION has been seen with some really old version of unixODBC on
+            // a CentOS used to build manylinux wheels, with the preinstalled ODBC version.
+            // INVALID_ATTRIBUTE_VALUE is the correct status code to emit for a driver manager if it
+            // does not know the version and has been seen with an unknown version of unixODBC on an
+            // Oracle Linux.
+            State::INVALID_STATE_TRANSACTION | State::INVALID_ATTRIBUTE_VALUE => {
                 Error::UnsupportedOdbcApiVersion(record)
-            } else {
-                Error::Diagnostics { record, function }
             }
+            _ => Error::Diagnostics { record, function },
         })?;
 
         Ok(Self {

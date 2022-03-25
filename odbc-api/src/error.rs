@@ -41,9 +41,10 @@ pub enum Error {
     AbortedConnectionStringCompletion,
     /// An error returned if we fail to set the ODBC version
     #[error(
-        "ODBC diver manager does not seem to support the required ODBC version 3.80. (Most \
-        likely you need to update unixODBC if you run on a Linux. Diagnostic record returned by \
-        SQLSetEnvAttr:\n{0}"
+        "The ODBC diver manager installed in your system does not seem to support ODBC API version
+        3.80. Which is required by this application. Most likely you need to update your driver
+        manager. Your driver manager is most likely unixODBC if you run on a Linux. Diagnostic
+        record returned by SQLSetEnvAttr:\n{0}"
     )]
     UnsupportedOdbcApiVersion(DiagnosticRecord),
     /// An error emitted by an `std::io::ReadBuf` implementation used as an input argument.
