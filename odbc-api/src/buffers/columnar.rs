@@ -247,7 +247,7 @@ pub struct ColumnarBuffer<C> {
     columns: Vec<(u16, C)>,
 }
 
-/// A buffer able to be used together with [`ColumnarBuffer`].
+/// A buffer for a single column intended to be used together with [`ColumnarBuffer`].
 ///
 /// # Safety
 ///
