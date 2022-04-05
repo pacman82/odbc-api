@@ -422,6 +422,18 @@ pub enum AnyColumnViewMut<'a> {
     NullableBit(NullableSliceMut<'a, Bit>),
 }
 
+impl<'a> AnyColumnViewMut<'a> {
+    /// This method is useful if you expect the variant to be [`AnyColumnViewMut::Text`]. It allows
+    /// to you unwrap the inner column view without explictly matching it.
+    pub fn as_text_view(self) -> Option<TextColumnWriter<'a, u8>> {
+        if let Self::Text(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+}
+
 unsafe impl<'a> ColumnProjections<'a> for AnyColumnBuffer {
     type View = AnyColumnView<'a>;
 

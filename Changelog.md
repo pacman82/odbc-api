@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.36.2
+
+* Add `AnyColumnViewMut::as_text_view`.
+
 ## 0.36.1
 
 * If setting the ODBC version fails with `HY092` (Invalid attribute value), the user will now see an error message stating that likely the ODBC driver manager should be updated as it does not seem to support ODBC version 3.80. This gives the user a better starting point to fix the problem than just the diagnostic record.

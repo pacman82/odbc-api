@@ -134,12 +134,11 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///     );
     ///
     ///     // Fill the buffer with values column by column
-    ///     match buffer.column_mut(0) {
-    ///         AnyColumnViewMut::Text(mut col) => {
-    ///             col.write(names.iter().map(|s| Some(s.as_bytes())))
-    ///         }
-    ///         _ => panic!("We know the name column to hold text.")
-    ///     }
+    ///     let mut col = buffer
+    ///         .column_mut(0)
+    ///         .as_text_view()
+    ///         .expect("We know the name column to hold text.");
+    ///     col.write(names.iter().map(|s| Some(s.as_bytes())));
     ///
     ///     match buffer.column_mut(1) {
     ///         AnyColumnViewMut::I16(mut col) => {

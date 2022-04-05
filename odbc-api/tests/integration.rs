@@ -97,9 +97,8 @@ fn insert_too_large_element_in_text_column() {
     };
     let mut buffer = buffer_from_description(10, iter::once(desc));
     buffer.set_num_rows(1);
-    if let AnyColumnViewMut::Text(mut col) = buffer.column_mut(0) {
-        col.write(iter::once(Some(&b"too large input."[..])))
-    }
+    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
+    col_view.write(iter::once(Some(&b"too large input."[..])))
 }
 
 #[test]
@@ -237,7 +236,7 @@ fn describe_columns() {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn text_buffer(profile: &Profile) {
+fn bulk_fetch_text(profile: &Profile) {
     let table_name = "TextBuffer";
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(255)", "INT"])
@@ -949,14 +948,11 @@ fn columnar_insert_varchar(profile: &Profile) {
     ];
 
     buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
-        // Reset length to make room for `Hello, World!`.
-        writer.set_max_len(13);
-        assert_eq!(writer.max_len(), 13);
-        writer.write(input.iter().copied());
-    } else {
-        panic!("Expected text column writer");
-    };
+    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
+    // Reset length to make room for `Hello, World!`.
+    col_view.set_max_len(13);
+    assert_eq!(col_view.max_len(), 13);
+    col_view.write(input.iter().copied());
 
     // Bind buffer and insert values.
     conn.execute(
@@ -1046,14 +1042,11 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
     let mut buffer = buffer_from_description(input.len(), iter::once(desc));
 
     buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
-        for (index, &text) in input.iter().enumerate() {
-            writer.append(index, text)
-        }
-    } else {
-        panic!("Expected text column writer");
-    };
-
+    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
+    for (index, &text) in input.iter().enumerate() {
+        col_view.append(index, text)
+    }
+    
     // Bind buffer and insert values.
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?)", table_name),
@@ -1615,15 +1608,11 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
     .copied();
     let mut params = buffer_from_description(5, description);
     params.set_num_rows(3);
-    let mut view_mut = params.column_mut(0);
     // Fill first column with text
-    match &mut view_mut {
-        AnyColumnViewMut::Text(col) => {
-            let input = ["England", "France", "Germany"];
-            col.write(input.iter().map(|&s| Some(s.as_bytes())))
-        }
-        _ => panic!("Unexpected column type"),
-    }
+    let mut col_view = params.column_mut(0).as_text_view().unwrap();
+    let input = ["England", "France", "Germany"];
+    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+
     // Fill second column with integers
     let input = [1, 2, 3];
     let view_mut = params.column_mut(1);
@@ -3176,10 +3165,8 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
             valid.push(true);
             offset += len;
             let start_index = index * (view.max_len() + 1);
-            consequtives_values.extend_from_slice(
-                &raw_values_odbc
-                    [start_index..(start_index + len)],
-            )
+            consequtives_values
+                .extend_from_slice(&raw_values_odbc[start_index..(start_index + len)])
         } else {
             valid.push(false);
         }
