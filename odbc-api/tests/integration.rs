@@ -1046,7 +1046,7 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
     for (index, &text) in input.iter().enumerate() {
         col_view.append(index, text)
     }
-    
+
     // Bind buffer and insert values.
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?)", table_name),
@@ -1629,6 +1629,82 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
             "SELECT a,b FROM BulkInsertWithColumnarBuffer ORDER BY id;",
             (),
         )
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bulk_insert_with_multiple_batches(profile: &Profile) {
+    // Given
+    let table_name = "BulkInsertWithMultipleBatches";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(50)", "INTEGER"])
+        .unwrap();
+
+    // When
+
+    // First batch
+
+    // Fill a buffer with three rows, and insert them into the database.
+    let mut prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a,b) Values (?,?)"))
+        .unwrap();
+    let description = [
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::Text { max_str_len: 50 },
+        },
+        BufferDescription {
+            nullable: true,
+            kind: BufferKind::I32,
+        },
+    ]
+    .iter()
+    .copied();
+    let mut params = buffer_from_description(5, description);
+    params.set_num_rows(3);
+    // Fill first column with text
+    let mut col_view = params.column_mut(0).as_text_view().unwrap();
+    let input = ["England", "France", "Germany"];
+    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+
+    // Fill second column with integers
+    let input = [1, 2, 3];
+    let view_mut = params.column_mut(1);
+    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    col.write(input.iter().map(|&i| Some(i)));
+
+    prepared.execute(&params).unwrap();
+
+    // Second Batch
+
+    // Fill a buffer with one row, and insert them into the database.
+    params.set_num_rows(1);
+    // Fill first column with text
+    let mut col_view = params.column_mut(0).as_text_view().unwrap();
+    let input = ["Spain"];
+    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+
+    // Fill second column with integers
+    let input = [4];
+    let view_mut = params.column_mut(1);
+    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    col.write(input.iter().map(|&i| Some(i)));
+
+    prepared.execute(&params).unwrap();
+
+    // Then
+
+    // Assert that the table contains the rows that have just been inserted.
+    let expected = "England,1\nFrance,2\nGermany,3\nSpain,4";
+
+    let cursor = conn
+        .execute(&format!("SELECT a,b FROM {table_name} ORDER BY id;"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
