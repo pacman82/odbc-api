@@ -160,7 +160,7 @@ impl<'c> Connection<'c> {
     }
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
-    pub fn allocate_statement(&self) -> SqlResult<StatementImpl<'_>> {
+    pub fn allocate_statement(&self) -> SqlResult<StatementImpl<'c>> {
         let mut out = null_mut();
         unsafe {
             SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out)

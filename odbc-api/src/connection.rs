@@ -110,7 +110,7 @@ impl<'c> Connection<'c> {
         &self,
         query: &str,
         params: impl ParameterRefCollection,
-    ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementImpl<'c>>>, Error> {
         let query = SqlText::new(query);
         let lazy_statement = move || self.allocate_statement();
         execute_with_parameters(lazy_statement, Some(&query), params)
@@ -574,7 +574,7 @@ impl<'c> Connection<'c> {
         ])
     }
 
-    fn allocate_statement(&self) -> Result<StatementImpl<'_>, Error> {
+    fn allocate_statement(&self) -> Result<StatementImpl<'c>, Error> {
         self.connection
             .allocate_statement()
             .into_result(&self.connection)
