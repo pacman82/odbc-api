@@ -3,6 +3,7 @@ use std::{collections::HashSet, ffi::c_void};
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
+    error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType},
     Bit, DataType, Error,
 };
@@ -59,7 +60,10 @@ pub enum AnyColumnBuffer {
 
 impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
-    pub fn from_description(max_rows: usize, desc: BufferDescription) -> Result<Self, Error> {
+    pub fn from_description(
+        max_rows: usize,
+        desc: BufferDescription,
+    ) -> Result<Self, TooLargeBufferSize> {
         let buffer = match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
                 AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length)?)
@@ -270,11 +274,10 @@ pub fn buffer_from_description(
     let mut column_index = 0;
     let columns = descs
         .map(move |desc| {
+            let buffer = AnyColumnBuffer::from_description(capacity, desc)
+                .map_err(|source| source.add_context(column_index))?;
             column_index += 1;
-            Ok((
-                column_index,
-                AnyColumnBuffer::from_description(capacity, desc)?,
-            ))
+            Ok((column_index, buffer))
         })
         .collect::<Result<_, _>>()?;
     Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
@@ -292,7 +295,8 @@ pub fn buffer_from_description_and_indices(
         .map(|(col_index, buffer_desc)| {
             Ok((
                 col_index,
-                AnyColumnBuffer::from_description(max_rows, buffer_desc)?,
+                AnyColumnBuffer::from_description(max_rows, buffer_desc)
+                    .map_err(|source| source.add_context(col_index - 1))?,
             ))
         })
         .collect::<Result<_, _>>()?;

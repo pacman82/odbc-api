@@ -31,7 +31,7 @@ pub use self::{
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
-    error::Error,
+    error::{Error, TooLargeBufferSize},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,

@@ -4,6 +4,27 @@ use thiserror::Error as ThisError;
 
 use crate::handles::{log_diagnostics, AsHandle, Record as DiagnosticRecord, SqlResult};
 
+/// Error indicating a failed allocation for a column buffer
+#[derive(Debug)]
+pub struct TooLargeBufferSize {
+    /// Number of elements supposed to be in the buffer.
+    pub num_elements: usize,
+    /// Element size in the buffer in bytes.
+    pub element_size: usize,
+}
+
+impl TooLargeBufferSize {
+    /// Map the column allocation error to an [`odbc_api::Error`] adding the context of which column
+    /// caused the allocation error.
+    pub fn add_context(self, buffer_index: u16) -> Error {
+        Error::TooLargeColumnBufferSize {
+            buffer_index,
+            num_elements: self.num_elements,
+            element_size: self.element_size,
+        }
+    }
+}
+
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
 pub enum Error {
@@ -82,6 +103,9 @@ pub enum Error {
         {element_size}."
     )]
     TooLargeColumnBufferSize {
+        /// Zero based column buffer index. Note that this is different from the 1 based column
+        /// index.
+        buffer_index: u16,
         num_elements: usize,
         element_size: usize,
     },

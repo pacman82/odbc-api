@@ -411,7 +411,16 @@ impl TextRowSet {
                 let max_str_len = max_str_len
                     .map(|limit| min(limit, reported_len))
                     .unwrap_or(reported_len);
-                Ok((col_index, TextColumn::new(batch_size, max_str_len)?))
+                Ok((
+                    col_index,
+                    TextColumn::new(batch_size, max_str_len).map_err(|source| {
+                        Error::TooLargeColumnBufferSize {
+                            buffer_index: col_index - 1,
+                            num_elements: source.num_elements,
+                            element_size: source.element_size,
+                        }
+                    })?,
+                ))
             })
             .collect::<Result<_, Error>>()?;
         Ok(TextRowSet {
@@ -432,7 +441,8 @@ impl TextRowSet {
             .map(|(index, max_str_len)| {
                 Ok((
                     (index + 1).try_into().unwrap(),
-                    TextColumn::new(row_capacity, max_str_len)?,
+                    TextColumn::new(row_capacity, max_str_len)
+                        .map_err(|source| source.add_context(index.try_into().unwrap()))?,
                 ))
             })
             .collect::<Result<_, _>>()?;

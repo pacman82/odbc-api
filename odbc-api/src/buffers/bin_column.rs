@@ -1,7 +1,8 @@
 use crate::{
     buffers::Indicator,
+    error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType},
-    DataType, Error,
+    DataType,
 };
 
 use log::debug;
@@ -26,7 +27,7 @@ pub struct BinColumn {
 impl BinColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_len`.
-    pub fn new(batch_size: usize, element_size: usize) -> Result<Self, Error> {
+    pub fn new(batch_size: usize, element_size: usize) -> Result<Self, TooLargeBufferSize> {
         // Use a fallibale allocation for creating the buffer. In applications often the max_len
         // size of the buffer, might be directly inspired by the maximum size of the type, as
         // reported, by ODBC. Which might get exceedingly large for types like VARBINARY(MAX), or
@@ -35,7 +36,7 @@ impl BinColumn {
         let mut values = Vec::new();
         values
             .try_reserve_exact(len)
-            .map_err(|_| Error::TooLargeColumnBufferSize {
+            .map_err(|_| TooLargeBufferSize {
                 num_elements: batch_size,
                 element_size,
             })?;
@@ -454,7 +455,7 @@ unsafe impl CDataMut for BinColumn {
 
 #[cfg(test)]
 mod test {
-    use crate::Error;
+    use crate::error::TooLargeBufferSize;
 
     use super::BinColumn;
 
@@ -465,7 +466,7 @@ mod test {
         let error = result.unwrap_err();
         assert!(matches!(
             error,
-            Error::TooLargeColumnBufferSize {
+            TooLargeBufferSize {
                 num_elements: 10_000,
                 element_size: 2_147_483_648
             }

@@ -1,6 +1,7 @@
 use crate::{
+    error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType},
-    DataType, Error,
+    DataType,
 };
 
 use super::{ColumnBuffer, ColumnProjections, Indicator};
@@ -41,7 +42,7 @@ impl<C> TextColumn<C> {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
     /// one in order to make space for the null terminating zero at the end of strings.
-    pub fn new(batch_size: usize, max_str_len: usize) -> Result<Self, Error>
+    pub fn new(batch_size: usize, max_str_len: usize) -> Result<Self, TooLargeBufferSize>
     where
         C: Default + Copy,
     {
@@ -55,7 +56,7 @@ impl<C> TextColumn<C> {
         let mut values = Vec::new();
         values
             .try_reserve_exact(len)
-            .map_err(|_| Error::TooLargeColumnBufferSize {
+            .map_err(|_| TooLargeBufferSize {
                 num_elements: batch_size,
                 // We want the element size in bytes
                 element_size: element_size * size_of::<C>(),

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.0
+
+* Add column buffer index to allocation errors to provide more context
+
 ## 0.37.0
 
 * Add fallibale allocation of binary columns.
