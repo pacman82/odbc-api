@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.37.0 (next)
+## 0.37.0
 
 * Add fallibale allocation of binary columns.
 * Add fallibale allocation of text columns.
