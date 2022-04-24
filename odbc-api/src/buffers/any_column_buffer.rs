@@ -4,7 +4,7 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
     handles::{CData, CDataMut, HasDataType},
-    Bit, DataType,
+    Bit, DataType, Error,
 };
 
 use super::{
@@ -59,10 +59,10 @@ pub enum AnyColumnBuffer {
 
 impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
-    pub fn from_description(max_rows: usize, desc: BufferDescription) -> Self {
-        match (desc.kind, desc.nullable) {
+    pub fn from_description(max_rows: usize, desc: BufferDescription) -> Result<Self, Error> {
+        let buffer = match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
-                AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
+                AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length)?)
             }
             (BufferKind::Text { max_str_len }, _) => {
                 AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
@@ -132,7 +132,8 @@ impl AnyColumnBuffer {
             (BufferKind::Bit, true) => {
                 AnyColumnBuffer::NullableBit(OptBitColumn::new(max_rows as usize))
             }
-        }
+        };
+        Ok(buffer)
     }
 
     fn fill_default_slice<T: Default + Copy>(col: &mut [T]) {
@@ -265,18 +266,18 @@ impl HasDataType for AnyColumnBuffer {
 pub fn buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
-) -> ColumnarBuffer<AnyColumnBuffer> {
+) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
     let mut column_index = 0;
     let columns = descs
         .map(move |desc| {
             column_index += 1;
-            (
+            Ok((
                 column_index,
-                AnyColumnBuffer::from_description(capacity, desc),
-            )
+                AnyColumnBuffer::from_description(capacity, desc)?,
+            ))
         })
-        .collect();
-    unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
+        .collect::<Result<_, _>>()?;
+    Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
 }
 
 /// Allows you to pass the buffer descriptions together with a one based column index referring the
@@ -286,15 +287,15 @@ pub fn buffer_from_description(
 pub fn buffer_from_description_and_indices(
     max_rows: usize,
     description: impl Iterator<Item = (u16, BufferDescription)>,
-) -> ColumnarBuffer<AnyColumnBuffer> {
+) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
     let columns: Vec<_> = description
         .map(|(col_index, buffer_desc)| {
-            (
+            Ok((
                 col_index,
-                AnyColumnBuffer::from_description(max_rows, buffer_desc),
-            )
+                AnyColumnBuffer::from_description(max_rows, buffer_desc)?,
+            ))
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
 
     // Assert uniqueness of indices
     let mut indices = HashSet::new();
@@ -305,7 +306,7 @@ pub fn buffer_from_description_and_indices(
         panic!("Column indices must be unique.")
     }
 
-    ColumnarBuffer::new(columns)
+    Ok(ColumnarBuffer::new(columns))
 }
 
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarBuffer`].

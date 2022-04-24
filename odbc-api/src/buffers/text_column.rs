@@ -88,9 +88,7 @@ impl<C> TextColumn<C> {
         match self.indicator_at(row_index) {
             Indicator::Null => None,
             // Seen no total in the wild then binding shorter buffer to fixed sized CHAR in MSSQL.
-            Indicator::NoTotal => {
-                Some(self.max_str_len)
-            }
+            Indicator::NoTotal => Some(self.max_str_len),
             Indicator::Length(length_in_bytes) => {
                 let length_in_chars = length_in_bytes / size_of::<C>();
                 let length = min(self.max_str_len, length_in_chars);
@@ -284,7 +282,7 @@ impl<C> TextColumn<C> {
     /// Provides access to the raw underlying value buffer. Normal applications should have little
     /// reason to call this method. Yet it may be useful for writing bindings which copy directly
     /// from the ODBC in memory representation into other kinds of buffers.
-    /// 
+    ///
     /// The buffer contains the bytes for every non null valid element, padded to the maximum string
     /// length. The content of the padding bytes is undefined. Usually ODBC drivers write a
     /// terminating zero at the end of each string. For the actual value length call
@@ -392,7 +390,7 @@ impl<'c, C> TextColumnView<'c, C> {
     /// Provides access to the raw underlying value buffer. Normal applications should have little
     /// reason to call this method. Yet it may be useful for writing bindings which copy directly
     /// from the ODBC in memory representation into other kinds of buffers.
-    /// 
+    ///
     /// The buffer contains the bytes for every non null valid element, padded to the maximum string
     /// length. The content of the padding bytes is undefined. Usually ODBC drivers write a
     /// terminating zero at the end of each string. For the actual value length call
@@ -560,7 +558,7 @@ where
     ///     Some(&b"Hello, World!"[..]),
     /// ];
     ///
-    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc)).unwrap();
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {

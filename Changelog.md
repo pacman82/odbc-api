@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.0 (next)
+
+* Support for fallibale allocation of binary columns.
+
 ## 0.36.2
 
 * Add `AnyColumnViewMut::as_text_view`.

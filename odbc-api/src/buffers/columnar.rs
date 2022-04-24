@@ -131,7 +131,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///     let mut buffer = buffer_from_description(
     ///         names.len(),
     ///         buffer_description.iter().copied()
-    ///     );
+    ///     ).expect("Must have enough memory available to allocate buffer.");
     ///
     ///     // Fill the buffer with values column by column
     ///     let mut col = buffer
@@ -522,6 +522,7 @@ mod tests {
             nullable: false,
             kind: BufferKind::I32,
         };
-        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
+        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned())
+            .unwrap();
     }
 }

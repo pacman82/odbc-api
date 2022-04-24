@@ -76,6 +76,15 @@ pub enum Error {
         wrong the original error is:\n{0}."
     )]
     OracleOdbcDriverDoesNotSupport64Bit(DiagnosticRecord),
+    #[error(
+        "There is not enough memory to allocate enough memory for a column buffer. Number of \
+        elements requested for the column buffer: {num_elements}; Size of an element: \
+        {element_size}."
+    )]
+    TooLargeColumnBufferSize {
+        num_elements: usize,
+        element_size: usize,
+    },
 }
 
 impl Error {

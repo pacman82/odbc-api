@@ -78,7 +78,7 @@ fn insert_too_large_element_in_bin_column() {
         kind: BufferKind::Binary { length: 1 },
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
     buffer.set_num_rows(1);
     if let AnyColumnViewMut::Binary(mut col) = buffer.column_mut(0) {
         col.write(iter::once(Some(&b"too large input."[..])))
@@ -95,7 +95,7 @@ fn insert_too_large_element_in_text_column() {
         kind: BufferKind::Text { max_str_len: 1 },
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
     buffer.set_num_rows(1);
     let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
     col_view.write(iter::once(Some(&b"too large input."[..])))
@@ -560,7 +560,8 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         kind: buffer_kind,
         nullable: true,
     };
-    let row_set_buffer = odbc_api::buffers::buffer_from_description(10, iter::once(buffer_desc));
+    let row_set_buffer =
+        odbc_api::buffers::buffer_from_description(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
@@ -602,7 +603,7 @@ fn columnar_fetch_binary(profile: &Profile) {
         kind: buffer_kind,
         nullable: true,
     };
-    let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc));
+    let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
@@ -648,7 +649,7 @@ fn columnar_fetch_timestamp(profile: &Profile) {
         kind: buffer_kind,
         nullable: true,
     };
-    let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc));
+    let row_set_buffer = buffer_from_description(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_nullable_slice().unwrap();
@@ -708,7 +709,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
         kind: BufferKind::Timestamp,
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -768,7 +769,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
         kind: BufferKind::I32,
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
 
     // Input values to insert.
     let input_values = [1, 0, 3];
@@ -816,7 +817,7 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
         kind: BufferKind::Timestamp,
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -881,7 +882,7 @@ fn columnar_insert_varbinary(profile: &Profile) {
         kind: BufferKind::Binary { length: 5 },
         nullable: true,
     };
-    let mut buffer = buffer_from_description(4, iter::once(desc));
+    let mut buffer = buffer_from_description(4, iter::once(desc)).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -936,7 +937,7 @@ fn columnar_insert_varchar(profile: &Profile) {
         kind: BufferKind::Text { max_str_len: 5 },
         nullable: true,
     };
-    let mut buffer = buffer_from_description(4, iter::once(desc));
+    let mut buffer = buffer_from_description(4, iter::once(desc)).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -1039,7 +1040,7 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
         Some(&b"Hello, World!"[..]),
     ];
 
-    let mut buffer = buffer_from_description(input.len(), iter::once(desc));
+    let mut buffer = buffer_from_description(input.len(), iter::once(desc)).unwrap();
 
     buffer.set_num_rows(input.len());
     let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
@@ -1090,7 +1091,7 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
         Some(&b"Hello, World!"[..]),
     ];
 
-    let mut buffer = buffer_from_description(input.len(), iter::once(desc));
+    let mut buffer = buffer_from_description(input.len(), iter::once(desc)).unwrap();
 
     buffer.set_num_rows(input.len());
     if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
@@ -1135,7 +1136,7 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
         kind: BufferKind::WText { max_str_len: 5 },
         nullable: true,
     };
-    let mut buffer = buffer_from_description(10, iter::once(desc));
+    let mut buffer = buffer_from_description(10, iter::once(desc)).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -1415,7 +1416,7 @@ fn wchar(profile: &Profile) {
         nullable: false,
         kind: BufferKind::WText { max_str_len: 1 },
     };
-    let row_set_buffer = buffer_from_description(2, iter::once(desc));
+    let row_set_buffer = buffer_from_description(2, iter::once(desc)).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let col = batch.column(0);
@@ -1606,7 +1607,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
     ]
     .iter()
     .copied();
-    let mut params = buffer_from_description(5, description);
+    let mut params = buffer_from_description(5, description).unwrap();
     params.set_num_rows(3);
     // Fill first column with text
     let mut col_view = params.column_mut(0).as_text_view().unwrap();
@@ -1666,7 +1667,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
     ]
     .iter()
     .copied();
-    let mut params = buffer_from_description(5, description);
+    let mut params = buffer_from_description(5, description).unwrap();
     params.set_num_rows(3);
     // Fill first column with text
     let mut col_view = params.column_mut(0).as_text_view().unwrap();
@@ -1877,7 +1878,7 @@ fn read_into_columnar_buffer(profile: &Profile) {
             kind: BufferKind::Text { max_str_len: 20 },
         },
     ];
-    let buffer = buffer_from_description(20, buffer_description.iter().copied());
+    let buffer = buffer_from_description(20, buffer_description.iter().copied()).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     // Assert existence of first batch
     let batch = cursor.fetch().unwrap().unwrap();
@@ -1910,7 +1911,8 @@ fn ignore_output_column(profile: &Profile) {
         kind: BufferKind::I32,
         nullable: true,
     };
-    let buffer = buffer_from_description_and_indices(20, [(1, bd), (3, bd)].iter().copied());
+    let buffer =
+        buffer_from_description_and_indices(20, [(1, bd), (3, bd)].iter().copied()).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
 
     // Assert that there is no batch.
@@ -2824,7 +2826,8 @@ fn columns_query(profile: &Profile, schema: &str) {
         conn.columns_buffer_description(255, 255, 255)
             .unwrap()
             .into_iter(),
-    );
+    )
+    .unwrap();
     // Mariadb does not support schemas
     let columns = conn
         .columns(&conn.current_catalog().unwrap(), schema, table_name, "a")
@@ -2875,7 +2878,7 @@ fn fill_vec_of_rows(profile: &Profile) {
         },
     ];
 
-    let buffer = buffer_from_description(1, buf_desc.iter().copied());
+    let buffer = buffer_from_description(1, buf_desc.iter().copied()).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
 
     let mut actual = Vec::new();
@@ -3030,7 +3033,8 @@ fn row_array_size_66536(profile: &Profile) {
             kind: BufferKind::Bit,
             nullable: false,
         }),
-    );
+    )
+    .unwrap();
     assert!(cursor.bind_buffer(row_set_buffer).is_ok())
 }
 
@@ -3161,7 +3165,8 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
             kind: BufferKind::I32,
             nullable: true,
         }),
-    );
+    )
+    .unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let nullable_slice = batch.column(0).as_nullable_slice::<i32>().unwrap();
@@ -3218,7 +3223,8 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
             kind: BufferKind::Text { max_str_len: 50 },
             nullable: true,
         }),
-    );
+    )
+    .unwrap();
 
     let mut cursor = cursor.bind_buffer(columnar_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();

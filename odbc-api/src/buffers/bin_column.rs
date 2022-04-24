@@ -1,7 +1,7 @@
 use crate::{
     buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
-    DataType,
+    DataType, Error,
 };
 
 use log::debug;
@@ -26,12 +26,25 @@ pub struct BinColumn {
 impl BinColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_len`.
-    pub fn new(batch_size: usize, max_len: usize) -> Self {
-        BinColumn {
+    pub fn new(batch_size: usize, max_len: usize) -> Result<Self, Error> {
+        // Use a fallibale allocation for creating the buffer. In applications often the max_len
+        // size of the buffer, might be directly inspired by the maximum size of the type, as
+        // reported, by ODBC. Which might get exceedingly large for types like VARBINARY(MAX), or
+        // IMAGE.
+        let bytes = max_len * batch_size;
+        let mut values = Vec::new();
+        values
+            .try_reserve_exact(bytes)
+            .map_err(|_| Error::TooLargeColumnBufferSize {
+                num_elements: batch_size,
+                element_size: max_len,
+            })?;
+        values.resize(bytes, 0);
+        Ok(BinColumn {
             max_len,
-            values: vec![0; max_len * batch_size],
+            values,
             indicators: vec![0; batch_size],
-        }
+        })
     }
 
     /// Return the value for the given row index.
@@ -378,7 +391,8 @@ impl<'a> BinColumnWriter<'a> {
     ///     Some(&[7,8,9,10,11,12]),
     /// ];
     ///
-    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc))
+    ///     .expect("Must have enough memor to allocate buffer.");
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
@@ -435,5 +449,26 @@ unsafe impl CDataMut for BinColumn {
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Error;
+
+    use super::BinColumn;
+
+    #[test]
+    fn allocating_too_big_a_binary_column() {
+        let two_gib = 2_147_483_648;
+        let result = BinColumn::new(10_000, two_gib);
+        let error = result.unwrap_err();
+        assert!(matches!(
+            error,
+            Error::TooLargeColumnBufferSize {
+                num_elements: 10_000,
+                element_size: 2_147_483_648
+            }
+        ))
     }
 }
