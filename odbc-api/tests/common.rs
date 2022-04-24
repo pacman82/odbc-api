@@ -116,7 +116,7 @@ impl SingleColumnRowSetBuffer<TextColumn<u16>> {
         Self {
             num_rows_fetched: Box::new(0),
             batch_size,
-            column: TextColumn::new(batch_size as usize, max_str_len),
+            column: TextColumn::new(batch_size as usize, max_str_len).unwrap(),
         }
     }
 
@@ -135,7 +135,7 @@ impl SingleColumnRowSetBuffer<TextColumn<u8>> {
         Self {
             num_rows_fetched: Box::new(0),
             batch_size,
-            column: TextColumn::new(batch_size as usize, max_str_len),
+            column: TextColumn::new(batch_size as usize, max_str_len).unwrap(),
         }
     }
 

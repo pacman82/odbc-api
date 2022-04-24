@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.67
+
+* Do not panic if allocation of column buffers fails. Gracefully abort instead, freeing allocated resources.
+
 ## 0.3.66
 
 * Updated dependencies

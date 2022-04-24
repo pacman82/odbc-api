@@ -2,7 +2,8 @@
 
 ## 0.37.0 (next)
 
-* Support for fallibale allocation of binary columns.
+* Add fallibale allocation of binary columns.
+* Add fallibale allocation of text columns.
 
 ## 0.36.2
 

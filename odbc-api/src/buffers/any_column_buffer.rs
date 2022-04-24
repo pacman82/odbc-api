@@ -65,10 +65,10 @@ impl AnyColumnBuffer {
                 AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length)?)
             }
             (BufferKind::Text { max_str_len }, _) => {
-                AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+                AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len)?)
             }
             (BufferKind::WText { max_str_len }, _) => {
-                AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
+                AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len)?)
             }
             (BufferKind::Date, false) => {
                 AnyColumnBuffer::Date(vec![Date::default(); max_rows as usize])

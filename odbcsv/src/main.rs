@@ -437,7 +437,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         .collect::<Result<_, _>>()?;
 
     // Allocate buffer
-    let mut buffer = TextRowSet::from_max_str_lens(*batch_size, (0..headline.len()).map(|_| 0));
+    let mut buffer = TextRowSet::from_max_str_lens(*batch_size, (0..headline.len()).map(|_| 0))?;
 
     // Used to log batch number
     let mut num_batch = 0;

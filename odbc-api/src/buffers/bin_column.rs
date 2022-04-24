@@ -26,22 +26,22 @@ pub struct BinColumn {
 impl BinColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_len`.
-    pub fn new(batch_size: usize, max_len: usize) -> Result<Self, Error> {
+    pub fn new(batch_size: usize, element_size: usize) -> Result<Self, Error> {
         // Use a fallibale allocation for creating the buffer. In applications often the max_len
         // size of the buffer, might be directly inspired by the maximum size of the type, as
         // reported, by ODBC. Which might get exceedingly large for types like VARBINARY(MAX), or
         // IMAGE.
-        let bytes = max_len * batch_size;
+        let len = element_size * batch_size;
         let mut values = Vec::new();
         values
-            .try_reserve_exact(bytes)
+            .try_reserve_exact(len)
             .map_err(|_| Error::TooLargeColumnBufferSize {
                 num_elements: batch_size,
-                element_size: max_len,
+                element_size,
             })?;
-        values.resize(bytes, 0);
+        values.resize(len, 0);
         Ok(BinColumn {
-            max_len,
+            max_len: element_size,
             values,
             indicators: vec![0; batch_size],
         })

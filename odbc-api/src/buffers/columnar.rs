@@ -411,7 +411,7 @@ impl TextRowSet {
                 let max_str_len = max_str_len
                     .map(|limit| min(limit, reported_len))
                     .unwrap_or(reported_len);
-                Ok((col_index, TextColumn::new(batch_size, max_str_len)))
+                Ok((col_index, TextColumn::new(batch_size, max_str_len)?))
             })
             .collect::<Result<_, Error>>()?;
         Ok(TextRowSet {
@@ -426,21 +426,21 @@ impl TextRowSet {
     pub fn from_max_str_lens(
         row_capacity: usize,
         max_str_lengths: impl Iterator<Item = usize>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let buffers = max_str_lengths
             .enumerate()
             .map(|(index, max_str_len)| {
-                (
+                Ok((
                     (index + 1).try_into().unwrap(),
-                    TextColumn::new(row_capacity, max_str_len),
-                )
+                    TextColumn::new(row_capacity, max_str_len)?,
+                ))
             })
-            .collect();
-        TextRowSet {
+            .collect::<Result<_, _>>()?;
+        Ok(TextRowSet {
             row_capacity,
             num_rows: Box::new(0),
             columns: buffers,
-        }
+        })
     }
 
     /// Access the element at the specified position in the row set.

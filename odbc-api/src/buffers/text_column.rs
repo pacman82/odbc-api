@@ -1,6 +1,6 @@
 use crate::{
     handles::{CData, CDataMut, HasDataType},
-    DataType,
+    DataType, Error,
 };
 
 use super::{ColumnBuffer, ColumnProjections, Indicator};
@@ -41,15 +41,31 @@ impl<C> TextColumn<C> {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
     /// one in order to make space for the null terminating zero at the end of strings.
-    pub fn new(batch_size: usize, max_str_len: usize) -> Self
+    pub fn new(batch_size: usize, max_str_len: usize) -> Result<Self, Error>
     where
         C: Default + Copy,
     {
-        TextColumn {
+        // Use a fallibale allocation for creating the buffer. In applications often the max_len
+        // size of the buffer, might be directly inspired by the maximum size of the type, as
+        // reported, by ODBC. Which might get exceedingly large for types like VARCHAR(MAX)
+
+        // Element size is +1 to account for terminating zero
+        let element_size = max_str_len + 1;
+        let len = element_size * batch_size;
+        let mut values = Vec::new();
+        values
+            .try_reserve_exact(len)
+            .map_err(|_| Error::TooLargeColumnBufferSize {
+                num_elements: batch_size,
+                // We want the element size in bytes
+                element_size: element_size * size_of::<C>(),
+            })?;
+        values.resize(len, C::default());
+        Ok(TextColumn {
             max_str_len,
-            values: vec![C::default(); (max_str_len + 1) * batch_size],
+            values,
             indicators: vec![0; batch_size],
-        }
+        })
     }
 
     /// Bytes of string at the specified position. Includes interior nuls, but excludes the
@@ -604,7 +620,8 @@ where
     /// }
     ///
     /// # use odbc_api::buffers::CharColumn;
-    /// # let mut buf = CharColumn::new(1, 12);
+    /// # let mut buf = CharColumn::new(1, 12)
+    /// #    .expect("Enough memory to allocate column buffer must be available");
     /// # let mut writer = buf.writer_n(1);
     /// # write_time(&mut writer, 0, 12, 23, 45, 678);
     /// # assert_eq!(

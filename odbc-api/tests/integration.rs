@@ -981,7 +981,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let column_buffer = WithDataType {
-        value: TextColumn::new(4, 5),
+        value: TextColumn::new(4, 5).unwrap(),
         data_type: DataType::Integer,
     };
 
@@ -1564,7 +1564,7 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let mut prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
-    let mut params = TextRowSet::from_max_str_lens(5, [50].iter().copied());
+    let mut params = TextRowSet::from_max_str_lens(5, [50].iter().copied()).unwrap();
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
     params.append(["France"].iter().map(|s| Some(s.as_bytes())));
     params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
@@ -3279,7 +3279,7 @@ fn many_diagnostic_messages() {
     let batch_size = 2 << 15;
 
     // Fill each row in the buffer with two letters.
-    let mut buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2));
+    let mut buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2)).unwrap();
 
     for _ in 0..batch_size {
         buffer.append([Some(&b"ab"[..])].iter().cloned());
@@ -3289,7 +3289,7 @@ fn many_diagnostic_messages() {
     conn.execute(&insert_sql, &buffer).unwrap();
 
     let query_sql = format!("SELECT a FROM {}", table_name);
-    buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1));
+    buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1)).unwrap();
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
 
