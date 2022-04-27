@@ -3260,6 +3260,39 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
     assert_eq!(consequtives_values, b"abcdefghijklmnpqrstu");
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
+    // Given a text entry with a length of ten.
+    let table_name = "DetectTruncatedOutputInBulkFetch";
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(10)"])
+        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES ('0123456789')"),
+        (),
+    )
+    .unwrap();
+
+    // When fetching that field as part of a bulk, but with a buffer of only length 5.
+    let buffer_description = BufferDescription {
+        nullable: true,
+        kind: BufferKind::Text { max_str_len: 5 },
+    };
+    let buffer = buffer_from_description(1, iter::once(buffer_description)).unwrap();
+    let query = format!("SELECT a FROM {table_name}");
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+
+    // Then we get a truncated value, but we can detect the truncation, by looking at the
+    // diagnostics.
+    let fetched_field =
+        str::from_utf8(batch.column(0).as_text_view().unwrap().get(0).unwrap()).unwrap();
+    assert_eq!("01234", fetched_field);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
