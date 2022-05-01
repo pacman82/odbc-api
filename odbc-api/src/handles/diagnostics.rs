@@ -68,7 +68,7 @@ trait Diagnostics {
     ///
     /// Returns the current values of multiple fields of a diagnostic record that contains error,
     /// warning, and status information
-    /// 
+    ///
     /// See: [Diagnostic Messages][1]
     ///
     /// # Arguments
@@ -99,7 +99,7 @@ trait Diagnostics {
     /// Call this method to retrieve diagnostic information for the last call to an ODBC function.
     /// This method builds on top of [`Self::diagnostic_record`], if the message does not fit in the
     /// buffer, it will grow the message buffer and extract it again.
-    /// 
+    ///
     /// See: [Diagnostic Messages][1]
     ///
     /// # Arguments
@@ -130,36 +130,37 @@ trait Diagnostics {
         let cap = message_text.capacity();
         message_text.resize(cap, 0);
 
-        self.diagnostic_record(rec_number, message_text).map(|result|{
-            let mut text_length = result.text_length.try_into().unwrap();
-            
-            // Check if the buffer has been large enough to hold the message.
-            if text_length > message_text.len() {
-                // The `message_text` buffer was too small to hold the requested diagnostic message.
-                // No diagnostic records were generated. To determine that a truncation occurred,
-                // the application must compare the buffer length to the actual number of bytes
-                // available, which is found in `DiagnosticResult::text_length`.
+        self.diagnostic_record(rec_number, message_text)
+            .map(|result| {
+                let mut text_length = result.text_length.try_into().unwrap();
 
-                // Resize with +1 to account for terminating zero
-                message_text.resize(text_length + 1, 0);
+                // Check if the buffer has been large enough to hold the message.
+                if text_length > message_text.len() {
+                    // The `message_text` buffer was too small to hold the requested diagnostic message.
+                    // No diagnostic records were generated. To determine that a truncation occurred,
+                    // the application must compare the buffer length to the actual number of bytes
+                    // available, which is found in `DiagnosticResult::text_length`.
 
-                // Call diagnostics again with the larger buffer. Should be a success this time if
-                // driver isn't buggy.
-                self.diagnostic_record(rec_number, message_text).unwrap()
-            } else {
-                // `message_text` has been large enough to hold the entire message.
+                    // Resize with +1 to account for terminating zero
+                    message_text.resize(text_length + 1, 0);
 
-                // Some drivers pad the message with null-chars (which is still a valid C string,
-                // but not a valid Rust string).
-                while text_length > 0 && message_text[text_length - 1] == 0 {
-                    text_length -= 1;
+                    // Call diagnostics again with the larger buffer. Should be a success this time if
+                    // driver isn't buggy.
+                    self.diagnostic_record(rec_number, message_text).unwrap()
+                } else {
+                    // `message_text` has been large enough to hold the entire message.
+
+                    // Some drivers pad the message with null-chars (which is still a valid C string,
+                    // but not a valid Rust string).
+                    while text_length > 0 && message_text[text_length - 1] == 0 {
+                        text_length -= 1;
+                    }
+                    // Resize Vec to hold exactly the message.
+                    message_text.resize(text_length, 0);
+
+                    result
                 }
-                // Resize Vec to hold exactly the message.
-                message_text.resize(text_length, 0);
-
-                result
-            }
-        })
+            })
     }
 }
 
@@ -193,13 +194,11 @@ impl Diagnostics for &dyn AsHandle {
         let result = DiagnosticResult {
             state: State::from_chars_with_nul(&state),
             native_error,
-            text_length
+            text_length,
         };
 
         match ret {
-            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => {
-                Some(result)
-            }
+            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Some(result),
             SqlReturn::NO_DATA => None,
             SqlReturn::ERROR => panic!("rec_number argument of diagnostics must be > 0."),
             unexpected => panic!("SQLGetDiagRec returned: {:?}", unexpected),

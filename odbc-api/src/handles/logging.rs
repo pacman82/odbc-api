@@ -4,7 +4,6 @@ use log::{warn, Level};
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
 /// is going to print placeholder characters, if it cannot convert the message to UTF-8.
 pub fn log_diagnostics(handle: &dyn AsHandle) {
-
     if log::max_level() < Level::Warn {
         // Early return to safe work creating all these log records in case we would not log
         // anyhing.
