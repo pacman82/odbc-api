@@ -28,6 +28,9 @@ impl State {
     /// An invalid data type has been bound to a statement. Is also returned by SQLFetch if trying
     /// to fetch into a 64Bit Integer Buffer.
     pub const INVALID_SQL_DATA_TYPE: State = State(*b"HY004");
+    /// String or binary data returned for a column resulted in the truncation of nonblank character
+    /// or non-NULL binary data. If it was a string value, it was right-truncated.
+    pub const STRING_DATA_RIGHT_TRUNCATION: State = State(*b"01004");
 
     /// Drops terminating zero and changes char type, if required
     pub fn from_chars_with_nul(code: &[SqlChar; SQLSTATE_SIZE + 1]) -> Self {
@@ -50,7 +53,7 @@ impl State {
 
 /// Result of [`Diagnostic::diagnostic_record`].
 #[derive(Debug, Clone, Copy)]
-struct DiagnosticResult {
+pub struct DiagnosticResult {
     /// A five-character SQLSTATE code (and terminating NULL) for the diagnostic record
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
     /// subclass. For more information, see [SQLSTATE][1]s.
@@ -63,7 +66,7 @@ struct DiagnosticResult {
 }
 
 /// Report diagnostics from the last call to an ODBC function using a handle.
-trait Diagnostics {
+pub trait Diagnostics {
     /// Call this method to retrieve diagnostic information for the last call to an ODBC function.
     ///
     /// Returns the current values of multiple fields of a diagnostic record that contains error,
@@ -164,7 +167,7 @@ trait Diagnostics {
     }
 }
 
-impl Diagnostics for &dyn AsHandle {
+impl<T: AsHandle + ?Sized> Diagnostics for T {
     fn diagnostic_record(
         &self,
         rec_number: i16,
@@ -227,7 +230,7 @@ impl Record {
     /// # Return
     ///
     /// `true` if a record has been found, `false` if not.
-    pub fn fill_from(&mut self, handle: &dyn AsHandle, record_number: i16) -> bool {
+    pub fn fill_from(&mut self, handle: &(impl Diagnostics + ?Sized), record_number: i16) -> bool {
         match handle.diagnostic_record_vec(record_number, &mut self.message) {
             Some(result) => {
                 self.state = result.state;

@@ -1,9 +1,9 @@
-use super::{as_handle::AsHandle, diagnostics::Record};
+use super::{diagnostics::Record, Diagnostics};
 use log::{warn, Level};
 
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
 /// is going to print placeholder characters, if it cannot convert the message to UTF-8.
-pub fn log_diagnostics(handle: &dyn AsHandle) {
+pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
     if log::max_level() < Level::Warn {
         // Early return to safe work creating all these log records in case we would not log
         // anyhing.

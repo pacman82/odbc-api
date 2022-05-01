@@ -3291,6 +3291,7 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     let fetched_field =
         str::from_utf8(batch.column(0).as_text_view().unwrap().get(0).unwrap()).unwrap();
     assert_eq!("01234", fetched_field);
+    assert!(cursor.has_diagnostics_indicating_truncation().unwrap())
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

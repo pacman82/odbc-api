@@ -109,6 +109,14 @@ pub enum Error {
         num_elements: usize,
         element_size: usize,
     },
+    #[error(
+        "The number of diagnostic records returned by ODBC seems to exceed `32,767` This means not
+        all (diagnostic) records could be inspected. This in turn may be problematic if invariants
+        rely on checking that certain errors did not occurr. Usually this many warnings are only
+        generated, if one or more warnings per row is generated, and then there are many rows. Maybe
+        try fewer rows, or fix the cause of some of these warnings/errors?"
+    )]
+    TooManyDiagnostics
 }
 
 impl Error {

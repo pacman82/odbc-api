@@ -4,7 +4,7 @@ use crate::{
     borrow_mut_statement::BorrowMutStatement,
     buffers::Indicator,
     error::ExtendResult,
-    handles::{State, Statement},
+    handles::{Diagnostics, State, Statement},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
@@ -389,6 +389,27 @@ where
                 Ok(None)
             }
         }
+    }
+
+    /// Call this method to find out wether there are any truncated values in the batch, without
+    /// inspecting all its rows and columns.
+    pub fn has_diagnostics_indicating_truncation(&self) -> Result<bool, Error> {
+        let mut empty = [];
+        let mut rec_number = 1;
+        while let Some(result) = self.cursor.stmt_ref().diagnostic_record(1, &mut empty) {
+
+            if result.state == State::STRING_DATA_RIGHT_TRUNCATION {
+                return Ok(true);
+            }
+
+            // Many diagnostic records may be produced with a single call. Especially in case of
+            // bulk fetching, or inserting.
+            if rec_number == i16::MAX {
+                return Err(Error::TooManyDiagnostics);
+            }
+            rec_number += 1;
+        }
+        Ok(false)
     }
 }
 
