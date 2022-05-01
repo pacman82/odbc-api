@@ -64,26 +64,27 @@ struct DiagnosticResult {
 
 /// Report diagnostics from the last call to an ODBC function using a handle.
 trait Diagnostics {
-    /// Call this method to retrieve diagnostic information for the last method call.
+    /// Call this method to retrieve diagnostic information for the last call to an ODBC function.
     ///
     /// Returns the current values of multiple fields of a diagnostic record that contains error,
-    /// warning, and status information.
+    /// warning, and status information
+    /// 
+    /// See: [Diagnostic Messages][1]
     ///
     /// # Arguments
     ///
     /// * `rec_number` - Indicates the status record from which the application seeks information.
     /// Status records are numbered from 1. Function panics for values smaller < 1.
     /// * `message_text` - Buffer in which to return the diagnostic message text string. If the
-    /// number of characters to return is greater than the buffer length, the buffer will be grown to be
-    /// large enough to hold it.
-    /// [Diagnostic Messages][1]
+    /// number of characters to return is greater than the buffer length, the message is truncated.
+    /// To determine that a truncation occurred, the application must compare the buffer length to
+    /// the actual number of bytes available, which is found in
+    /// [`self::DiagnosticResult::text_length]`
     ///
     /// # Result
     ///
     /// * `Some(rec)` - The function successfully returned diagnostic information.
-    /// message. No diagnostic records were generated. To determine that a truncation occurred, the
-    /// application must compare the buffer length to the actual number of bytes available, which is
-    /// found in [`self::DiagnosticResult::text_length]`.
+    /// message. No diagnostic records were generated.
     /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
     /// the specified Handle. The function also returns `NoData` for any positive `rec_number` if
     /// there are no diagnostic records available.
@@ -94,6 +95,72 @@ trait Diagnostics {
         rec_number: i16,
         message_text: &mut [SqlChar],
     ) -> Option<DiagnosticResult>;
+
+    /// Call this method to retrieve diagnostic information for the last call to an ODBC function.
+    /// This method builds on top of [`Self::diagnostic_record`], if the message does not fit in the
+    /// buffer, it will grow the message buffer and extract it again.
+    /// 
+    /// See: [Diagnostic Messages][1]
+    ///
+    /// # Arguments
+    ///
+    /// * `rec_number` - Indicates the status record from which the application seeks information.
+    /// Status records are numbered from 1. Function panics for values smaller < 1.
+    /// * `message_text` - Buffer in which to return the diagnostic message text string. If the
+    /// number of characters to return is greater than the buffer length, the buffer will be grown to be
+    /// large enough to hold it.
+    ///
+    /// # Result
+    ///
+    /// * `Some(rec)` - The function successfully returned diagnostic information.
+    /// message. No diagnostic records were generated. To determine that a truncation occurred, the
+    /// application must compare the buffer length to the actual number of bytes available, which is
+    /// found in [`self::DiagnosticResult::text_length]`.
+    /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for the
+    /// specified Handle. The function also returns `NoData` for any positive `rec_number` if there are
+    /// no diagnostic records available.
+    ///
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
+    fn diagnostic_record_vec(
+        &self,
+        rec_number: i16,
+        message_text: &mut Vec<SqlChar>,
+    ) -> Option<DiagnosticResult> {
+        // Use all the memory available in the buffer, but don't allocate any extra.
+        let cap = message_text.capacity();
+        message_text.resize(cap, 0);
+
+        self.diagnostic_record(rec_number, message_text).map(|result|{
+            let mut text_length = result.text_length.try_into().unwrap();
+            
+            // Check if the buffer has been large enough to hold the message.
+            if text_length > message_text.len() {
+                // The `message_text` buffer was too small to hold the requested diagnostic message.
+                // No diagnostic records were generated. To determine that a truncation occurred,
+                // the application must compare the buffer length to the actual number of bytes
+                // available, which is found in `DiagnosticResult::text_length`.
+
+                // Resize with +1 to account for terminating zero
+                message_text.resize(text_length + 1, 0);
+
+                // Call diagnostics again with the larger buffer. Should be a success this time if
+                // driver isn't buggy.
+                self.diagnostic_record(rec_number, message_text).unwrap()
+            } else {
+                // `message_text` has been large enough to hold the entire message.
+
+                // Some drivers pad the message with null-chars (which is still a valid C string,
+                // but not a valid Rust string).
+                while text_length > 0 && message_text[text_length - 1] == 0 {
+                    text_length -= 1;
+                }
+                // Resize Vec to hold exactly the message.
+                message_text.resize(text_length, 0);
+
+                result
+            }
+        })
+    }
 }
 
 impl Diagnostics for &dyn AsHandle {
@@ -140,73 +207,6 @@ impl Diagnostics for &dyn AsHandle {
     }
 }
 
-/// Call this function to retrieve diagnostic information for the last method call.
-///
-/// Returns the current values of multiple fields of a diagnostic record that contains error,
-/// warning, and status information.
-///
-/// # Arguments
-///
-/// * `handle` - Handle used to query for diagnostic records.
-/// * `rec_number` - Indicates the status record from which the application seeks information.
-/// Status records are numbered from 1. Function panics for values smaller < 1.
-/// * `message_text` - Buffer in which to return the diagnostic message text string. If the
-/// number of characters to return is greater than the buffer length, the buffer will be grown to be
-/// large enough to hold it.
-/// [Diagnostic Messages][1]
-///
-/// # Result
-///
-/// * `Some(rec)` - The function successfully returned diagnostic information.
-/// message. No diagnostic records were generated. To determine that a truncation occurred, the
-/// application must compare the buffer length to the actual number of bytes available, which is
-/// found in [`self::DiagnosticResult::text_length]`.
-/// * `None` - `rec_number` was greater than the number of diagnostic records that existed for the
-/// specified Handle. The function also returns `NoData` for any positive `rec_number` if there are
-/// no diagnostic records available.
-///
-/// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
-fn diagnostics(
-    handle: &dyn AsHandle,
-    rec_number: i16,
-    message_text: &mut Vec<SqlChar>,
-) -> Option<DiagnosticResult> {
-    // Use all the memory available in the buffer, but don't allocate any extra.
-    let cap = message_text.capacity();
-    message_text.resize(cap, 0);
-
-    handle.diagnostic_record(rec_number, message_text).map(|result|{
-        let mut text_length = result.text_length.try_into().unwrap();
-         
-        // Check if the buffer has been large enough to hold the message.
-        if text_length > message_text.len() {
-            // The `message_text` buffer was too small to hold the requested diagnostic message.
-            // No diagnostic records were generated. To determine that a truncation occurred,
-            // the application must compare the buffer length to the actual number of bytes
-            // available, which is found in `DiagnosticResult::text_length`.
-
-            // Resize with +1 to account for terminating zero
-            message_text.resize(text_length + 1, 0);
-
-            // Call diagnostics again with the larger buffer. Should be a success this time if
-            // driver isn't buggy.
-            handle.diagnostic_record(rec_number, message_text).unwrap()
-        } else {
-            // `message_text` has been large enough to hold the entire message.
-
-            // Some drivers pad the message with null-chars (which is still a valid C string,
-            // but not a valid Rust string).
-            while text_length > 0 && message_text[text_length - 1] == 0 {
-                text_length -= 1;
-            }
-            // Resize Vec to hold exactly the message.
-            message_text.resize(text_length, 0);
-
-            result
-        }
-    })
-}
-
 /// ODBC Diagnostic Record
 ///
 /// The `description` method of the `std::error::Error` trait only returns the message. Use
@@ -229,7 +229,7 @@ impl Record {
     ///
     /// `true` if a record has been found, `false` if not.
     pub fn fill_from(&mut self, handle: &dyn AsHandle, record_number: i16) -> bool {
-        match diagnostics(handle, record_number, &mut self.message) {
+        match handle.diagnostic_record_vec(record_number, &mut self.message) {
             Some(result) => {
                 self.state = result.state;
                 self.native_error = result.native_error;
