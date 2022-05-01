@@ -48,9 +48,9 @@ impl State {
     }
 }
 
-/// Result of `diagnostics`.
+/// Result of [`Diagnostic::diagnostic_record`].
 #[derive(Debug, Clone, Copy)]
-pub struct DiagnosticResult {
+struct DiagnosticResult {
     /// A five-character SQLSTATE code (and terminating NULL) for the diagnostic record
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
     /// subclass. For more information, see [SQLSTATE][1]s.
@@ -58,6 +58,86 @@ pub struct DiagnosticResult {
     pub state: State,
     /// Native error code specific to the data source.
     pub native_error: i32,
+    /// The length of the diagnostic message reported by ODBC (excluding the terminating zero).
+    pub text_length: i16,
+}
+
+/// Report diagnostics from the last call to an ODBC function using a handle.
+trait Diagnostics {
+    /// Call this method to retrieve diagnostic information for the last method call.
+    ///
+    /// Returns the current values of multiple fields of a diagnostic record that contains error,
+    /// warning, and status information.
+    ///
+    /// # Arguments
+    ///
+    /// * `rec_number` - Indicates the status record from which the application seeks information.
+    /// Status records are numbered from 1. Function panics for values smaller < 1.
+    /// * `message_text` - Buffer in which to return the diagnostic message text string. If the
+    /// number of characters to return is greater than the buffer length, the buffer will be grown to be
+    /// large enough to hold it.
+    /// [Diagnostic Messages][1]
+    ///
+    /// # Result
+    ///
+    /// * `Some(rec)` - The function successfully returned diagnostic information.
+    /// message. No diagnostic records were generated. To determine that a truncation occurred, the
+    /// application must compare the buffer length to the actual number of bytes available, which is
+    /// found in [`self::DiagnosticResult::text_length]`.
+    /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
+    /// the specified Handle. The function also returns `NoData` for any positive `rec_number` if
+    /// there are no diagnostic records available.
+    ///
+    /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
+    fn diagnostic_record(
+        &self,
+        rec_number: i16,
+        message_text: &mut [SqlChar],
+    ) -> Option<DiagnosticResult>;
+}
+
+impl Diagnostics for &dyn AsHandle {
+    fn diagnostic_record(
+        &self,
+        rec_number: i16,
+        message_text: &mut [SqlChar],
+    ) -> Option<DiagnosticResult> {
+        // Diagnostic records in ODBC are indexed starting with 1
+        assert!(rec_number > 0);
+
+        // The total number of characters (excluding the terminating NULL) available to return in
+        // `message_text`.
+        let mut text_length = 0;
+        let mut state = [0; SQLSTATE_SIZE + 1];
+        let mut native_error = 0;
+        let ret = unsafe {
+            sql_get_diag_rec(
+                self.handle_type(),
+                self.as_handle(),
+                rec_number,
+                state.as_mut_ptr(),
+                &mut native_error,
+                mut_buf_ptr(message_text),
+                clamp_small_int(message_text.len()),
+                &mut text_length,
+            )
+        };
+
+        let result = DiagnosticResult {
+            state: State::from_chars_with_nul(&state),
+            native_error,
+            text_length
+        };
+
+        match ret {
+            SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => {
+                Some(result)
+            }
+            SqlReturn::NO_DATA => None,
+            SqlReturn::ERROR => panic!("rec_number argument of diagnostics must be > 0."),
+            unexpected => panic!("SQLGetDiagRec returned: {:?}", unexpected),
+        }
+    }
 }
 
 /// Call this function to retrieve diagnostic information for the last method call.
@@ -86,72 +166,45 @@ pub struct DiagnosticResult {
 /// no diagnostic records available.
 ///
 /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
-pub fn diagnostics(
+fn diagnostics(
     handle: &dyn AsHandle,
     rec_number: i16,
     message_text: &mut Vec<SqlChar>,
 ) -> Option<DiagnosticResult> {
-    assert!(rec_number > 0);
-
     // Use all the memory available in the buffer, but don't allocate any extra.
     let cap = message_text.capacity();
     message_text.resize(cap, 0);
 
-    // The total number of characters (excluding the terminating NULL) available to return in
-    // `message_text`.
-    let mut text_length = 0;
-    let mut state = [0; SQLSTATE_SIZE + 1];
-    let mut native_error = 0;
-    let ret = unsafe {
-        sql_get_diag_rec(
-            handle.handle_type(),
-            handle.as_handle(),
-            rec_number,
-            state.as_mut_ptr(),
-            &mut native_error,
-            mut_buf_ptr(message_text),
-            clamp_small_int(message_text.len()),
-            &mut text_length,
-        )
-    };
-    let result = DiagnosticResult {
-        state: State::from_chars_with_nul(&state),
-        native_error,
-    };
-    let mut text_length: usize = text_length.try_into().unwrap();
-    match ret {
-        SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => {
-            // Check if the buffer has been large enough to hold the message.
-            if text_length > message_text.len() {
-                // The `message_text` buffer was too small to hold the requested diagnostic message.
-                // No diagnostic records were generated. To determine that a truncation occurred,
-                // the application must compare the buffer length to the actual number of bytes
-                // available, which is found in `DiagnosticResult::text_length`.
+    handle.diagnostic_record(rec_number, message_text).map(|result|{
+        let mut text_length = result.text_length.try_into().unwrap();
+         
+        // Check if the buffer has been large enough to hold the message.
+        if text_length > message_text.len() {
+            // The `message_text` buffer was too small to hold the requested diagnostic message.
+            // No diagnostic records were generated. To determine that a truncation occurred,
+            // the application must compare the buffer length to the actual number of bytes
+            // available, which is found in `DiagnosticResult::text_length`.
 
-                // Resize with +1 to account for terminating zero
-                message_text.resize(text_length + 1, 0);
+            // Resize with +1 to account for terminating zero
+            message_text.resize(text_length + 1, 0);
 
-                // Call diagnostics again with the larger buffer. Should be a success this time if
-                // driver isn't buggy.
-                diagnostics(handle, rec_number, message_text)
-            } else {
-                // `message_text` has been large enough to hold the entire message.
+            // Call diagnostics again with the larger buffer. Should be a success this time if
+            // driver isn't buggy.
+            handle.diagnostic_record(rec_number, message_text).unwrap()
+        } else {
+            // `message_text` has been large enough to hold the entire message.
 
-                // Some drivers pad the message with null-chars (which is still a valid C string,
-                // but not a valid Rust string).
-                while text_length > 0 && message_text[text_length - 1] == 0 {
-                    text_length -= 1;
-                }
-                // Resize Vec to hold exactly the message.
-                message_text.resize(text_length, 0);
-
-                Some(result)
+            // Some drivers pad the message with null-chars (which is still a valid C string,
+            // but not a valid Rust string).
+            while text_length > 0 && message_text[text_length - 1] == 0 {
+                text_length -= 1;
             }
+            // Resize Vec to hold exactly the message.
+            message_text.resize(text_length, 0);
+
+            result
         }
-        SqlReturn::NO_DATA => None,
-        SqlReturn::ERROR => panic!("rec_number argument of diagnostics must be > 0."),
-        unexpected => panic!("SQLGetDiagRec returned: {:?}", unexpected),
-    }
+    })
 }
 
 /// ODBC Diagnostic Record
