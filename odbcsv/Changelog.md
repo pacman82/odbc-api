@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+* Default behaviour is now to emit an error in case of truncation.
+* Removed subcommand `fetch` which has been replaced by query since version `0.3.50`.
+
 ## 0.3.68
 
 * Update dependencies

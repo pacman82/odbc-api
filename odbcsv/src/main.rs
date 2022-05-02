@@ -1,4 +1,4 @@
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use clap::{Args, Parser};
 use log::info;
 use odbc_api::{
@@ -386,7 +386,13 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     match connection.execute(query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
-            cursor_to_csv(cursor, &mut writer, *batch_size, *max_str_len, *ignore_truncation)?;
+            cursor_to_csv(
+                cursor,
+                &mut writer,
+                *batch_size,
+                *max_str_len,
+                *ignore_truncation,
+            )?;
         }
         None => {
             eprintln!("Query came back empty (not even a schema has been returned). No output has been created.");
@@ -548,8 +554,10 @@ fn cursor_to_csv(
     let mut buffers = TextRowSet::for_cursor(batch_size, &cursor, max_str_len)?;
     let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
     let mut num_batch = 0;
-    while let Some(buffer) = row_set_cursor.fetch()? {
-
+    while let Some(buffer) = row_set_cursor
+        .fetch_with_truncation_check(!ignore_truncation)
+        .map_err(provide_context_for_truncation_error)?
+    {
         num_batch += 1;
         info!(
             "Fetched batch {} with {} rows.",
@@ -561,16 +569,21 @@ fn cursor_to_csv(
                 .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
             writer.write_record(record)?;
         }
+    }
+    Ok(())
+}
 
-        if max_str_len.is_some() && !ignore_truncation && row_set_cursor.has_diagnostics_indicating_truncation()? {
-            bail!(
+fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
+    match error {
+        odbc_api::Error::TooLargeValueForBuffer => {
+            anyhow!(
                 "Truncation of text or binary data detected. Try using larger values of \
                 `--max-str-len` (or do not specify it at all) in order to allow for larger values.
                 You can also use the `--ignore-truncation` flag in order to consider truncations
                 warnings only. This will cause the truncated value to be written into the csv, and
                 execution to be continued normally."
-            );
+            )
         }
+        other => other.into(),
     }
-    Ok(())
 }

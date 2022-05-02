@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.38.0"
+version = "0.39.0"
 dependencies = [
  "anyhow",
  "csv",
@@ -770,7 +770,7 @@ checksum = "5fa96a125cee9f1fe33cb69d6517466afc4e9cb1f44afdcc67210e2776aec7b2"
 
 [[package]]
 name = "odbcsv"
-version = "0.3.68"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "assert_cmd",

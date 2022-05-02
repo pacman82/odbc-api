@@ -4,7 +4,7 @@ use crate::{
     borrow_mut_statement::BorrowMutStatement,
     buffers::Indicator,
     error::ExtendResult,
-    handles::{Diagnostics, State, Statement},
+    handles::{State, Statement},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
@@ -368,11 +368,58 @@ where
     ///
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
+    /// 
+    /// ```
+    /// use odbc_api::{buffers::TextRowSet, Cursor};
+    ///
+    /// fn print_all_values(cursor: impl Cursor) {
+    ///     let batch_size = 100;
+    ///     let max_string_len = 4000;
+    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
+    ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    ///     // Iterate over batches
+    ///     while let Some(batch) = cursor.fetch(true).unwrap() {
+    ///         // ... print values in batch ...
+    ///     }
+    /// }
+    /// ```
     pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
+        self.fetch_with_truncation_check(false)
+    }
+
+    /// Fills the bound buffer with the next row set. Should `error_for_truncation` be `true`and any
+    /// diagnostic indicate truncation of a value an error is returned.
+    ///
+    /// # Return
+    ///
+    /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
+    /// reference to the internal buffer otherwise.
+    /// 
+    /// /// Call this method to find out wether there are any truncated values in the batch, without
+    /// inspecting all its rows and columns.
+    ///
+    /// ```
+    /// use odbc_api::{buffers::TextRowSet, Cursor};
+    ///
+    /// fn print_all_values(cursor: impl Cursor) {
+    ///     let batch_size = 100;
+    ///     let max_string_len = 4000;
+    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
+    ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    ///     // Iterate over batches
+    ///     while let Some(batch) = cursor.fetch_with_truncation_check(true).unwrap() {
+    ///         // ... print values in batch ...
+    ///     }
+    /// }
+    /// ```
+    pub fn fetch_with_truncation_check(
+        &mut self,
+        error_for_truncation: bool,
+    ) -> Result<Option<&B>, Error> {
         unsafe {
             if let Some(sql_result) = self.cursor.stmt_mut().fetch() {
                 sql_result
-                    .into_result(self.cursor.stmt_mut())
+                    .into_result_with_trunaction_check(self.cursor.stmt_mut(), error_for_truncation)
                     // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
                     // tell the it to the user than binding parameters, but rather now then we fetch
                     // results. The error code retruned is `HY004` rather then `HY003` which should
@@ -389,48 +436,6 @@ where
                 Ok(None)
             }
         }
-    }
-
-    /// Call this method to find out wether there are any truncated values in the batch, without
-    /// inspecting all its rows and columns.
-    /// 
-    /// ```
-    /// use odbc_api::{buffers::TextRowSet, Cursor};
-    /// 
-    /// fn print_all_values(cursor: impl Cursor) {
-    ///     let batch_size = 100;
-    ///     let max_string_len = 4000;
-    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
-    ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    ///     // Iterate over batches
-    ///     while let Some(batch) = cursor.fetch().unwrap() {
-    ///         if cursor.has_diagnostics_indicating_truncation().unwrap() {
-    ///             panic!(
-    ///                 "Text representation of value truncated, because it exceeded the maximum
-    ///                 length."
-    ///             )
-    ///         }
-    ///         // ... print values batch ...
-    ///     }
-    /// }
-    /// ```
-    pub fn has_diagnostics_indicating_truncation(&self) -> Result<bool, Error> {
-        let mut empty = [];
-        let mut rec_number = 1;
-        while let Some(result) = self.cursor.stmt_ref().diagnostic_record(1, &mut empty) {
-
-            if result.state == State::STRING_DATA_RIGHT_TRUNCATION {
-                return Ok(true);
-            }
-
-            // Many diagnostic records may be produced with a single call. Especially in case of
-            // bulk fetching, or inserting.
-            if rec_number == i16::MAX {
-                return Err(Error::TooManyDiagnostics);
-            }
-            rec_number += 1;
-        }
-        Ok(false)
     }
 }
 

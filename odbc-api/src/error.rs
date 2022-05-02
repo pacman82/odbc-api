@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::handles::{log_diagnostics, AsHandle, Record as DiagnosticRecord, SqlResult};
+use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult, State};
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]
@@ -14,8 +14,8 @@ pub struct TooLargeBufferSize {
 }
 
 impl TooLargeBufferSize {
-    /// Map the column allocation error to an [`odbc_api::Error`] adding the context of which column
-    /// caused the allocation error.
+    /// Map the column allocation error to an [`crate::Error`] adding the context of which
+    /// column caused the allocation error.
     pub fn add_context(self, buffer_index: u16) -> Error {
         Error::TooLargeColumnBufferSize {
             buffer_index,
@@ -116,7 +116,12 @@ pub enum Error {
         generated, if one or more warnings per row is generated, and then there are many rows. Maybe
         try fewer rows, or fix the cause of some of these warnings/errors?"
     )]
-    TooManyDiagnostics
+    TooManyDiagnostics,
+    #[error(
+        "A value (at least one) is too large to be written into the allocated buffer without
+        truncation."
+    )]
+    TooLargeValueForBuffer,
 }
 
 impl Error {
@@ -150,16 +155,38 @@ impl<T> ExtendResult for Result<T, Error> {
     }
 }
 
-// Define that here rather than in `sql_result` mod to keep the `handles` modlue entirely agnostic
+// Define that here rather than in `sql_result` mod to keep the `handles` module entirely agnostic
 // about the top level `Error` type.
 impl<T> SqlResult<T> {
-    pub fn into_result(self, handle: &dyn AsHandle) -> Result<T, Error> {
+    /// [`Self::Success`] and [`Self::SucccesWithInfo`] are mapped to Ok. In case of
+    /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
+    pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
+        let error_for_truncation = false;
+        self.into_result_with_trunaction_check(handle, error_for_truncation)
+    }
+
+    /// Intended to be used to be used after bulk fetching into a buffer. Mostly the same as
+    /// [`Self::into_result`], but if `error_for_truncation` is `true` any diagnostics are inspected
+    /// for truncation. If any truncation is found an error is returned.
+    pub fn into_result_with_trunaction_check(
+        self,
+        handle: &impl Diagnostics,
+        error_for_truncation: bool,
+    ) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(value) => Ok(value),
             // The function has been executed successfully. There have been warnings. Holds result.
             SqlResult::SuccessWithInfo(value) => {
                 log_diagnostics(handle);
+
+                // This is only relevant then bulk fetching values into a buffer. As such this check
+                // would perform unnecessary work in most cases. When bulk fetching it should be up
+                // for the application to decide wether this is considered an error or not.
+                if error_for_truncation {
+                    check_for_truncation(handle)?;
+                }
+
                 Ok(value)
             }
             SqlResult::Error { function } => {
@@ -177,4 +204,22 @@ impl<T> SqlResult<T> {
             }
         }
     }
+}
+
+fn check_for_truncation(handle: &impl Diagnostics) -> Result<(), Error> {
+    let mut empty = [];
+    let mut rec_number = 1;
+    while let Some(result) = handle.diagnostic_record(1, &mut empty) {
+        if result.state == State::STRING_DATA_RIGHT_TRUNCATION {
+            return Err(Error::TooLargeValueForBuffer);
+        }
+
+        // Many diagnostic records may be produced with a single call. Especially in case of
+        // bulk fetching, or inserting.
+        if rec_number == i16::MAX {
+            return Err(Error::TooManyDiagnostics);
+        }
+        rec_number += 1;
+    }
+    Ok(())
 }

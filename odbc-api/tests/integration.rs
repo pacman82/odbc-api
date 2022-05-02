@@ -20,7 +20,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Cursor, DataType, InOut, IntoParameter, Nullability, Nullable,
-    Out, ResultSetMetadata, U16Str, U16String,
+    Out, ResultSetMetadata, U16Str, U16String, Error,
 };
 use std::{
     ffi::CString,
@@ -3284,14 +3284,7 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     let query = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let batch = cursor.fetch().unwrap().unwrap();
-
-    // Then we get a truncated value, but we can detect the truncation, by looking at the
-    // diagnostics.
-    let fetched_field =
-        str::from_utf8(batch.column(0).as_text_view().unwrap().get(0).unwrap()).unwrap();
-    assert_eq!("01234", fetched_field);
-    assert!(cursor.has_diagnostics_indicating_truncation().unwrap())
+    matches!(cursor.fetch(), Err(Error::TooLargeValueForBuffer));
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic

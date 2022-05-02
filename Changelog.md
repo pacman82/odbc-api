@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.39.0
+
+* Support for checking for truncation after bulk fetch with: `RowSetCursor::fetch_with_truncation_check`.
+
 ## 0.38.0
 
 * Add column buffer index to allocation errors to provide more context
