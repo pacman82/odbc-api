@@ -158,7 +158,7 @@ impl<T> ExtendResult for Result<T, Error> {
 // Define that here rather than in `sql_result` mod to keep the `handles` module entirely agnostic
 // about the top level `Error` type.
 impl<T> SqlResult<T> {
-    /// [`Self::Success`] and [`Self::SucccesWithInfo`] are mapped to Ok. In case of
+    /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. In case of
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
         let error_for_truncation = false;

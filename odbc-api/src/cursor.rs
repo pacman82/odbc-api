@@ -378,7 +378,7 @@ where
     ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
     ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     ///     // Iterate over batches
-    ///     while let Some(batch) = cursor.fetch(true).unwrap() {
+    ///     while let Some(batch) = cursor.fetch().unwrap() {
     ///         // ... print values in batch ...
     ///     }
     /// }
