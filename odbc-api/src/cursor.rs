@@ -393,6 +393,27 @@ where
 
     /// Call this method to find out wether there are any truncated values in the batch, without
     /// inspecting all its rows and columns.
+    /// 
+    /// ```
+    /// use odbc_api::{buffers::TextRowSet, Cursor};
+    /// 
+    /// fn print_all_values(cursor: impl Cursor) {
+    ///     let batch_size = 100;
+    ///     let max_string_len = 4000;
+    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
+    ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    ///     // Iterate over batches
+    ///     while let Some(batch) = cursor.fetch().unwrap() {
+    ///         if cursor.has_diagnostics_indicating_truncation().unwrap() {
+    ///             panic!(
+    ///                 "Text representation of value truncated, because it exceeded the maximum
+    ///                 length."
+    ///             )
+    ///         }
+    ///         // ... print values batch ...
+    ///     }
+    /// }
+    /// ```
     pub fn has_diagnostics_indicating_truncation(&self) -> Result<bool, Error> {
         let mut empty = [];
         let mut rec_number = 1;
