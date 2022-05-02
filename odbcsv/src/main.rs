@@ -96,6 +96,13 @@ struct QueryOpt {
     /// for its word regarding the maximum length of the columns.
     #[clap(long, short = 'm')]
     max_str_len: Option<usize>,
+    /// Setting a maximum string length does help with avoiding allocating really large buffers, and
+    /// save memory, but it may lead to values being truncated, if any fields are larger than the
+    /// number of bytes specified with `max-str-len`. By default a truncation will raise an error
+    /// and cause the tool to exit with a non-zero status code. Set this flag to continue execution
+    /// and just write the truncated values into the csv.
+    #[clap(long)]
+    ignore_truncation: bool,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
     #[clap(long, short = 'o')]
@@ -336,6 +343,7 @@ fn fetch(environment: &Environment, opt: FetchOpt) -> Result<(), Error> {
         connect_opts,
         batch_size,
         max_str_len,
+        ignore_truncation: false,
         output,
         query: query_str,
         parameters,
@@ -353,6 +361,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
         query,
         batch_size,
         max_str_len,
+        ignore_truncation,
     } = opt;
 
     // If an output file has been specified write to it, otherwise use stdout instead.
@@ -377,7 +386,7 @@ fn query(environment: &Environment, opt: &QueryOpt) -> Result<(), Error> {
     match connection.execute(query, params.as_slice())? {
         Some(cursor) => {
             // Write column names.
-            cursor_to_csv(cursor, &mut writer, *batch_size, *max_str_len)?;
+            cursor_to_csv(cursor, &mut writer, *batch_size, *max_str_len, *ignore_truncation)?;
         }
         None => {
             eprintln!("Query came back empty (not even a schema has been returned). No output has been created.");
@@ -495,7 +504,7 @@ fn tables(environment: &Environment, table_opt: &ListTablesOpt) -> Result<(), Er
     // Limit the amount of memory allocated for each column element in case some driver decides to
     // report crazy max column lengths (e.g. MariaDB on Windows)
     let max_str_len = Some(4096);
-    cursor_to_csv(cursor, &mut writer, 100, max_str_len)?;
+    cursor_to_csv(cursor, &mut writer, 100, max_str_len, true)?;
     Ok(())
 }
 
@@ -523,7 +532,7 @@ fn columns(environment: &Environment, columns_opt: &ListColumnsOpt) -> Result<()
     // Limit the amount of memory allocated for each column element in case some driver decides to
     // report crazy max column lengths (e.g. MariaDB on Windows)
     let max_str_len = Some(4096);
-    cursor_to_csv(cursor, &mut writer, 100, max_str_len)?;
+    cursor_to_csv(cursor, &mut writer, 100, max_str_len, true)?;
     Ok(())
 }
 
@@ -532,6 +541,7 @@ fn cursor_to_csv(
     writer: &mut csv::Writer<impl Write>,
     batch_size: usize,
     max_str_len: Option<usize>,
+    ignore_truncation: bool,
 ) -> Result<(), Error> {
     let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
     writer.write_record(headline)?;
@@ -539,6 +549,7 @@ fn cursor_to_csv(
     let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
     let mut num_batch = 0;
     while let Some(buffer) = row_set_cursor.fetch()? {
+
         num_batch += 1;
         info!(
             "Fetched batch {} with {} rows.",
@@ -549,6 +560,16 @@ fn cursor_to_csv(
             let record = (0..buffer.num_cols())
                 .map(|col_index| buffer.at(col_index, row_index).unwrap_or(&[]));
             writer.write_record(record)?;
+        }
+
+        if max_str_len.is_some() && !ignore_truncation && row_set_cursor.has_diagnostics_indicating_truncation()? {
+            bail!(
+                "Truncation of text or binary data detected. Try using larger values of \
+                `--max-str-len` (or do not specify it at all) in order to allow for larger values.
+                You can also use the `--ignore-truncation` flag in order to consider truncations
+                warnings only. This will cause the truncated value to be written into the csv, and
+                execution to be continued normally."
+            );
         }
     }
     Ok(())

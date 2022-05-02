@@ -207,10 +207,30 @@ fn columns() {
 }
 
 #[test]
-fn max_str_len() {
+fn ignore_truncation() {
     let csv = "some_string\n\
         1234\n\
     ";
+
+    Command::cargo_bin("odbcsv")
+        .unwrap()
+        .args(&[
+            "-vvvv",
+            "query",
+            "--max-str-len",
+            "4",
+            "--ignore-truncation",
+            "--connection-string",
+            MSSQL,
+            "SELECT '12345' as some_string",
+        ])
+        .assert()
+        .success()
+        .stdout(csv);
+}
+
+#[test]
+fn do_not_ignore_truncation() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
@@ -224,8 +244,7 @@ fn max_str_len() {
             "SELECT '12345' as some_string",
         ])
         .assert()
-        .success()
-        .stdout(csv);
+        .failure();
 }
 
 #[test]
