@@ -411,7 +411,7 @@ impl<'c, C> TextColumnView<'c, C> {
     /// The buffer contains the bytes for every non null valid element, padded to the maximum string
     /// length. The content of the padding bytes is undefined. Usually ODBC drivers write a
     /// terminating zero at the end of each string. For the actual value length call
-    /// [`Self::conten_length_at`]. Any element starts at index * ([`Self::max_len`] + 1).
+    /// [`Self::content_length_at`]. Any element starts at index * ([`Self::max_len`] + 1).
     pub fn raw_value_buffer(&self) -> &'c [C] {
         self.col.raw_value_buffer(self.num_rows)
     }
