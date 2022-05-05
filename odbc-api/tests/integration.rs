@@ -103,8 +103,24 @@ fn insert_too_large_element_in_text_column() {
 
 #[test]
 fn bogus_connection_string() {
-    let conn = ENV.connect_with_connection_string("foobar");
-    assert!(matches!(conn, Err(_)));
+    // When
+    let result = ENV.connect_with_connection_string("foobar");
+
+    // Then
+
+    // We expect an error, since "foobar" is obviously not a connection string we can use to connect
+    // to any datasource (for starters it does not specify a driver).
+    assert!(result.is_err());
+
+    // We also want to be sure our error messages do not contain any Nul.
+    let error = result.err().unwrap();
+    if let Error::Diagnostics { record, function } = error {
+        assert_eq!("SQLDriverConnect", function);
+        // Make sure we remove any Nuls from the message, trailing or otherwise.
+        assert!(!record.message.contains(&0));
+    } else {
+        panic!("Expected Error::Diagnostics")
+    };
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

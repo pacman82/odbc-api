@@ -134,7 +134,7 @@ pub trait Diagnostics {
         message_text.resize(cap, 0);
 
         self.diagnostic_record(rec_number, message_text)
-            .map(|result| {
+            .map(|mut result| {
                 let mut text_length = result.text_length.try_into().unwrap();
 
                 // Check if the buffer has been large enough to hold the message.
@@ -149,20 +149,19 @@ pub trait Diagnostics {
 
                     // Call diagnostics again with the larger buffer. Should be a success this time if
                     // driver isn't buggy.
-                    self.diagnostic_record(rec_number, message_text).unwrap()
-                } else {
-                    // `message_text` has been large enough to hold the entire message.
+                    result = self.diagnostic_record(rec_number, message_text).unwrap();
+                } 
+                // Now `message_text` has been large enough to hold the entire message.
 
-                    // Some drivers pad the message with null-chars (which is still a valid C string,
-                    // but not a valid Rust string).
-                    while text_length > 0 && message_text[text_length - 1] == 0 {
-                        text_length -= 1;
-                    }
-                    // Resize Vec to hold exactly the message.
-                    message_text.resize(text_length, 0);
-
-                    result
+                // Some drivers pad the message with null-chars (which is still a valid C string,
+                // but not a valid Rust string).
+                while text_length > 0 && message_text[text_length - 1] == 0 {
+                    text_length -= 1;
                 }
+                // Resize Vec to hold exactly the message.
+                message_text.resize(text_length, 0);
+
+                result
             })
     }
 }
