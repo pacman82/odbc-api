@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+* Updated dependencies
+
 ## 0.4.0
 
 * Default behaviour is now to emit an error in case of truncation.

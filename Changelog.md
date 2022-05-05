@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.39.1
+
+* Fixed an issue introduced in `0.39.1` there the terminating zero at the end of diagnostic messages has not been removed correctly.
+
 ## 0.39.0
 
 * Support for checking for truncation after bulk fetch with: `RowSetCursor::fetch_with_truncation_check`.
