@@ -74,3 +74,9 @@ anyhow = "1.0.57"
 csv = "1.1.6"
 test-case = "2.0.2"
 tempfile = "3.3.0"
+criterion = "0.3.5"
+
+
+[[bench]]
+name = "benches"
+harness = false
