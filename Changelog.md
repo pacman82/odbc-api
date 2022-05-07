@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.40.0 (next)
+## 0.40.0
 
 * The fallibale allocations introduced for `buffer_from_description` had performance implications. Therfore the fallibale allocations are available to users of this library to `try_buffer_from_description`. `buffer_for_description` is now panicing again in case there is not enough memory available to allocate the buffers.
 
