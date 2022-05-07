@@ -60,19 +60,47 @@ pub enum AnyColumnBuffer {
 
 impl AnyColumnBuffer {
     /// Map buffer description to actual buffer.
-    pub fn from_description(
+    pub fn try_from_description(
         max_rows: usize,
         desc: BufferDescription,
     ) -> Result<Self, TooLargeBufferSize> {
+        let fallible_allocations = true;
+        Self::impl_from_description(max_rows, desc, fallible_allocations)
+    }
+
+    /// Map buffer description to actual buffer.
+    pub fn from_description(max_rows: usize, desc: BufferDescription) -> Self {
+        let fallible_allocations = false;
+        Self::impl_from_description(max_rows, desc, fallible_allocations).unwrap()
+    }
+
+    /// Map buffer description to actual buffer.
+    fn impl_from_description(
+        max_rows: usize,
+        desc: BufferDescription,
+        fallible_allocations: bool,
+    ) -> Result<Self, TooLargeBufferSize> {
         let buffer = match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
-                AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length)?)
+                if fallible_allocations {
+                    AnyColumnBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
+                } else {
+                    AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
+                }
             }
             (BufferKind::Text { max_str_len }, _) => {
-                AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len)?)
+                if fallible_allocations {
+                    AnyColumnBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                } else {
+                    AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+                }
             }
             (BufferKind::WText { max_str_len }, _) => {
-                AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len)?)
+                if fallible_allocations {
+                    AnyColumnBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                } else {
+                    AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
+                }
             }
             (BufferKind::Date, false) => {
                 AnyColumnBuffer::Date(vec![Date::default(); max_rows as usize])
@@ -266,21 +294,41 @@ impl HasDataType for AnyColumnBuffer {
     }
 }
 
-/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions.
-pub fn buffer_from_description(
+/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions. If not
+/// enough memory is available to allocate the buffers this function fails with
+/// [`Error::TooLargeColumnBufferSize`]. This function is slower than
+/// [`self::buffer_from_description`] which would just panic if not enough memory is available for
+/// allocation.
+pub fn try_buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
 ) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
     let mut column_index = 0;
     let columns = descs
         .map(move |desc| {
-            let buffer = AnyColumnBuffer::from_description(capacity, desc)
+            let buffer = AnyColumnBuffer::try_from_description(capacity, desc)
                 .map_err(|source| source.add_context(column_index))?;
             column_index += 1;
             Ok((column_index, buffer))
         })
         .collect::<Result<_, _>>()?;
     Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
+}
+
+/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions.
+pub fn buffer_from_description(
+    capacity: usize,
+    descs: impl Iterator<Item = BufferDescription>,
+) -> ColumnarBuffer<AnyColumnBuffer> {
+    let mut column_index = 0;
+    let columns = descs
+        .map(move |desc| {
+            let buffer = AnyColumnBuffer::from_description(capacity, desc);
+            column_index += 1;
+            (column_index, buffer)
+        })
+        .collect();
+    unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
 }
 
 /// Allows you to pass the buffer descriptions together with a one based column index referring the
@@ -290,16 +338,15 @@ pub fn buffer_from_description(
 pub fn buffer_from_description_and_indices(
     max_rows: usize,
     description: impl Iterator<Item = (u16, BufferDescription)>,
-) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
+) -> ColumnarBuffer<AnyColumnBuffer> {
     let columns: Vec<_> = description
         .map(|(col_index, buffer_desc)| {
-            Ok((
+            (
                 col_index,
-                AnyColumnBuffer::from_description(max_rows, buffer_desc)
-                    .map_err(|source| source.add_context(col_index - 1))?,
-            ))
+                AnyColumnBuffer::from_description(max_rows, buffer_desc),
+            )
         })
-        .collect::<Result<_, _>>()?;
+        .collect();
 
     // Assert uniqueness of indices
     let mut indices = HashSet::new();
@@ -310,7 +357,7 @@ pub fn buffer_from_description_and_indices(
         panic!("Column indices must be unique.")
     }
 
-    Ok(ColumnarBuffer::new(columns))
+    ColumnarBuffer::new(columns)
 }
 
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarBuffer`].
@@ -432,6 +479,16 @@ impl<'a> AnyColumnViewMut<'a> {
     /// to you unwrap the inner column view without explictly matching it.
     pub fn as_text_view(self) -> Option<TextColumnWriter<'a, u8>> {
         if let Self::Text(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// This method is useful if you expect the variant to be [`AnyColumnView::WText`]. It allows
+    /// you to unwrap the inner column view without explictly matching it.
+    pub fn as_w_text_view(self) -> Option<TextColumnWriter<'a, u16>> {
+        if let Self::WText(view) = self {
             Some(view)
         } else {
             None

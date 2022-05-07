@@ -150,7 +150,7 @@ pub trait Diagnostics {
                     // Call diagnostics again with the larger buffer. Should be a success this time if
                     // driver isn't buggy.
                     result = self.diagnostic_record(rec_number, message_text).unwrap();
-                } 
+                }
                 // Now `message_text` has been large enough to hold the entire message.
 
                 // Some drivers pad the message with null-chars (which is still a valid C string,

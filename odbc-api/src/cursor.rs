@@ -368,7 +368,7 @@ where
     ///
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
-    /// 
+    ///
     /// ```
     /// use odbc_api::{buffers::TextRowSet, Cursor};
     ///
@@ -394,7 +394,7 @@ where
     ///
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
-    /// 
+    ///
     /// /// Call this method to find out wether there are any truncated values in the batch, without
     /// inspecting all its rows and columns.
     ///

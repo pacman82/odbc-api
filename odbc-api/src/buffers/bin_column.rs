@@ -26,12 +26,12 @@ pub struct BinColumn {
 
 impl BinColumn {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
-    /// have a maximum length of `max_len`.
-    pub fn new(batch_size: usize, element_size: usize) -> Result<Self, TooLargeBufferSize> {
-        // Use a fallibale allocation for creating the buffer. In applications often the max_len
-        // size of the buffer, might be directly inspired by the maximum size of the type, as
-        // reported, by ODBC. Which might get exceedingly large for types like VARBINARY(MAX), or
-        // IMAGE.
+    /// have a maximum length of `element_size`. Uses a fallibale allocation for creating the
+    /// buffer. In applications often the `element_size` of the buffer, might be directly inspired
+    /// by the maximum size of the type, as reported, by ODBC. Which might get exceedingly large for
+    /// types like VARBINARY(MAX), or IMAGE. On the downside, this method is potentially slower than
+    /// new.
+    pub fn try_new(batch_size: usize, element_size: usize) -> Result<Self, TooLargeBufferSize> {
         let len = element_size * batch_size;
         let mut values = Vec::new();
         values
@@ -46,6 +46,20 @@ impl BinColumn {
             values,
             indicators: vec![0; batch_size],
         })
+    }
+
+    /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
+    /// have a maximum length of `max_len`.
+    pub fn new(batch_size: usize, element_size: usize) -> Self {
+        let len = element_size * batch_size;
+        let mut values = Vec::new();
+        values.reserve_exact(len);
+        values.resize(len, 0);
+        BinColumn {
+            max_len: element_size,
+            values,
+            indicators: vec![0; batch_size],
+        }
     }
 
     /// Return the value for the given row index.
@@ -392,8 +406,7 @@ impl<'a> BinColumnWriter<'a> {
     ///     Some(&[7,8,9,10,11,12]),
     /// ];
     ///
-    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc))
-    ///     .expect("Must have enough memor to allocate buffer.");
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
@@ -462,7 +475,7 @@ mod test {
     #[test]
     fn allocating_too_big_a_binary_column() {
         let two_gib = 2_147_483_648;
-        let result = BinColumn::new(10_000, two_gib);
+        let result = BinColumn::try_new(10_000, two_gib);
         let error = result.unwrap_err();
         assert!(matches!(
             error,

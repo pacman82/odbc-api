@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.0 (next)
+
+* The fallibale allocations introduced for `buffer_from_description` had performance implications. Therfore the fallibale allocations are available to users of this library to `try_buffer_from_description`. `buffer_for_description` is now panicing again in case there is not enough memory available to allocate the buffers.
+
 ## 0.39.1
 
 * Fixed an issue introduced in `0.39.1` there the terminating zero at the end of diagnostic messages has not been removed correctly.

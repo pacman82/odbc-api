@@ -11,8 +11,8 @@ mod text_column;
 
 pub use self::{
     any_column_buffer::{
-        buffer_from_description, buffer_from_description_and_indices, AnyColumnBuffer,
-        AnyColumnView, AnyColumnViewMut,
+        buffer_from_description, buffer_from_description_and_indices, try_buffer_from_description,
+        AnyColumnBuffer, AnyColumnView, AnyColumnViewMut,
     },
     bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},

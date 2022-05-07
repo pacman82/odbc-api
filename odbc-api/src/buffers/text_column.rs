@@ -41,15 +41,14 @@ pub struct TextColumn<C> {
 impl<C> TextColumn<C> {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
-    /// one in order to make space for the null terminating zero at the end of strings.
-    pub fn new(batch_size: usize, max_str_len: usize) -> Result<Self, TooLargeBufferSize>
+    /// one in order to make space for the null terminating zero at the end of strings. Uses a
+    /// fallibale allocation for creating the buffer. In applications often the `max_str_len` size
+    /// of the buffer, might be directly inspired by the maximum size of the type, as reported, by
+    /// ODBC. Which might get exceedingly large for types like VARCHAR(MAX)
+    pub fn try_new(batch_size: usize, max_str_len: usize) -> Result<Self, TooLargeBufferSize>
     where
         C: Default + Copy,
     {
-        // Use a fallibale allocation for creating the buffer. In applications often the max_len
-        // size of the buffer, might be directly inspired by the maximum size of the type, as
-        // reported, by ODBC. Which might get exceedingly large for types like VARCHAR(MAX)
-
         // Element size is +1 to account for terminating zero
         let element_size = max_str_len + 1;
         let len = element_size * batch_size;
@@ -67,6 +66,26 @@ impl<C> TextColumn<C> {
             values,
             indicators: vec![0; batch_size],
         })
+    }
+
+    /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
+    /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
+    /// one in order to make space for the null terminating zero at the end of strings.
+    pub fn new(batch_size: usize, max_str_len: usize) -> Self
+    where
+        C: Default + Copy,
+    {
+        // Element size is +1 to account for terminating zero
+        let element_size = max_str_len + 1;
+        let len = element_size * batch_size;
+        let mut values = Vec::new();
+        values.reserve_exact(len);
+        values.resize(len, C::default());
+        TextColumn {
+            max_str_len,
+            values,
+            indicators: vec![0; batch_size],
+        }
     }
 
     /// Bytes of string at the specified position. Includes interior nuls, but excludes the
@@ -575,7 +594,7 @@ where
     ///     Some(&b"Hello, World!"[..]),
     /// ];
     ///
-    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc)).unwrap();
+    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
@@ -621,8 +640,7 @@ where
     /// }
     ///
     /// # use odbc_api::buffers::CharColumn;
-    /// # let mut buf = CharColumn::new(1, 12)
-    /// #    .expect("Enough memory to allocate column buffer must be available");
+    /// # let mut buf = CharColumn::new(1, 12);
     /// # let mut writer = buf.writer_n(1);
     /// # write_time(&mut writer, 0, 12, 23, 45, 678);
     /// # assert_eq!(

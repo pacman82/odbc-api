@@ -131,7 +131,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///     let mut buffer = buffer_from_description(
     ///         names.len(),
     ///         buffer_description.iter().copied()
-    ///     ).expect("Must have enough memory available to allocate buffer.");
+    ///     );
     ///
     ///     // Fill the buffer with values column by column
     ///     let mut col = buffer
@@ -413,7 +413,7 @@ impl TextRowSet {
                     .unwrap_or(reported_len);
                 Ok((
                     col_index,
-                    TextColumn::new(batch_size, max_str_len).map_err(|source| {
+                    TextColumn::try_new(batch_size, max_str_len).map_err(|source| {
                         Error::TooLargeColumnBufferSize {
                             buffer_index: col_index - 1,
                             num_elements: source.num_elements,
@@ -441,7 +441,7 @@ impl TextRowSet {
             .map(|(index, max_str_len)| {
                 Ok((
                     (index + 1).try_into().unwrap(),
-                    TextColumn::new(row_capacity, max_str_len)
+                    TextColumn::try_new(row_capacity, max_str_len)
                         .map_err(|source| source.add_context(index.try_into().unwrap()))?,
                 ))
             })
@@ -532,7 +532,6 @@ mod tests {
             nullable: false,
             kind: BufferKind::I32,
         };
-        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned())
-            .unwrap();
+        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 }

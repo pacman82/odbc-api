@@ -384,7 +384,7 @@ let buffer_description = [
 let mut buffer = buffer_from_description(
     batch_size,
     buffer_description.iter().copied()
-).expect("Enough memory to allocate must be available");
+);
 
 let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
@@ -444,7 +444,7 @@ fn get_birthdays<'a>(conn: &'a mut Connection)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = buffer_from_description(5000, buffer_description.into_iter())?;
+    let buffer = buffer_from_description(5000, buffer_description.into_iter());
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }
@@ -501,7 +501,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
     let mut buffer = buffer_from_description(
         names.len(),
         buffer_description.iter().copied()
-    )?;
+    );
 
     // Fill the buffer with values column by column
     let mut col = buffer

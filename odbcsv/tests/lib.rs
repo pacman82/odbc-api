@@ -231,7 +231,6 @@ fn ignore_truncation() {
 
 #[test]
 fn do_not_ignore_truncation() {
-
     Command::cargo_bin("odbcsv")
         .unwrap()
         .args(&[

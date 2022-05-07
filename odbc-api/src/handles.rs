@@ -24,7 +24,7 @@ pub use {
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
-    diagnostics::{Record, State, Diagnostics},
+    diagnostics::{Diagnostics, Record, State},
     environment::Environment,
     logging::log_diagnostics,
     sql_char::{slice_to_cow_utf8, slice_to_utf8, OutputStringBuffer, SqlChar, SqlText, SzBuffer},
