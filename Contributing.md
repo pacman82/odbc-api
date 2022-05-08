@@ -30,7 +30,7 @@ Otherwise you can install these requirements from here:
 
 The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
 
-```
+```shell
 cargo test
 ```
 
