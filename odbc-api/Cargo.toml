@@ -55,6 +55,10 @@ odbc_version_3_5 = ["odbc-sys/odbc_version_3_50"]
 # UnixOdbc.
 odbc_version_3_80 = ["odbc-sys/odbc_version_3_80"]
 
+# In order to work with iodbc we need to only use symbols defined in ODBC 3.5. We need to use
+# narrow function calls and preferale link against `libiodbc.so` instead of `libodbc.so`.
+iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
+
 default=["odbc_version_3_80"]
 
 [dependencies]
