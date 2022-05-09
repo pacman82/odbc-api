@@ -44,6 +44,28 @@ pub struct ColumnDescription {
 }
 
 impl ColumnDescription {
+    /// In production, an 'empty' [`ColumnDescription`] is expected to be constructed via the
+    /// [`Default`] trait. It is then filled using [`crate::ResultSetMetadata::describe_col`]. When
+    /// writing test cases however it might be desirable to directly instantiate a
+    /// [`ColumnDescription`]. This constructor enabels you to do that, without caring which type
+    /// `SqlChar` resolves to.
+    pub fn new(name: &str, data_type: DataType, nullability: Nullability) -> Self {
+        #[cfg(feature = "narrow")]
+        pub fn utf8_to_vec_char(text: &str) -> Vec<u8> {
+            text.to_owned().into_bytes()
+        }
+        #[cfg(not(feature = "narrow"))]
+        pub fn utf8_to_vec_char(text: &str) -> Vec<u16> {
+            use widestring::U16String;
+            U16String::from_str(text).into_vec()
+        }
+        Self {
+            name: utf8_to_vec_char(name),
+            data_type,
+            nullability,
+        }
+    }
+
     /// Converts the internal UTF16 representation of the column name into UTF8 and returns the
     /// result as a `String`.
     pub fn name_to_string(&self) -> Result<String, DecodingError> {

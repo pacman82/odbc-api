@@ -133,15 +133,6 @@ fn connect_to_db(profile: &Profile) {
 
 #[test]
 fn describe_columns() {
-    #[cfg(feature = "narrow")]
-    pub fn utf8_to_vec_char(text: &str) -> Vec<u8> {
-        text.to_owned().into_bytes()
-    }
-    #[cfg(not(feature = "narrow"))]
-    pub fn utf8_to_vec_char(text: &str) -> Vec<u16> {
-        U16String::from_str(text).into_vec()
-    }
-
     let conn = MSSQL.connection().unwrap();
     setup_empty_table(
         &conn,
@@ -168,38 +159,32 @@ fn describe_columns() {
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
 
-    let desc = |name, data_type, nullability| ColumnDescription {
-        name: utf8_to_vec_char(name),
-        data_type,
-        nullability,
-    };
-
     let kind = DataType::Varchar { length: 255 };
-    let expected = desc("a", kind, Nullability::NoNulls);
+    let expected = ColumnDescription::new("a", kind, Nullability::NoNulls);
     cursor.describe_col(1, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(1).unwrap());
 
     let kind = DataType::Integer;
-    let expected = desc("b", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("b", kind, Nullability::Nullable);
     cursor.describe_col(2, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(2).unwrap());
 
     let kind = DataType::Binary { length: 12 };
-    let expected = desc("c", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("c", kind, Nullability::Nullable);
     cursor.describe_col(3, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(3).unwrap());
 
     let kind = DataType::Varbinary { length: 100 };
-    let expected = desc("d", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("d", kind, Nullability::Nullable);
     cursor.describe_col(4, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(4).unwrap());
 
     let kind = DataType::WChar { length: 10 };
-    let expected = desc("e", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("e", kind, Nullability::Nullable);
     cursor.describe_col(5, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(5).unwrap());
@@ -208,13 +193,13 @@ fn describe_columns() {
         precision: 3,
         scale: 2,
     };
-    let expected = desc("f", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("f", kind, Nullability::Nullable);
     cursor.describe_col(6, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(6).unwrap());
 
     let kind = DataType::Timestamp { precision: 7 };
-    let expected = desc("g", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("g", kind, Nullability::Nullable);
     cursor.describe_col(7, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(7).unwrap());
@@ -224,25 +209,25 @@ fn describe_columns() {
         column_size: 16,
         decimal_digits: 7,
     };
-    let expected = desc("h", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("h", kind, Nullability::Nullable);
     cursor.describe_col(8, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
 
     let kind = DataType::LongVarchar { length: 2147483647 };
-    let expected = desc("i", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("i", kind, Nullability::Nullable);
     cursor.describe_col(9, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(9).unwrap());
 
     let kind = DataType::LongVarbinary { length: 2147483647 };
-    let expected = desc("j", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("j", kind, Nullability::Nullable);
     cursor.describe_col(10, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(10).unwrap());
 
     let kind = DataType::Float { precision: 53 };
-    let expected = desc("k", kind, Nullability::Nullable);
+    let expected = ColumnDescription::new("k", kind, Nullability::Nullable);
     cursor.describe_col(11, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(11).unwrap());
