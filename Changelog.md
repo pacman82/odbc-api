@@ -8,6 +8,8 @@
   * Use of `odbc_version_3_5` symbols and declaration of ODBC API version 3.0.
   * Linking of upstream `odbc-sys` vs `iodbc` as opposed to plain `odbc`.
 
+* Introduce `ColumnDescription::new` to allow for intantiating `ColumnDescription` in test cases without caring about wether `SqlChar` is `u8` or `u16`.
+
 ## 0.40.0
 
 * The fallibale allocations introduced for `buffer_from_description` had performance implications. Therfore the fallibale allocations are available to users of this library to `try_buffer_from_description`. `buffer_for_description` is now panicing again in case there is not enough memory available to allocate the buffers.
