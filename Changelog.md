@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.40.1
+
+* Introduce feature `iodbc`. This features enables all features required for this crate to work with the IODBC driver manager.
+
+  * `narrow` ODBC function calls
+  * Use of `odbc_version_3_5` symbols and declaration of ODBC API version 3.0.
+  * Linking of upstream `odbc-sys` vs `iodbc` as opposed to plain `odbc`.
+
 ## 0.40.0
 
 * The fallibale allocations introduced for `buffer_from_description` had performance implications. Therfore the fallibale allocations are available to users of this library to `try_buffer_from_description`. `buffer_for_description` is now panicing again in case there is not enough memory available to allocate the buffers.
