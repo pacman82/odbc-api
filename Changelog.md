@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.2
+
+* Introduce alias for `ColumnarAnyBuffer` for `ColumnarBuffer<AnyColumnBuffer>`.
+
 ## 0.40.1
 
 * Introduce feature `iodbc`. This features enables all features required for this crate to work with the IODBC driver manager.

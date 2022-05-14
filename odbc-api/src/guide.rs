@@ -361,7 +361,7 @@ Consider querying a table with two columns `year` and `name`.
 ```no_run
 use odbc_api::{
     Environment, Cursor,
-    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, buffer_from_description},
+    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, ColumnarAnyBuffer},
 };
 
 let env = Environment::new()?;
@@ -381,7 +381,7 @@ let buffer_description = [
 ];
 
 /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-let mut buffer = buffer_from_description(
+let mut buffer = ColumnarAnyBuffer::from_description(
     batch_size,
     buffer_description.iter().copied()
 );
@@ -424,12 +424,12 @@ have an easier time with the borrow checker.
 use odbc_api::{
     Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
     buffers::{
-        AnyColumnBuffer, BufferDescription, BufferKind, buffer_from_description, ColumnarBuffer
+        AnyColumnBuffer, BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer
     }
 };
 
 fn get_birthdays<'a>(conn: &'a mut Connection)
-    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarBuffer<AnyColumnBuffer>>, Error>
+    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
 {
     let cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
     let mut column_description = Default::default();
@@ -444,7 +444,7 @@ fn get_birthdays<'a>(conn: &'a mut Connection)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = buffer_from_description(5000, buffer_description.into_iter());
+    let buffer = ColumnarAnyBuffer::from_description(5000, buffer_description.into_iter());
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }
@@ -479,7 +479,7 @@ inserts.
 ```no_run
 use odbc_api::{
     Connection, Error, IntoParameter,
-    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, buffer_from_description}
+    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, ColumnarAnyBuffer}
 };
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
@@ -498,7 +498,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
             nullable: false,
         },
     ];
-    let mut buffer = buffer_from_description(
+    let mut buffer = ColumnarAnyBuffer::from_description(
         names.len(),
         buffer_description.iter().copied()
     );

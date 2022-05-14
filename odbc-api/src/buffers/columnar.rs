@@ -33,6 +33,10 @@ pub unsafe trait ColumnProjections<'a> {
 impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
     /// minimum capacity of the columns.
+    /// 
+    /// You do not want to call this constructor directly unless you want to provide your own buffer
+    /// implentation. Most users of this crate may want to use the constructors on 
+    /// [`crate::buffers::ColumnarAnyBuffer`] or [`crate::buffers::TextRowSet`] instead.
     pub fn new(columns: Vec<(u16, C)>) -> Self {
         // Assert capacity
         let capacity = columns
@@ -107,7 +111,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// ```no_run
     /// use odbc_api::{
     ///     Connection, Error, IntoParameter,
-    ///     buffers::{BufferDescription, BufferKind, AnyColumnViewMut, buffer_from_description}
+    ///     buffers::{BufferDescription, BufferKind, AnyColumnViewMut, ColumnarAnyBuffer}
     /// };
     ///
     /// fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16])
@@ -128,7 +132,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///             nullable: false,
     ///         },
     ///     ];
-    ///     let mut buffer = buffer_from_description(
+    ///     let mut buffer = ColumnarAnyBuffer::from_description(
     ///         names.len(),
     ///         buffer_description.iter().copied()
     ///     );

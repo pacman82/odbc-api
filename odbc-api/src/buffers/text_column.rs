@@ -574,7 +574,7 @@ where
     ///
     /// ```
     /// # use odbc_api::buffers::{
-    /// #   BufferDescription, BufferKind, AnyColumnViewMut, buffer_from_description
+    /// #   BufferDescription, BufferKind, AnyColumnViewMut, ColumnarAnyBuffer
     /// # };
     /// # use std::iter;
     /// #
@@ -594,7 +594,7 @@ where
     ///     Some(&b"Hello, World!"[..]),
     /// ];
     ///
-    /// let mut buffer = buffer_from_description(input.len(), iter::once(desc));
+    /// let mut buffer = ColumnarAnyBuffer::from_description(input.len(), iter::once(desc));
     ///
     /// buffer.set_num_rows(input.len());
     /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
