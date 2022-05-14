@@ -365,67 +365,6 @@ impl ColumnarAnyBuffer {
     }
 }
 
-/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions. If not
-/// enough memory is available to allocate the buffers this function fails with
-/// [`Error::TooLargeColumnBufferSize`]. This function is slower than
-/// [`self::buffer_from_description`] which would just panic if not enough memory is available for
-/// allocation.
-#[deprecated(
-    since = "0.40.2",
-    note = "Please use `ColumnarAnyBuffer::try_from_description` instead"
-)]
-pub fn try_buffer_from_description(
-    capacity: usize,
-    descs: impl Iterator<Item = BufferDescription>,
-) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
-    ColumnarAnyBuffer::try_from_description(capacity, descs)
-}
-
-/// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions.
-#[deprecated(
-    since = "0.40.2",
-    note = "Please use `ColumnarAnyBuffer::from_description` instead"
-)]
-pub fn buffer_from_description(
-    capacity: usize,
-    descs: impl Iterator<Item = BufferDescription>,
-) -> ColumnarBuffer<AnyColumnBuffer> {
-    ColumnarAnyBuffer::from_description(capacity, descs)
-}
-
-/// Allows you to pass the buffer descriptions together with a one based column index referring the
-/// column, the buffer is supposed to bind to. This allows you also to ignore columns in a result
-/// set, by not binding them at all. There is no restriction on the order of column indices passed,
-/// but the function will panic, if the indices are not unique.
-#[deprecated(
-    since = "0.40.2",
-    note = "Please use `ColumnarAnyBuffer::from_description_and_indices` instead"
-)]
-pub fn buffer_from_description_and_indices(
-    max_rows: usize,
-    description: impl Iterator<Item = (u16, BufferDescription)>,
-) -> ColumnarBuffer<AnyColumnBuffer> {
-    let columns: Vec<_> = description
-        .map(|(col_index, buffer_desc)| {
-            (
-                col_index,
-                AnyColumnBuffer::from_description(max_rows, buffer_desc),
-            )
-        })
-        .collect();
-
-    // Assert uniqueness of indices
-    let mut indices = HashSet::new();
-    if columns
-        .iter()
-        .any(move |&(col_index, _)| !indices.insert(col_index))
-    {
-        panic!("Column indices must be unique.")
-    }
-
-    ColumnarBuffer::new(columns)
-}
-
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
