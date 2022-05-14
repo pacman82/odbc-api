@@ -294,47 +294,113 @@ impl HasDataType for AnyColumnBuffer {
     }
 }
 
+/// Flexible columnar buffer implementation. Bind this to a cursor to fetch values in bulk, or pass
+/// this as a parameter to a statement, to submit many parameters at once.
+pub type ColumnarAnyBuffer = ColumnarBuffer<AnyColumnBuffer>;
+
+impl ColumnarAnyBuffer {
+    /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
+    pub fn from_description(
+        capacity: usize,
+        descs: impl Iterator<Item = BufferDescription>,
+    ) -> Self {
+        let mut column_index = 0;
+        let columns = descs
+            .map(move |desc| {
+                let buffer = AnyColumnBuffer::from_description(capacity, desc);
+                column_index += 1;
+                (column_index, buffer)
+            })
+            .collect();
+        unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
+    }
+
+    /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions. If not enough memory is
+    /// available to allocate the buffers this function fails with
+    /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_description`]
+    /// which would just panic if not enough memory is available for allocation.
+    pub fn try_from_description(
+        capacity: usize,
+        descs: impl Iterator<Item = BufferDescription>,
+    ) -> Result<Self, Error> {
+        let mut column_index = 0;
+        let columns = descs
+            .map(move |desc| {
+                let buffer = AnyColumnBuffer::try_from_description(capacity, desc)
+                    .map_err(|source| source.add_context(column_index))?;
+                column_index += 1;
+                Ok((column_index, buffer))
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
+    }
+
+    /// Allows you to pass the buffer descriptions together with a one based column index referring
+    /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
+    /// result set, by not binding them at all. There is no restriction on the order of column
+    /// indices passed, but the function will panic, if the indices are not unique.
+    pub fn from_description_and_indices(
+        max_rows: usize,
+        description: impl Iterator<Item = (u16, BufferDescription)>,
+    ) -> ColumnarBuffer<AnyColumnBuffer> {
+        let columns: Vec<_> = description
+            .map(|(col_index, buffer_desc)| {
+                (
+                    col_index,
+                    AnyColumnBuffer::from_description(max_rows, buffer_desc),
+                )
+            })
+            .collect();
+
+        // Assert uniqueness of indices
+        let mut indices = HashSet::new();
+        if columns
+            .iter()
+            .any(move |&(col_index, _)| !indices.insert(col_index))
+        {
+            panic!("Column indices must be unique.")
+        }
+
+        ColumnarBuffer::new(columns)
+    }
+}
+
 /// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions. If not
 /// enough memory is available to allocate the buffers this function fails with
 /// [`Error::TooLargeColumnBufferSize`]. This function is slower than
 /// [`self::buffer_from_description`] which would just panic if not enough memory is available for
 /// allocation.
+#[deprecated(
+    since = "0.40.2",
+    note = "Please use `ColumnarAnyBuffer::try_from_description` instead"
+)]
 pub fn try_buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
 ) -> Result<ColumnarBuffer<AnyColumnBuffer>, Error> {
-    let mut column_index = 0;
-    let columns = descs
-        .map(move |desc| {
-            let buffer = AnyColumnBuffer::try_from_description(capacity, desc)
-                .map_err(|source| source.add_context(column_index))?;
-            column_index += 1;
-            Ok((column_index, buffer))
-        })
-        .collect::<Result<_, _>>()?;
-    Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
+    ColumnarAnyBuffer::try_from_description(capacity, descs)
 }
 
 /// Convinience function allocating a [`ColumnarBuffer`] fitting the buffer descriptions.
+#[deprecated(
+    since = "0.40.2",
+    note = "Please use `ColumnarAnyBuffer::from_description` instead"
+)]
 pub fn buffer_from_description(
     capacity: usize,
     descs: impl Iterator<Item = BufferDescription>,
 ) -> ColumnarBuffer<AnyColumnBuffer> {
-    let mut column_index = 0;
-    let columns = descs
-        .map(move |desc| {
-            let buffer = AnyColumnBuffer::from_description(capacity, desc);
-            column_index += 1;
-            (column_index, buffer)
-        })
-        .collect();
-    unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
+    ColumnarAnyBuffer::from_description(capacity, descs)
 }
 
 /// Allows you to pass the buffer descriptions together with a one based column index referring the
 /// column, the buffer is supposed to bind to. This allows you also to ignore columns in a result
 /// set, by not binding them at all. There is no restriction on the order of column indices passed,
 /// but the function will panic, if the indices are not unique.
+#[deprecated(
+    since = "0.40.2",
+    note = "Please use `ColumnarAnyBuffer::from_description_and_indices` instead"
+)]
 pub fn buffer_from_description_and_indices(
     max_rows: usize,
     description: impl Iterator<Item = (u16, BufferDescription)>,

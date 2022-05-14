@@ -521,7 +521,7 @@ impl TextRowSet {
 #[cfg(test)]
 mod tests {
 
-    use crate::buffers::buffer_from_description_and_indices;
+    use crate::buffers::ColumnarAnyBuffer;
 
     use super::super::{BufferDescription, BufferKind};
 
@@ -532,6 +532,9 @@ mod tests {
             nullable: false,
             kind: BufferKind::I32,
         };
-        buffer_from_description_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
+        ColumnarAnyBuffer::from_description_and_indices(
+            1,
+            [(1, bd), (2, bd), (1, bd)].iter().cloned(),
+        );
     }
 }
