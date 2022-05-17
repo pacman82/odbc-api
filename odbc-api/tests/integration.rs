@@ -1558,10 +1558,12 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_insert_with_text_buffer(profile: &Profile) {
+    // Given
     let conn = profile
         .setup_empty_table("BulkInsertWithTextBuffer", &["VARCHAR(50)"])
         .unwrap();
 
+    // When
     // Fill a text buffer with three rows, and insert them into the database.
     let mut prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
@@ -1570,18 +1572,16 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
     params.append(["France"].iter().map(|s| Some(s.as_bytes())));
     params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
-
     prepared.execute(&params).unwrap();
 
+    // Then
     // Assert that the table contains the rows that have just been inserted.
     let expected = "England\nFrance\nGermany";
-
     let cursor = conn
         .execute("SELECT a FROM BulkInsertWithTextBuffer ORDER BY id;", ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
-
     assert_eq!(expected, actual);
 }
 
