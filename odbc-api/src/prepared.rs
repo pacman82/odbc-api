@@ -2,7 +2,7 @@ use crate::{
     execute::execute_with_parameters,
     handles::{ParameterDescription, Statement, StatementImpl},
     prebound::ParameterMutCollection,
-    CursorImpl, Error, ParameterRefCollection, Prebound, ResultSetMetadata,
+    CursorImpl, Error, Prebound, ResultSetMetadata, ParameterCollectionRef,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -37,7 +37,7 @@ impl<'o> Prepared<'o> {
     ///   parameters.
     pub fn execute(
         &mut self,
-        params: impl ParameterRefCollection,
+        params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         execute_with_parameters(move || Ok(&mut self.statement), None, params)
     }

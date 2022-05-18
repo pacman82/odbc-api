@@ -360,6 +360,39 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// # Safety
 ///
 /// Parameters bound to the statement must remain valid for the lifetime of the instance.
+pub unsafe trait Parameter {
+    /// Bind the parameter in question to a specific `parameter_number`.
+    ///
+    /// # Safety
+    ///
+    /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
+    /// the parameter remains valid while it is used. If the parameter is bound as an output
+    /// parameter it must also be ensured that it is exclusively referenced by statement.
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error>;
+}
+
+unsafe impl<T> Parameter for T where T: InputParameter + ?Sized {
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_input_parameter(parameter_number, self)
+            .into_result(stmt)
+    }
+}
+
+/// Implementers of this trait can be used as individual parameters of in a
+/// [`crate::ParameterRefCollection`]. They can be bound as either input parameters, output
+/// parameters or both.
+///
+/// # Safety
+///
+/// Parameters bound to the statement must remain valid for the lifetime of the instance.
 pub unsafe trait ParameterRef {
     /// Bind the parameter in question to a specific `parameter_number`.
     ///
@@ -375,23 +408,18 @@ pub unsafe trait ParameterRef {
     ) -> Result<(), Error>;
 }
 
-/// Bind immutable references as input parameters.
-unsafe impl<T: ?Sized> ParameterRef for &T
-where
-    T: InputParameter,
-{
+unsafe impl<T> ParameterRef for &mut T where T: Parameter + ?Sized {
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
-        stmt.bind_input_parameter(parameter_number, *self)
-            .into_result(stmt)
+        (**self).bind_to(parameter_number, stmt)
     }
 }
 
-/// Bind mutable references as input parameters.
-unsafe impl<T: ?Sized> ParameterRef for &mut T
+/// Bind immutable references as input parameters.
+unsafe impl<T: ?Sized> ParameterRef for &T
 where
     T: InputParameter,
 {

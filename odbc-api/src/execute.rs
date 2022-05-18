@@ -4,7 +4,7 @@ use crate::{
     borrow_mut_statement::BorrowMutStatement,
     handles::{SqlText, Statement},
     parameter::Blob,
-    CursorImpl, Error, ParameterRefCollection,
+    CursorImpl, Error, ParameterCollectionRef,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],
@@ -21,7 +21,7 @@ use crate::{
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&SqlText>,
-    mut params: impl ParameterRefCollection,
+    mut params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: BorrowMutStatement,

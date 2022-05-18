@@ -7,7 +7,7 @@ use std::{
 use crate::{
     handles::{CDataMut, HasDataType, Statement},
     parameter::WithDataType,
-    Cursor, Error, ParameterRefCollection, ResultSetMetadata, RowSetBuffer,
+    Cursor, Error, ResultSetMetadata, RowSetBuffer, parameter_collection::InputParameterCollection,
 };
 
 use super::{Indicator, TextColumn};
@@ -214,7 +214,7 @@ where
     }
 }
 
-unsafe impl<C> ParameterRefCollection for &ColumnarBuffer<C>
+unsafe impl<C> InputParameterCollection for ColumnarBuffer<C>
 where
     C: ColumnBuffer + HasDataType,
 {
@@ -222,7 +222,7 @@ where
         *self.num_rows
     }
 
-    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error> {
         for &(parameter_number, ref buffer) in &self.columns {
             stmt.bind_input_parameter(parameter_number, buffer)
                 .into_result(stmt)?;

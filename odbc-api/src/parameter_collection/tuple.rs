@@ -1,7 +1,7 @@
 //! Implement `Parameters` trait for tuples consisting of elements implementing `SingleParameter`
 //! trait.
 
-use super::ParameterRefCollection;
+use super::ParameterCollectionRef;
 use crate::{handles::Statement, Error, ParameterRef};
 
 macro_rules! impl_bind_parameters {
@@ -21,7 +21,7 @@ macro_rules! impl_parameters_for_tuple{
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         #[allow(non_snake_case)]
-        unsafe impl<$($t:ParameterRef,)*> ParameterRefCollection for ($($t,)*)
+        unsafe impl<$($t:ParameterRef,)*> ParameterCollectionRef for ($($t,)*)
         {
             fn parameter_set_size(&self) -> usize {
                 1

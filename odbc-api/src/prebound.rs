@@ -2,7 +2,7 @@ use crate::{
     execute::execute,
     handles::{Statement, StatementImpl},
     parameter::StableCData,
-    CursorImpl, Error, ParameterRefCollection,
+    CursorImpl, Error, ParameterCollection,
 };
 
 /// A prepared statement with prebound parameters.
@@ -53,7 +53,7 @@ where
 ///
 /// The changes made through the reference returned by `as_mut` may not invalidate the parameter
 /// pointers bound to a statement.
-pub unsafe trait ParameterMutCollection: ParameterRefCollection {
+pub unsafe trait ParameterMutCollection: ParameterCollection {
     /// Mutable projection used to change parameter values in between statement executions.
     type Mut;
 
@@ -65,7 +65,7 @@ pub unsafe trait ParameterMutCollection: ParameterRefCollection {
 unsafe impl<T> ParameterMutCollection for &mut T
 where
     T: StableCData,
-    for<'a> &'a mut T: ParameterRefCollection,
+    for<'a> &'a mut T: ParameterCollection,
 {
     type Mut = T;
 
@@ -77,7 +77,7 @@ where
 unsafe impl<T> ParameterMutCollection for Box<T>
 where
     T: StableCData,
-    Box<T>: ParameterRefCollection,
+    Box<T>: ParameterCollection,
 {
     type Mut = T;
 
