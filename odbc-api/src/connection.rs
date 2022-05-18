@@ -2,9 +2,8 @@ use crate::{
     buffers::{BufferDescription, BufferKind},
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
-    parameter_collection::ParameterRefCollection,
     statement_connection::StatementConnection,
-    CursorImpl, Error, Preallocated, Prepared,
+    CursorImpl, Error, Preallocated, Prepared, ParameterCollectionRef,
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
@@ -109,7 +108,7 @@ impl<'c> Connection<'c> {
     pub fn execute(
         &self,
         query: &str,
-        params: impl ParameterRefCollection,
+        params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = SqlText::new(query);
         let lazy_statement = move || self.allocate_statement();
@@ -144,7 +143,7 @@ impl<'c> Connection<'c> {
     pub fn into_cursor(
         self,
         query: &str,
-        params: impl ParameterRefCollection,
+        params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, Error> {
         let cursor = match self.execute(query, params) {
             Ok(Some(cursor)) => cursor,

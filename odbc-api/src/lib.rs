@@ -37,7 +37,7 @@ pub use self::{
     into_parameter::IntoParameter,
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter, ParameterRef},
-    parameter_collection::ParameterRefCollection,
+    parameter_collection::{ParameterCollection, ParameterCollectionRef},
     preallocated::Preallocated,
     prebound::Prebound,
     prepared::Prepared,

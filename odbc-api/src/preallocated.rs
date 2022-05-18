@@ -1,7 +1,7 @@
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{SqlText, StatementImpl},
-    CursorImpl, Error, ParameterRefCollection,
+    CursorImpl, Error, ParameterCollectionRef,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -82,7 +82,7 @@ impl<'o> Preallocated<'o> {
     pub fn execute(
         &mut self,
         query: &str,
-        params: impl ParameterRefCollection,
+        params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
         let query = SqlText::new(query);
         execute_with_parameters(move || Ok(&mut self.statement), Some(&query), params)
