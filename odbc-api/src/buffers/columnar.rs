@@ -32,7 +32,8 @@ pub unsafe trait ColumnProjections<'a> {
 
 impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
-    /// minimum capacity of the columns.
+    /// minimum capacity of the columns. The constructed buffer is always empty (i.e. the number of
+    /// valid rows is considered to be zero).
     /// 
     /// You do not want to call this constructor directly unless you want to provide your own buffer
     /// implentation. Most users of this crate may want to use the constructors on 
