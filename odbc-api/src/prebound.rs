@@ -18,7 +18,7 @@ pub struct Prebound<'open_connection, Parameters> {
 
 impl<'o, P> Prebound<'o, P>
 where
-    P: ParameterMutCollection,
+    P: PinnedParameterCollection,
 {
     /// # Safety
     ///
@@ -28,9 +28,10 @@ where
     ///   bindings.
     pub unsafe fn new(mut statement: StatementImpl<'o>, mut parameters: P) -> Result<Self, Error> {
         statement.reset_parameters().into_result(&statement)?;
-        let paramset_size = parameters.parameter_set_size();
+        let ref_parameters = parameters.deref();
+        let paramset_size = ref_parameters.parameter_set_size();
         statement.set_paramset_size(paramset_size);
-        parameters.bind_parameters_to(&mut statement)?;
+        ref_parameters.bind_parameters_to(&mut statement)?;
         Ok(Self {
             statement,
             parameters,
@@ -44,44 +45,66 @@ where
 
     /// Provides write access to the bound parameters. Used to change arguments betwenn statement
     /// executions.
-    pub fn params_mut(&mut self) -> &mut P::Mut {
-        self.parameters.as_mut()
+    pub fn params_mut(&mut self) -> &mut P::ViewMut {
+        self.parameters.as_view_mut()
     }
 }
 
+/// Smart Pointer to a parameter collection, which allows mutating buffer content and can be moved
+/// without invalidating bound pointers. The methods in this trait are intended [`self::Prebound`]
+/// and not intended for end users to be called directly.
+///
 /// # Safety
 ///
-/// The changes made through the reference returned by `as_mut` may not invalidate the parameter
-/// pointers bound to a statement.
-pub unsafe trait ParameterMutCollection: ParameterCollection {
+/// * Changes made through [`Self::as_mut`] must not invalidate or change the pointers, of
+///   [`Self::Target`] E.g. reallocate the referenced buffers.
+/// * Moving this smart pointer must not move any bound buffers in memory.
+pub unsafe trait PinnedParameterCollection {
+    /// The target parameters are intended to be bound to a statement and mutated / read between
+    /// execution.
+    type Target: ParameterCollection;
+
     /// Mutable projection used to change parameter values in between statement executions.
-    type Mut;
+    type ViewMut;
+
+    /// Dereference parameters for binding.
+    unsafe fn deref(&mut self) -> &mut Self::Target;
 
     /// Acquire a mutable projection of the parameters to change values between executions of the
     /// statement.
-    fn as_mut(&mut self) -> &mut Self::Mut;
+    fn as_view_mut(&mut self) -> &mut Self::ViewMut;
 }
 
-unsafe impl<T> ParameterMutCollection for &mut T
+unsafe impl<T> PinnedParameterCollection for &mut T
 where
-    T: StableCData,
-    for<'a> &'a mut T: ParameterCollection,
+    T: StableCData + ParameterCollection,
 {
-    type Mut = T;
+    type ViewMut = T;
 
-    fn as_mut(&mut self) -> &mut T {
+    type Target = T;
+
+    fn as_view_mut(&mut self) -> &mut T {
+        self
+    }
+
+    unsafe fn deref(&mut self) -> &mut Self::Target {
         self
     }
 }
 
-unsafe impl<T> ParameterMutCollection for Box<T>
+unsafe impl<T> PinnedParameterCollection for Box<T>
 where
-    T: StableCData,
-    Box<T>: ParameterCollection,
+    T: StableCData + ParameterCollection,
 {
-    type Mut = T;
+    type ViewMut = T;
 
-    fn as_mut(&mut self) -> &mut T {
+    type Target = T;
+
+    fn as_view_mut(&mut self) -> &mut T {
+        self
+    }
+
+    unsafe fn deref(&mut self) -> &mut T {
         self
     }
 }
