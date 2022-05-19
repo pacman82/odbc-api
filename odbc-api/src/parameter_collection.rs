@@ -2,64 +2,7 @@ use crate::{handles::Statement, parameter::{InputParameter, Parameter}, Error};
 
 mod tuple;
 
-/// SQL Parameters used to execute a query.
-///
-/// ODBC allows to place question marks (`?`) in the statement text as placeholders. For each such
-/// placeholder a parameter needs to be bound to the statement before executing it.
-///
-/// # Examples
-///
-/// This trait is implemented by single parameters.
-///
-/// ```no_run
-/// use odbc_api::Environment;
-///
-/// let env = Environment::new()?;
-///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
-/// let year = 1980;
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
-///     // Use cursor to process query results.
-/// }
-/// # Ok::<(), odbc_api::Error>(())
-/// ```
-///
-/// Tuples of `Parameter`s implement this trait, too.
-///
-/// ```no_run
-/// use odbc_api::Environment;
-///
-/// let env = Environment::new()?;
-///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
-/// let too_old = 1980;
-/// let too_young = 2000;
-/// if let Some(cursor) = conn.execute(
-///     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
-///     (&too_old, &too_young),
-/// )? {
-///     // Use cursor to congratulate only persons in the right age group...
-/// }
-/// # Ok::<(), odbc_api::Error>(())
-/// ```
-///
-/// And so do array slices of `Parameter`s.
-///
-/// ```no_run
-/// use odbc_api::Environment;
-///
-/// let env = Environment::new()?;
-///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
-/// let params = [1980, 2000];
-/// if let Some(cursor) = conn.execute(
-///     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
-///     &params[..])?
-/// {
-///     // Use cursor to process query results.
-/// }
-/// # Ok::<(), odbc_api::Error>(())
-/// ```
+/// Collection of parameters which can be bound to a statement through an exclusive reference.
 ///
 /// # Safety
 ///
@@ -89,6 +32,8 @@ unsafe impl<T> ParameterCollection for T where T: Parameter {
     }
 }
 
+/// A collection of input parameters. They can be bound to a statement using a shared reference.
+///
 /// # Safety
 /// 
 /// Must only bind pointers to statement which are valid for the lifetime of the collection. The

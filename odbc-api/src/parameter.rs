@@ -353,9 +353,7 @@ pub unsafe trait InputParameter: HasDataType + CData {}
 /// Guarantees that there is space in the output buffer for at least one element.
 pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 
-/// Implementers of this trait can be used as individual parameters of in a
-/// [`crate::ParameterRefCollection`]. They can be bound as either input parameters, output
-/// parameters or both.
+/// Implementers of this trait can be to a statement through a [`self::ParameterRef`].
 ///
 /// # Safety
 ///
@@ -387,7 +385,7 @@ unsafe impl<T> Parameter for T where T: InputParameter + ?Sized {
 }
 
 /// Implementers of this trait can be used as individual parameters of in a
-/// [`crate::ParameterRefCollection`]. They can be bound as either input parameters, output
+/// [`crate::ParameterCollection`]. They can be bound as either input parameters, output
 /// parameters or both.
 ///
 /// # Safety
@@ -433,7 +431,7 @@ where
     }
 }
 
-/// Bind immutable references as input parameters.
+/// Allow binding boxed input parameters
 unsafe impl<T: ?Sized> ParameterRef for Box<T>
 where
     T: InputParameter,

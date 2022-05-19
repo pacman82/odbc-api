@@ -64,7 +64,10 @@ pub unsafe trait PinnedParameterCollection {
     /// execution.
     type Target: ParameterCollection;
 
-    /// Mutable projection used to change parameter values in between statement executions.
+    /// Mutable projection used to change parameter values in between statement executions. It is
+    /// intended to allow changing the parameters in between statement execution. It must not be
+    /// possible to perfom any operations on the [`Self::Target`] using this view, which would
+    /// invalidate any of the pointers already bound to a [`self::Prebound.`]
     type ViewMut;
 
     /// Dereference parameters for binding.
