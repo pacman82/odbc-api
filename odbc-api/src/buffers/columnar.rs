@@ -7,7 +7,9 @@ use std::{
 use crate::{
     handles::{CDataMut, HasDataType, Statement},
     parameter::WithDataType,
-    Cursor, Error, ResultSetMetadata, RowSetBuffer, parameter_collection::InputParameterCollection,
+    parameter_collection::InputParameterCollection,
+    prebound::PinnedParameterCollection,
+    Cursor, Error, ParameterCollection, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -34,9 +36,9 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
     /// minimum capacity of the columns. The constructed buffer is always empty (i.e. the number of
     /// valid rows is considered to be zero).
-    /// 
+    ///
     /// You do not want to call this constructor directly unless you want to provide your own buffer
-    /// implentation. Most users of this crate may want to use the constructors on 
+    /// implentation. Most users of this crate may want to use the constructors on
     /// [`crate::buffers::ColumnarAnyBuffer`] or [`crate::buffers::TextRowSet`] instead.
     pub fn new(columns: Vec<(u16, C)>) -> Self {
         // Assert capacity
@@ -520,6 +522,20 @@ impl TextRowSet {
         }
 
         *self.num_rows += 1;
+    }
+}
+
+/// Since every pointer we bind, including the one storing the number of returned rows is head
+/// allocated, ColumnarBuffer is safe to move without invalidating pointers. We express this by
+/// implemneting this trait.
+unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C>
+where
+    ColumnarBuffer<C>: ParameterCollection,
+{
+    type Target = Self;
+
+    unsafe fn deref(&mut self) -> &mut Self::Target {
+        self
     }
 }
 

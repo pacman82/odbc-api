@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.41.0
+
+* Refactored traits for passing parameters to `Connection::execute`. Should not break user syntax, though.
+* Renamed `TextColumnWriter::rebind` into `TextColumnWriter::resize_max_str`
+
 ## 0.40.2
 
 * Introduce alias for `ColumnarAnyBuffer` for `ColumnarBuffer<AnyColumnBuffer>`.

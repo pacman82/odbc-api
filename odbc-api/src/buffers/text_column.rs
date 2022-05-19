@@ -549,7 +549,7 @@ where
     ///   allocated memory. This is used as an optimization as to not copy all values. If the buffer
     ///   contained values after `num_rows` their indicator values remain, but their values will be
     ///   all zeroes.
-    pub fn rebind(&mut self, new_max_str_len: usize, num_rows: usize) {
+    pub fn resize_max_str(&mut self, new_max_str_len: usize, num_rows: usize) {
         self.column.resize_max_str(new_max_str_len, num_rows)
     }
 
