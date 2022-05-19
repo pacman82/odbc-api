@@ -1,7 +1,7 @@
 use crate::{
     execute::execute_with_parameters,
     handles::{ParameterDescription, Statement, StatementImpl},
-    prebound::ParameterMutCollection,
+    prebound::PinnedParameterCollection,
     CursorImpl, Error, Prebound, ResultSetMetadata, ParameterCollectionRef,
 };
 
@@ -95,7 +95,7 @@ impl<'o> Prepared<'o> {
     ///
     pub fn bind_parameters<P>(self, parameters: P) -> Result<Prebound<'o, P>, Error>
     where
-        P: ParameterMutCollection,
+        P: PinnedParameterCollection,
     {
         // We know that statement is a prepared statement.
         unsafe { Prebound::new(self.into_statement(), parameters) }
