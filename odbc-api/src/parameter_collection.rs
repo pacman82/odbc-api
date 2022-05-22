@@ -80,7 +80,7 @@ where
     }
 }
 
-unsafe impl<T> ParameterCollectionRef for &[T]
+unsafe impl<T> InputParameterCollection for [T]
 where
     T: InputParameter,
 {
@@ -88,7 +88,7 @@ where
         1
     }
 
-    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
+    unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
             stmt.bind_input_parameter(index as u16 + 1, parameter)
                 .into_result(stmt)?;
