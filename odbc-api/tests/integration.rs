@@ -2568,6 +2568,37 @@ fn send_long_data_binary_vec(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
+    // Given
+    let table_name = "SendBlobAsPartOfTuple";
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER", profile.blob_type])
+        .unwrap();
+    // Large vector with successive numbers. It's too large to send to the database in one go.
+    let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
+
+    // When
+    let mut blob = BlobSlice::from_byte_slice(&input);
+    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?)", table_name);
+    conn.execute(&insert, (&42, &mut blob.as_blob_param())).unwrap();
+
+    // Then
+    // Query value just streamed into the DB and compare it with the input.
+    let select = format!("SELECT a,b FROM {}", table_name);
+    let mut result = conn.execute(&select, ()).unwrap().unwrap();
+    let mut row = result.next_row().unwrap().unwrap();
+    let mut output_a: i32 = 0;
+    let mut output_b = Vec::new();
+    row.get_data(1, &mut output_a).unwrap();
+    row.get_binary(2, &mut output_b).unwrap();
+
+    assert_eq!(42, output_a);
+    assert_eq!(input, output_b);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
 fn send_long_data_string(profile: &Profile) {
     let table_name = "SendLongDataString";
     let conn = profile.setup_empty_table(table_name, &["Text"]).unwrap();

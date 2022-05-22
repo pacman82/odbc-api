@@ -1,9 +1,9 @@
 use crate::{
-    handles::{CData, DataType, HasDataType},
-    parameter::InputParameter,
+    handles::{CData, CDataMut, DataType, HasDataType},
+    parameter::{InputParameter, OutputParameter}
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
-use std::{ffi::c_void, ptr::null};
+use std::{ffi::c_void, ptr::{null, null_mut}};
 
 /// New type wrapping u8 and binding as SQL_BIT.
 ///
@@ -57,6 +57,18 @@ macro_rules! impl_fixed_sized {
             }
         }
 
+        unsafe impl CDataMut for $t {
+            /// Indicates the length of variable sized types. May be zero for fixed sized types.
+            fn mut_indicator_ptr(&mut self) -> *mut isize {
+                null_mut()
+            }
+        
+            /// Pointer to a value corresponding to the one described by `cdata_type`.
+            fn mut_value_ptr(&mut self) -> *mut c_void {
+                self as *mut $t as *mut c_void
+            }
+        }
+
         unsafe impl Pod for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;
         }
@@ -92,6 +104,7 @@ macro_rules! impl_input_fixed_sized {
         }
 
         unsafe impl InputParameter for $t {}
+        unsafe impl OutputParameter for $t {}
     };
 }
 
