@@ -1,43 +1,10 @@
 use crate::{
     handles::Statement,
-    parameter::{InputParameter, Parameter},
+    parameter::{InputParameter, ParameterCollection},
     Error,
 };
 
 mod tuple;
-
-/// Collection of parameters which can be bound to a statement through an exclusive reference.
-///
-/// # Safety
-///
-/// Any pointers bound to the statement must be valid for the lifetime of the type.
-pub unsafe trait ParameterCollection {
-    /// Number of values per parameter in the collection. This can be different from the maximum
-    /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
-    /// executed.
-    fn parameter_set_size(&self) -> usize;
-
-    /// # Safety
-    ///
-    /// On execution a statement may want to read/write to the bound paramaters. It is the callers
-    /// responsibility that by then the buffers are either unbound from the statement or still
-    /// valild.
-    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error>;
-}
-
-/// A single [`Parameter`] is considered a collection of parameters.
-unsafe impl<T> ParameterCollection for T
-where
-    T: Parameter,
-{
-    fn parameter_set_size(&self) -> usize {
-        (*self).parameter_set_size()
-    }
-
-    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
-        self.bind_to(1, stmt)
-    }
-}
 
 /// A collection of input parameters. They can be bound to a statement using a shared reference.
 ///
@@ -191,6 +158,6 @@ where
     }
 
     unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
-        (**self).bind_parameters_to(stmt)
+        (**self).bind_parameters_to(1, stmt)
     }
 }

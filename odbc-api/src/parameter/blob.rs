@@ -11,7 +11,7 @@ use std::{
     path::Path,
 };
 
-use super::Parameter;
+use super::ParameterCollection;
 
 /// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
 /// transfer large amounts of data, exceeding the drivers capabilities for normal input parameters.
@@ -91,12 +91,12 @@ impl HasDataType for BlobParam<'_> {
     }
 }
 
-unsafe impl Parameter for BlobParam<'_> {
+unsafe impl ParameterCollection for BlobParam<'_> {
     fn parameter_set_size(&self) -> usize {
         1
     }
 
-    unsafe fn bind_to(
+    unsafe fn bind_parameters_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,

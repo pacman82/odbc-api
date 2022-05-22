@@ -358,8 +358,7 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// # Safety
 ///
 /// Parameters bound to the statement must remain valid for the lifetime of the instance.
-pub unsafe trait Parameter {
-    
+pub unsafe trait ParameterCollection {
     /// Number of values per parameter in the collection. This can be different from the maximum
     /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
     /// executed.
@@ -372,14 +371,14 @@ pub unsafe trait Parameter {
     /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
     /// the parameter remains valid while it is used. If the parameter is bound as an output
     /// parameter it must also be ensured that it is exclusively referenced by statement.
-    unsafe fn bind_to(
+    unsafe fn bind_parameters_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error>;
 }
 
-unsafe impl<T> Parameter for T
+unsafe impl<T> ParameterCollection for T
 where
     T: InputParameter + ?Sized,
 {
@@ -387,7 +386,7 @@ where
         1
     }
 
-    unsafe fn bind_to(
+    unsafe fn bind_parameters_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
@@ -421,14 +420,14 @@ pub unsafe trait ParameterRef {
 
 unsafe impl<T> ParameterRef for &mut T
 where
-    T: Parameter + ?Sized,
+    T: ParameterCollection + ?Sized,
 {
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
-        (**self).bind_to(parameter_number, stmt)
+        (**self).bind_parameters_to(parameter_number, stmt)
     }
 }
 

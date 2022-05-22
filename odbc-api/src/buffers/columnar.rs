@@ -8,8 +8,7 @@ use crate::{
     handles::{CDataMut, HasDataType, Statement},
     parameter::WithDataType,
     parameter_collection::InputParameterCollection,
-    prebound::PinnedParameterCollection,
-    Cursor, Error, ParameterCollection, ResultSetMetadata, RowSetBuffer,
+    Cursor, Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -522,20 +521,6 @@ impl TextRowSet {
         }
 
         *self.num_rows += 1;
-    }
-}
-
-/// Since every pointer we bind, including the one storing the number of returned rows is head
-/// allocated, ColumnarBuffer is safe to move without invalidating pointers. We express this by
-/// implemneting this trait.
-unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C>
-where
-    ColumnarBuffer<C>: ParameterCollection,
-{
-    type Target = Self;
-
-    unsafe fn deref(&mut self) -> &mut Self::Target {
-        self
     }
 }
 
