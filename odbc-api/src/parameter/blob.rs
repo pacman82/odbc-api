@@ -92,6 +92,10 @@ impl HasDataType for BlobParam<'_> {
 }
 
 unsafe impl Parameter for BlobParam<'_> {
+    fn parameter_set_size(&self) -> usize {
+        1
+    }
+
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,

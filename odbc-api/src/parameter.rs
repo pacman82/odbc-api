@@ -359,6 +359,12 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 ///
 /// Parameters bound to the statement must remain valid for the lifetime of the instance.
 pub unsafe trait Parameter {
+    
+    /// Number of values per parameter in the collection. This can be different from the maximum
+    /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
+    /// executed.
+    fn parameter_set_size(&self) -> usize;
+
     /// Bind the parameter in question to a specific `parameter_number`.
     ///
     /// # Safety
@@ -377,6 +383,10 @@ unsafe impl<T> Parameter for T
 where
     T: InputParameter + ?Sized,
 {
+    fn parameter_set_size(&self) -> usize {
+        1
+    }
+
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,

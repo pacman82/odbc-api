@@ -31,7 +31,7 @@ where
     T: Parameter,
 {
     fn parameter_set_size(&self) -> usize {
-        1
+        (*self).parameter_set_size()
     }
 
     unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
