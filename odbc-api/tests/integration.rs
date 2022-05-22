@@ -2050,15 +2050,17 @@ fn interior_nul(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_int(profile: &Profile) {
+    let table_name = "GetDataInt";
+
     let conn = profile
-        .setup_empty_table("GetDataInt", &["INTEGER"])
+        .setup_empty_table(table_name, &["INTEGER"])
         .unwrap();
 
-    conn.execute("INSERT INTO GetDataInt (a) VALUES (42),(NULL)", ())
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"), ())
         .unwrap();
 
     let mut cursor = conn
-        .execute("SELECT a FROM GetDataInt", ())
+        .execute(&format!("SELECT a FROM {table_name}"), ())
         .unwrap()
         .unwrap();
 
@@ -2074,6 +2076,41 @@ fn get_data_int(profile: &Profile) {
     row.get_data(1, &mut actual).unwrap();
     assert_eq!(None, actual.into_opt());
 
+    // Cursor has reached its end
+    assert!(cursor.next_row().unwrap().is_none())
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// SQLITE has a bug. It does not return an error but simply fills the integer with `0`. At least on
+// windows this is the case.
+// #[test_case(SQLITE_3; "SQLite 3")]
+fn get_data_int_null(profile: &Profile) {
+    let table_name = "GetDataIntNull";
+
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
+
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
+        .unwrap();
+
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), ())
+        .unwrap()
+        .unwrap();
+
+    let mut actual = 0i32;
+
+    // Second row contains a NULL
+    let mut row = cursor.next_row().unwrap().unwrap();
+    // Failure due to the value being NULL, but i32 not being NULLABLE
+    let result = row.get_data(1, &mut actual);
+
+
+    assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert!(matches!(error, Error::UnableToRepresentNull(_)));
     // Cursor has reached its end
     assert!(cursor.next_row().unwrap().is_none())
 }

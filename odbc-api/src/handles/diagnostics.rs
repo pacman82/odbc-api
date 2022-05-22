@@ -31,6 +31,8 @@ impl State {
     /// String or binary data returned for a column resulted in the truncation of nonblank character
     /// or non-NULL binary data. If it was a string value, it was right-truncated.
     pub const STRING_DATA_RIGHT_TRUNCATION: State = State(*b"01004");
+    /// StrLen_or_IndPtr was a null pointer and NULL data was retrieved.
+    pub const INDICATOR_VARIABLE_REQUIRED_BUT_NOT_SUPPLIED: State = State(*b"22002");
 
     /// Drops terminating zero and changes char type, if required
     pub fn from_chars_with_nul(code: &[SqlChar; SQLSTATE_SIZE + 1]) -> Self {

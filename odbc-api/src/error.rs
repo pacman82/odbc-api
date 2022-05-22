@@ -85,6 +85,13 @@ pub enum Error {
         record: DiagnosticRecord,
         size: usize,
     },
+    #[error(
+        "Tried to retrieve a value from the database. The value turned out to be `NULL` yet this
+        turned out to not be representable. So the application is written as if the value could
+        never be `NULL` in the datasource, yet the in actuallity a `NULL` has been returned.
+        Diagnostic record returned:\n{0}"
+    )]
+    UnableToRepresentNull(DiagnosticRecord),
     /// There are plenty of issues in the net about Oracle ODBC driver not supporting 64Bit. This
     /// message, should make it easier identify what is going on, since the message emmitted by,
     /// Oracles ODBC driver is a bit cryptic: `[Oracle][ODBC]Invalid SQL data type <-25>`.

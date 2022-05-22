@@ -82,6 +82,13 @@ where
         self.statement
             .get_data(col_or_param_num, target)
             .into_result(self.statement)
+            .provide_context_for_diagnostic(|record, function| {
+                if record.state == State::INDICATOR_VARIABLE_REQUIRED_BUT_NOT_SUPPLIED {
+                    Error::UnableToRepresentNull(record)
+                } else {
+                    Error::Diagnostics { record, function }
+                }
+            })
     }
 
     /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
