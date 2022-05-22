@@ -2617,7 +2617,7 @@ fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
     // When
     let mut blob = BlobSlice::from_byte_slice(&input);
     let insert = format!("INSERT INTO {} (a,b) VALUES (?,?)", table_name);
-    conn.execute(&insert, (&42, &mut blob.as_blob_param())).unwrap();
+    conn.execute(&insert, (&42i32, &mut blob.as_blob_param())).unwrap();
 
     // Then
     // Query value just streamed into the DB and compare it with the input.

@@ -2,7 +2,7 @@ use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
     handles::{DelayedInput, HasDataType, Statement},
-    DataType, Error,
+    DataType, Error, ParameterTupleElement,
 };
 use std::{
     ffi::c_void,
@@ -102,6 +102,17 @@ unsafe impl ParameterCollection for BlobParam<'_> {
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
         stmt.bind_delayed_input_parameter(parameter_number, self)
+            .into_result(stmt)
+    }
+}
+
+unsafe impl ParameterTupleElement for &mut BlobParam<'_> {
+    unsafe fn bind_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_delayed_input_parameter(parameter_number, *self)
             .into_result(stmt)
     }
 }
