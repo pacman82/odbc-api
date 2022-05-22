@@ -373,7 +373,10 @@ pub unsafe trait Parameter {
     ) -> Result<(), Error>;
 }
 
-unsafe impl<T> Parameter for T where T: InputParameter + ?Sized {
+unsafe impl<T> Parameter for T
+where
+    T: InputParameter + ?Sized,
+{
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,
@@ -406,7 +409,10 @@ pub unsafe trait ParameterRef {
     ) -> Result<(), Error>;
 }
 
-unsafe impl<T> ParameterRef for &mut T where T: Parameter + ?Sized {
+unsafe impl<T> ParameterRef for &mut T
+where
+    T: Parameter + ?Sized,
+{
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,
@@ -622,4 +628,3 @@ impl HasDataType for Box<dyn InputParameter> {
 }
 
 unsafe impl InputParameter for Box<dyn InputParameter> {}
-

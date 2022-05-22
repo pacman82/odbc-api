@@ -2,7 +2,7 @@ use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
     handles::{DelayedInput, HasDataType, Statement},
-    DataType, Error
+    DataType, Error,
 };
 use std::{
     ffi::c_void,

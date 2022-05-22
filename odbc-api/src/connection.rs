@@ -3,7 +3,7 @@ use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     statement_connection::StatementConnection,
-    CursorImpl, Error, Preallocated, Prepared, ParameterCollectionRef,
+    CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared,
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};

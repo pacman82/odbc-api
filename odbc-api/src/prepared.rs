@@ -2,7 +2,7 @@ use crate::{
     execute::execute_with_parameters,
     handles::{ParameterDescription, Statement, StatementImpl},
     prebound::PinnedParameterCollection,
-    CursorImpl, Error, Prebound, ResultSetMetadata, ParameterCollectionRef,
+    CursorImpl, Error, ParameterCollectionRef, Prebound, ResultSetMetadata,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than

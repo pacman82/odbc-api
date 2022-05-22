@@ -1,4 +1,8 @@
-use crate::{handles::Statement, parameter::{InputParameter, Parameter}, Error};
+use crate::{
+    handles::Statement,
+    parameter::{InputParameter, Parameter},
+    Error,
+};
 
 mod tuple;
 
@@ -22,7 +26,10 @@ pub unsafe trait ParameterCollection {
 }
 
 /// A single [`Parameter`] is considered a collection of parameters.
-unsafe impl<T> ParameterCollection for T where T: Parameter {
+unsafe impl<T> ParameterCollection for T
+where
+    T: Parameter,
+{
     fn parameter_set_size(&self) -> usize {
         1
     }
@@ -35,12 +42,11 @@ unsafe impl<T> ParameterCollection for T where T: Parameter {
 /// A collection of input parameters. They can be bound to a statement using a shared reference.
 ///
 /// # Safety
-/// 
+///
 /// Must only bind pointers to statement which are valid for the lifetime of the collection. The
 /// parameter set size returned must not be larger than the range of valid values behind these
 /// pointers.
 pub unsafe trait InputParameterCollection {
-
     /// Number of values per parameter in the collection. This can be different from the maximum
     /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
     /// executed.
