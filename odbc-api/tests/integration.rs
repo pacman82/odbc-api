@@ -1565,14 +1565,15 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
 
     // When
     // Fill a text buffer with three rows, and insert them into the database.
-    let mut prepared = conn
+    let prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
     let mut params = TextRowSet::from_max_str_lens(5, [50].iter().copied()).unwrap();
     params.append(["England"].iter().map(|s| Some(s.as_bytes())));
     params.append(["France"].iter().map(|s| Some(s.as_bytes())));
     params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
-    prepared.execute(&params).unwrap();
+    let mut prebound = prepared.bind_parameters(params).unwrap();
+    prebound.execute().unwrap();
 
     // Then
     // Assert that the table contains the rows that have just been inserted.

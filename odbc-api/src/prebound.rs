@@ -34,7 +34,7 @@ where
         let ref_parameters = parameters.deref();
         let paramset_size = ref_parameters.parameter_set_size();
         statement.set_paramset_size(paramset_size);
-        ref_parameters.bind_parameters_to(1, &mut statement)?;
+        ref_parameters.bind_parameters_to(&mut statement)?;
         Ok(Self {
             statement,
             parameters,

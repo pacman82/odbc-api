@@ -8,6 +8,7 @@ use crate::{
     handles::{CDataMut, HasDataType, Statement},
     parameter::WithDataType,
     parameter_collection::InputParameterCollection,
+    prebound::PinnedParameterCollection,
     Cursor, Error, ResultSetMetadata, RowSetBuffer,
 };
 
@@ -229,6 +230,16 @@ where
                 .into_result(stmt)?;
         }
         Ok(())
+    }
+}
+
+unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C> where
+    ColumnarBuffer<C>: InputParameterCollection
+{
+    type Target = Self;
+
+    unsafe fn deref(&mut self) -> &mut Self::Target {
+        self
     }
 }
 

@@ -94,13 +94,8 @@ unsafe impl ParameterCollection for BlobParam<'_> {
         1
     }
 
-    unsafe fn bind_parameters_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_delayed_input_parameter(parameter_number, self)
-            .into_result(stmt)
+    unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
+        stmt.bind_delayed_input_parameter(1, self).into_result(stmt)
     }
 }
 
