@@ -2052,12 +2052,13 @@ fn interior_nul(profile: &Profile) {
 fn get_data_int(profile: &Profile) {
     let table_name = "GetDataInt";
 
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
-    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"), ())
-        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"),
+        (),
+    )
+    .unwrap();
 
     let mut cursor = conn
         .execute(&format!("SELECT a FROM {table_name}"), ())
@@ -2088,9 +2089,7 @@ fn get_data_int(profile: &Profile) {
 fn get_data_int_null(profile: &Profile) {
     let table_name = "GetDataIntNull";
 
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
         .unwrap();
@@ -2106,7 +2105,6 @@ fn get_data_int_null(profile: &Profile) {
     let mut row = cursor.next_row().unwrap().unwrap();
     // Failure due to the value being NULL, but i32 not being NULLABLE
     let result = row.get_data(1, &mut actual);
-
 
     assert!(result.is_err());
     let error = result.unwrap_err();
@@ -2617,7 +2615,8 @@ fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
     // When
     let mut blob = BlobSlice::from_byte_slice(&input);
     let insert = format!("INSERT INTO {} (a,b) VALUES (?,?)", table_name);
-    conn.execute(&insert, (&42i32, &mut blob.as_blob_param())).unwrap();
+    conn.execute(&insert, (&42i32, &mut blob.as_blob_param()))
+        .unwrap();
 
     // Then
     // Query value just streamed into the DB and compare it with the input.

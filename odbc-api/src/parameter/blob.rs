@@ -2,7 +2,7 @@ use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
 
 use crate::{
     handles::{DelayedInput, HasDataType, Statement},
-    DataType, Error, ParameterTupleElement,
+    DataType, Error, ParameterCollection, ParameterTupleElement,
 };
 use std::{
     ffi::c_void,
@@ -10,8 +10,6 @@ use std::{
     io::{self, BufRead, BufReader},
     path::Path,
 };
-
-use super::ParameterCollection;
 
 /// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
 /// transfer large amounts of data, exceeding the drivers capabilities for normal input parameters.

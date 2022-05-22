@@ -1,8 +1,4 @@
-use crate::{
-    handles::Statement,
-    parameter::{InputParameter, ParameterCollection},
-    Error,
-};
+use crate::{handles::Statement, parameter::InputParameter, Error};
 
 mod tuple;
 
@@ -161,5 +157,49 @@ where
 
     unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
         (**self).bind_parameters_to(1, stmt)
+    }
+}
+
+/// Implementers of this trait can be bound to a statement through a
+/// [`self::ParameterCollectionRef`].
+///
+/// # Safety
+///
+/// Parameters bound to the statement must remain valid for the lifetime of the instance.
+pub unsafe trait ParameterCollection {
+    /// Number of values per parameter in the collection. This can be different from the maximum
+    /// batch size a buffer may be able to hold. Returning `0` will cause the the query not to be
+    /// executed.
+    fn parameter_set_size(&self) -> usize;
+
+    /// Bind the parameter in question to a specific `parameter_number`.
+    ///
+    /// # Safety
+    ///
+    /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
+    /// the parameter remains valid while it is used. If the parameter is bound as an output
+    /// parameter it must also be ensured that it is exclusively referenced by statement.
+    unsafe fn bind_parameters_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error>;
+}
+
+unsafe impl<T> ParameterCollection for T
+where
+    T: InputParameter + ?Sized,
+{
+    fn parameter_set_size(&self) -> usize {
+        1
+    }
+
+    unsafe fn bind_parameters_to(
+        &mut self,
+        parameter_number: u16,
+        stmt: &mut impl Statement,
+    ) -> Result<(), Error> {
+        stmt.bind_input_parameter(parameter_number, self)
+            .into_result(stmt)
     }
 }
