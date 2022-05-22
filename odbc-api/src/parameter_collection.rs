@@ -6,6 +6,8 @@ use crate::{
 
 mod tuple;
 
+pub use tuple::ParameterTupleElement;
+
 /// A collection of input parameters. They can be bound to a statement using a shared reference.
 ///
 /// # Safety

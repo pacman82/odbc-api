@@ -353,7 +353,8 @@ pub unsafe trait InputParameter: HasDataType + CData {}
 /// Guarantees that there is space in the output buffer for at least one element.
 pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 
-/// Implementers of this trait can be to a statement through a [`self::ParameterRef`].
+/// Implementers of this trait can be bound to a statement through a
+/// [`self::ParameterCollectionRef`].
 ///
 /// # Safety
 ///
@@ -392,86 +393,6 @@ where
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
         stmt.bind_input_parameter(parameter_number, self)
-            .into_result(stmt)
-    }
-}
-
-/// Implementers of this trait can be used as individual parameters of in a
-/// [`crate::ParameterCollection`]. They can be bound as either input parameters, output
-/// parameters or both.
-///
-/// # Safety
-///
-/// Parameters bound to the statement must remain valid for the lifetime of the instance.
-pub unsafe trait ParameterRef {
-    /// Bind the parameter in question to a specific `parameter_number`.
-    ///
-    /// # Safety
-    ///
-    /// Since the parameter is now bound to `stmt` callers must take care that it is ensured that
-    /// the parameter remains valid while it is used. If the parameter is bound as an output
-    /// parameter it must also be ensured that it is exclusively referenced by statement.
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error>;
-}
-
-unsafe impl<T> ParameterRef for &mut T
-where
-    T: ParameterCollection + ?Sized,
-{
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        (**self).bind_parameters_to(parameter_number, stmt)
-    }
-}
-
-/// Bind immutable references as input parameters.
-unsafe impl<T: ?Sized> ParameterRef for &T
-where
-    T: InputParameter,
-{
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_input_parameter(parameter_number, *self)
-            .into_result(stmt)
-    }
-}
-
-/// Allow binding boxed input parameters
-unsafe impl<T: ?Sized> ParameterRef for Box<T>
-where
-    T: InputParameter,
-{
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_input_parameter(parameter_number, self.as_ref())
-            .into_result(stmt)
-    }
-}
-
-/// Bind mutable references as input/output parameter.
-unsafe impl<'a, T> ParameterRef for InOut<'a, T>
-where
-    T: OutputParameter,
-{
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
             .into_result(stmt)
     }
 }
@@ -521,21 +442,6 @@ pub struct InOut<'a, T>(pub &'a mut T);
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
 pub struct Out<'a, T>(pub &'a mut T);
-
-/// Mutable references wrapped in `Out` are bound as output parameters.
-unsafe impl<'a, T> ParameterRef for Out<'a, T>
-where
-    T: OutputParameter,
-{
-    unsafe fn bind_to(
-        &mut self,
-        parameter_number: u16,
-        stmt: &mut impl Statement,
-    ) -> Result<(), Error> {
-        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
-            .into_result(stmt)
-    }
-}
 
 /// Annotates an instance of an inner type with an SQL Data type in order to indicate how it should
 /// be bound as a parameter to an SQL Statement.
