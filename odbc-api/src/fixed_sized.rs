@@ -34,7 +34,7 @@ impl Bit {
 ///
 /// A type implementing this trait, must be a fixed sized type. The information in the `C_DATA_TYPE`
 /// constant must be enough to determine both the size and the buffer length of an Instance.
-pub unsafe trait Pod: Default + Copy + CData {
+pub unsafe trait Pod: Default + Copy + CData + 'static {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;
 }

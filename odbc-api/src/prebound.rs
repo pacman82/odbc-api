@@ -47,13 +47,13 @@ where
     }
 }
 
-impl<'o, P> Prebound<'o, P>
-where
-    P: ViewPinnedMut,
-{
-    /// Provides write access to the bound parameters. Used to change arguments betwenn statement
+impl<'o, P> Prebound<'o, P> {
+    /// Provides write access to the bound parameters. Used to change arguments between statement
     /// executions.
-    pub fn params_mut(&mut self) -> &mut P::ViewMut {
+    pub fn params_mut<'a>(&'a mut self) -> P::ViewMut
+    where
+        P: ViewPinnedMut<'a>,
+    {
         self.parameters.as_view_mut()
     }
 }
@@ -88,9 +88,10 @@ pub unsafe trait PinnedParameterCollection {
 ///
 /// # Safety
 ///
-/// * Changes made through [`Self::as_view_mut`] must not invalidate or change the pointers bound to
-///   statements.
-pub unsafe trait ViewPinnedMut {
+/// * Changes made through [`Self::as_view_mut`] must either not invalidate or change the pointers
+///   bound to a statement previously, or they must use the statement handle to rebind valid
+///   pointers. At the latest once the view is dropped.
+pub unsafe trait ViewPinnedMut<'a> {
     /// Mutable projection used to change parameter values in between statement executions. It is
     /// intended to allow changing the parameters in between statement execution. It must not be
     /// possible to perfom any operations on the [`Self::Target`] using this view, which would
@@ -99,7 +100,7 @@ pub unsafe trait ViewPinnedMut {
 
     /// Acquire a mutable projection of the parameters to change values between executions of the
     /// statement.
-    fn as_view_mut(&mut self) -> &mut Self::ViewMut;
+    fn as_view_mut(&'a mut self) -> Self::ViewMut;
 }
 
 // &mut T
@@ -115,13 +116,13 @@ where
     }
 }
 
-unsafe impl<T> ViewPinnedMut for &mut T
+unsafe impl<'a, 'b: 'a, T> ViewPinnedMut<'a> for &'b mut T
 where
     T: Pod,
 {
-    type ViewMut = T;
+    type ViewMut = &'a mut T;
 
-    fn as_view_mut(&mut self) -> &mut Self::ViewMut {
+    fn as_view_mut(&'a mut self) -> &'a mut T {
         self
     }
 }
@@ -139,13 +140,13 @@ where
     }
 }
 
-unsafe impl<T> ViewPinnedMut for Box<T>
+unsafe impl<'a, T> ViewPinnedMut<'a> for Box<T>
 where
     T: Pod,
 {
-    type ViewMut = T;
+    type ViewMut = &'a mut T;
 
-    fn as_view_mut(&mut self) -> &mut Self::ViewMut {
+    fn as_view_mut(&'a mut self) -> &'a mut T {
         self
     }
 }
