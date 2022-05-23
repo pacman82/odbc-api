@@ -208,8 +208,8 @@ impl<C> TextColumn<C> {
         self.max_str_len = new_max_len;
     }
 
-    /// Appends a new element to the column buffer. Rebinds the buffer to increase maximum string
-    /// length should text be to large.
+    /// Appends a new element to the column buffer. Reallocates the buffer to increase maximum
+    /// string length should text be to large.
     ///
     /// # Parameters
     ///

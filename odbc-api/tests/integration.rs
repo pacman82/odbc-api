@@ -1568,11 +1568,12 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
-    let mut params = TextRowSet::from_max_str_lens(5, [50].iter().copied()).unwrap();
-    params.append(["England"].iter().map(|s| Some(s.as_bytes())));
-    params.append(["France"].iter().map(|s| Some(s.as_bytes())));
-    params.append(["Germany"].iter().map(|s| Some(s.as_bytes())));
-    let mut prebound = prepared.bind_parameters(params).unwrap();
+    let buffer = TextRowSet::from_max_str_lens(5, [50].iter().copied()).unwrap();
+    let mut prebound = prepared.bind_parameters(buffer).unwrap();
+    let mut params = prebound.params_mut();
+    params.append(["England"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    params.append(["France"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    params.append(["Germany"].iter().map(|s| Some(s.as_bytes()))).unwrap();
     prebound.execute().unwrap();
 
     // Then

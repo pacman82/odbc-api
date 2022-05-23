@@ -32,8 +32,6 @@ where
     pub unsafe fn new(mut statement: StatementImpl<'o>, mut parameters: P) -> Result<Self, Error> {
         statement.reset_parameters().into_result(&statement)?;
         let ref_parameters = parameters.deref();
-        let paramset_size = ref_parameters.parameter_set_size();
-        statement.set_paramset_size(paramset_size);
         ref_parameters.bind_parameters_to(&mut statement)?;
         Ok(Self {
             statement,
@@ -43,7 +41,20 @@ where
 
     /// Execute the prepared statement
     pub fn execute(&mut self) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
-        unsafe { execute(&mut self.statement, None) }
+        unsafe {
+            let ref_parameters = self.parameters.deref();
+            // We reset the parameter set size, in order to adequatly handle batches of different
+            // size then inserting into the database.
+            let paramset_size = ref_parameters.parameter_set_size();
+            if paramset_size == 0 {
+                // A batch size of 0 will not execute anything, same as for execute on connection or
+                // prepared.
+                Ok(None)
+            } else {
+                self.statement.set_paramset_size(paramset_size);
+                execute(&mut self.statement, None)
+            }
+        }
     }
 }
 
@@ -52,9 +63,9 @@ impl<'o, P> Prebound<'o, P> {
     /// executions.
     pub fn params_mut<'a>(&'a mut self) -> P::ViewMut
     where
-        P: ViewPinnedMut<'a>,
+        P: ViewPinnedMut<'a, 'o>,
     {
-        self.parameters.as_view_mut()
+        self.parameters.as_view_mut(&mut self.statement)
     }
 }
 
@@ -91,7 +102,7 @@ pub unsafe trait PinnedParameterCollection {
 /// * Changes made through [`Self::as_view_mut`] must either not invalidate or change the pointers
 ///   bound to a statement previously, or they must use the statement handle to rebind valid
 ///   pointers. At the latest once the view is dropped.
-pub unsafe trait ViewPinnedMut<'a> {
+pub unsafe trait ViewPinnedMut<'a, 'o> {
     /// Mutable projection used to change parameter values in between statement executions. It is
     /// intended to allow changing the parameters in between statement execution. It must not be
     /// possible to perfom any operations on the [`Self::Target`] using this view, which would
@@ -100,7 +111,7 @@ pub unsafe trait ViewPinnedMut<'a> {
 
     /// Acquire a mutable projection of the parameters to change values between executions of the
     /// statement.
-    fn as_view_mut(&'a mut self) -> Self::ViewMut;
+    fn as_view_mut(&'a mut self, stmt: &'a mut StatementImpl<'o>) -> Self::ViewMut;
 }
 
 // &mut T
@@ -116,13 +127,13 @@ where
     }
 }
 
-unsafe impl<'a, 'b: 'a, T> ViewPinnedMut<'a> for &'b mut T
+unsafe impl<'a, 'b: 'a, 'o, T> ViewPinnedMut<'a, 'o> for &'b mut T
 where
     T: Pod,
 {
     type ViewMut = &'a mut T;
 
-    fn as_view_mut(&'a mut self) -> &'a mut T {
+    fn as_view_mut(&'a mut self, _stmt: &'a mut StatementImpl<'o>) -> &'a mut T {
         self
     }
 }
@@ -140,13 +151,13 @@ where
     }
 }
 
-unsafe impl<'a, T> ViewPinnedMut<'a> for Box<T>
+unsafe impl<'a, 'o, T> ViewPinnedMut<'a, 'o> for Box<T>
 where
     T: Pod,
 {
     type ViewMut = &'a mut T;
 
-    fn as_view_mut(&'a mut self) -> &'a mut T {
+    fn as_view_mut(&'a mut self, _stmt: &'a mut StatementImpl<'o>) -> &'a mut T {
         self
     }
 }

@@ -5,10 +5,10 @@ use std::{
 };
 
 use crate::{
-    handles::{CDataMut, HasDataType, Statement},
+    handles::{CDataMut, HasDataType, Statement, StatementImpl},
     parameter::WithDataType,
     parameter_collection::InputParameterCollection,
-    prebound::PinnedParameterCollection,
+    prebound::{PinnedParameterCollection, ViewPinnedMut},
     Cursor, Error, ResultSetMetadata, RowSetBuffer,
 };
 
@@ -233,8 +233,9 @@ where
     }
 }
 
-unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C> where
-    ColumnarBuffer<C>: InputParameterCollection
+unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C>
+where
+    ColumnarBuffer<C>: InputParameterCollection,
 {
     type Target = Self;
 
@@ -315,6 +316,69 @@ where
 
     fn capacity(&self) -> usize {
         self.value.capacity()
+    }
+}
+
+/// A mutable view on a columnar buffer bound to a statement. It is intended to change the buffer
+/// contents, whilst still guaranteeing that all pointers bound to the statement remain valid, thus
+/// making the change safe. This is usually utilized using the [`crate::Prebound`] statement
+/// wrapper to insert efficiently into a database.
+pub struct ColumnarBufferViewMut<'a, 'o, C> {
+    buffer: &'a mut ColumnarBuffer<C>,
+    stmt: &'a mut StatementImpl<'o>,
+}
+
+unsafe impl<'a, 'o: 'a, C: 'a> ViewPinnedMut<'a, 'o> for ColumnarBuffer<C> {
+    type ViewMut = ColumnarBufferViewMut<'a, 'o, C>;
+
+    fn as_view_mut(
+        &'a mut self,
+        stmt: &'a mut StatementImpl<'o>,
+    ) -> ColumnarBufferViewMut<'a, 'o, C> {
+        ColumnarBufferViewMut { buffer: self, stmt }
+    }
+}
+
+impl<'a, 'o> ColumnarBufferViewMut<'a, 'o, TextColumn<u8>> {
+
+    /// Takes one element from the iterator for each internal column buffer and appends it to the
+    /// end of the buffer. Should a cell of the row be too large for the associated column buffer,
+    /// the column buffer will be reallocated with `1.2` times its size, and rebound to the
+    /// statement.
+    ///
+    /// This method panics if it is tried to insert elements beyond batch size. It will also panic
+    /// if row does not contain at least one item for each internal column buffer.
+    pub fn append<'b>(&mut self, mut row: impl Iterator<Item = Option<&'b [u8]>>) -> Result<(), Error>{
+        if self.buffer.row_capacity == *self.buffer.num_rows {
+            panic!("Trying to insert elements into TextRowSet beyond batch size.")
+        }
+
+        let index = *self.buffer.num_rows;
+        for (_, column) in &mut self.buffer.columns {
+            let text = row.next().expect(
+                "Row passed to TextRowSet::append must contain one element for each column.",
+            );
+            if let Some(text) = text {
+                // Column buffer is not large enough to hold the element. We must allocate a larger
+                // buffer in order to hold it. This invalidates the pointers previously bound to
+                // the statement. So we rebind them.
+                if text.len() > column.max_len() {
+                    let new_max_str_len = (text.len() as f64 * 1.2) as usize;
+                    column.resize_max_str(new_max_str_len, index);
+                    unsafe {
+                        self.stmt.bind_input_parameter(index as u16, column)
+                            .into_result(self.stmt)?
+                    }
+                }
+                column.append(index, Some(text));
+            } else {
+                column.append(index, None);
+            }
+        }
+
+        *self.buffer.num_rows += 1;
+
+        Ok(())
     }
 }
 
