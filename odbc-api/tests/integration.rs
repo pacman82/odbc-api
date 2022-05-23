@@ -3379,17 +3379,19 @@ fn many_diagnostic_messages() {
     let batch_size = 2 << 15;
 
     // Fill each row in the buffer with two letters.
-    let mut buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2)).unwrap();
+    let buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2)).unwrap();
+    let statement = conn.prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)")).unwrap();
+    let mut statement = statement.bind_parameters(buffer).unwrap();
 
+    let mut params = statement.params_mut();
     for _ in 0..batch_size {
-        buffer.append([Some(&b"ab"[..])].iter().cloned());
+        params.append([Some(&b"ab"[..])].iter().cloned()).unwrap();
     }
 
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (?)", table_name);
-    conn.execute(&insert_sql, &buffer).unwrap();
+    statement.execute().unwrap();
 
     let query_sql = format!("SELECT a FROM {}", table_name);
-    buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1)).unwrap();
+    let buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1)).unwrap();
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
 

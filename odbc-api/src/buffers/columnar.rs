@@ -594,6 +594,10 @@ impl TextRowSet {
     ///
     /// This method panics if it is tried to insert elements beyond batch size. It will also panic
     /// if row does not contain at least one item for each internal column buffer.
+    #[deprecated(
+        since = "0.41.0",
+        note = "Please insert using `Prebound` instead"
+    )]
     pub fn append<'a>(&mut self, mut row: impl Iterator<Item = Option<&'a [u8]>>) {
         if self.row_capacity == *self.num_rows {
             panic!("Trying to insert elements into TextRowSet beyond batch size.")

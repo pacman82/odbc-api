@@ -5,6 +5,7 @@
 * Refactored traits for passing parameters to `Connection::execute`. Should not break user syntax, though.
 * Allow using fixed size paramters like `i32` directly as output parameter without wrapping them into a `Nullable` first.
 * Renamed `TextColumnWriter::rebind` into `TextColumnWriter::resize_max_str`
+* Fast insertion into database using `TextRowSet` without rebinding parameter buffers for individual batches.
 
 ## 0.40.2
 
