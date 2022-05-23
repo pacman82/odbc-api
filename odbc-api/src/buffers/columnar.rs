@@ -339,6 +339,18 @@ unsafe impl<'a, 'o: 'a, C: 'a> ViewPinnedMut<'a, 'o> for ColumnarBuffer<C> {
     }
 }
 
+impl<'a, 'o, C> ColumnarBufferViewMut<'a, 'o, C> where C: ColumnBuffer {
+    /// Number of valid rows in the buffer
+    pub fn num_rows(&self) -> usize {
+        self.buffer.num_rows()
+    }
+
+    /// Sets the number of rows in the buffer to zero. Does nothing to shrink the memory usage.
+    pub fn clear(&mut self) {
+        self.buffer.set_num_rows(0)
+    }
+}
+
 impl<'a, 'o> ColumnarBufferViewMut<'a, 'o, TextColumn<u8>> {
 
     /// Takes one element from the iterator for each internal column buffer and appends it to the
@@ -354,7 +366,7 @@ impl<'a, 'o> ColumnarBufferViewMut<'a, 'o, TextColumn<u8>> {
         }
 
         let index = *self.buffer.num_rows;
-        for (_, column) in &mut self.buffer.columns {
+        for (col_index, column) in &mut self.buffer.columns {
             let text = row.next().expect(
                 "Row passed to TextRowSet::append must contain one element for each column.",
             );
@@ -366,7 +378,7 @@ impl<'a, 'o> ColumnarBufferViewMut<'a, 'o, TextColumn<u8>> {
                     let new_max_str_len = (text.len() as f64 * 1.2) as usize;
                     column.resize_max_str(new_max_str_len, index);
                     unsafe {
-                        self.stmt.bind_input_parameter(index as u16, column)
+                        self.stmt.bind_input_parameter(*col_index, column)
                             .into_result(self.stmt)?
                     }
                 }

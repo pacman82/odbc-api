@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.5
+
+* Performance overhead for insertion per batch has been significantly reduced, by allowing for insertions without rebinding buffers.
+
+## 0.4.4
+
+* Updated dependencies
+
 ## 0.4.3
 
 * Updated dependencies

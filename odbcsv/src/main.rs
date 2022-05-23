@@ -436,7 +436,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     let statement_text = format!("INSERT INTO {} ({}) VALUES ({});", table, columns, values);
     info!("Insert statement Text: {}", statement_text);
 
-    let mut statement = connection.prepare(&statement_text)?;
+    let statement = connection.prepare(&statement_text)?;
 
     // Log column types.
     // Could get required buffer sizes from parameter description.
@@ -452,35 +452,41 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         .collect::<Result<_, _>>()?;
 
     // Allocate buffer
-    let mut buffer = TextRowSet::from_max_str_lens(*batch_size, (0..headline.len()).map(|_| 0))?;
+
+    // Let's start with a buffer size of 50 per column. This is not much memory on a modern pc, yet
+    // may prevent reallocating and rebinding buffers a lot than compared to starting with `0`.
+    let buffer = TextRowSet::from_max_str_lens(*batch_size, (0..headline.len()).map(|_| 50))?;
+    let mut statement = statement.bind_parameters(buffer)?;
 
     // Used to log batch number
     let mut num_batch = 0;
 
     for try_record in reader.into_byte_records() {
-        if buffer.num_rows() == *batch_size as usize {
+        if statement.params_mut().num_rows() == *batch_size as usize {
             num_batch += 1;
             // Batch is full. We need to send it to the data base and clear it, before we insert
             // more rows into it.
-            statement.execute(&buffer)?;
+            statement.execute()?;
             info!(
                 "Insert batch {} with {} rows into DB.",
                 num_batch, batch_size
             );
-            buffer.clear();
+            statement.params_mut().clear();
         }
+
+        let mut buffer = statement.params_mut();
 
         let record = try_record?;
         buffer.append(
             record
                 .iter()
                 .map(|field| if field.is_empty() { None } else { Some(field) }),
-        );
+        )?;
     }
 
     // Insert the remainder of the buffer to the database. If buffer is empty nothing will be
     // executed.
-    statement.execute(&buffer)?;
+    statement.execute()?;
     info!("Insert last batch with {} rows into DB.", batch_size);
 
     Ok(())
