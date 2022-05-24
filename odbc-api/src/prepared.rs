@@ -1,8 +1,9 @@
 use crate::{
+    buffers::{ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
-    handles::{ParameterDescription, Statement, StatementImpl},
+    handles::{HasDataType, ParameterDescription, Statement, StatementImpl},
     prebound::PinnedParameterCollection,
-    CursorImpl, Error, ParameterCollectionRef, Prebound, ResultSetMetadata,
+    ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, Prebound, ResultSetMetadata,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -99,6 +100,29 @@ impl<'o> Prepared<'o> {
     {
         // We know that statement is a prepared statement.
         unsafe { Prebound::new(self.into_statement(), parameters) }
+    }
+
+    pub fn bind_columnar_array_parameters<C>(
+        self,
+        parameter_buffers: Vec<C>,
+    ) -> Result<ColumnarBulkInserter<'o, C>, Error>
+    where
+        C: ColumnBuffer + HasDataType,
+    {
+        // We know that statement is a prepared statement.
+        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers) }
+    }
+
+    pub fn into_text_inserter(
+        self,
+        capacity: usize,
+        max_str_len: impl IntoIterator<Item = usize>,
+    ) -> Result<ColumnarBulkInserter<'o, TextColumn<u8>>, Error> {
+        let max_str_len = max_str_len.into_iter();
+        let parameter_buffers = max_str_len
+            .map(|max_str_len| TextColumn::new(capacity, max_str_len))
+            .collect();
+        self.bind_columnar_array_parameters(parameter_buffers)
     }
 }
 

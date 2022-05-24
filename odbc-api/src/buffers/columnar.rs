@@ -596,7 +596,7 @@ impl TextRowSet {
     /// if row does not contain at least one item for each internal column buffer.
     #[deprecated(
         since = "0.41.0",
-        note = "Please insert using `Prebound` instead"
+        note = "Please insert using `into_text_inserter` instead"
     )]
     pub fn append<'a>(&mut self, mut row: impl Iterator<Item = Option<&'a [u8]>>) {
         if self.row_capacity == *self.num_rows {

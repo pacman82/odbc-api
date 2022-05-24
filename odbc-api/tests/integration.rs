@@ -1568,13 +1568,12 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
-    let buffer = TextRowSet::from_max_str_lens(5, [50].iter().copied()).unwrap();
-    let mut prebound = prepared.bind_parameters(buffer).unwrap();
-    let mut params = prebound.params_mut();
-    params.append(["England"].iter().map(|s| Some(s.as_bytes()))).unwrap();
-    params.append(["France"].iter().map(|s| Some(s.as_bytes()))).unwrap();
-    params.append(["Germany"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    let mut prebound = prepared.into_text_inserter(5, [50].iter().copied()).unwrap();
+    prebound.append(["England"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    prebound.append(["France"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    prebound.append(["Germany"].iter().map(|s| Some(s.as_bytes()))).unwrap();
     prebound.execute().unwrap();
+
 
     // Then
     // Assert that the table contains the rows that have just been inserted.
