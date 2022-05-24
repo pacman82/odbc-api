@@ -455,7 +455,8 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
 
     // Let's start with a buffer size of 50 per column. This is not much memory on a modern pc, yet
     // may prevent reallocating and rebinding buffers a lot than compared to starting with `0`.
-    let mut statement = statement.into_text_inserter(*batch_size, (0..headline.len()).map(|_| 50))?;
+    let mut statement =
+        statement.into_text_inserter(*batch_size, (0..headline.len()).map(|_| 50))?;
 
     // Used to log batch number
     let mut num_batch = 0;

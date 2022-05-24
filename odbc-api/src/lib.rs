@@ -5,6 +5,7 @@
 //! examples.
 
 mod borrow_mut_statement;
+mod columnar_bulk_inserter;
 mod connection;
 mod cursor;
 mod driver_complete_option;
@@ -20,17 +21,15 @@ mod prebound;
 mod prepared;
 mod result_set_metadata;
 mod statement_connection;
-mod columnar_bulk_inserter;
 
 pub mod buffers;
 pub mod guide;
 pub mod handles;
 pub mod parameter;
 
-
 pub use self::{
-    connection::{escape_attribute_value, Connection},
     columnar_bulk_inserter::ColumnarBulkInserter,
+    connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
@@ -46,7 +45,6 @@ pub use self::{
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     statement_connection::StatementConnection,
-
 };
 // Reexports
 pub use force_send_sync;

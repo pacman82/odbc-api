@@ -1568,12 +1568,19 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let prepared = conn
         .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
         .unwrap();
-    let mut prebound = prepared.into_text_inserter(5, [50].iter().copied()).unwrap();
-    prebound.append(["England"].iter().map(|s| Some(s.as_bytes()))).unwrap();
-    prebound.append(["France"].iter().map(|s| Some(s.as_bytes()))).unwrap();
-    prebound.append(["Germany"].iter().map(|s| Some(s.as_bytes()))).unwrap();
+    let mut prebound = prepared
+        .into_text_inserter(5, [50].iter().copied())
+        .unwrap();
+    prebound
+        .append(["England"].iter().map(|s| Some(s.as_bytes())))
+        .unwrap();
+    prebound
+        .append(["France"].iter().map(|s| Some(s.as_bytes())))
+        .unwrap();
+    prebound
+        .append(["Germany"].iter().map(|s| Some(s.as_bytes())))
+        .unwrap();
     prebound.execute().unwrap();
-
 
     // Then
     // Assert that the table contains the rows that have just been inserted.
@@ -3378,13 +3385,17 @@ fn many_diagnostic_messages() {
     let batch_size = 2 << 15;
 
     // Fill each row in the buffer with two letters.
-    let buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(2)).unwrap();
-    let statement = conn.prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)")).unwrap();
-    let mut statement = statement.bind_parameters(buffer).unwrap();
+    let statement = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let mut statement = statement
+        .into_text_inserter(batch_size, iter::once(2))
+        .unwrap();
 
-    let mut params = statement.params_mut();
     for _ in 0..batch_size {
-        params.append([Some(&b"ab"[..])].iter().cloned()).unwrap();
+        statement
+            .append([Some(&b"ab"[..])].iter().cloned())
+            .unwrap();
     }
 
     statement.execute().unwrap();
