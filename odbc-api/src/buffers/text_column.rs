@@ -70,7 +70,8 @@ impl<C> TextColumn<C> {
 
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
-    /// one in order to make space for the null terminating zero at the end of strings.
+    /// one in order to make space for the null terminating zero at the end of strings. All
+    /// indicators are set to [`crate::sys::NULL_DATA`] by default.
     pub fn new(batch_size: usize, max_str_len: usize) -> Self
     where
         C: Default + Copy,
@@ -84,7 +85,7 @@ impl<C> TextColumn<C> {
         TextColumn {
             max_str_len,
             values,
-            indicators: vec![0; batch_size],
+            indicators: vec![NULL_DATA; batch_size],
         }
     }
 

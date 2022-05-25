@@ -102,7 +102,15 @@ impl<'o> Prepared<'o> {
         unsafe { Prebound::new(self.into_statement(), parameters) }
     }
 
-    pub fn bind_columnar_array_parameters<C>(
+    /// Unless you want to roll your own column buffer implementation users are encouraged to use
+    /// [`Self::into_text_inserter`] instead.
+    ///
+    /// # Safety
+    ///
+    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
+    ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
+    ///   can happen after when truncation occurs then writing into a buffer.
+    pub unsafe fn unchecked_bind_columnar_array_parameters<C>(
         self,
         parameter_buffers: Vec<C>,
     ) -> Result<ColumnarBulkInserter<'o, C>, Error>
@@ -110,7 +118,7 @@ impl<'o> Prepared<'o> {
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers) }
+        ColumnarBulkInserter::new(self.into_statement(), parameter_buffers)
     }
 
     pub fn into_text_inserter(
@@ -122,7 +130,8 @@ impl<'o> Prepared<'o> {
         let parameter_buffers = max_str_len
             .map(|max_str_len| TextColumn::new(capacity, max_str_len))
             .collect();
-        self.bind_columnar_array_parameters(parameter_buffers)
+        // Text Columns are freshly created and valid
+        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
     }
 }
 

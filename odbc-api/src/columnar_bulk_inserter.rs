@@ -28,7 +28,10 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     ///
     /// # Safety
     ///
-    /// Statement is expected to be a perpared statement.
+    /// * Statement is expected to be a perpared statement.
+    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
+    ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
+    ///   can happen after when truncation occurs then writing into a buffer.
     pub unsafe fn new(mut statement: StatementImpl<'o>, parameters: Vec<C>) -> Result<Self, Error>
     where
         C: ColumnBuffer + HasDataType,
@@ -83,6 +86,22 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     /// Number of valid rows in the buffer
     pub fn num_rows(&self) -> usize {
         self.parameter_set_size
+    }
+
+    /// Set number of valid rows in the buffer. Mustt not be larger than the batch size. If the
+    /// specified number than the number of valid rows currently held by the buffer additional they
+    /// will just hold the value previously assigned to them. Therfore if extending the number of
+    /// valid rows users should take care to assign values to these rows. However, even if not
+    /// assigend it is always guaranteed that every cell is valid for insertion and will not cause
+    /// out of bounds access down in the ODBC driver. Therfore this method is safe.
+    pub fn set_num_rows(&mut self, num_rows: usize) {
+        if num_rows > self.capacity as usize {
+            panic!(
+                "Columnar buffer may not be resized to a value higher than the maximum number of \
+                rows initially specified in the constructor."
+            );
+        }
+        self.parameter_set_size = num_rows;
     }
 }
 
