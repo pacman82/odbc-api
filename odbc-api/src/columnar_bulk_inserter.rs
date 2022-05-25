@@ -105,6 +105,23 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     }
 }
 
+/// A column buffer which allows manipulating its contents through a few.
+/// 
+/// # Safety
+/// 
+/// The column is bounded to the statement as a parameter than the few is created, and must be
+/// bounded than the view is dropped. The view is allowed to rebind the column though, in order to
+/// allow for reallocating the buffer and support resizing.
+pub unsafe trait ViewAsInputArrayParameter<'a> {
+    /// Intended to allow for modifying buffer contents, while leaving the bound parameter buffers
+    /// valid.
+    type ViewMut;
+
+    /// Obtain a mutable view on a parameter buffer in order to change the parameter value(s)
+    /// submitted when executing the statement.
+    fn as_view_mut<'o>(&'a mut self, stmt: &StatementImpl<'o>) -> Self::ViewMut;
+}
+
 impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
     /// Takes one element from the iterator for each internal column buffer and appends it to the
     /// end of the buffer. Should a cell of the row be too large for the associated column buffer,

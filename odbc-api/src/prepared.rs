@@ -121,6 +121,45 @@ impl<'o> Prepared<'o> {
         ColumnarBulkInserter::new(self.into_statement(), parameter_buffers)
     }
 
+    /// Use this to insert rows of string input into the database.
+    /// 
+    /// ```
+    /// use odbc_api::{Connection, Error};
+    /// 
+    /// fn insert_text<'e>(connection: Connection<'e>) -> Result<(), Error>{
+    ///     // Insert six rows of text with two columns each into the database in batches of 3. In a
+    ///     // real usecase you are likely to achieve a better results with a higher batch size.
+    /// 
+    ///     // Note the two `?` used as placeholders for the parameters.
+    ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
+    ///     // We assume both parameter inputs never exceed 50 bytes.
+    ///     let mut prebound = prepared.into_text_inserter(3, [50, 50])?;
+    ///     
+    ///     // A cell is an option to byte. We could use `None` to represent NULL but we have no
+    ///     // need to do that in this example.
+    ///     let as_cell = |s: &'static str| { Some(s.as_bytes()) } ;
+    /// 
+    ///     // First batch of values
+    ///     prebound.append(["England", "Tea"].into_iter().map(as_cell))?;
+    ///     prebound.append(["Germany", "Beer"].into_iter().map(as_cell))?;
+    ///     prebound.append(["Russia", "Vodka"].into_iter().map(as_cell))?;
+    /// 
+    ///     // Execute statement using values bound in buffer.
+    ///     prebound.execute()?;
+    ///     // Clear buffer contents, otherwise the previous values would stay in the buffer.
+    ///     prebound.clear();
+    /// 
+    ///     // Second batch of values
+    ///     prebound.append(["India", "Tea"].into_iter().map(as_cell))?;
+    ///     prebound.append(["France", "Wine"].into_iter().map(as_cell))?;
+    ///     prebound.append(["USA", "Cola"].into_iter().map(as_cell))?;
+    /// 
+    ///     // Send second batch to the database
+    ///     prebound.execute()?;
+    /// 
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn into_text_inserter(
         self,
         capacity: usize,
