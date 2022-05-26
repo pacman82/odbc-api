@@ -1,7 +1,8 @@
 use crate::{
+    columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType},
-    DataType,
+    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
+    DataType, Error,
 };
 
 use super::{ColumnBuffer, ColumnProjections, Indicator};
@@ -308,6 +309,11 @@ impl<C> TextColumn<C> {
     pub fn raw_value_buffer(&self, num_valid_rows: usize) -> &[C] {
         &self.values[..(self.max_str_len + 1) * num_valid_rows]
     }
+
+    /// The maximum number of rows the TextColumn can hold.
+    pub fn row_capacity(&self) -> usize {
+        self.values.len()
+    }
 }
 
 impl WCharColumn {
@@ -419,6 +425,73 @@ impl<'c, C> TextColumnView<'c, C> {
 
     pub fn max_len(&self) -> usize {
         self.col.max_len()
+    }
+}
+
+unsafe impl<'a, 'o: 'a, C: 'static> BoundInputSlice<'a, 'o> for TextColumn<C> {
+    type SliceMut = TextColumnSliceMut<'a, 'o, C>;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: &'a mut crate::handles::StatementImpl<'o>,
+    ) -> Self::SliceMut {
+        TextColumnSliceMut {
+            column: self,
+            stmt,
+            parameter_index,
+        }
+    }
+}
+
+/// A view to a mutable array parameter text buffer, which allows for filling the buffer with
+/// values.
+pub struct TextColumnSliceMut<'a, 'o, C> {
+    column: &'a mut TextColumn<C>,
+    // Needed to rebind the column in case of resize
+    stmt: &'a mut StatementImpl<'o>,
+    // Also needed to rebind the column in case of resize
+    parameter_index: u16,
+}
+
+impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> {
+    /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
+    /// panic on out of bounds index, or if input holds a text which is larger than the maximum
+    /// allowed element length. `element` must be specified without the terminating zero.
+    pub fn set_cell(&mut self, row_index: usize, element: Option<&[C]>)
+    where
+        C: Default + Copy,
+    {
+        self.column.set_value(row_index, element)
+    }
+
+    /// Ensures that the buffer is large enough to hold elements of `element_length`. Does nothing
+    /// if the buffer is already large enough. Otherwise it will reallocate and rebind the buffer.
+    /// The first `num_rows_to_copy_elements` will be copied from the old value buffer to the new
+    /// one. This makes this an extremly expensive operation.
+    pub fn ensure_max_element_length(
+        &mut self,
+        element_length: usize,
+        num_rows_to_copy: usize,
+    ) -> Result<(), Error>
+    where
+        C: Default + Copy,
+        TextColumn<C>: HasDataType + CData,
+    {
+        // Column buffer is not large enough to hold the element. We must allocate a larger buffer
+        // in order to hold it. This invalidates the pointers previously bound to the statement. So
+        // we rebind them.
+        if element_length > self.column.max_len() {
+            let new_max_str_len = element_length;
+            self.column
+                .resize_max_str(new_max_str_len, num_rows_to_copy);
+            unsafe {
+                self.stmt
+                    .bind_input_parameter(self.parameter_index, self.column)
+                    .into_result(self.stmt)?
+            }
+        }
+        Ok(())
     }
 }
 

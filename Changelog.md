@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.42.0
+
+* Removed `TextColumn::set_max_len` as `resize_max_str_len` can do everything the former can and does it better.
+
 ## 0.41.0
 
 * Refactored traits for passing parameters to `Connection::execute`. Should not break user syntax, though.

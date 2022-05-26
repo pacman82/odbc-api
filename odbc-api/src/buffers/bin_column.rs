@@ -1,8 +1,9 @@
 use crate::{
     buffers::Indicator,
+    columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType},
-    DataType,
+    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
+    DataType, Error,
 };
 
 use log::debug;
@@ -251,6 +252,65 @@ impl BinColumn {
     /// Maximum number of elements this buffer can hold.
     pub fn capacity(&self) -> usize {
         self.indicators.len()
+    }
+}
+
+unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for BinColumn {
+    type SliceMut = BinColumnSliceMut<'a, 'o>;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: &'a mut StatementImpl<'o>,
+    ) -> Self::SliceMut {
+        BinColumnSliceMut {
+            column: self,
+            stmt,
+            parameter_index,
+        }
+    }
+}
+
+/// A view to a mutable array parameter text buffer, which allows for filling the buffer with
+/// values.
+pub struct BinColumnSliceMut<'a, 'o> {
+    column: &'a mut BinColumn,
+    // Needed to rebind the column in case of resize
+    stmt: &'a mut StatementImpl<'o>,
+    // Also needed to rebind the column in case of resize
+    parameter_index: u16,
+}
+
+impl<'a, 'o> BinColumnSliceMut<'a, 'o> {
+    /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
+    /// panic on out of bounds index, or if input holds a text which is larger than the maximum
+    /// allowed element length. `element` must be specified without the terminating zero.
+    pub fn set_cell(&mut self, row_index: usize, element: Option<&[u8]>) {
+        self.column.set_value(row_index, element)
+    }
+
+    /// Ensures that the buffer is large enough to hold elements of `element_length`. Does nothing
+    /// if the buffer is already large enough. Otherwise it will reallocate and rebind the buffer.
+    /// The first `num_rows_to_copy_elements` will be copied from the old value buffer to the new
+    /// one. This makes this an extremly expensive operation.
+    pub fn ensure_max_element_length(
+        &mut self,
+        element_length: usize,
+        num_rows_to_copy: usize,
+    ) -> Result<(), Error> {
+        // Column buffer is not large enough to hold the element. We must allocate a larger buffer
+        // in order to hold it. This invalidates the pointers previously bound to the statement. So
+        // we rebind them.
+        if element_length > self.column.max_len() {
+            self.column
+                .resize_max_element_length(element_length, num_rows_to_copy);
+            unsafe {
+                self.stmt
+                    .bind_input_parameter(self.parameter_index, self.column)
+                    .into_result(self.stmt)?
+            }
+        }
+        Ok(())
     }
 }
 

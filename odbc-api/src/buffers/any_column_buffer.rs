@@ -4,8 +4,8 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType},
-    Bit, DataType, Error,
+    handles::{CData, CDataMut, HasDataType, StatementImpl},
+    Bit, DataType, Error, columnar_bulk_inserter::BoundInputSlice,
 };
 
 use super::{
@@ -16,7 +16,7 @@ use super::{
     columnar::{ColumnBuffer, ColumnProjections},
     BinColumn, BinColumnView, BinColumnWriter, BufferDescription, BufferKind, CharColumn,
     ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView,
-    TextColumnWriter, WCharColumn,
+    TextColumnWriter, WCharColumn, text_column::TextColumnSliceMut, bin_column::BinColumnSliceMut,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -499,6 +499,74 @@ impl<'a> AnyColumnViewMut<'a> {
             None
         }
     }
+}
+
+unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
+    type SliceMut = AnyColumnSliceMut<'a, 'o>;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: &'a mut StatementImpl<'o>,
+    ) -> Self::SliceMut {
+        let num_rows = self.capacity();
+        match self {
+            AnyColumnBuffer::Binary(column) => AnyColumnSliceMut::Binary(column.as_view_mut(parameter_index, stmt)),
+            AnyColumnBuffer::Text(column) => AnyColumnSliceMut::Text(column.as_view_mut(parameter_index, stmt)),
+            AnyColumnBuffer::WText(column) => AnyColumnSliceMut::WText(column.as_view_mut(parameter_index, stmt)),
+            AnyColumnBuffer::Date(column) => AnyColumnSliceMut::Date(column),
+            AnyColumnBuffer::Time(column) => AnyColumnSliceMut::Time(column),
+            AnyColumnBuffer::Timestamp(column) => AnyColumnSliceMut::Timestamp(column),
+            AnyColumnBuffer::F64(column) => AnyColumnSliceMut::F64(column),
+            AnyColumnBuffer::F32(column) => AnyColumnSliceMut::F32(column),
+            AnyColumnBuffer::I8(column) => AnyColumnSliceMut::I8(column),
+            AnyColumnBuffer::I16(column) => AnyColumnSliceMut::I16(column),
+            AnyColumnBuffer::I32(column) => AnyColumnSliceMut::I32(column),
+            AnyColumnBuffer::I64(column) => AnyColumnSliceMut::I64(column),
+            AnyColumnBuffer::U8(column) => AnyColumnSliceMut::U8(column),
+            AnyColumnBuffer::Bit(column) => AnyColumnSliceMut::Bit(column),
+            AnyColumnBuffer::NullableDate(column) => AnyColumnSliceMut::NullableDate(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableTime(column) => AnyColumnSliceMut::NullableTime(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableTimestamp(column) => AnyColumnSliceMut::NullableTimestamp(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableF64(column) => AnyColumnSliceMut::NullableF64(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableF32(column) => AnyColumnSliceMut::NullableF32(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableI8(column) => AnyColumnSliceMut::NullableI8(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableI16(column) => AnyColumnSliceMut::NullableI16(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableI32(column) => AnyColumnSliceMut::NullableI32(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableI64(column) => AnyColumnSliceMut::NullableI64(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableU8(column) => AnyColumnSliceMut::NullableU8(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableBit(column) => AnyColumnSliceMut::NullableBit(column.writer_n(num_rows)),
+        }
+    }
+}
+
+pub enum AnyColumnSliceMut<'a,'o> {
+    Text(TextColumnSliceMut<'a, 'o, u8>),
+    /// Nullable character data encoded in UTF-16.
+    WText(TextColumnSliceMut<'a, 'o, u16>),
+    Binary(BinColumnSliceMut<'a, 'o>),
+    Date(&'a mut [Date]),
+    Time(&'a mut [Time]),
+    Timestamp(&'a mut [Timestamp]),
+    F64(&'a mut [f64]),
+    F32(&'a mut [f32]),
+    I8(&'a mut [i8]),
+    I16(&'a mut [i16]),
+    I32(&'a mut [i32]),
+    I64(&'a mut [i64]),
+    U8(&'a mut [u8]),
+    Bit(&'a mut [Bit]),
+    NullableDate(NullableSliceMut<'a, Date>),
+    NullableTime(NullableSliceMut<'a, Time>),
+    NullableTimestamp(NullableSliceMut<'a, Timestamp>),
+    NullableF64(NullableSliceMut<'a, f64>),
+    NullableF32(NullableSliceMut<'a, f32>),
+    NullableI8(NullableSliceMut<'a, i8>),
+    NullableI16(NullableSliceMut<'a, i16>),
+    NullableI32(NullableSliceMut<'a, i32>),
+    NullableI64(NullableSliceMut<'a, i64>),
+    NullableU8(NullableSliceMut<'a, u8>),
+    NullableBit(NullableSliceMut<'a, Bit>),
 }
 
 unsafe impl<'a> ColumnProjections<'a> for AnyColumnBuffer {

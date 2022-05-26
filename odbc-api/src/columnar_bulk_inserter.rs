@@ -103,23 +103,42 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
         }
         self.parameter_set_size = num_rows;
     }
+
+    pub fn column_mut<'a>(&'a mut self, buffer_index: usize) -> C::SliceMut
+    where
+        C: BoundInputSlice<'a, 'o>,
+    {
+        unsafe {
+            self.parameters[buffer_index]
+                .as_view_mut((buffer_index + 1) as u16, &mut self.statement)
+        }
+    }
 }
 
-/// A column buffer which allows manipulating its contents through a few.
-/// 
+/// You can obtain a mutable slice of a column buffer which allows you to change its contents.
+///
 /// # Safety
-/// 
-/// The column is bounded to the statement as a parameter than the few is created, and must be
-/// bounded than the view is dropped. The view is allowed to rebind the column though, in order to
-/// allow for reallocating the buffer and support resizing.
-pub unsafe trait ViewAsInputArrayParameter<'a> {
+///
+/// If any operations have been performed which would invalidate the pointers bound to the
+/// statement, the slice must use the statement handle to rebind the column, at the end of its
+/// lifetime (at the latest).
+pub unsafe trait BoundInputSlice<'a, 'o> {
     /// Intended to allow for modifying buffer contents, while leaving the bound parameter buffers
     /// valid.
-    type ViewMut;
+    type SliceMut;
 
     /// Obtain a mutable view on a parameter buffer in order to change the parameter value(s)
     /// submitted when executing the statement.
-    fn as_view_mut<'o>(&'a mut self, stmt: &StatementImpl<'o>) -> Self::ViewMut;
+    ///
+    /// # Safety
+    ///
+    /// The statement must be the statment the column buffer is bound to. The index must be the
+    /// parameter index it is bound at.
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: &'a mut StatementImpl<'o>,
+    ) -> Self::SliceMut;
 }
 
 impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
@@ -144,17 +163,10 @@ impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
                 "Row passed to TextRowSet::append must contain one element for each column.",
             );
             if let Some(text) = text {
-                // Column buffer is not large enough to hold the element. We must allocate a larger
-                // buffer in order to hold it. This invalidates the pointers previously bound to
-                // the statement. So we rebind them.
-                if text.len() > column.max_len() {
-                    let new_max_str_len = (text.len() as f64 * 1.2) as usize;
-                    column.resize_max_str(new_max_str_len, self.parameter_set_size);
-                    unsafe {
-                        self.statement
-                            .bind_input_parameter(col_index, column)
-                            .into_result(&self.statement)?
-                    }
+                unsafe {
+                    column
+                        .as_view_mut(col_index, &mut self.statement)
+                        .ensure_max_element_length(text.len(), self.parameter_set_size)?;
                 }
                 column.append(self.parameter_set_size, Some(text));
             } else {
