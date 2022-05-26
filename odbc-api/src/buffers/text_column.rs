@@ -190,25 +190,6 @@ impl<C> TextColumn<C> {
         self.max_str_len = new_max_str_len;
     }
 
-    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
-    ///
-    /// # Parameters
-    ///
-    /// * `new_max_len`: New maximum string length without terminating zero.
-    pub fn set_max_len(&mut self, new_max_len: usize)
-    where
-        C: Default + Copy,
-    {
-        let batch_size = self.indicators.len();
-        // Allocate a new buffer large enough to hold a batch of strings with maximum length.
-        let new_values = vec![C::default(); (new_max_len + 1) * batch_size];
-        // Set all indicators to NULL
-        self.fill_null(0, batch_size);
-        self.values = new_values;
-        self.max_str_len = new_max_len;
-    }
-
     /// Appends a new element to the column buffer. Reallocates the buffer to increase maximum
     /// string length should text be to large.
     ///
@@ -519,16 +500,6 @@ where
     /// Maximum string length without terminating zero
     pub fn max_len(&self) -> usize {
         self.column.max_len()
-    }
-
-    /// Changes the maximum string length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
-    ///
-    /// # Parameters
-    ///
-    /// * `new_max_len`: New maximum string length without terminating zero.
-    pub fn set_max_len(&mut self, new_max_len: usize) {
-        self.column.set_max_len(new_max_len)
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find

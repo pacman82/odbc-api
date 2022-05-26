@@ -954,7 +954,7 @@ fn columnar_insert_varchar(profile: &Profile) {
     buffer.set_num_rows(input.len());
     let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
     // Reset length to make room for `Hello, World!`.
-    col_view.set_max_len(13);
+    col_view.resize_max_str(13, 0);
     assert_eq!(col_view.max_len(), 13);
     col_view.write(input.iter().copied());
 
@@ -1155,7 +1155,7 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
     buffer.set_num_rows(input.len());
     let mut writer = buffer.column_mut(0).as_w_text_view().unwrap();
     // Reset length to make room for `Hello, World!`.
-    writer.set_max_len(13);
+    writer.resize_max_str(13, 0);
     writer.write(
         input
             .iter()
