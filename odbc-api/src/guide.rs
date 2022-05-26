@@ -487,6 +487,8 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
     // All columns must have equal length.
     assert_eq!(names.len(), years.len());
 
+    let prepared = conn.prepare("INSERT INTO Birthdays (name, year) VALUES (?, ?)")?;
+
     // Create a columnar buffer which fits the input parameters.
     let buffer_description = [
         BufferDescription {
@@ -498,26 +500,32 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
             nullable: false,
         },
     ];
-    let mut buffer = ColumnarAnyBuffer::from_description(
-        names.len(),
-        buffer_description.iter().copied()
-    );
+    // The capacity must be able to hold at least the largest batch. We do everything in one go, so
+    // we set it to the length of the input parameters.
+    let capacity = names.len();
+    // Allocate memory for the array column parameters and bind it to the statement.
+    let mut prebound = prepared.into_any_column_inserter(capacity, buffer_description)?;
+    // Length of this batch
+    prebound.set_num_rows(capacity);
+
 
     // Fill the buffer with values column by column
-    let mut col = buffer
+    let mut col = prebound
         .column_mut(0)
         .as_text_view()
         .expect("We know the name column to hold text.");
-    col.write(names.iter().map(|s| Some(s.as_bytes())));
+    
+    for (index, name) in names.iter().enumerate() {
+        col.set_cell(index, Some(name.as_bytes()));
+    }
 
-    let col = i16::as_slice_mut(buffer.column_mut(1))
+    let col = prebound
+        .column_mut(1)
+        .as_slice::<i16>()
         .expect("We know the year column to hold i16.");
     col.copy_from_slice(years);
 
-    conn.execute(
-        "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
-        &buffer
-    )?;
+    prebound.execute()?;
     Ok(())
 }
 ```

@@ -68,39 +68,6 @@ const MARIADB: &Profile = &Profile {
     blob_type: "BLOB",
 };
 
-/// Verify writer panics if too large elements are inserted into a binary column of ColumnarBuffer
-/// buffer.
-#[test]
-#[should_panic]
-fn insert_too_large_element_in_bin_column() {
-    // Fill buffer with values
-    let desc = BufferDescription {
-        kind: BufferKind::Binary { length: 1 },
-        nullable: true,
-    };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
-    buffer.set_num_rows(1);
-    if let AnyColumnViewMut::Binary(mut col) = buffer.column_mut(0) {
-        col.write(iter::once(Some(&b"too large input."[..])))
-    }
-}
-
-/// Verify writer panics if too large elements are inserted into a text column of `ColumnarBuffer`
-/// buffer.
-#[test]
-#[should_panic]
-fn insert_too_large_element_in_text_column() {
-    // Fill buffer with values
-    let desc = BufferDescription {
-        kind: BufferKind::Text { max_str_len: 1 },
-        nullable: true,
-    };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
-    buffer.set_num_rows(1);
-    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
-    col_view.write(iter::once(Some(&b"too large input."[..])))
-}
-
 #[test]
 fn bogus_connection_string() {
     // When
@@ -712,7 +679,10 @@ fn columnar_insert_timestamp(profile: &Profile) {
         kind: BufferKind::Timestamp,
         nullable: true,
     };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -738,19 +708,13 @@ fn columnar_insert_timestamp(profile: &Profile) {
         None,
     ];
 
-    buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::NullableTimestamp(mut writer) = buffer.column_mut(0) {
-        writer.write(input.iter().copied());
-    } else {
-        panic!("Expected timestamp column writer");
-    };
+    prebound.set_num_rows(input.len());
+    let column = prebound.column_mut(0);
+    let mut writer = Timestamp::as_nullable_slice_mut(column).unwrap();
+    writer.write(input.iter().copied());
 
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let actual = table_to_string(&conn, table_name, &["a"]);
@@ -772,30 +736,26 @@ fn columnar_insert_int_raw(profile: &Profile) {
         kind: BufferKind::I32,
         nullable: true,
     };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert.
     let input_values = [1, 0, 3];
     let mask = [true, false, true];
 
-    buffer.set_num_rows(input_values.len());
-    if let AnyColumnViewMut::NullableI32(mut writer) = buffer.column_mut(0) {
-        let (values, indicators) = writer.raw_values();
-        values.copy_from_slice(&input_values);
-        indicators
-            .iter_mut()
-            .zip(mask.iter())
-            .for_each(|(indicator, &mask)| *indicator = if mask { 0 } else { NULL_DATA })
-    } else {
-        panic!("Expected i32 column writer");
-    };
+    prebound.set_num_rows(input_values.len());
+    let mut writer = prebound.column_mut(0).as_nullable_slice::<i32>().unwrap();
+    let (values, indicators) = writer.raw_values();
+    values[..input_values.len()].copy_from_slice(&input_values);
+    indicators
+        .iter_mut()
+        .zip(mask.iter())
+        .for_each(|(indicator, &mask)| *indicator = if mask { 0 } else { NULL_DATA });
 
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let actual = table_to_string(&conn, table_name, &["a"]);
@@ -814,13 +774,15 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
     let conn = profile
         .setup_empty_table(table_name, &["DATETIME2(3)"])
         .unwrap();
-
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
     // Fill buffer with values
     let desc = BufferDescription {
         kind: BufferKind::Timestamp,
         nullable: true,
     };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
+    let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -846,19 +808,11 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
         None,
     ];
 
-    buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::NullableTimestamp(mut writer) = buffer.column_mut(0) {
-        writer.write(input.iter().copied());
-    } else {
-        panic!("Expected timestamp column writer");
-    };
+    prebound.set_num_rows(input.len());
+    let mut writer = prebound.column_mut(0).as_nullable_slice().unwrap();
+    writer.write(input.iter().copied());
 
-    // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
@@ -1602,7 +1556,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
         .unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
-    let mut prepared = conn
+    let prepared = conn
         .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a,b) Values (?,?)")
         .unwrap();
     let description = [
@@ -1614,23 +1568,23 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
             nullable: true,
             kind: BufferKind::I32,
         },
-    ]
-    .iter()
-    .copied();
-    let mut params = ColumnarAnyBuffer::try_from_description(5, description).unwrap();
-    params.set_num_rows(3);
+    ];
+
+    let mut prebound = prepared.into_any_column_inserter(5, description).unwrap();
+
+    prebound.set_num_rows(3);
     // Fill first column with text
-    let mut col_view = params.column_mut(0).as_text_view().unwrap();
-    let input = ["England", "France", "Germany"];
-    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    col_view.set_cell(0, Some("England".as_bytes()));
+    col_view.set_cell(1, Some("France".as_bytes()));
+    col_view.set_cell(2, Some("Germany".as_bytes()));
 
     // Fill second column with integers
     let input = [1, 2, 3];
-    let view_mut = params.column_mut(1);
-    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    let mut col = prebound.column_mut(1).as_nullable_slice::<i32>().unwrap();
     col.write(input.iter().map(|&i| Some(i)));
 
-    prepared.execute(&params).unwrap();
+    prebound.execute().unwrap();
 
     // Assert that the table contains the rows that have just been inserted.
     let expected = "England,1\nFrance,2\nGermany,3";
@@ -1662,7 +1616,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // First batch
 
     // Fill a buffer with three rows, and insert them into the database.
-    let mut prepared = conn
+    let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a,b) Values (?,?)"))
         .unwrap();
     let description = [
@@ -1674,40 +1628,36 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
             nullable: true,
             kind: BufferKind::I32,
         },
-    ]
-    .iter()
-    .copied();
-    let mut params = ColumnarAnyBuffer::try_from_description(5, description).unwrap();
-    params.set_num_rows(3);
+    ];
+    let mut prebound = prepared.into_any_column_inserter(5, description).unwrap();
+    prebound.set_num_rows(3);
     // Fill first column with text
-    let mut col_view = params.column_mut(0).as_text_view().unwrap();
-    let input = ["England", "France", "Germany"];
-    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    col_view.set_cell(0, Some("England".as_bytes()));
+    col_view.set_cell(1, Some("France".as_bytes()));
+    col_view.set_cell(2, Some("Germany".as_bytes()));
 
     // Fill second column with integers
     let input = [1, 2, 3];
-    let view_mut = params.column_mut(1);
-    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    let mut col = prebound.column_mut(1).as_nullable_slice::<i32>().unwrap();
     col.write(input.iter().map(|&i| Some(i)));
 
-    prepared.execute(&params).unwrap();
+    prebound.execute().unwrap();
 
     // Second Batch
 
     // Fill a buffer with one row, and insert them into the database.
-    params.set_num_rows(1);
+    prebound.set_num_rows(1);
     // Fill first column with text
-    let mut col_view = params.column_mut(0).as_text_view().unwrap();
-    let input = ["Spain"];
-    col_view.write(input.iter().map(|&s| Some(s.as_bytes())));
+    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    col_view.set_cell(0, Some("Spain".as_bytes()));
 
     // Fill second column with integers
     let input = [4];
-    let view_mut = params.column_mut(1);
-    let mut col = i32::as_nullable_slice_mut(view_mut).unwrap();
+    let mut col = prebound.column_mut(1).as_nullable_slice::<i32>().unwrap();
     col.write(input.iter().map(|&i| Some(i)));
 
-    prepared.execute(&params).unwrap();
+    prebound.execute().unwrap();
 
     // Then
 

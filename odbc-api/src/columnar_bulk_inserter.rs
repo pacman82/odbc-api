@@ -88,12 +88,14 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
         self.parameter_set_size
     }
 
-    /// Set number of valid rows in the buffer. Mustt not be larger than the batch size. If the
+    /// Set number of valid rows in the buffer. Must not be larger than the batch size. If the
     /// specified number than the number of valid rows currently held by the buffer additional they
     /// will just hold the value previously assigned to them. Therfore if extending the number of
     /// valid rows users should take care to assign values to these rows. However, even if not
     /// assigend it is always guaranteed that every cell is valid for insertion and will not cause
-    /// out of bounds access down in the ODBC driver. Therfore this method is safe.
+    /// out of bounds access down in the ODBC driver. Therfore this method is safe. You can set
+    /// the number of valid rows before or after filling values into the buffer, but you must do so
+    /// before executing the query.
     pub fn set_num_rows(&mut self, num_rows: usize) {
         if num_rows > self.capacity as usize {
             panic!(

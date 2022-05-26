@@ -1,5 +1,5 @@
 use crate::{
-    buffers::{ColumnBuffer, TextColumn},
+    buffers::{AnyColumnBuffer, BufferDescription, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
     handles::{HasDataType, ParameterDescription, Statement, StatementImpl},
     prebound::PinnedParameterCollection,
@@ -122,14 +122,14 @@ impl<'o> Prepared<'o> {
     }
 
     /// Use this to insert rows of string input into the database.
-    /// 
+    ///
     /// ```
     /// use odbc_api::{Connection, Error};
-    /// 
+    ///
     /// fn insert_text<'e>(connection: Connection<'e>) -> Result<(), Error>{
     ///     // Insert six rows of text with two columns each into the database in batches of 3. In a
     ///     // real usecase you are likely to achieve a better results with a higher batch size.
-    /// 
+    ///
     ///     // Note the two `?` used as placeholders for the parameters.
     ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
     ///     // We assume both parameter inputs never exceed 50 bytes.
@@ -138,25 +138,25 @@ impl<'o> Prepared<'o> {
     ///     // A cell is an option to byte. We could use `None` to represent NULL but we have no
     ///     // need to do that in this example.
     ///     let as_cell = |s: &'static str| { Some(s.as_bytes()) } ;
-    /// 
+    ///
     ///     // First batch of values
     ///     prebound.append(["England", "Tea"].into_iter().map(as_cell))?;
     ///     prebound.append(["Germany", "Beer"].into_iter().map(as_cell))?;
     ///     prebound.append(["Russia", "Vodka"].into_iter().map(as_cell))?;
-    /// 
+    ///
     ///     // Execute statement using values bound in buffer.
     ///     prebound.execute()?;
     ///     // Clear buffer contents, otherwise the previous values would stay in the buffer.
     ///     prebound.clear();
-    /// 
+    ///
     ///     // Second batch of values
     ///     prebound.append(["India", "Tea"].into_iter().map(as_cell))?;
     ///     prebound.append(["France", "Wine"].into_iter().map(as_cell))?;
     ///     prebound.append(["USA", "Cola"].into_iter().map(as_cell))?;
-    /// 
+    ///
     ///     // Send second batch to the database
     ///     prebound.execute()?;
-    /// 
+    ///
     ///     Ok(())
     /// }
     /// ```
@@ -169,7 +169,19 @@ impl<'o> Prepared<'o> {
         let parameter_buffers = max_str_len
             .map(|max_str_len| TextColumn::new(capacity, max_str_len))
             .collect();
-        // Text Columns are freshly created and valid
+        // Text Columns are created with NULL as default, which is valid for insertion.
+        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
+    }
+
+    pub fn into_any_column_inserter(
+        self,
+        capacity: usize,
+        descriptions: impl IntoIterator<Item = BufferDescription>,
+    ) -> Result<ColumnarBulkInserter<'o, AnyColumnBuffer>, Error> {
+        let parameter_buffers = descriptions
+            .into_iter()
+            .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
+            .collect();
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
     }
 }

@@ -1,6 +1,6 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnyColumnView, AnyColumnViewMut, BufferKind, NullableSlice, NullableSliceMut};
+use super::{AnyColumnView, BufferKind, NullableSlice, NullableSliceMut, AnyColumnSliceMut};
 use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnyColumnView`]. This allows
@@ -17,10 +17,10 @@ pub trait Item: Sized + Copy {
     fn as_nullable_slice(variant: AnyColumnView<'_>) -> Option<NullableSlice<Self>>;
 
     /// Extract the array type from an [`AnyColumnViewMut`].
-    fn as_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<&mut [Self]>;
+    fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<&'a mut [Self]>;
 
-    /// Extract the typed nullable buffer from an [`AnyColumnViewMut`].
-    fn as_nullable_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<NullableSliceMut<Self>>;
+    /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
+    fn as_nullable_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<NullableSliceMut<'a, Self>>;
 }
 
 macro_rules! impl_item {
@@ -42,18 +42,18 @@ macro_rules! impl_item {
                 }
             }
 
-            fn as_slice_mut(variant: AnyColumnViewMut<'_>) -> Option<&mut [Self]> {
+            fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<&'a mut [Self]> {
                 match variant {
-                    AnyColumnViewMut::$plain(vals) => Some(vals),
+                    AnyColumnSliceMut::$plain(vals) => Some(vals),
                     _ => None,
                 }
             }
 
-            fn as_nullable_slice_mut(
-                variant: AnyColumnViewMut<'_>,
-            ) -> Option<NullableSliceMut<Self>> {
+            fn as_nullable_slice_mut<'a>(
+                variant: AnyColumnSliceMut<'a, '_>,
+            ) -> Option<NullableSliceMut<'a, Self>> {
                 match variant {
-                    AnyColumnViewMut::$null(vals) => Some(vals),
+                    AnyColumnSliceMut::$null(vals) => Some(vals),
                     _ => None,
                 }
             }

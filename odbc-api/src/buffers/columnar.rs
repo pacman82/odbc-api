@@ -168,6 +168,10 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Set number of valid rows in the buffer. May not be larger than the batch size. If the
     /// specified number should be larger than the number of valid rows currently held by the buffer
     /// additional rows with the default value are going to be created.
+    #[deprecated(
+        since = "0.42.0",
+        note = "Please use `ColumnarBulkInserter::set_num_rows` instead"
+    )]
     pub fn set_num_rows(&mut self, num_rows: usize) {
         if num_rows > self.row_capacity as usize {
             panic!(
@@ -184,6 +188,10 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     }
 
     /// Sets the number of rows in the buffer to zero.
+    #[deprecated(
+        since = "0.42.0",
+        note = "Please use `ColumnarBulkInserter::clear` instead"
+    )]
     pub fn clear(&mut self) {
         *self.num_rows = 0;
     }

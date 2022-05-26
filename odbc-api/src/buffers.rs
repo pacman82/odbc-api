@@ -12,7 +12,7 @@ mod text_column;
 use crate::Error;
 
 pub use self::{
-    any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnViewMut, ColumnarAnyBuffer},
+    any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnViewMut, AnyColumnSliceMut, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},

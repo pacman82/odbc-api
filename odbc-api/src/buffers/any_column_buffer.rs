@@ -569,6 +569,38 @@ pub enum AnyColumnSliceMut<'a,'o> {
     NullableBit(NullableSliceMut<'a, Bit>),
 }
 
+impl<'a, 'o> AnyColumnSliceMut<'a, 'o> {
+    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Text`]. It allows
+    /// to you unwrap the inner column view without explictly matching it.
+    pub fn as_text_view(self) -> Option<TextColumnSliceMut<'a, 'o, u8>> {
+        if let Self::Text(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::WText`]. It
+    /// allows you to unwrap the inner column view without explictly matching it.
+    pub fn as_w_text_view(self) -> Option<TextColumnSliceMut<'a, 'o, u16>> {
+        if let Self::WText(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
+    /// Extract the array type from an [`AnyColumnSliceMut`].
+    pub fn as_slice<I: Item>(self) -> Option<&'a mut [I]> {
+        I::as_slice_mut(self)
+    }
+
+    /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
+    pub fn as_nullable_slice<I: Item>(self) -> Option<NullableSliceMut<'a, I>> {
+        I::as_nullable_slice_mut(self)
+    }
+}
+
 unsafe impl<'a> ColumnProjections<'a> for AnyColumnBuffer {
     type View = AnyColumnView<'a>;
 
