@@ -833,14 +833,15 @@ fn columnar_insert_varbinary(profile: &Profile) {
     let conn = profile
         .setup_empty_table("ColumnarInsertVarbinary", &["VARBINARY(13)"])
         .unwrap();
-
+    let prepared = conn
+        .prepare("INSERT INTO ColumnarInsertVarbinary (a) VALUES (?)")
+        .unwrap();
     // Fill buffer with values
     let desc = BufferDescription {
         kind: BufferKind::Binary { length: 5 },
         nullable: true,
     };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(4, iter::once(desc)).unwrap();
-
+    let mut prebound = prepared.into_any_column_inserter(4, [desc]).unwrap();
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
     let input = [
@@ -849,23 +850,18 @@ fn columnar_insert_varbinary(profile: &Profile) {
         None,
         Some(&b"Hello, World!"[..]),
     ];
+    prebound.set_num_rows(input.len());
 
-    buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
-        // Reset length to make room for `Hello, World!`.
-        writer.set_max_len(13);
-        assert_eq!(13, writer.max_len());
-        writer.write(input.iter().copied());
-    } else {
-        panic!("Expected binary column writer");
-    };
+    let mut writer = prebound.column_mut(0).as_bin_view().unwrap();
+    // Reset length to make room for `Hello, World!`.
+    writer.ensure_max_element_length(13, 0).unwrap();
+    writer.set_cell(0, Some("Hello".as_bytes()));
+    writer.set_cell(1, Some("World".as_bytes()));
+    writer.set_cell(2, None);
+    writer.set_cell(3, Some("Hello, World!".as_bytes()));
 
     // Bind buffer and insert values.
-    conn.execute(
-        "INSERT INTO ColumnarInsertVarbinary (a) VALUES (?)",
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
@@ -886,16 +882,17 @@ fn columnar_insert_varchar(profile: &Profile) {
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(13)"])
         .unwrap();
-
-    // Fill buffer with values
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {} (a) VALUES (?)", table_name))
+        .unwrap();
     let desc = BufferDescription {
         // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
         // not work.
         kind: BufferKind::Text { max_str_len: 5 },
         nullable: true,
     };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(4, iter::once(desc)).unwrap();
-
+    let mut prebound = prepared.into_any_column_inserter(4, [desc]).unwrap();
+    // Fill buffer with values
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
     let input = [
@@ -905,19 +902,17 @@ fn columnar_insert_varchar(profile: &Profile) {
         Some(&b"Hello, World!"[..]),
     ];
 
-    buffer.set_num_rows(input.len());
-    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
+    prebound.set_num_rows(input.len());
+    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
     // Reset length to make room for `Hello, World!`.
-    col_view.resize_max_str(13, 0);
-    assert_eq!(col_view.max_len(), 13);
-    col_view.write(input.iter().copied());
+    col_view.ensure_max_element_length(13, 0).unwrap();
+    col_view.set_cell(0, Some("Hello".as_bytes()));
+    col_view.set_cell(1, Some("World".as_bytes()));
+    col_view.set_cell(2, None);
+    col_view.set_cell(3, Some("Hello, World!".as_bytes()));
 
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
@@ -987,7 +982,9 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
         kind: BufferKind::Text { max_str_len: 1 },
         nullable: true,
     };
-
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
     // Input values to insert.
     let input = [
         Some(&b"Hi"[..]),
@@ -996,22 +993,20 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
         None,
         Some(&b"Hello, World!"[..]),
     ];
-
-    let mut buffer =
-        ColumnarAnyBuffer::try_from_description(input.len(), iter::once(desc)).unwrap();
-
-    buffer.set_num_rows(input.len());
-    let mut col_view = buffer.column_mut(0).as_text_view().unwrap();
+    let mut prebound = prepared
+        .into_any_column_inserter(input.len(), [desc])
+        .unwrap();
+    prebound.set_num_rows(input.len());
+    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
     for (index, &text) in input.iter().enumerate() {
-        col_view.append(index, text)
+        col_view
+            .ensure_max_element_length(input[index].map(|s| s.len()).unwrap_or(0), index)
+            .unwrap();
+        col_view.set_cell(index, text)
     }
 
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn

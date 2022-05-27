@@ -570,6 +570,16 @@ pub enum AnyColumnSliceMut<'a,'o> {
 }
 
 impl<'a, 'o> AnyColumnSliceMut<'a, 'o> {
+    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Binary`]. It
+    /// allows to you unwrap the inner column view without explictly matching it.
+    pub fn as_bin_view(self) -> Option<BinColumnSliceMut<'a, 'o>> {
+        if let Self::Binary(view) = self {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
     /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Text`]. It allows
     /// to you unwrap the inner column view without explictly matching it.
     pub fn as_text_view(self) -> Option<TextColumnSliceMut<'a, 'o, u8>> {
