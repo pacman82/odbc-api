@@ -211,8 +211,8 @@ where
     }
 }
 
-/// Used to fill a column buffer with an iterator. Returned by [`super::ColumnarBuffer::column_mut`]
-/// as part of an [`crate::buffers::AnyColumnViewMut`].
+/// Used to fill a column buffer with an iterator. Returned by
+/// [`crate::ColumnarBulkInserter::column_mut`] as part of an [`crate::buffers::AnyColumnSliceMut`].
 #[derive(Debug)]
 pub struct NullableSliceMut<'a, T> {
     indicators: &'a mut [isize],

@@ -4,8 +4,7 @@
 
 * Removed `TextColumn::set_max_len` as `resize_max_str_len` can do everything the former can and
   does it better.
-* `ColumnBuffer` and `TextRowSet` can no longer be used to insert data into the database. Only to receive it. This is due to different invariants which must hold true for input and output buffers. The new `ColumnarBulkInserter` which can be constructed using `into_any_column_inserter` or `into_text_inserter` on a prepared statment closes this safety hole. It also allows for faster insertion into a database in case you transmit the data in several batches, because it does not require the unser to rebind the parameter buffers in safe code. This significantly reduces the overhead for each batch.
-
+* `ColumnBuffer` and `TextRowSet` can no longer be used to insert data into the database. It can now only be used to receive data. This is due to different invariants which must hold true for input and output buffers. The new `ColumnarBulkInserter` which can be constructed using `into_any_column_inserter` or `into_text_inserter` on a prepared statment closes this safety hole. It also allows for faster insertion into a database in case you transmit the data in several batches, because it does not require the user to rebind the parameter buffers in safe code. This significantly reduces the overhead for each batch.
 
 ## 0.41.0
 

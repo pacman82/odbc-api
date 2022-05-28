@@ -451,7 +451,7 @@ impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> where C: Default + Copy {
     /// Can be used to set a value at a specific row index without performing a memcopy on an input
     /// slice and instead provides direct access to the underlying buffer.
     ///
-    /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
+    /// In situations there the memcopy can not be avoided anyway [`Self::set_cell`] is likely to
     /// be more convenient. This method is very useful if you want to `write!` a string value to the
     /// buffer and the binary (**!**) length of the formatted string is known upfront.
     ///

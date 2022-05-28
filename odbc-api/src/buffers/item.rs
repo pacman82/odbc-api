@@ -16,7 +16,7 @@ pub trait Item: Sized + Copy {
     /// Extract the typed nullable buffer from an [`AnyColumnView`].
     fn as_nullable_slice(variant: AnyColumnView<'_>) -> Option<NullableSlice<Self>>;
 
-    /// Extract the array type from an [`AnyColumnViewMut`].
+    /// Extract the array type from an [`AnyColumnSliceMut`].
     fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<&'a mut [Self]>;
 
     /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
