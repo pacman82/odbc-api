@@ -164,14 +164,6 @@ impl BinColumn {
         }
     }
 
-    /// A writer able to fill the first `n` elements of the buffer, from an iterator.
-    pub fn writer_n(&mut self, n: usize) -> BinColumnWriter<'_> {
-        BinColumnWriter {
-            column: self,
-            to: n,
-        }
-    }
-
     /// Changes the maximum number of bytes per row the buffer can hold. This operation is useful if
     /// you find an unexpected large input during insertion.
     ///
@@ -374,62 +366,6 @@ impl<'c> Iterator for BinColumnIt<'c> {
 }
 
 impl<'c> ExactSizeIterator for BinColumnIt<'c> {}
-
-/// Fills a binary column buffer with elements from an Iterator. See
-/// [`crate::buffers::AnyColumnViewMut`]
-#[derive(Debug)]
-pub struct BinColumnWriter<'a> {
-    column: &'a mut BinColumn,
-    /// Upper limit, the binary column writer will not write beyond this index.
-    to: usize,
-}
-
-impl<'a> BinColumnWriter<'a> {
-    /// Fill the binary column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold. This
-    /// method panics if elements of the iterator are larger than the maximum element length of the
-    /// buffer.
-    pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [u8]>>) {
-        for (index, item) in it.enumerate().take(self.to) {
-            self.column.set_value(index, item)
-        }
-    }
-
-    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
-    ///
-    /// # Parameters
-    ///
-    /// * `new_max_len`: New maximum element length
-    pub fn set_max_len(&mut self, new_max_len: usize) {
-        self.column.set_max_len(new_max_len)
-    }
-
-    /// Maximum length
-    pub fn max_len(&self) -> usize {
-        self.column.max_len()
-    }
-
-    /// Changes the maximum element length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input during insertion.
-    ///
-    /// This is however costly, as not only does the new buffer have to be allocated, but all values
-    /// have to copied from the old to the new buffer.
-    ///
-    /// This method could also be used to reduce the maximum element length, which would truncate
-    /// values in the process.
-    ///
-    /// This method does not adjust indicator buffers as these might hold values larger than the
-    /// maximum element length.
-    ///
-    /// # Parameters
-    ///
-    /// * `new_max_len`: New maximum element length.
-    /// * `num_rows`: Number of valid rows currently stored in this buffer.
-    pub fn resize_max_element_length(&mut self, new_max_len: usize, num_rows: usize) {
-        self.column.resize_max_element_length(new_max_len, num_rows)
-    }
-}
 
 unsafe impl CData for BinColumn {
     fn cdata_type(&self) -> CDataType {

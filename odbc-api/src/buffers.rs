@@ -11,7 +11,7 @@ mod text_column;
 
 pub use self::{
     any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnSliceMut, ColumnarAnyBuffer},
-    bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnWriter},
+    bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnSliceMut},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
     description::{BufferDescription, BufferKind},
