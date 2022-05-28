@@ -261,14 +261,6 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// A writer able to fill the first `n` elements of the buffer, from an iterator.
-    pub fn writer_n(&mut self, n: usize) -> TextColumnWriter<'_, C> {
-        TextColumnWriter {
-            column: self,
-            to: n,
-        }
-    }
-
     /// Provides access to the raw underlying value buffer. Normal applications should have little
     /// reason to call this method. Yet it may be useful for writing bindings which copy directly
     /// from the ODBC in memory representation into other kinds of buffers.
@@ -304,8 +296,6 @@ impl WCharColumn {
 
 unsafe impl<'a, C: 'static> ColumnProjections<'a> for TextColumn<C> {
     type View = TextColumnView<'a, C>;
-
-    type ViewMut = TextColumnWriter<'a, C>;
 }
 
 unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
@@ -317,10 +307,6 @@ where
             num_rows: valid_rows,
             col: self,
         }
-    }
-
-    unsafe fn view_mut(&mut self, valid_rows: usize) -> TextColumnWriter<'_, C> {
-        self.writer_n(valid_rows)
     }
 
     fn fill_default(&mut self, from: usize, to: usize) {
@@ -425,13 +411,11 @@ pub struct TextColumnSliceMut<'a, 'o, C> {
     parameter_index: u16,
 }
 
-impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> {
+impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> where C: Default + Copy {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `element` must be specified without the terminating zero.
     pub fn set_cell(&mut self, row_index: usize, element: Option<&[C]>)
-    where
-        C: Default + Copy,
     {
         self.column.set_value(row_index, element)
     }
@@ -446,7 +430,6 @@ impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> {
         num_rows_to_copy: usize,
     ) -> Result<(), Error>
     where
-        C: Default + Copy,
         TextColumn<C>: HasDataType + CData,
     {
         // Column buffer is not large enough to hold the element. We must allocate a larger buffer
@@ -463,6 +446,39 @@ impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> {
             }
         }
         Ok(())
+    }
+
+    /// Can be used to set a value at a specific row index without performing a memcopy on an input
+    /// slice and instead provides direct access to the underlying buffer.
+    ///
+    /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
+    /// be more convenient. This method is very useful if you want to `write!` a string value to the
+    /// buffer and the binary (**!**) length of the formatted string is known upfront.
+    ///
+    /// # Example: Write timestamp to text column.
+    ///
+    /// ```
+    /// use odbc_api::buffers::TextColumnSliceMut;
+    /// use std::io::Write;
+    ///
+    /// /// Writes times formatted as hh::mm::ss.fff
+    /// fn write_time(
+    ///     col: &mut TextColumnSliceMut<u8>,
+    ///     index: usize,
+    ///     hours: u8,
+    ///     minutes: u8,
+    ///     seconds: u8,
+    ///     milliseconds: u16)
+    /// {
+    ///     write!(
+    ///         col.set_mut(index, 12),
+    ///         "{:02}:{:02}:{:02}.{:03}",
+    ///         hours, minutes, seconds, milliseconds
+    ///     ).unwrap();
+    /// }
+    /// ```
+    pub fn set_mut(&mut self, index: usize, length: usize) -> &mut [C] {
+        self.column.set_mut(index, length)
     }
 }
 
@@ -515,107 +531,6 @@ impl<'c> Iterator for TextColumnIt<'c, u16> {
 }
 
 impl<'c> ExactSizeIterator for TextColumnIt<'c, u16> {}
-
-/// Fills a text column buffer with elements from an Iterator.
-#[derive(Debug)]
-pub struct TextColumnWriter<'a, C> {
-    column: &'a mut TextColumn<C>,
-    /// Upper limit, the text column writer will not write beyond this index.
-    to: usize,
-}
-
-impl<'a, C> TextColumnWriter<'a, C>
-where
-    C: Default + Copy,
-{
-    /// Fill the text column with values by consuming the iterator and copying its items into the
-    /// buffer. It will not extract more items from the iterator than the buffer may hold. This
-    /// method panics if strings returned by the iterator are larger than the maximum element length
-    /// of the buffer.
-    pub fn write<'b>(&mut self, it: impl Iterator<Item = Option<&'b [C]>>)
-    where
-        C: 'b,
-    {
-        for (index, item) in it.enumerate().take(self.to) {
-            self.column.set_value(index, item)
-        }
-    }
-
-    /// Maximum string length without terminating zero
-    pub fn max_len(&self) -> usize {
-        self.column.max_len()
-    }
-
-    /// Changes the maximum string length the buffer can hold. This operation is useful if you find
-    /// an unexpected large input string during insertion.
-    ///
-    /// This is however costly, as not only does the new buffer have to be allocated, but all values
-    /// have to copied from the old to the new buffer.
-    ///
-    /// This method could also be used to reduce the maximum string length, which would truncate
-    /// strings in the process.
-    ///
-    /// This method does not adjust indicator buffers as these might hold values larger than the
-    /// maximum string length.
-    ///
-    /// # Parameters
-    ///
-    /// * `new_max_str_len`: New maximum string length without terminating zero.
-    /// * `num_rows`: Rows up to this index will be copied from the old memory to the newly
-    ///   allocated memory. This is used as an optimization as to not copy all values. If the buffer
-    ///   contained values after `num_rows` their indicator values remain, but their values will be
-    ///   all zeroes.
-    pub fn resize_max_str(&mut self, new_max_str_len: usize, num_rows: usize) {
-        self.column.resize_max_str(new_max_str_len, num_rows)
-    }
-
-    /// Change a single value in the column at the specified index.
-    pub fn set_value(&mut self, index: usize, value: Option<&[C]>) {
-        self.column.set_value(index, value)
-    }
-
-    /// Can be used to set a value at a specific row index without performing a memcopy on an input
-    /// slice and instead provides direct access to the underlying buffer.
-    ///
-    /// In situations there the memcopy can not be avoided anyway [`Self::set_value`] is likely to
-    /// be more convenient. This method is very useful if you want to `write!` a string value to the
-    /// buffer and the binary (**!**) length of the formatted string is known upfront.
-    ///
-    /// # Example: Write timestamp to text column.
-    ///
-    /// ```
-    /// use odbc_api::buffers::TextColumnWriter;
-    /// use std::io::Write;
-    ///
-    /// /// Writes times formatted as hh::mm::ss.fff
-    /// fn write_time(
-    ///     col: &mut TextColumnWriter<u8>,
-    ///     index: usize,
-    ///     hours: u8,
-    ///     minutes: u8,
-    ///     seconds: u8,
-    ///     milliseconds: u16)
-    /// {
-    ///     write!(
-    ///         col.set_mut(index, 12),
-    ///         "{:02}:{:02}:{:02}.{:03}",
-    ///         hours, minutes, seconds, milliseconds
-    ///     ).unwrap();
-    /// }
-    ///
-    /// # use odbc_api::buffers::CharColumn;
-    /// # let mut buf = CharColumn::new(1, 12);
-    /// # let mut writer = buf.writer_n(1);
-    /// # write_time(&mut writer, 0, 12, 23, 45, 678);
-    /// # assert_eq!(
-    /// #   "12:23:45.678",
-    /// #   std::str::from_utf8(unsafe { buf.value_at(0) }.unwrap()).unwrap()
-    /// # );
-    /// ```
-    pub fn set_mut(&mut self, index: usize, length: usize) -> &mut [C] {
-        self.column.set_mut(index, length)
-    }
-}
 
 unsafe impl CData for CharColumn {
     fn cdata_type(&self) -> CDataType {

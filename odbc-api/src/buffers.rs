@@ -10,7 +10,7 @@ mod item;
 mod text_column;
 
 pub use self::{
-    any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnViewMut, AnyColumnSliceMut, ColumnarAnyBuffer},
+    any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnSliceMut, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnWriter},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
@@ -18,6 +18,6 @@ pub use self::{
     indicator::Indicator,
     item::Item,
     text_column::{
-        CharColumn, TextColumn, TextColumnIt, TextColumnView, TextColumnWriter, WCharColumn,
+        CharColumn, TextColumn, TextColumnIt, TextColumnView, TextColumnSliceMut, WCharColumn,
     },
 };

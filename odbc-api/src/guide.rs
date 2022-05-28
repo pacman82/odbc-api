@@ -477,10 +477,7 @@ buffers in a columnar layout at hand. [`crate::buffers::ColumnarBuffer`] can be 
 inserts.
 
 ```no_run
-use odbc_api::{
-    Connection, Error, IntoParameter,
-    buffers::{BufferDescription, BufferKind, AnyColumnViewMut, Item, ColumnarAnyBuffer}
-};
+use odbc_api::{Connection, Error, IntoParameter, buffers::{BufferDescription, BufferKind}};
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
 

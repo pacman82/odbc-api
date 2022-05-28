@@ -25,9 +25,6 @@ pub unsafe trait ColumnProjections<'a> {
     /// Immutable view on the column data. Used in safe abstractions. User must not be able to
     /// access uninitialized or invalid memory of the buffer through this interface.
     type View;
-
-    /// Used to gain access to the buffer, if bound as a parameter for inserting.
-    type ViewMut;
 }
 
 impl<C: ColumnBuffer> ColumnarBuffer<C> {
@@ -154,12 +151,6 @@ pub unsafe trait ColumnBuffer: for<'a> ColumnProjections<'a> + CDataMut {
     /// on accessing an undefined element.
     fn view(&self, valid_rows: usize) -> <Self as ColumnProjections<'_>>::View;
 
-    /// # Safety
-    ///
-    /// `valid_rows` must be valid, otherwise the safe abstraction would provide access to invalid
-    /// memory.
-    unsafe fn view_mut(&mut self, valid_rows: usize) -> <Self as ColumnProjections<'_>>::ViewMut;
-
     /// Fills the column with the default representation of values, between `from` and `to` index.
     fn fill_default(&mut self, from: usize, to: usize);
 
@@ -172,8 +163,6 @@ where
     T: ColumnProjections<'a>,
 {
     type View = T::View;
-
-    type ViewMut = T::ViewMut;
 }
 
 unsafe impl<T> ColumnBuffer for WithDataType<T>
@@ -182,10 +171,6 @@ where
 {
     fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
         self.value.view(valid_rows)
-    }
-
-    unsafe fn view_mut(&mut self, valid_rows: usize) -> <T as ColumnProjections>::ViewMut {
-        self.value.view_mut(valid_rows)
     }
 
     fn fill_default(&mut self, from: usize, to: usize) {

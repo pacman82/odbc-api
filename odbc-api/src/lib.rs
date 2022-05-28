@@ -28,7 +28,7 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
-    columnar_bulk_inserter::ColumnarBulkInserter,
+    columnar_bulk_inserter::{ColumnarBulkInserter, BoundInputSlice},
     connection::{escape_attribute_value, Connection},
     cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     driver_complete_option::DriverCompleteOption,
