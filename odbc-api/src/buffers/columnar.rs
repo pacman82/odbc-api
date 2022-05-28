@@ -5,11 +5,9 @@ use std::{
 };
 
 use crate::{
-    handles::{CDataMut, HasDataType, Statement},
+    handles::{CDataMut, Statement},
     parameter::WithDataType,
-    parameter_collection::InputParameterCollection,
-    prebound::PinnedParameterCollection,
-    Cursor, Error, ResultSetMetadata, RowSetBuffer,
+    Cursor, Error, ResultSetMetadata, RowSetBuffer, columnar_bulk_inserter::BoundInputSlice,
 };
 
 use super::{Indicator, TextColumn};
@@ -95,106 +93,6 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     pub fn column(&self, buffer_index: usize) -> <C as ColumnProjections<'_>>::View {
         self.columns[buffer_index].1.view(*self.num_rows)
     }
-
-    /// Use this method to gain write access to the actual column data.
-    ///
-    /// # Parameters
-    ///
-    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
-    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
-    ///   the output result set. This is important, because not every column needs to be bound. Some
-    ///   columns may simply be ignored. That being said, if every column of the output is bound in
-    ///   the buffer, in the same order in which they are enumerated in the result set, the
-    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
-    ///
-    /// # Example
-    ///
-    /// This method is intend to be called if using [`ColumnarBuffer`] for column wise bulk inserts.
-    ///
-    /// ```no_run
-    /// use odbc_api::{
-    ///     Connection, Error, IntoParameter,
-    ///     buffers::{BufferDescription, BufferKind, AnyColumnViewMut, ColumnarAnyBuffer}
-    /// };
-    ///
-    /// fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16])
-    ///     -> Result<(), Error>
-    /// {
-    ///
-    ///     // All columns must have equal length.
-    ///     assert_eq!(names.len(), years.len());
-    ///
-    ///     // Create a columnar buffer which fits the input parameters.
-    ///     let buffer_description = [
-    ///         BufferDescription {
-    ///             kind: BufferKind::Text { max_str_len: 255 },
-    ///             nullable: false,
-    ///         },
-    ///         BufferDescription {
-    ///             kind: BufferKind::I16,
-    ///             nullable: false,
-    ///         },
-    ///     ];
-    ///     let mut buffer = ColumnarAnyBuffer::from_description(
-    ///         names.len(),
-    ///         buffer_description.iter().copied()
-    ///     );
-    ///
-    ///     // Fill the buffer with values column by column
-    ///     let mut col = buffer
-    ///         .column_mut(0)
-    ///         .as_text_view()
-    ///         .expect("We know the name column to hold text.");
-    ///     col.write(names.iter().map(|s| Some(s.as_bytes())));
-    ///
-    ///     match buffer.column_mut(1) {
-    ///         AnyColumnViewMut::I16(mut col) => {
-    ///             col.copy_from_slice(years)
-    ///         }
-    ///         _ => panic!("We know the year column to hold i16.")
-    ///     }
-    ///
-    ///     conn.execute(
-    ///         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
-    ///         &buffer
-    ///     )?;
-    ///     Ok(())
-    /// }
-    /// ```
-    pub fn column_mut(&mut self, buffer_index: usize) -> <C as ColumnProjections<'_>>::ViewMut {
-        unsafe { self.columns[buffer_index].1.view_mut(*self.num_rows) }
-    }
-
-    /// Set number of valid rows in the buffer. May not be larger than the batch size. If the
-    /// specified number should be larger than the number of valid rows currently held by the buffer
-    /// additional rows with the default value are going to be created.
-    #[deprecated(
-        since = "0.42.0",
-        note = "Please use `ColumnarBulkInserter::set_num_rows` instead"
-    )]
-    pub fn set_num_rows(&mut self, num_rows: usize) {
-        if num_rows > self.row_capacity as usize {
-            panic!(
-                "Columnar buffer may not be resized to a value higher than the maximum number of \
-                rows initially specified in the constructor."
-            );
-        }
-        if *self.num_rows < num_rows {
-            for (_col_index, ref mut column) in &mut self.columns {
-                column.fill_default(*self.num_rows, num_rows)
-            }
-        }
-        *self.num_rows = num_rows;
-    }
-
-    /// Sets the number of rows in the buffer to zero.
-    #[deprecated(
-        since = "0.42.0",
-        note = "Please use `ColumnarBulkInserter::clear` instead"
-    )]
-    pub fn clear(&mut self) {
-        *self.num_rows = 0;
-    }
 }
 
 unsafe impl<C> RowSetBuffer for ColumnarBuffer<C>
@@ -221,34 +119,6 @@ where
                 .into_result(cursor.stmt_mut())?;
         }
         Ok(())
-    }
-}
-
-unsafe impl<C> InputParameterCollection for ColumnarBuffer<C>
-where
-    C: ColumnBuffer + HasDataType,
-{
-    fn parameter_set_size(&self) -> usize {
-        *self.num_rows
-    }
-
-    unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error> {
-        for &(parameter_number, ref buffer) in &self.columns {
-            stmt.bind_input_parameter(parameter_number, buffer)
-                .into_result(stmt)?;
-        }
-        Ok(())
-    }
-}
-
-unsafe impl<C> PinnedParameterCollection for ColumnarBuffer<C>
-where
-    ColumnarBuffer<C>: InputParameterCollection,
-{
-    type Target = Self;
-
-    unsafe fn deref(&mut self) -> &mut Self::Target {
-        self
     }
 }
 
@@ -324,6 +194,18 @@ where
 
     fn capacity(&self) -> usize {
         self.value.capacity()
+    }
+}
+
+unsafe impl<'a, 'o, T> BoundInputSlice<'a, 'o> for WithDataType<T> where T: BoundInputSlice<'a, 'o> {
+    type SliceMut = T::SliceMut;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: &'a mut crate::handles::StatementImpl<'o>,
+    ) -> Self::SliceMut {
+        self.value.as_view_mut(parameter_index, stmt)
     }
 }
 
@@ -519,32 +401,6 @@ impl TextRowSet {
     /// Maximum length in bytes of elements in a column.
     pub fn max_len(&self, buf_index: usize) -> usize {
         self.columns[buf_index].1.max_len()
-    }
-
-    /// Takes one element from the iterator for each internal column buffer and appends it to the
-    /// end of the buffer. Should the buffer be not large enough to hold the element, it will be
-    /// reallocated with `1.2` times its size.
-    ///
-    /// This method panics if it is tried to insert elements beyond batch size. It will also panic
-    /// if row does not contain at least one item for each internal column buffer.
-    #[deprecated(
-        since = "0.41.0",
-        note = "Please insert using `into_text_inserter` instead"
-    )]
-    pub fn append<'a>(&mut self, mut row: impl Iterator<Item = Option<&'a [u8]>>) {
-        if self.row_capacity == *self.num_rows {
-            panic!("Trying to insert elements into TextRowSet beyond batch size.")
-        }
-
-        let index = *self.num_rows;
-        for (_, column) in &mut self.columns {
-            let text = row.next().expect(
-                "Row passed to TextRowSet::append must contain one element for each column.",
-            );
-            column.append(index, text);
-        }
-
-        *self.num_rows += 1;
     }
 }
 

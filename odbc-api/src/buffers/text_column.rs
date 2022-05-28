@@ -191,35 +191,6 @@ impl<C> TextColumn<C> {
         self.max_str_len = new_max_str_len;
     }
 
-    /// Appends a new element to the column buffer. Reallocates the buffer to increase maximum
-    /// string length should text be to large.
-    ///
-    /// # Parameters
-    ///
-    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
-    ///   currently in the buffer.
-    /// * `text`: Text to store without terminating zero.
-    pub fn append(&mut self, index: usize, text: Option<&[C]>)
-    where
-        C: Default + Copy,
-    {
-        if let Some(text) = text {
-            if text.len() > self.max_str_len {
-                let new_max_str_len = (text.len() as f64 * 1.2) as usize;
-                self.resize_max_str(new_max_str_len, index)
-            }
-
-            let offset = index * (self.max_str_len + 1);
-            self.values[offset..offset + text.len()].copy_from_slice(text);
-            // Add terminating zero to string.
-            self.values[offset + text.len()] = C::default();
-            // And of course set the indicator correctly.
-            self.indicators[index] = (text.len() * size_of::<C>()).try_into().unwrap();
-        } else {
-            self.indicators[index] = NULL_DATA;
-        }
-    }
-
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `input` must be specified without the terminating zero.
@@ -601,58 +572,6 @@ where
     /// Change a single value in the column at the specified index.
     pub fn set_value(&mut self, index: usize, value: Option<&[C]>) {
         self.column.set_value(index, value)
-    }
-
-    /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum string
-    /// length should the text be larger than the maximum allowed string size. The number of rows
-    /// the column buffer can hold stays constant, but during rebind only values before `index` would
-    /// be copied to the new memory location. Therefore this method is intended to be used to fill
-    /// the buffer element-wise and in order. Hence the name `append`.
-    ///
-    /// # Parameters
-    ///
-    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
-    ///   currently in the buffer.
-    /// * `text`: Text to store without terminating zero.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use odbc_api::buffers::{
-    /// #   BufferDescription, BufferKind, AnyColumnViewMut, ColumnarAnyBuffer
-    /// # };
-    /// # use std::iter;
-    /// #
-    /// let desc = BufferDescription {
-    ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
-    ///     // encounter larger inputs.
-    ///     kind: BufferKind::Text { max_str_len: 1 },
-    ///     nullable: true,
-    /// };
-    ///
-    /// // Input values to insert.
-    /// let input = [
-    ///     Some(&b"Hi"[..]),
-    ///     Some(&b"Hello"[..]),
-    ///     Some(&b"World"[..]),
-    ///     None,
-    ///     Some(&b"Hello, World!"[..]),
-    /// ];
-    ///
-    /// let mut buffer = ColumnarAnyBuffer::from_description(input.len(), iter::once(desc));
-    ///
-    /// buffer.set_num_rows(input.len());
-    /// if let AnyColumnViewMut::Text(mut writer) = buffer.column_mut(0) {
-    ///     for (index, &text) in input.iter().enumerate() {
-    ///         writer.append(index, text)
-    ///     }
-    /// } else {
-    ///     panic!("Expected text column writer");
-    /// };
-    /// ```
-    ///
-    pub fn append(&mut self, index: usize, text: Option<&[C]>) {
-        self.column.append(index, text)
     }
 
     /// Can be used to set a value at a specific row index without performing a memcopy on an input

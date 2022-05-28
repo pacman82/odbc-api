@@ -429,65 +429,6 @@ impl<'a> BinColumnWriter<'a> {
     pub fn resize_max_element_length(&mut self, new_max_len: usize, num_rows: usize) {
         self.column.resize_max_element_length(new_max_len, num_rows)
     }
-
-    /// Inserts a new element to the column buffer. Rebinds the buffer to increase maximum element
-    /// length should the value be larger than the maximum allowed element length. The number of
-    /// rows the column buffer can hold stays constant, but during rebind only values before `index`
-    /// would be copied to the new memory location. Therefore this method is intended to be used to
-    /// fill the buffer element-wise and in order. Hence the name `append`.
-    ///
-    /// # Parameters
-    ///
-    /// * `index`: Zero based index of the new row position. Must be equal to the number of rows
-    ///   currently in the buffer.
-    /// * `bytes`: Value to store
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use odbc_api::buffers::{
-    ///     BufferDescription, BufferKind, AnyColumnViewMut, AnyColumnView, ColumnarAnyBuffer
-    /// };
-    /// # use std::iter;
-    /// #
-    /// let desc = BufferDescription {
-    ///     // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
-    ///     // encounter larger inputs.
-    ///     kind: BufferKind::Binary { length: 1 },
-    ///     nullable: true,
-    /// };
-    ///
-    /// // Input values to insert.
-    /// let input : [Option<&[u8]>; 5]= [
-    ///     Some(&[1]),
-    ///     Some(&[2,3]),
-    ///     Some(&[4,5,6]),
-    ///     None,
-    ///     Some(&[7,8,9,10,11,12]),
-    /// ];
-    ///
-    /// let mut buffer = ColumnarAnyBuffer::from_description(input.len(), iter::once(desc));
-    ///
-    /// buffer.set_num_rows(input.len());
-    /// if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
-    ///     for (index, &bytes) in input.iter().enumerate() {
-    ///         writer.append(index, bytes)
-    ///     }
-    /// } else {
-    ///     panic!("Expected binary column writer");
-    /// }
-    ///
-    /// let col_view = buffer.column(0).as_bin_view().expect("Expected binary column slice");
-    /// assert!(
-    ///     col_view
-    ///         .iter()
-    ///         .zip(input.iter().copied())
-    ///         .all(|(expected, actual)| expected == actual)
-    /// )
-    /// ```
-    pub fn append(&mut self, index: usize, bytes: Option<&[u8]>) {
-        self.column.append(index, bytes)
-    }
 }
 
 unsafe impl CData for BinColumn {

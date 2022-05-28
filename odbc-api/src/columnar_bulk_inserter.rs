@@ -106,6 +106,74 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
         self.parameter_set_size = num_rows;
     }
 
+    /// Use this method to gain write access to the actual column data.
+    ///
+    /// # Parameters
+    ///
+    /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
+    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   the output result set. This is important, because not every column needs to be bound. Some
+    ///   columns may simply be ignored. That being said, if every column of the output is bound in
+    ///   the buffer, in the same order in which they are enumerated in the result set, the
+    ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
+    ///
+    /// # Example
+    ///
+    /// This method is intend to be called if using [`ColumnarBulkInserter`] for column wise bulk
+    /// inserts.
+    ///
+    /// ```no_run
+    /// use odbc_api::{Connection, Error, buffers::{BufferDescription, BufferKind}};
+    ///
+    /// fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16])
+    ///     -> Result<(), Error>
+    /// {
+    ///
+    ///     // All columns must have equal length.
+    ///     assert_eq!(names.len(), years.len());
+    ///     // Prepare the insert statement
+    ///     let prepared = conn.prepare("INSERT INTO Birthdays (name, year) VALUES (?, ?)")?;
+    ///     // Create a columnar buffer which fits the input parameters.
+    ///     let buffer_description = [
+    ///         BufferDescription {
+    ///             kind: BufferKind::Text { max_str_len: 255 },
+    ///             nullable: false,
+    ///         },
+    ///         BufferDescription {
+    ///             kind: BufferKind::I16,
+    ///             nullable: false,
+    ///         },
+    ///     ];
+    ///     // Here we do everything in one batch. So the capacity is the number of input
+    ///     // parameters.
+    ///     let capacity = names.len();
+    ///     let mut prebound = prepared.into_any_column_inserter(capacity, buffer_description)?;
+    ///     // Set number of input rows in the current batch.
+    ///     prebound.set_num_rows(names.len());
+    ///     // Fill the buffer with values column by column
+    /// 
+    ///     // Fill names
+    ///     let mut col = prebound
+    ///         .column_mut(0)
+    ///         .as_text_view()
+    ///         .expect("We know the name column to hold text.");
+    ///     for (index, name) in names.iter().map(|s| Some(s.as_bytes())).enumerate() {
+    ///         col.set_cell(index, name);
+    ///     }
+    /// 
+    ///     // Fill birth years
+    ///     let mut col = prebound
+    ///         .column_mut(1)
+    ///         .as_slice::<i16>()
+    ///         .expect("We know the year column to hold i16.");
+    ///     col.copy_from_slice(years);
+    ///
+    ///     // Execute the prepared statment with the bound array parameters. Sending the values to
+    ///     // the database.
+    ///     prebound.execute()?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn column_mut<'a>(&'a mut self, buffer_index: usize) -> C::SliceMut
     where
         C: BoundInputSlice<'a, 'o>,
@@ -170,9 +238,9 @@ impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
                         .as_view_mut(col_index, &mut self.statement)
                         .ensure_max_element_length(text.len(), self.parameter_set_size)?;
                 }
-                column.append(self.parameter_set_size, Some(text));
+                column.set_value(self.parameter_set_size, Some(text));
             } else {
-                column.append(self.parameter_set_size, None);
+                column.set_value(self.parameter_set_size, None);
             }
             col_index += 1;
         }

@@ -11,8 +11,7 @@ use common::{
 
 use odbc_api::{
     buffers::{
-        AnyColumnViewMut, BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer,
-        Indicator, Item, TextColumn, TextRowSet,
+        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
@@ -932,28 +931,25 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     // Setup
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
-    let column_buffer = WithDataType {
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let parameter_buffers = vec![WithDataType {
         value: TextColumn::try_new(4, 5).unwrap(),
         data_type: DataType::Integer,
-    };
-
-    // Fill buffer with values
-    let mut buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
-
-    // Input values to insert.
-    let input = [Some(&b"1"[..]), Some(&b"2"[..]), None, Some(&b"4"[..])];
-
-    buffer.set_num_rows(input.len());
-    let mut writer = buffer.column_mut(0);
-
-    writer.write(input.iter().copied());
+    }];
+    // Safety: all values in the buffer are safe for insertion
+    let mut prebound =
+        unsafe { prepared.unchecked_bind_columnar_array_parameters(parameter_buffers) }.unwrap();
+    prebound.set_num_rows(4);
+    let mut writer = prebound.column_mut(0);
+    writer.set_cell(0, Some("1".as_bytes()));
+    writer.set_cell(1, Some("2".as_bytes()));
+    writer.set_cell(2, None);
+    writer.set_cell(3, Some("4".as_bytes()));
 
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
@@ -1026,7 +1022,6 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
     let conn = profile
         .setup_empty_table(table_name, &["VARBINARY(13)"])
         .unwrap();
-
     // Fill buffer with values
     let desc = BufferDescription {
         // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
@@ -1034,7 +1029,6 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
         kind: BufferKind::Binary { length: 1 },
         nullable: true,
     };
-
     // Input values to insert.
     let input = [
         Some(&b"Hi"[..]),
@@ -1044,28 +1038,28 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
         Some(&b"Hello, World!"[..]),
     ];
 
-    let mut buffer =
-        ColumnarAnyBuffer::try_from_description(input.len(), iter::once(desc)).unwrap();
-
-    buffer.set_num_rows(input.len());
-    if let AnyColumnViewMut::Binary(mut writer) = buffer.column_mut(0) {
-        for (index, &bytes) in input.iter().enumerate() {
-            writer.append(index, bytes)
-        }
-    } else {
-        panic!("Expected binary column writer");
-    };
-
     // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let mut prebound = prepared
+        .into_any_column_inserter(input.len(), [desc])
+        .unwrap();
+    prebound.set_num_rows(input.len());
+    let mut writer = prebound.column_mut(0).as_bin_view().unwrap();
+    for (row_index, &bytes) in input.iter().enumerate() {
+        // Resize and rebind the buffer if it turns out to be to small.
+        writer
+            .ensure_max_element_length(bytes.map(|b| b.len()).unwrap_or(0), row_index)
+            .unwrap();
+        writer.set_cell(row_index, bytes)
+    }
+
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -1083,40 +1077,33 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
         .setup_empty_table(table_name, &["NVARCHAR(13)"])
         .unwrap();
 
-    // Fill buffer with values
-    let desc = BufferDescription {
-        // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
-        // not work.
-        kind: BufferKind::WText { max_str_len: 5 },
-        nullable: true,
-    };
-    let mut buffer = ColumnarAnyBuffer::try_from_description(10, iter::once(desc)).unwrap();
-
-    // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
-    // reallocation of the underlying buffer.
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
     let input = [
         Some(U16String::from_str("Hello")),
         Some(U16String::from_str("World")),
         None,
         Some(U16String::from_str("Hello, World!")),
     ];
-
-    buffer.set_num_rows(input.len());
-    let mut writer = buffer.column_mut(0).as_w_text_view().unwrap();
-    // Reset length to make room for `Hello, World!`.
-    writer.resize_max_str(13, 0);
-    writer.write(
-        input
-            .iter()
-            .map(|opt| opt.as_ref().map(|ustring| ustring.as_slice())),
-    );
-
-    // Bind buffer and insert values.
-    conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
-        &buffer,
-    )
-    .unwrap();
+    // Fill buffer with values
+    let desc = BufferDescription {
+        kind: BufferKind::WText { max_str_len: 20 },
+        nullable: true,
+    };
+    let mut prebound = prepared
+        .into_any_column_inserter(input.len(), [desc])
+        .unwrap();
+    prebound.set_num_rows(input.len());
+    let mut writer = prebound.column_mut(0).as_w_text_view().unwrap();
+    for (row_index, value) in input
+        .iter()
+        .map(|opt| opt.as_ref().map(|ustring| ustring.as_slice()))
+        .enumerate()
+    {
+        writer.set_cell(row_index, value)
+    }
+    prebound.execute().unwrap();
 
     // Query values and compare with expectation
     let cursor = conn
