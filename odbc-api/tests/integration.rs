@@ -3298,6 +3298,50 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     matches!(cursor.fetch(), Err(Error::TooLargeValueForBuffer));
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn grow_batch_size_during_bulk_insert(profile: &Profile) {
+    // Given a table
+    let table_name = "GrowBatchSizeDuringBulkInsert";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+
+    // When insert two batches with size one and two.
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let desc = BufferDescription {
+        nullable: false,
+        kind: BufferKind::I32,
+    };
+    // The first batch is inserted with capacity 1
+    let mut prebound = prepared.into_any_column_inserter(1, [desc]).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+    // Second batch is larger than the first and does not fit into the capacity. Only way to resize
+    // is currently to destroy everything including the prepared statement and create everything a
+    // new, which is costly.
+    let prepared = conn
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let mut prebound = prepared.into_any_column_inserter(2, [desc]).unwrap();
+    prebound.set_num_rows(2);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 2;
+    col[1] = 3;
+    prebound.execute().unwrap();
+
+    // Then
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1\n2\n3", actual);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
