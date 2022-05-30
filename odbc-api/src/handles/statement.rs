@@ -75,7 +75,7 @@ impl<'s> StatementImpl<'s> {
 
     /// Special wrapper to a borrowed statement. Acts like a mutable reference to an owned
     /// statement, but allows the lifetime of the tracked connection to stay covariant.
-    pub fn as_stmt_ref(&mut self) -> StatementRef<'s> {
+    pub fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         StatementRef {
             parent: self.parent,
             handle: self.handle,
