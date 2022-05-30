@@ -1,7 +1,7 @@
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
+    handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
     DataType, Error,
 };
 
@@ -386,7 +386,7 @@ impl<'c, C> TextColumnView<'c, C> {
 }
 
 unsafe impl<'a, 'o: 'a, C: 'static> BoundInputSlice<'a, 'o> for TextColumn<C> {
-    type SliceMut = TextColumnSliceMut<'a, 'o, C>;
+    type SliceMut = TextColumnSliceMut<'a, C>;
 
     unsafe fn as_view_mut(
         &'a mut self,
@@ -395,7 +395,7 @@ unsafe impl<'a, 'o: 'a, C: 'static> BoundInputSlice<'a, 'o> for TextColumn<C> {
     ) -> Self::SliceMut {
         TextColumnSliceMut {
             column: self,
-            stmt,
+            stmt: stmt.as_stmt_ref(),
             parameter_index,
         }
     }
@@ -403,15 +403,15 @@ unsafe impl<'a, 'o: 'a, C: 'static> BoundInputSlice<'a, 'o> for TextColumn<C> {
 
 /// A view to a mutable array parameter text buffer, which allows for filling the buffer with
 /// values.
-pub struct TextColumnSliceMut<'a, 'o, C> {
+pub struct TextColumnSliceMut<'a, C> {
     column: &'a mut TextColumn<C>,
     // Needed to rebind the column in case of resize
-    stmt: &'a mut StatementImpl<'o>,
+    stmt: StatementRef<'a>,
     // Also needed to rebind the column in case of resize
     parameter_index: u16,
 }
 
-impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> where C: Default + Copy {
+impl<'a, C> TextColumnSliceMut<'a, C> where C: Default + Copy {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `element` must be specified without the terminating zero.
@@ -442,7 +442,7 @@ impl<'a, 'o, C> TextColumnSliceMut<'a, 'o, C> where C: Default + Copy {
             unsafe {
                 self.stmt
                     .bind_input_parameter(self.parameter_index, self.column)
-                    .into_result(self.stmt)?
+                    .into_result(&self.stmt)?
             }
         }
         Ok(())

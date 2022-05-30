@@ -485,9 +485,9 @@ unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
 /// A mutable slice of an input buffer, with runtime type information. Edit values in this slice in
 /// order to send parameters in bulk to a database.
 pub enum AnyColumnSliceMut<'a,'o> {
-    Text(TextColumnSliceMut<'a, 'o, u8>),
+    Text(TextColumnSliceMut<'a, u8>),
     /// Nullable character data encoded in UTF-16.
-    WText(TextColumnSliceMut<'a, 'o, u16>),
+    WText(TextColumnSliceMut<'a, u16>),
     Binary(BinColumnSliceMut<'a, 'o>),
     Date(&'a mut [Date]),
     Time(&'a mut [Time]),
@@ -526,7 +526,7 @@ impl<'a, 'o> AnyColumnSliceMut<'a, 'o> {
 
     /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Text`]. It allows
     /// to you unwrap the inner column view without explictly matching it.
-    pub fn as_text_view(self) -> Option<TextColumnSliceMut<'a, 'o, u8>> {
+    pub fn as_text_view(self) -> Option<TextColumnSliceMut<'a, u8>> {
         if let Self::Text(view) = self {
             Some(view)
         } else {
@@ -536,7 +536,7 @@ impl<'a, 'o> AnyColumnSliceMut<'a, 'o> {
 
     /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::WText`]. It
     /// allows you to unwrap the inner column view without explictly matching it.
-    pub fn as_w_text_view(self) -> Option<TextColumnSliceMut<'a, 'o, u16>> {
+    pub fn as_w_text_view(self) -> Option<TextColumnSliceMut<'a, u16>> {
         if let Self::WText(view) = self {
             Some(view)
         } else {
