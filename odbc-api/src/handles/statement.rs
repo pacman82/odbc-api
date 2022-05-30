@@ -31,7 +31,7 @@ use odbc_sys::{
     SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
-/// Wraps a valid (i.e. successfully allocated) ODBC statement handle.
+/// An owned valid (i.e. successfully allocated) ODBC statement handle.
 pub struct StatementImpl<'s> {
     parent: PhantomData<&'s HDbc>,
     handle: HStmt,
@@ -71,6 +71,40 @@ impl<'s> StatementImpl<'s> {
     pub fn into_sys(self) -> HStmt {
         // We do not want to run the drop handler, but transfer ownership instead.
         ManuallyDrop::new(self).handle
+    }
+
+    /// Special wrapper to a borrowed statement. Acts like a mutable reference to an owned
+    /// statement, but allows the lifetime of the tracked connection to stay covariant.
+    pub fn as_stmt_ref(&mut self) -> StatementRef<'s> {
+        StatementRef {
+            parent: self.parent,
+            handle: self.handle,
+        }
+    }
+}
+
+/// A borrowed valid (i.e. successfully allocated) ODBC statement handle. This can be used instead
+/// of a mutable reference to a [`StatementImpl`]. The main advantage here is that the lifetime
+/// paramater remains covariant, thereas if we would just take a mutable reference to an owned
+/// statement it would become invariant.
+pub struct StatementRef<'s> {
+    parent: PhantomData<&'s HDbc>,
+    handle: HStmt,
+}
+
+impl<'s> Statement for StatementRef<'s> {
+    fn as_sys(&self) -> HStmt {
+        self.handle
+    }
+}
+
+unsafe impl<'c> AsHandle for StatementRef<'c> {
+    fn as_handle(&self) -> Handle {
+        self.handle as Handle
+    }
+
+    fn handle_type(&self) -> HandleType {
+        HandleType::Stmt
     }
 }
 
