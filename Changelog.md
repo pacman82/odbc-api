@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.43.0
+
+* `BoundInputSlice`, `TextColumnSliceMut` and `BinColumnSliceMut` now only track the lifetime of the statement. The do no longer need to track the lifetime of the `Connection` anymore.
+
 ## 0.42.0
 
 * Removed `TextColumn::set_max_len` as `resize_max_str_len` can do everything the former can and
