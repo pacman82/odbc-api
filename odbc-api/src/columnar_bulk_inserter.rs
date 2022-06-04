@@ -1,7 +1,7 @@
 use crate::{
     buffers::{ColumnBuffer, TextColumn},
     execute::execute,
-    handles::{HasDataType, Statement, StatementImpl},
+    handles::{HasDataType, Statement, StatementImpl, StatementRef},
     CursorImpl, Error,
 };
 
@@ -151,7 +151,7 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     ///     // Set number of input rows in the current batch.
     ///     prebound.set_num_rows(names.len());
     ///     // Fill the buffer with values column by column
-    /// 
+    ///
     ///     // Fill names
     ///     let mut col = prebound
     ///         .column_mut(0)
@@ -160,7 +160,7 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     ///     for (index, name) in names.iter().map(|s| Some(s.as_bytes())).enumerate() {
     ///         col.set_cell(index, name);
     ///     }
-    /// 
+    ///
     ///     // Fill birth years
     ///     let mut col = prebound
     ///         .column_mut(1)
@@ -176,11 +176,11 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     /// ```
     pub fn column_mut<'a>(&'a mut self, buffer_index: usize) -> C::SliceMut
     where
-        C: BoundInputSlice<'a, 'o>,
+        C: BoundInputSlice<'a>,
     {
         unsafe {
             self.parameters[buffer_index]
-                .as_view_mut((buffer_index + 1) as u16, &mut self.statement)
+                .as_view_mut((buffer_index + 1) as u16, self.statement.as_stmt_ref())
         }
     }
 }
@@ -192,7 +192,7 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
 /// If any operations have been performed which would invalidate the pointers bound to the
 /// statement, the slice must use the statement handle to rebind the column, at the end of its
 /// lifetime (at the latest).
-pub unsafe trait BoundInputSlice<'a, 'o> {
+pub unsafe trait BoundInputSlice<'a> {
     /// Intended to allow for modifying buffer contents, while leaving the bound parameter buffers
     /// valid.
     type SliceMut;
@@ -207,7 +207,7 @@ pub unsafe trait BoundInputSlice<'a, 'o> {
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,
-        stmt: &'a mut StatementImpl<'o>,
+        stmt: StatementRef<'a>,
     ) -> Self::SliceMut;
 }
 
@@ -235,7 +235,7 @@ impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
             if let Some(text) = text {
                 unsafe {
                     column
-                        .as_view_mut(col_index, &mut self.statement)
+                        .as_view_mut(col_index, self.statement.as_stmt_ref())
                         .ensure_max_element_length(text.len(), self.parameter_set_size)?;
                 }
                 column.set_value(self.parameter_set_size, Some(text));

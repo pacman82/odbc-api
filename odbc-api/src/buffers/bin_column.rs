@@ -2,7 +2,7 @@ use crate::{
     buffers::Indicator,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl, StatementRef},
+    handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
     DataType, Error,
 };
 
@@ -247,17 +247,17 @@ impl BinColumn {
     }
 }
 
-unsafe impl<'a, 'o> BoundInputSlice<'a, 'o> for BinColumn {
+unsafe impl<'a> BoundInputSlice<'a> for BinColumn {
     type SliceMut = BinColumnSliceMut<'a>;
 
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,
-        stmt: &'a mut StatementImpl<'o>,
+        stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
         BinColumnSliceMut {
             column: self,
-            stmt: stmt.as_stmt_ref(),
+            stmt,
             parameter_index,
         }
     }

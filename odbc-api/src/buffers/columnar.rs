@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    handles::{CDataMut, Statement},
+    handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     Cursor, Error, ResultSetMetadata, RowSetBuffer, columnar_bulk_inserter::BoundInputSlice,
 };
@@ -182,13 +182,13 @@ where
     }
 }
 
-unsafe impl<'a, 'o, T> BoundInputSlice<'a, 'o> for WithDataType<T> where T: BoundInputSlice<'a, 'o> {
+unsafe impl<'a, T> BoundInputSlice<'a> for WithDataType<T> where T: BoundInputSlice<'a> {
     type SliceMut = T::SliceMut;
 
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,
-        stmt: &'a mut crate::handles::StatementImpl<'o>,
+        stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
         self.value.as_view_mut(parameter_index, stmt)
     }

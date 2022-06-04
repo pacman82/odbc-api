@@ -4,7 +4,7 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, StatementImpl},
+    handles::{CData, CDataMut, HasDataType, StatementRef},
     Bit, DataType, Error, columnar_bulk_inserter::BoundInputSlice,
 };
 
@@ -443,13 +443,13 @@ impl<'a> AnyColumnView<'a> {
     }
 }
 
-unsafe impl<'a, 'o> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
+unsafe impl<'a> BoundInputSlice<'a> for AnyColumnBuffer {
     type SliceMut = AnyColumnSliceMut<'a>;
 
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,
-        stmt: &'a mut StatementImpl<'o>,
+        stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
         let num_rows = self.capacity();
         match self {

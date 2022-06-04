@@ -385,17 +385,17 @@ impl<'c, C> TextColumnView<'c, C> {
     }
 }
 
-unsafe impl<'a, 'o: 'a, C: 'static> BoundInputSlice<'a, 'o> for TextColumn<C> {
+unsafe impl<'a, C: 'static> BoundInputSlice<'a> for TextColumn<C> {
     type SliceMut = TextColumnSliceMut<'a, C>;
 
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,
-        stmt: &'a mut crate::handles::StatementImpl<'o>,
+        stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
         TextColumnSliceMut {
             column: self,
-            stmt: stmt.as_stmt_ref(),
+            stmt,
             parameter_index,
         }
     }
