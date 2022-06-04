@@ -443,8 +443,8 @@ impl<'a> AnyColumnView<'a> {
     }
 }
 
-unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
-    type SliceMut = AnyColumnSliceMut<'a, 'o>;
+unsafe impl<'a, 'o> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
+    type SliceMut = AnyColumnSliceMut<'a>;
 
     unsafe fn as_view_mut(
         &'a mut self,
@@ -484,11 +484,11 @@ unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for AnyColumnBuffer {
 
 /// A mutable slice of an input buffer, with runtime type information. Edit values in this slice in
 /// order to send parameters in bulk to a database.
-pub enum AnyColumnSliceMut<'a,'o> {
+pub enum AnyColumnSliceMut<'a> {
     Text(TextColumnSliceMut<'a, u8>),
     /// Nullable character data encoded in UTF-16.
     WText(TextColumnSliceMut<'a, u16>),
-    Binary(BinColumnSliceMut<'a, 'o>),
+    Binary(BinColumnSliceMut<'a>),
     Date(&'a mut [Date]),
     Time(&'a mut [Time]),
     Timestamp(&'a mut [Timestamp]),
@@ -513,10 +513,10 @@ pub enum AnyColumnSliceMut<'a,'o> {
     NullableBit(NullableSliceMut<'a, Bit>),
 }
 
-impl<'a, 'o> AnyColumnSliceMut<'a, 'o> {
+impl<'a> AnyColumnSliceMut<'a> {
     /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Binary`]. It
     /// allows to you unwrap the inner column view without explictly matching it.
-    pub fn as_bin_view(self) -> Option<BinColumnSliceMut<'a, 'o>> {
+    pub fn as_bin_view(self) -> Option<BinColumnSliceMut<'a>> {
         if let Self::Binary(view) = self {
             Some(view)
         } else {

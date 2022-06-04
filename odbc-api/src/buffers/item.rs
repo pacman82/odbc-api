@@ -17,10 +17,10 @@ pub trait Item: Sized + Copy {
     fn as_nullable_slice(variant: AnyColumnView<'_>) -> Option<NullableSlice<Self>>;
 
     /// Extract the array type from an [`AnyColumnSliceMut`].
-    fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<&'a mut [Self]>;
+    fn as_slice_mut(variant: AnyColumnSliceMut<'_>) -> Option<&'_ mut [Self]>;
 
     /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
-    fn as_nullable_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<NullableSliceMut<'a, Self>>;
+    fn as_nullable_slice_mut(variant: AnyColumnSliceMut<'_>) -> Option<NullableSliceMut<'_, Self>>;
 }
 
 macro_rules! impl_item {
@@ -42,7 +42,7 @@ macro_rules! impl_item {
                 }
             }
 
-            fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a, '_>) -> Option<&'a mut [Self]> {
+            fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a>) -> Option<&'a mut [Self]> {
                 match variant {
                     AnyColumnSliceMut::$plain(vals) => Some(vals),
                     _ => None,
@@ -50,7 +50,7 @@ macro_rules! impl_item {
             }
 
             fn as_nullable_slice_mut<'a>(
-                variant: AnyColumnSliceMut<'a, '_>,
+                variant: AnyColumnSliceMut<'a>,
             ) -> Option<NullableSliceMut<'a, Self>> {
                 match variant {
                     AnyColumnSliceMut::$null(vals) => Some(vals),

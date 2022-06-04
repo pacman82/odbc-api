@@ -2,7 +2,7 @@ use crate::{
     buffers::Indicator,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl},
+    handles::{CData, CDataMut, HasDataType, Statement, StatementImpl, StatementRef},
     DataType, Error,
 };
 
@@ -247,8 +247,8 @@ impl BinColumn {
     }
 }
 
-unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for BinColumn {
-    type SliceMut = BinColumnSliceMut<'a, 'o>;
+unsafe impl<'a, 'o> BoundInputSlice<'a, 'o> for BinColumn {
+    type SliceMut = BinColumnSliceMut<'a>;
 
     unsafe fn as_view_mut(
         &'a mut self,
@@ -257,7 +257,7 @@ unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for BinColumn {
     ) -> Self::SliceMut {
         BinColumnSliceMut {
             column: self,
-            stmt,
+            stmt: stmt.as_stmt_ref(),
             parameter_index,
         }
     }
@@ -265,15 +265,15 @@ unsafe impl<'a, 'o: 'a> BoundInputSlice<'a, 'o> for BinColumn {
 
 /// A view to a mutable array parameter text buffer, which allows for filling the buffer with
 /// values.
-pub struct BinColumnSliceMut<'a, 'o> {
+pub struct BinColumnSliceMut<'a> {
     column: &'a mut BinColumn,
-    // Needed to rebind the column in case of resize
-    stmt: &'a mut StatementImpl<'o>,
-    // Also needed to rebind the column in case of resize
+    // Needed to rebind the column in case of reallocation
+    stmt: StatementRef<'a>,
+    // Also needed to rebind the column in case of reallocation
     parameter_index: u16,
 }
 
-impl<'a, 'o> BinColumnSliceMut<'a, 'o> {
+impl<'a> BinColumnSliceMut<'a> {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `element` must be specified without the terminating zero.
@@ -299,7 +299,7 @@ impl<'a, 'o> BinColumnSliceMut<'a, 'o> {
             unsafe {
                 self.stmt
                     .bind_input_parameter(self.parameter_index, self.column)
-                    .into_result(self.stmt)?
+                    .into_result(&self.stmt)?
             }
         }
         Ok(())
