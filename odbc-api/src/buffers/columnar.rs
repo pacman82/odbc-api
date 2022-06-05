@@ -5,9 +5,10 @@ use std::{
 };
 
 use crate::{
+    columnar_bulk_inserter::BoundInputSlice,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
-    Cursor, Error, ResultSetMetadata, RowSetBuffer, columnar_bulk_inserter::BoundInputSlice,
+    Cursor, Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -113,7 +114,7 @@ where
             cursor
                 .stmt_mut()
                 .bind_col(*col_number, column)
-                .into_result(cursor.stmt_mut())?;
+                .into_result(&cursor.stmt_mut())?;
         }
         Ok(())
     }
@@ -182,7 +183,10 @@ where
     }
 }
 
-unsafe impl<'a, T> BoundInputSlice<'a> for WithDataType<T> where T: BoundInputSlice<'a> {
+unsafe impl<'a, T> BoundInputSlice<'a> for WithDataType<T>
+where
+    T: BoundInputSlice<'a>,
+{
     type SliceMut = T::SliceMut;
 
     unsafe fn as_view_mut(
@@ -233,14 +237,14 @@ unsafe impl<'a, T> BoundInputSlice<'a> for WithDataType<T> where T: BoundInputSl
 ///
 ///     // Execute a one of query without any parameters.
 ///     match connection.execute("SELECT * FROM TableName", ())? {
-///         Some(cursor) => {
+///         Some(mut cursor) => {
 ///             // Write the column names to stdout
 ///             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
 ///             writer.write_record(headline)?;
 ///
 ///             // Use schema in cursor to initialize a text buffer large enough to hold the largest
 ///             // possible strings for each column up to an upper limit of 4KiB
-///             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor, Some(4096))?;
+///             let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &mut cursor, Some(4096))?;
 ///             // Bind the buffer to the cursor. It is now being filled with every call to fetch.
 ///             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 ///
@@ -287,7 +291,7 @@ impl TextRowSet {
     ///   upper bound for the length of character data.
     pub fn for_cursor(
         batch_size: usize,
-        cursor: &impl ResultSetMetadata,
+        cursor: &mut impl ResultSetMetadata,
         max_str_len: Option<usize>,
     ) -> Result<TextRowSet, Error> {
         let num_cols: u16 = cursor.num_result_cols()?.try_into().unwrap();

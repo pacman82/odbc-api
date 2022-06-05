@@ -10,14 +10,14 @@ mod item;
 mod text_column;
 
 pub use self::{
-    any_column_buffer::{AnyColumnBuffer, AnyColumnView, AnyColumnSliceMut, ColumnarAnyBuffer},
-    bin_column::{BinColumn, BinColumnIt, BinColumnView, BinColumnSliceMut},
+    any_column_buffer::{AnyColumnBuffer, AnyColumnSliceMut, AnyColumnView, ColumnarAnyBuffer},
+    bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
     description::{BufferDescription, BufferKind},
     indicator::Indicator,
     item::Item,
     text_column::{
-        CharColumn, TextColumn, TextColumnIt, TextColumnView, TextColumnSliceMut, WCharColumn,
+        CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnView, WCharColumn,
     },
 };

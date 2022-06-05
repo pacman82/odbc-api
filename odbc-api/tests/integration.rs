@@ -120,7 +120,7 @@ fn describe_columns() {
     )
     .unwrap();
     let sql = "SELECT a,b,c,d,e,f,g,h,i,j,k FROM DescribeColumns ORDER BY Id;";
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
@@ -280,7 +280,7 @@ fn column_name(profile: &Profile) {
         .unwrap();
 
     let sql = format!("SELECT a, b FROM {};", table_name);
-    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     let name = cursor.col_name(1).unwrap();
     assert_eq!("a", name);
@@ -515,7 +515,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     conn.execute(&insert_sql, ()).unwrap();
 
     // Retrieve values
-    let cursor = conn
+    let mut cursor = conn
         .execute("SELECT a FROM ColumnarFetchVarbinary ORDER BY Id", ())
         .unwrap()
         .unwrap();
@@ -558,7 +558,7 @@ fn columnar_fetch_binary(profile: &Profile) {
     .unwrap();
 
     // Retrieve values
-    let cursor = conn
+    let mut cursor = conn
         .execute("SELECT a FROM ColumnarFetchBinary ORDER BY Id", ())
         .unwrap()
         .unwrap();
@@ -605,7 +605,7 @@ fn columnar_fetch_timestamp(profile: &Profile) {
     .unwrap();
 
     // Retrieve values
-    let cursor = conn
+    let mut cursor = conn
         .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
         .unwrap()
         .unwrap();
@@ -1448,7 +1448,7 @@ fn column_names_iterator(profile: &Profile) {
         .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("SELECT a, b FROM {};", table_name);
-    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
         .column_names()
         .unwrap()
@@ -1467,7 +1467,7 @@ fn column_names_from_prepared_query(profile: &Profile) {
         .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("SELECT a, b FROM {};", table_name);
-    let prepared = conn.prepare(&sql).unwrap();
+    let mut prepared = conn.prepare(&sql).unwrap();
     let names: Vec<_> = prepared
         .column_names()
         .unwrap()
@@ -1486,7 +1486,7 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
         .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a, b) VALUES (42, 'Hello');", table_name);
-    let prepared = conn.prepare(&sql).unwrap();
+    let mut prepared = conn.prepare(&sql).unwrap();
     assert_eq!(0, prepared.num_result_cols().unwrap());
 }
 
@@ -2313,12 +2313,12 @@ fn capped_text_buffer(profile: &Profile) {
     )
     .unwrap();
 
-    let cursor = conn
+    let mut cursor = conn
         .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
         .unwrap()
         .unwrap();
 
-    let row_set_buffer = TextRowSet::for_cursor(1, &cursor, Some(5)).unwrap();
+    let row_set_buffer = TextRowSet::for_cursor(1, &mut cursor, Some(5)).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let field = batch.at_as_str(0, 0).unwrap().unwrap();
@@ -3011,7 +3011,7 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
     // tables a lot, listing them in parallel is dangerous. This filter gets rid of most of the
     // weirdness.
     let table_name = "table_does_not_exist";
-    let cursor = conn.columns("", "", table_name, "").unwrap();
+    let mut cursor = conn.columns("", "", table_name, "").unwrap();
     let mut column_description = ColumnDescription::default();
     let mut size_of_row = 0;
     for index in 0..cursor.num_result_cols().unwrap() {

@@ -1,7 +1,7 @@
 use std::intrinsics::transmute;
 
 use crate::{
-    borrow_mut_statement::BorrowMutStatement,
+    borrow_mut_statement::AsStatementRef,
     handles::{SqlText, Statement},
     parameter::Blob,
     CursorImpl, Error, ParameterCollectionRef,
@@ -24,7 +24,7 @@ pub fn execute_with_parameters<S>(
     mut params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
     let parameter_set_size = params.parameter_set_size();
     if parameter_set_size == 0 {
@@ -33,15 +33,15 @@ where
 
     // Only allocate the statement, if we know we are going to execute something.
     let mut statement = lazy_statement()?;
-    let stmt = statement.borrow_mut();
+    let mut stmt = statement.as_stmt_ref();
     // Reset parameters so we do not dereference stale once by mistake if we call
     // `exec_direct`.
-    stmt.reset_parameters().into_result(stmt)?;
+    stmt.reset_parameters().into_result(&stmt)?;
     unsafe {
         stmt.set_paramset_size(parameter_set_size)
-            .into_result(stmt)?;
+            .into_result(&stmt)?;
         // Bind new parameters passed by caller.
-        params.bind_parameters_to(stmt)?;
+        params.bind_parameters_to(&mut stmt)?;
         execute(statement, query)
     }
 }
@@ -56,31 +56,31 @@ pub unsafe fn execute<S>(
     query: Option<&SqlText>,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
-    let stmt = statement.borrow_mut();
+    let mut stmt = statement.as_stmt_ref();
     let need_data = if let Some(sql) = query {
-        stmt.exec_direct(sql).into_result(stmt)?
+        stmt.exec_direct(sql).into_result(&stmt)?
     } else {
-        stmt.execute().into_result(stmt)?
+        stmt.execute().into_result(&stmt)?
     };
 
     if need_data {
         // Check if any delayed parameters have been bound which stream data to the database at
         // statement execution time. Loops over each bound stream.
-        while let Some(blob_ptr) = stmt.param_data().into_result(stmt)? {
+        while let Some(blob_ptr) = stmt.param_data().into_result(&stmt)? {
             // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
             let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
             let blob_ref = &mut *blob_ptr;
             // Loop over all batches within each blob
             while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
-                stmt.put_binary_batch(batch).into_result(stmt)?;
+                stmt.put_binary_batch(batch).into_result(&stmt)?;
             }
         }
     }
 
     // Check if a result set has been created.
-    if stmt.num_result_cols().into_result(stmt)? == 0 {
+    if stmt.num_result_cols().into_result(&stmt)? == 0 {
         Ok(None)
     } else {
         // Safe: `statement` is in cursor state.
@@ -99,12 +99,12 @@ pub fn execute_columns<S>(
     column_name: &SqlText,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
-    let stmt = statement.borrow_mut();
+    let mut stmt = statement.as_stmt_ref();
 
     stmt.columns(catalog_name, schema_name, table_name, column_name)
-        .into_result(stmt)?;
+        .into_result(&stmt)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
@@ -124,12 +124,12 @@ pub fn execute_tables<S>(
     column_name: &SqlText,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
-    let stmt = statement.borrow_mut();
+    let mut stmt = statement.as_stmt_ref();
 
     stmt.tables(catalog_name, schema_name, table_name, column_name)
-        .into_result(stmt)?;
+        .into_result(&stmt)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);

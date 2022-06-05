@@ -55,14 +55,14 @@ fn main() -> Result<(), Error> {
 
     // Execute a one of query without any parameters.
     match connection.execute("SELECT * FROM TableName", ())? {
-        Some(cursor) => {
+        Some(mut cursor) => {
             // Write the column names to stdout
             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
             writer.write_record(headline)?;
 
             // Use schema in cursor to initialize a text buffer large enough to hold the largest
             // possible strings for each column up to an upper limit of 4KiB.
-            let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &cursor, Some(4096))?;
+            let mut buffers = TextRowSet::for_cursor(BATCH_SIZE, &mut cursor, Some(4096))?;
             // Bind the buffer to the cursor. It is now being filled with every call to fetch.
             let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
@@ -431,7 +431,7 @@ use odbc_api::{
 fn get_birthdays<'a>(conn: &'a mut Connection)
     -> Result<RowSetCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
 {
-    let cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
+    let mut cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
     let mut column_description = Default::default();
     let buffer_description : Vec<_> = (0..cursor.num_result_cols()?).map(|index| {
         cursor.describe_col(index as u16 + 1, &mut column_description)?;
@@ -511,7 +511,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
         .column_mut(0)
         .as_text_view()
         .expect("We know the name column to hold text.");
-    
+
     for (index, name) in names.iter().enumerate() {
         col.set_cell(index, Some(name.as_bytes()));
     }

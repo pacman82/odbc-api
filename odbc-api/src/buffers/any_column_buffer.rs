@@ -3,20 +3,22 @@ use std::{collections::HashSet, ffi::c_void};
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
+    columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
-    Bit, DataType, Error, columnar_bulk_inserter::BoundInputSlice,
+    Bit, DataType, Error,
 };
 
 use super::{
+    bin_column::BinColumnSliceMut,
     column_with_indicator::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
         OptI64Column, OptI8Column, OptTimeColumn, OptTimestampColumn, OptU8Column,
     },
     columnar::{ColumnBuffer, ColumnProjections},
-    BinColumn, BinColumnView, BufferDescription, BufferKind, CharColumn,
-    ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView,
-    WCharColumn, text_column::TextColumnSliceMut, bin_column::BinColumnSliceMut,
+    text_column::TextColumnSliceMut,
+    BinColumn, BinColumnView, BufferDescription, BufferKind, CharColumn, ColumnarBuffer, Item,
+    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -453,9 +455,15 @@ unsafe impl<'a> BoundInputSlice<'a> for AnyColumnBuffer {
     ) -> Self::SliceMut {
         let num_rows = self.capacity();
         match self {
-            AnyColumnBuffer::Binary(column) => AnyColumnSliceMut::Binary(column.as_view_mut(parameter_index, stmt)),
-            AnyColumnBuffer::Text(column) => AnyColumnSliceMut::Text(column.as_view_mut(parameter_index, stmt)),
-            AnyColumnBuffer::WText(column) => AnyColumnSliceMut::WText(column.as_view_mut(parameter_index, stmt)),
+            AnyColumnBuffer::Binary(column) => {
+                AnyColumnSliceMut::Binary(column.as_view_mut(parameter_index, stmt))
+            }
+            AnyColumnBuffer::Text(column) => {
+                AnyColumnSliceMut::Text(column.as_view_mut(parameter_index, stmt))
+            }
+            AnyColumnBuffer::WText(column) => {
+                AnyColumnSliceMut::WText(column.as_view_mut(parameter_index, stmt))
+            }
             AnyColumnBuffer::Date(column) => AnyColumnSliceMut::Date(column),
             AnyColumnBuffer::Time(column) => AnyColumnSliceMut::Time(column),
             AnyColumnBuffer::Timestamp(column) => AnyColumnSliceMut::Timestamp(column),
@@ -467,17 +475,39 @@ unsafe impl<'a> BoundInputSlice<'a> for AnyColumnBuffer {
             AnyColumnBuffer::I64(column) => AnyColumnSliceMut::I64(column),
             AnyColumnBuffer::U8(column) => AnyColumnSliceMut::U8(column),
             AnyColumnBuffer::Bit(column) => AnyColumnSliceMut::Bit(column),
-            AnyColumnBuffer::NullableDate(column) => AnyColumnSliceMut::NullableDate(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableTime(column) => AnyColumnSliceMut::NullableTime(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableTimestamp(column) => AnyColumnSliceMut::NullableTimestamp(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableF64(column) => AnyColumnSliceMut::NullableF64(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableF32(column) => AnyColumnSliceMut::NullableF32(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableI8(column) => AnyColumnSliceMut::NullableI8(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableI16(column) => AnyColumnSliceMut::NullableI16(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableI32(column) => AnyColumnSliceMut::NullableI32(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableI64(column) => AnyColumnSliceMut::NullableI64(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableU8(column) => AnyColumnSliceMut::NullableU8(column.writer_n(num_rows)),
-            AnyColumnBuffer::NullableBit(column) => AnyColumnSliceMut::NullableBit(column.writer_n(num_rows)),
+            AnyColumnBuffer::NullableDate(column) => {
+                AnyColumnSliceMut::NullableDate(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableTime(column) => {
+                AnyColumnSliceMut::NullableTime(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableTimestamp(column) => {
+                AnyColumnSliceMut::NullableTimestamp(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableF64(column) => {
+                AnyColumnSliceMut::NullableF64(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableF32(column) => {
+                AnyColumnSliceMut::NullableF32(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI8(column) => {
+                AnyColumnSliceMut::NullableI8(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI16(column) => {
+                AnyColumnSliceMut::NullableI16(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI32(column) => {
+                AnyColumnSliceMut::NullableI32(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableI64(column) => {
+                AnyColumnSliceMut::NullableI64(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableU8(column) => {
+                AnyColumnSliceMut::NullableU8(column.writer_n(num_rows))
+            }
+            AnyColumnBuffer::NullableBit(column) => {
+                AnyColumnSliceMut::NullableBit(column.writer_n(num_rows))
+            }
         }
     }
 }

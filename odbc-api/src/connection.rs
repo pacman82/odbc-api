@@ -152,7 +152,7 @@ impl<'c> Connection<'c> {
         };
         // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
         // resulting cursor would depend on the lifetime of `params`.
-        let cursor = ManuallyDrop::new(cursor);
+        let mut cursor = ManuallyDrop::new(cursor);
         let handle = cursor.as_sys();
         // Safe: `handle` is a valid statement, and we are giving up ownership of `self`.
         let statement = unsafe { StatementConnection::new(handle, self) };
@@ -391,7 +391,7 @@ impl<'c> Connection<'c> {
     ///
     /// fn print_all_tables(conn: &Connection<'_>) -> Result<(), Error> {
     ///     // Set all filters to an empty string, to really print all tables
-    ///     let cursor = conn.tables("", "", "", "")?;
+    ///     let mut cursor = conn.tables("", "", "", "")?;
     ///
     ///     // The column are gonna be TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS, but may
     ///     // also contain additional driver specific columns.
@@ -403,7 +403,7 @@ impl<'c> Connection<'c> {
     ///     }
     ///
     ///     let batch_size = 100;
-    ///     let mut buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4096))?;
+    ///     let mut buffer = TextRowSet::for_cursor(batch_size, &mut cursor, Some(4096))?;
     ///     let mut row_set_cursor = cursor.bind_buffer(&mut buffer)?;
     ///
     ///     while let Some(row_set) = row_set_cursor.fetch()? {

@@ -411,12 +411,14 @@ pub struct TextColumnSliceMut<'a, C> {
     parameter_index: u16,
 }
 
-impl<'a, C> TextColumnSliceMut<'a, C> where C: Default + Copy {
+impl<'a, C> TextColumnSliceMut<'a, C>
+where
+    C: Default + Copy,
+{
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `element` must be specified without the terminating zero.
-    pub fn set_cell(&mut self, row_index: usize, element: Option<&[C]>)
-    {
+    pub fn set_cell(&mut self, row_index: usize, element: Option<&[C]>) {
         self.column.set_value(row_index, element)
     }
 

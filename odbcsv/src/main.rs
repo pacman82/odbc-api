@@ -547,7 +547,7 @@ fn columns(environment: &Environment, columns_opt: &ListColumnsOpt) -> Result<()
 }
 
 fn cursor_to_csv(
-    cursor: impl Cursor,
+    mut cursor: impl Cursor,
     writer: &mut csv::Writer<impl Write>,
     batch_size: usize,
     max_str_len: Option<usize>,
@@ -555,7 +555,7 @@ fn cursor_to_csv(
 ) -> Result<(), Error> {
     let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
     writer.write_record(headline)?;
-    let mut buffers = TextRowSet::for_cursor(batch_size, &cursor, max_str_len)?;
+    let mut buffers = TextRowSet::for_cursor(batch_size, &mut cursor, max_str_len)?;
     let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
     let mut num_batch = 0;
     while let Some(buffer) = row_set_cursor

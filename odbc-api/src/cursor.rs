@@ -1,10 +1,10 @@
 use odbc_sys::HStmt;
 
 use crate::{
-    borrow_mut_statement::BorrowMutStatement,
+    borrow_mut_statement::AsStatementRef,
     buffers::Indicator,
     error::ExtendResult,
-    handles::{State, Statement},
+    handles::{State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
@@ -21,7 +21,7 @@ pub trait Cursor: ResultSetMetadata {
     /// of safe wrapper types (i.e. [`crate::RowSetCursor`]). Some actions like closing the cursor
     /// may just result in ODBC transition errors, others like binding columns may even cause actual
     /// invalid memory access if not used with care.
-    unsafe fn stmt_mut(&mut self) -> &mut Self::Statement;
+    unsafe fn stmt_mut(&mut self) -> StatementRef<'_>;
 
     /// Advances the cursor to the next row in the result set.
     ///
@@ -32,11 +32,11 @@ pub trait Cursor: ResultSetMetadata {
     /// performed then requesting individual fields, since the C buffer type is not known to the
     /// driver in advance. Consider binding a buffer to the cursor first using
     /// [`Self::bind_buffer`].
-    fn next_row(&mut self) -> Result<Option<CursorRow<'_, Self::Statement>>, Error> {
+    fn next_row(&mut self) -> Result<Option<CursorRow<'_>>, Error> {
         let row_available = unsafe {
             self.stmt_mut()
                 .fetch()
-                .map(|res| res.into_result(self.stmt_mut()))
+                .map(|res| res.into_result(&self.stmt_mut()))
                 .transpose()?
                 .is_some()
         };
@@ -56,20 +56,17 @@ pub trait Cursor: ResultSetMetadata {
 }
 
 /// An individual row of an result set. See [`crate::Cursor::next_row`].
-pub struct CursorRow<'c, S: ?Sized> {
-    statement: &'c mut S,
+pub struct CursorRow<'s> {
+    statement: StatementRef<'s>,
 }
 
-impl<'c, S: ?Sized> CursorRow<'c, S> {
-    fn new(statement: &'c mut S) -> Self {
+impl<'s> CursorRow<'s> {
+    fn new(statement: StatementRef<'s>) -> Self {
         CursorRow { statement }
     }
 }
 
-impl<'c, S> CursorRow<'c, S>
-where
-    S: Statement,
-{
+impl<'s> CursorRow<'s> {
     /// Fills a suitable target buffer with a field from the current row of the result set. This
     /// method drains the data from the field. It can be called repeatedly to if not all the data
     /// fit in the output buffer at once. It should not called repeatedly to fetch the same value
@@ -81,7 +78,7 @@ where
     ) -> Result<(), Error> {
         self.statement
             .get_data(col_or_param_num, target)
-            .into_result(self.statement)
+            .into_result(&self.statement)
             .provide_context_for_diagnostic(|record, function| {
                 if record.state == State::INDICATOR_VARIABLE_REQUIRED_BUT_NOT_SUPPLIED {
                     Error::UnableToRepresentNull(record)
@@ -211,17 +208,17 @@ where
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
-pub struct CursorImpl<Stmt: BorrowMutStatement> {
+pub struct CursorImpl<Stmt: AsStatementRef> {
     statement: Stmt,
 }
 
 impl<'o, S> Drop for CursorImpl<S>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
     fn drop(&mut self) {
-        let stmt = self.statement.borrow_mut();
-        if let Err(e) = stmt.close_cursor().into_result(stmt) {
+        let mut stmt = self.statement.as_stmt_ref();
+        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
@@ -233,34 +230,34 @@ where
 
 impl<S> ResultSetMetadata for CursorImpl<S>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
     type Statement = S::Statement;
 
-    fn stmt_ref(&self) -> &Self::Statement {
-        self.statement.borrow()
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
     }
 }
 
 impl<S> Cursor for CursorImpl<S>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
-    unsafe fn stmt_mut(&mut self) -> &mut Self::Statement {
-        self.statement.borrow_mut()
+    unsafe fn stmt_mut(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
     }
 
     fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer,
     {
-        let stmt = self.statement.borrow_mut();
+        let mut stmt = self.statement.as_stmt_ref();
         unsafe {
             stmt.set_row_bind_type(row_set_buffer.bind_type())
-                .into_result(stmt)?;
+                .into_result(&stmt)?;
             let size = row_set_buffer.row_array_size();
             stmt.set_row_array_size(size)
-                .into_result(stmt)
+                .into_result(&stmt)
                 // SAP anywhere has been seen to return with an "invalid attribute" error instead of
                 // a success with "option value changed" info. Let us map invalid attributes during
                 // setting row set array size to something more precise.
@@ -272,7 +269,7 @@ where
                     }
                 })?;
             stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
-                .into_result(stmt)?;
+                .into_result(&stmt)?;
             row_set_buffer.bind_to_cursor(&mut self)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
@@ -281,7 +278,7 @@ where
 
 impl<S> CursorImpl<S>
 where
-    S: BorrowMutStatement,
+    S: AsStatementRef,
 {
     /// Users of this library are encouraged not to call this constructor directly but rather invoke
     /// [`crate::Connection::execute`] or [`crate::Prepared::execute`] to get a cursor and utilize
@@ -297,8 +294,8 @@ where
         Self { statement }
     }
 
-    pub(crate) fn as_sys(&self) -> HStmt {
-        self.statement.borrow().as_sys()
+    pub(crate) fn as_sys(&mut self) -> HStmt {
+        self.as_stmt_ref().as_sys()
     }
 }
 
@@ -379,10 +376,10 @@ where
     /// ```
     /// use odbc_api::{buffers::TextRowSet, Cursor};
     ///
-    /// fn print_all_values(cursor: impl Cursor) {
+    /// fn print_all_values(mut cursor: impl Cursor) {
     ///     let batch_size = 100;
     ///     let max_string_len = 4000;
-    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
+    ///     let buffer = TextRowSet::for_cursor(batch_size, &mut cursor, Some(4000)).unwrap();
     ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     ///     // Iterate over batches
     ///     while let Some(batch) = cursor.fetch().unwrap() {
@@ -408,10 +405,10 @@ where
     /// ```
     /// use odbc_api::{buffers::TextRowSet, Cursor};
     ///
-    /// fn print_all_values(cursor: impl Cursor) {
+    /// fn print_all_values(mut cursor: impl Cursor) {
     ///     let batch_size = 100;
     ///     let max_string_len = 4000;
-    ///     let buffer = TextRowSet::for_cursor(batch_size, &cursor, Some(4000)).unwrap();
+    ///     let buffer = TextRowSet::for_cursor(batch_size, &mut cursor, Some(4000)).unwrap();
     ///     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     ///     // Iterate over batches
     ///     while let Some(batch) = cursor.fetch_with_truncation_check(true).unwrap() {
@@ -426,7 +423,10 @@ where
         unsafe {
             if let Some(sql_result) = self.cursor.stmt_mut().fetch() {
                 sql_result
-                    .into_result_with_trunaction_check(self.cursor.stmt_mut(), error_for_truncation)
+                    .into_result_with_trunaction_check(
+                        &self.cursor.stmt_mut(),
+                        error_for_truncation,
+                    )
                     // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
                     // tell the it to the user than binding parameters, but rather now then we fetch
                     // results. The error code retruned is `HY004` rather then `HY003` which should
@@ -452,11 +452,11 @@ where
 {
     fn drop(&mut self) {
         unsafe {
-            let stmt = self.cursor.stmt_mut();
+            let mut stmt = self.cursor.stmt_mut();
             if let Err(e) = stmt
                 .unbind_cols()
-                .into_result(stmt)
-                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(stmt))
+                .into_result(&stmt)
+                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(&stmt))
             {
                 // Avoid panicking, if we already have a panic. We don't want to mask the original
                 // error.

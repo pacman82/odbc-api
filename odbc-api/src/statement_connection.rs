@@ -1,7 +1,7 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
 use crate::{
-    handles::{drop_handle, AsHandle, Statement},
+    handles::{drop_handle, AsHandle, Statement, StatementRef},
     Connection,
 };
 
@@ -17,6 +17,10 @@ impl<'env> StatementConnection<'env> {
             _parent: parent,
             handle,
         }
+    }
+
+    pub fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        unsafe { StatementRef::new(self.handle) }
     }
 }
 

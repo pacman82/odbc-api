@@ -74,9 +74,9 @@ pub fn table_to_string(conn: &Connection<'_>, table_name: &str, column_names: &[
     cursor_to_string(cursor)
 }
 
-pub fn cursor_to_string(cursor: impl Cursor) -> String {
+pub fn cursor_to_string(mut cursor: impl Cursor) -> String {
     let batch_size = 20;
-    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &cursor, Some(8192)).unwrap();
+    let mut buffer = buffers::TextRowSet::for_cursor(batch_size, &mut cursor, Some(8192)).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(&mut buffer).unwrap();
 
     let mut text = String::new();
@@ -186,7 +186,7 @@ where
         cursor
             .stmt_mut()
             .bind_col(1, &mut self.column)
-            .into_result(cursor.stmt_mut())?;
+            .into_result(&cursor.stmt_mut())?;
         Ok(())
     }
 }

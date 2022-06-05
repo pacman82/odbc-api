@@ -92,6 +92,15 @@ pub struct StatementRef<'s> {
     handle: HStmt,
 }
 
+impl<'s> StatementRef<'s> {
+    pub(crate) unsafe fn new(handle: HStmt) -> Self {
+        Self {
+            handle,
+            parent: PhantomData,
+        }
+    }
+}
+
 impl<'s> Statement for StatementRef<'s> {
     fn as_sys(&self) -> HStmt {
         self.handle

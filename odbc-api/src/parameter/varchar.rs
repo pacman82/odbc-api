@@ -115,9 +115,9 @@ where
     /// ```
     /// use odbc_api::{CursorRow, parameter::VarCharArray, Error, handles::Statement};
     ///
-    /// fn process_large_text<S: Statement>(
+    /// fn process_large_text(
     ///     col_index: u16,
-    ///     row: &mut CursorRow<S>
+    ///     row: &mut CursorRow<'_>
     /// ) -> Result<(), Error>{
     ///     let mut buf = VarCharArray::<512>::NULL;
     ///     row.get_data(col_index, &mut buf)?;
