@@ -3307,7 +3307,7 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     // When insert two batches with size one and two.
-    let prepared = conn
+    let mut prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
     let desc = BufferDescription {
@@ -3315,18 +3315,15 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
         kind: BufferKind::I32,
     };
     // The first batch is inserted with capacity 1
-    let mut prebound = prepared.into_any_column_inserter(1, [desc]).unwrap();
+    let mut prebound = prepared.any_column_inserter(1, [desc]).unwrap();
     prebound.set_num_rows(1);
     let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
     col[0] = 1;
     prebound.execute().unwrap();
     // Second batch is larger than the first and does not fit into the capacity. Only way to resize
-    // is currently to destroy everything including the prepared statement and create everything a
-    // new, which is costly.
-    let prepared = conn
-        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
-        .unwrap();
-    let mut prebound = prepared.into_any_column_inserter(2, [desc]).unwrap();
+    // is currently to destroy everything the ColumnarInserter, but luckily we only borrowed the
+    // statment.
+    let mut prebound = prepared.any_column_inserter(2, [desc]).unwrap();
     prebound.set_num_rows(2);
     let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
     col[0] = 2;

@@ -473,8 +473,7 @@ fn insert_birth_year(conn: &Connection, name: &str, year: i16) -> Result<(), Err
 
 Inserting values row by row can introduce a lot of overhead. ODBC allows you to perform either
 row or column wise bulk inserts. Especially in pipelines for data science you may already have
-buffers in a columnar layout at hand. [`crate::buffers::ColumnarBuffer`] can be used for bulk
-inserts.
+buffers in a columnar layout at hand. [`crate::ColumnarBulkInserter`] can be used for bulk inserts.
 
 ```no_run
 use odbc_api::{Connection, Error, IntoParameter, buffers::{BufferDescription, BufferKind}};

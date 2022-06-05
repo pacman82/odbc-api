@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.0
+
+* All methods on the `ResultSetMetaData` trait now require exclusive (`&mut`) references.
+* The trait `BorrowMutStatement` has been replaced by `AsStatementRef`.
+* `ColumnarBulkInserter` is now generic over statement ownership.
+* It is now possible to create a bulk inserter which just borrows a prepared statement, rather than taking ownership of it. Use `Prepared::any_column_inserter` to do so. This is useful for dynamically growing the capacity of the bound array parameters. So far users were forced to create a new `ColumnarBulkInserter` to do so. This is still true, but creating a new `ColumnarBulkInserter` now longer implies that a new prepared statement has to be created.
+
 ## 0.43.0
 
 * `BoundInputSlice`, `TextColumnSliceMut` and `BinColumnSliceMut` now only track the lifetime of the statement. The do no longer need to track the lifetime of the `Connection` anymore.

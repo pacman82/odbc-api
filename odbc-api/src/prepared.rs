@@ -175,6 +175,62 @@ impl<'o> Prepared<'o> {
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
     }
 
+    /// A [`crate::ColumnarBulkInserter`] which takes ownership of both the statement and the bound
+    /// array parameter buffers.
+    ///
+    /// ```no_run
+    /// use odbc_api::{Connection, Error, IntoParameter, buffers::{BufferDescription, BufferKind}};
+    ///
+    /// fn insert_birth_years(
+    ///     conn: &Connection,
+    ///     names: &[&str],
+    ///     years: &[i16]
+    /// ) -> Result<(), Error> {
+    ///     // All columns must have equal length.
+    ///     assert_eq!(names.len(), years.len());
+    ///
+    ///     let prepared = conn.prepare("INSERT INTO Birthdays (name, year) VALUES (?, ?)")?;
+    ///
+    ///     // Create a columnar buffer which fits the input parameters.
+    ///     let buffer_description = [
+    ///         BufferDescription {
+    ///             kind: BufferKind::Text { max_str_len: 255 },
+    ///             nullable: false,
+    ///         },
+    ///         BufferDescription {
+    ///             kind: BufferKind::I16,
+    ///             nullable: false,
+    ///         },
+    ///     ];
+    ///     // The capacity must be able to hold at least the largest batch. We do everything in one
+    ///     // go, so we set it to the length of the input parameters.
+    ///     let capacity = names.len();
+    ///     // Allocate memory for the array column parameters and bind it to the statement.
+    ///     let mut prebound = prepared.into_any_column_inserter(capacity, buffer_description)?;
+    ///     // Length of this batch
+    ///     prebound.set_num_rows(capacity);
+    ///
+    ///
+    ///     // Fill the buffer with values column by column
+    ///     let mut col = prebound
+    ///         .column_mut(0)
+    ///         .as_text_view()
+    ///         .expect("We know the name column to hold text.");
+    ///
+    ///     for (index, name) in names.iter().enumerate() {
+    ///         col.set_cell(index, Some(name.as_bytes()));
+    ///     }
+    ///
+    ///     let col = prebound
+    ///         .column_mut(1)
+    ///         .as_slice::<i16>()
+    ///         .expect("We know the year column to hold i16.");
+    ///     col.copy_from_slice(years);
+    ///
+    ///     prebound.execute()?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn into_any_column_inserter(
         self,
         capacity: usize,
@@ -185,6 +241,24 @@ impl<'o> Prepared<'o> {
             .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
             .collect();
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
+    }
+
+    /// A [`crate::ColumnarBulkInserter`] which has ownership of the bound array parameter buffers
+    /// and borrows the statement. For most usecases [`Self::into_any_column_inserter`] is what you
+    /// want to use, yet on some instances you may want to bind new paramater buffers to the same
+    /// prepared statement. E.g. to grow the capacity dynamicaly during insertions with several
+    /// chunks. In such usecases you may only want to borrow the prepared statemnt, so it can be
+    /// reused with a different set of parameter buffers.
+    pub fn any_column_inserter(
+        &mut self,
+        capacity: usize,
+        descriptions: impl IntoIterator<Item = BufferDescription>,
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyColumnBuffer>, Error> {
+        let parameter_buffers = descriptions
+            .into_iter()
+            .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
+            .collect();
+        unsafe { ColumnarBulkInserter::new(self.statement.as_stmt_ref(), parameter_buffers) }
     }
 }
 
