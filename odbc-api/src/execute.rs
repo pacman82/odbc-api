@@ -1,7 +1,7 @@
 use std::intrinsics::transmute;
 
 use crate::{
-    handles::{SqlText, Statement, AsStatementRef},
+    handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
     CursorImpl, Error, ParameterCollectionRef,
 };

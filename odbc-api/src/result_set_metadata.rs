@@ -1,7 +1,7 @@
 use odbc_sys::SqlDataType;
 
 use crate::{
-    handles::{slice_to_utf8, SqlChar, Statement, AsStatementRef},
+    handles::{slice_to_utf8, AsStatementRef, SqlChar, Statement},
     ColumnDescription, DataType, Error,
 };
 
@@ -11,8 +11,7 @@ use crate::{
 ///
 /// See also:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/result-set-metadata>
-pub trait ResultSetMetadata : AsStatementRef {
-
+pub trait ResultSetMetadata: AsStatementRef {
     /// Fetch a column description using the column index.
     ///
     /// # Parameters

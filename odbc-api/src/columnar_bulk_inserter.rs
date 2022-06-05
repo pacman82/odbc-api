@@ -1,7 +1,7 @@
 use crate::{
     buffers::{ColumnBuffer, TextColumn},
     execute::execute,
-    handles::{HasDataType, Statement, StatementImpl, StatementRef},
+    handles::{AsStatementRef, HasDataType, Statement, StatementRef},
     CursorImpl, Error,
 };
 
@@ -14,16 +14,19 @@ use crate::{
 /// buffers already bound first rather than binding user defined buffer. Often the data might need
 /// to be transformed anyway, so the copy is no actual overhead. Once the buffers are filled with a
 /// batch, we send the data.
-pub struct ColumnarBulkInserter<'o, C> {
+pub struct ColumnarBulkInserter<S, C> {
     // We maintain the invariant that the parameters are bound to the statement that parameter set
     // size reflects the number of valid rows in the batch.
-    statement: StatementImpl<'o>,
+    statement: S,
     parameter_set_size: usize,
     capacity: usize,
     parameters: Vec<C>,
 }
 
-impl<'o, C> ColumnarBulkInserter<'o, C> {
+impl<S, C> ColumnarBulkInserter<S, C>
+where
+    S: AsStatementRef,
+{
     /// Users are not encouraged to call this directly.
     ///
     /// # Safety
@@ -32,21 +35,21 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
     ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
     ///   can happen after when truncation occurs then writing into a buffer.
-    pub unsafe fn new(mut statement: StatementImpl<'o>, parameters: Vec<C>) -> Result<Self, Error>
+    pub unsafe fn new(mut statement: S, parameters: Vec<C>) -> Result<Self, Error>
     where
         C: ColumnBuffer + HasDataType,
     {
+        let mut stmt = statement.as_stmt_ref();
         let mut parameter_number = 1;
         // Bind buffers to statement.
         for column in &parameters {
-            statement
-                .bind_input_parameter(parameter_number, column)
+            stmt.bind_input_parameter(parameter_number, column)
                 // This early return using `?` is risky. We actually did bind some parameters
                 // already. They would be invalid and we can not guarantee their correctness.
                 // However we get away with this, because we take ownership of the statement, and it
                 // is destroyed should the constructor not succeed. However this logic would need to
                 // be adapted if we ever borrow the statement instead.
-                .into_result(&statement)?;
+                .into_result(&stmt)?;
             parameter_number += 1;
         }
         let capacity = parameters
@@ -63,7 +66,8 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
     }
 
     /// Execute the prepared statement, with the parameters bound
-    pub fn execute(&mut self) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
+    pub fn execute(&mut self) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
+        let mut stmt = self.statement.as_stmt_ref();
         unsafe {
             if self.parameter_set_size == 0 {
                 // A batch size of 0 will not execute anything, same as for execute on connection or
@@ -72,8 +76,8 @@ impl<'o, C> ColumnarBulkInserter<'o, C> {
             } else {
                 // We reset the parameter set size, in order to adequatly handle batches of
                 // different size then inserting into the database.
-                self.statement.set_paramset_size(self.parameter_set_size);
-                execute(&mut self.statement, None)
+                stmt.set_paramset_size(self.parameter_set_size);
+                execute(stmt, None)
             }
         }
     }
@@ -211,7 +215,7 @@ pub unsafe trait BoundInputSlice<'a> {
     ) -> Self::SliceMut;
 }
 
-impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
+impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
     /// Takes one element from the iterator for each internal column buffer and appends it to the
     /// end of the buffer. Should a cell of the row be too large for the associated column buffer,
     /// the column buffer will be reallocated with `1.2` times its size, and rebound to the
@@ -222,7 +226,10 @@ impl<'o> ColumnarBulkInserter<'o, TextColumn<u8>> {
     pub fn append<'b>(
         &mut self,
         mut row: impl Iterator<Item = Option<&'b [u8]>>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        S: AsStatementRef,
+    {
         if self.capacity == self.parameter_set_size {
             panic!("Trying to insert elements into TextRowSet beyond batch size.")
         }

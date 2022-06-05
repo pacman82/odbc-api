@@ -137,6 +137,12 @@ impl<'o> AsStatementRef for &mut StatementImpl<'o> {
     }
 }
 
+impl<'s> AsStatementRef for StatementRef<'s> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        unsafe { StatementRef::new(self.handle) }
+    }
+}
+
 /// An ODBC statement handle. In this crate it is implemented by [`self::StatementImpl`]. In ODBC
 /// Statements are used to execute statements and retrieve results. Both parameter and result
 /// buffers are bound to the statement and dereferenced during statement execution and fetching

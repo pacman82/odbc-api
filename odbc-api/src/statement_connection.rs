@@ -1,7 +1,7 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
 use crate::{
-    handles::{drop_handle, AsHandle, Statement, StatementRef, AsStatementRef},
+    handles::{drop_handle, AsHandle, AsStatementRef, Statement, StatementRef},
     Connection,
 };
 

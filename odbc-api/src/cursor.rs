@@ -3,7 +3,7 @@ use odbc_sys::HStmt;
 use crate::{
     buffers::Indicator,
     error::ExtendResult,
-    handles::{State, Statement, StatementRef, AsStatementRef},
+    handles::{AsStatementRef, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
@@ -51,7 +51,7 @@ pub struct CursorRow<'s> {
 
 impl<'s> CursorRow<'s> {
     /// # Safety
-    /// 
+    ///
     /// `statement` must be in a cursor state.
     unsafe fn new(statement: StatementRef<'s>) -> Self {
         CursorRow { statement }
@@ -220,18 +220,16 @@ where
     }
 }
 
-impl<S> AsStatementRef for CursorImpl<S> 
-    where S: AsStatementRef 
+impl<S> AsStatementRef for CursorImpl<S>
+where
+    S: AsStatementRef,
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
 }
 
-impl<S> ResultSetMetadata for CursorImpl<S>
-where
-    S: AsStatementRef,
-{}
+impl<S> ResultSetMetadata for CursorImpl<S> where S: AsStatementRef {}
 
 impl<S> Cursor for CursorImpl<S>
 where

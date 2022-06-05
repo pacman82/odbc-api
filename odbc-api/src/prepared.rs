@@ -1,7 +1,9 @@
 use crate::{
     buffers::{AnyColumnBuffer, BufferDescription, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
-    handles::{HasDataType, ParameterDescription, Statement, StatementImpl, StatementRef, AsStatementRef},
+    handles::{
+        AsStatementRef, HasDataType, ParameterDescription, Statement, StatementImpl, StatementRef,
+    },
     prebound::PinnedParameterCollection,
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, Prebound, ResultSetMetadata,
 };
@@ -113,7 +115,7 @@ impl<'o> Prepared<'o> {
     pub unsafe fn unchecked_bind_columnar_array_parameters<C>(
         self,
         parameter_buffers: Vec<C>,
-    ) -> Result<ColumnarBulkInserter<'o, C>, Error>
+    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, C>, Error>
     where
         C: ColumnBuffer + HasDataType,
     {
@@ -164,7 +166,7 @@ impl<'o> Prepared<'o> {
         self,
         capacity: usize,
         max_str_len: impl IntoIterator<Item = usize>,
-    ) -> Result<ColumnarBulkInserter<'o, TextColumn<u8>>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, TextColumn<u8>>, Error> {
         let max_str_len = max_str_len.into_iter();
         let parameter_buffers = max_str_len
             .map(|max_str_len| TextColumn::new(capacity, max_str_len))
@@ -177,7 +179,7 @@ impl<'o> Prepared<'o> {
         self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDescription>,
-    ) -> Result<ColumnarBulkInserter<'o, AnyColumnBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, AnyColumnBuffer>, Error> {
         let parameter_buffers = descriptions
             .into_iter()
             .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
