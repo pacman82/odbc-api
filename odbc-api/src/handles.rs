@@ -29,7 +29,7 @@ pub use {
     logging::log_diagnostics,
     sql_char::{slice_to_cow_utf8, slice_to_utf8, OutputStringBuffer, SqlChar, SqlText, SzBuffer},
     sql_result::SqlResult,
-    statement::{ParameterDescription, Statement, StatementImpl, StatementRef},
+    statement::{ParameterDescription, Statement, StatementImpl, StatementRef, AsStatementRef},
 };
 
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

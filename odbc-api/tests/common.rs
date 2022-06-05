@@ -184,9 +184,9 @@ where
 
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
         cursor
-            .stmt_mut()
+            .as_stmt_ref()
             .bind_col(1, &mut self.column)
-            .into_result(&cursor.stmt_mut())?;
+            .into_result(&cursor.as_stmt_ref())?;
         Ok(())
     }
 }

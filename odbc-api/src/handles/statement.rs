@@ -117,6 +117,26 @@ unsafe impl<'c> AsHandle for StatementRef<'c> {
     }
 }
 
+/// Allows us to be generic over the ownership type (mutably borrowed or owned) of a statement
+pub trait AsStatementRef {
+    /// Get an exclusive reference to the underlying statement handle. This method is used to
+    /// implement other more higher level methods on top of it. It is not intended to be called by
+    /// users of this crate directly, yet it may serve as an escape hatch for low level usecases.
+    fn as_stmt_ref(&mut self) -> StatementRef<'_>;
+}
+
+impl<'o> AsStatementRef for StatementImpl<'o> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.as_stmt_ref()
+    }
+}
+
+impl<'o> AsStatementRef for &mut StatementImpl<'o> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        (*self).as_stmt_ref()
+    }
+}
+
 /// An ODBC statement handle. In this crate it is implemented by [`self::StatementImpl`]. In ODBC
 /// Statements are used to execute statements and retrieve results. Both parameter and result
 /// buffers are bound to the statement and dereferenced during statement execution and fetching

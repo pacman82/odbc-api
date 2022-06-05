@@ -1,7 +1,7 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
 use crate::{
-    handles::{drop_handle, AsHandle, Statement, StatementRef},
+    handles::{drop_handle, AsHandle, Statement, StatementRef, AsStatementRef},
     Connection,
 };
 
@@ -45,5 +45,11 @@ unsafe impl AsHandle for StatementConnection<'_> {
 impl Statement for StatementConnection<'_> {
     fn as_sys(&self) -> HStmt {
         self.handle
+    }
+}
+
+impl<'o> AsStatementRef for StatementConnection<'o> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.as_stmt_ref()
     }
 }

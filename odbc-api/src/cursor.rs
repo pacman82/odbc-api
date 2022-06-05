@@ -1,10 +1,9 @@
 use odbc_sys::HStmt;
 
 use crate::{
-    borrow_mut_statement::AsStatementRef,
     buffers::Indicator,
     error::ExtendResult,
-    handles::{State, Statement, StatementRef},
+    handles::{State, Statement, StatementRef, AsStatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
@@ -13,16 +12,6 @@ use std::{cmp::max, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: ResultSetMetadata {
-    /// Provides access to the underlying statement handle.
-    ///
-    /// # Safety
-    ///
-    /// Assigning to this statement handle or binding buffers to it may invalidate the invariants
-    /// of safe wrapper types (i.e. [`crate::RowSetCursor`]). Some actions like closing the cursor
-    /// may just result in ODBC transition errors, others like binding columns may even cause actual
-    /// invalid memory access if not used with care.
-    unsafe fn stmt_mut(&mut self) -> StatementRef<'_>;
-
     /// Advances the cursor to the next row in the result set.
     ///
     /// While this method is very convenient due to the fact that the application does not have to
@@ -34,14 +23,14 @@ pub trait Cursor: ResultSetMetadata {
     /// [`Self::bind_buffer`].
     fn next_row(&mut self) -> Result<Option<CursorRow<'_>>, Error> {
         let row_available = unsafe {
-            self.stmt_mut()
+            self.as_stmt_ref()
                 .fetch()
-                .map(|res| res.into_result(&self.stmt_mut()))
+                .map(|res| res.into_result(&self.as_stmt_ref()))
                 .transpose()?
                 .is_some()
         };
         let ret = if row_available {
-            Some(CursorRow::new(unsafe { self.stmt_mut() }))
+            Some(unsafe { CursorRow::new(self.as_stmt_ref()) })
         } else {
             None
         };
@@ -61,7 +50,10 @@ pub struct CursorRow<'s> {
 }
 
 impl<'s> CursorRow<'s> {
-    fn new(statement: StatementRef<'s>) -> Self {
+    /// # Safety
+    /// 
+    /// `statement` must be in a cursor state.
+    unsafe fn new(statement: StatementRef<'s>) -> Self {
         CursorRow { statement }
     }
 }
@@ -228,25 +220,23 @@ where
     }
 }
 
-impl<S> ResultSetMetadata for CursorImpl<S>
-where
-    S: AsStatementRef,
+impl<S> AsStatementRef for CursorImpl<S> 
+    where S: AsStatementRef 
 {
-    type Statement = S::Statement;
-
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
 }
 
+impl<S> ResultSetMetadata for CursorImpl<S>
+where
+    S: AsStatementRef,
+{}
+
 impl<S> Cursor for CursorImpl<S>
 where
     S: AsStatementRef,
 {
-    unsafe fn stmt_mut(&mut self) -> StatementRef<'_> {
-        self.statement.as_stmt_ref()
-    }
-
     fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
     where
         B: RowSetBuffer,
@@ -421,10 +411,10 @@ where
         error_for_truncation: bool,
     ) -> Result<Option<&B>, Error> {
         unsafe {
-            if let Some(sql_result) = self.cursor.stmt_mut().fetch() {
+            if let Some(sql_result) = self.cursor.as_stmt_ref().fetch() {
                 sql_result
                     .into_result_with_trunaction_check(
-                        &self.cursor.stmt_mut(),
+                        &self.cursor.as_stmt_ref(),
                         error_for_truncation,
                     )
                     // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
@@ -452,7 +442,7 @@ where
 {
     fn drop(&mut self) {
         unsafe {
-            let mut stmt = self.cursor.stmt_mut();
+            let mut stmt = self.cursor.as_stmt_ref();
             if let Err(e) = stmt
                 .unbind_cols()
                 .into_result(&stmt)

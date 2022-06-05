@@ -1,7 +1,7 @@
 use crate::{
     buffers::{AnyColumnBuffer, BufferDescription, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
-    handles::{HasDataType, ParameterDescription, Statement, StatementImpl, StatementRef},
+    handles::{HasDataType, ParameterDescription, Statement, StatementImpl, StatementRef, AsStatementRef},
     prebound::PinnedParameterCollection,
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, Prebound, ResultSetMetadata,
 };
@@ -186,9 +186,9 @@ impl<'o> Prepared<'o> {
     }
 }
 
-impl<'o> ResultSetMetadata for Prepared<'o> {
-    type Statement = StatementImpl<'o>;
+impl<'o> ResultSetMetadata for Prepared<'o> {}
 
+impl<'o> AsStatementRef for Prepared<'o> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }

@@ -112,9 +112,9 @@ where
     unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
             cursor
-                .stmt_mut()
+                .as_stmt_ref()
                 .bind_col(*col_number, column)
-                .into_result(&cursor.stmt_mut())?;
+                .into_result(&cursor.as_stmt_ref())?;
         }
         Ok(())
     }

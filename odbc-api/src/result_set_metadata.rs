@@ -1,7 +1,7 @@
 use odbc_sys::SqlDataType;
 
 use crate::{
-    handles::{slice_to_utf8, SqlChar, Statement, StatementRef},
+    handles::{slice_to_utf8, SqlChar, Statement, AsStatementRef},
     ColumnDescription, DataType, Error,
 };
 
@@ -11,23 +11,7 @@ use crate::{
 ///
 /// See also:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/result-set-metadata>
-pub trait ResultSetMetadata {
-    /// Statement type of the cursor. This is always an instantiation of
-    /// [`crate::handles::Statement`] with a generic parameter indicating the lifetime of the
-    /// associated connection.
-    ///
-    /// So this trait could have had a lifetime parameter instead and provided access to the
-    /// underlying type. However by using the projection of only the cursor methods of the
-    /// underlying statement, consumers of this trait no only have to worry about the lifetime of
-    /// the statement itself (e.g. the prepared query) and not about the lifetime of the connection
-    /// it belongs to.
-    type Statement: Statement;
-
-    /// Get an exclusive reference to the underlying statement handle. This method is used to
-    /// implement other more high level methods like [`Self::describe_col`] on top of it. It is
-    /// usually not intended to be called by users of this crate directly, but may serve as an
-    /// escape hatch for low level usecases.
-    fn as_stmt_ref(&mut self) -> StatementRef<'_>;
+pub trait ResultSetMetadata : AsStatementRef {
 
     /// Fetch a column description using the column index.
     ///

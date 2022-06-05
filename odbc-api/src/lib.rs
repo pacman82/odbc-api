@@ -4,7 +4,6 @@
 //! standard to access databases. See the [`guide`] for more information and code
 //! examples.
 
-mod borrow_mut_statement;
 mod columnar_bulk_inserter;
 mod connection;
 mod cursor;
