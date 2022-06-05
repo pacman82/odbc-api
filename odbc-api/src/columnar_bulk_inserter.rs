@@ -40,6 +40,7 @@ where
         C: ColumnBuffer + HasDataType,
     {
         let mut stmt = statement.as_stmt_ref();
+        stmt.reset_parameters();
         let mut parameter_number = 1;
         // Bind buffers to statement.
         for column in &parameters {
