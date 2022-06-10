@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.44.1
+
+* Add `ColumnarBulkInserter::capacity`.
+
 ## 0.44.0
 
 * All methods on the `ResultSetMetaData` trait now require exclusive (`&mut`) references.

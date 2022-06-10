@@ -188,6 +188,11 @@ where
                 .as_view_mut((buffer_index + 1) as u16, self.statement.as_stmt_ref())
         }
     }
+
+    /// Maximum number of rows the buffer can hold at once.
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
 }
 
 /// You can obtain a mutable slice of a column buffer which allows you to change its contents.
