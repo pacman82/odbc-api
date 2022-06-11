@@ -17,6 +17,22 @@ use std::{
 pub struct Bit(pub u8);
 
 impl Bit {
+    /// Maps `true` to `1` and `false` to `0`.
+    /// 
+    /// ```
+    /// use odbc_api::Bit;
+    /// 
+    /// assert_eq!(Bit(0), Bit::from_bool(false));
+    /// assert_eq!(Bit(1), Bit::from_bool(true));
+    /// ```
+    pub fn from_bool(boolean: bool) -> Self {
+        if boolean {
+            Bit(1)
+        } else {
+            Bit(0)
+        }
+    }
+
     /// Maps `1` to `true`, `0` to `false`. Panics if `Bit` should be invalid (not `0` or `1`).
     pub fn as_bool(self) -> bool {
         match self.0 {
