@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.44.2
+
+* Add `Bit::from_bool`.
+
 ## 0.44.1
 
 * Add `ColumnarBulkInserter::capacity`.
