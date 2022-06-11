@@ -230,6 +230,16 @@ impl<'a, T> NullableSliceMut<'a, T> {
         self.values.len()
     }
 
+        /// Sets the value at the specified index. Use `None` to specify a `NULL` value.
+        pub fn set_cell(&mut self, index: usize, cell: Option<T>) {
+            if let Some(value) = cell {
+                self.indicators[index] = 0;
+                self.values[index] = value;
+            } else {
+                self.indicators[index] = NULL_DATA;
+            }
+        }
+
     /// Write access to the underlying raw value and indicator buffer.
     ///
     /// The number of elements in the buffer is equal to `len`.
@@ -271,12 +281,7 @@ impl<'a, T> NullableSliceMut<'a, T> {
     /// Writes elements until the iterator returns `None` or the buffer can not hold more elements.
     pub fn write(&mut self, it: impl Iterator<Item = Option<T>>) {
         for (index, item) in it.enumerate().take(self.values.len()) {
-            if let Some(value) = item {
-                self.indicators[index] = 0;
-                self.values[index] = value;
-            } else {
-                self.indicators[index] = NULL_DATA;
-            }
+            self.set_cell(index, item)
         }
     }
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.44.3
+
+* Add `NullableSliceMut::set_cell`
+
 ## 0.44.2
 
 * Add `Bit::from_bool`.
