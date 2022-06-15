@@ -34,7 +34,7 @@ csv = "1.1.6"
 anyhow = "1.0.57"
 stderrlog = "0.5.1"
 log = "0.4.17"
-clap = { version = "3.2.2", features = ["derive", "env"] }
+clap = { version = "3.2.4", features = ["derive", "env"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.4"
