@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.45.0 (next)
+## 0.45.0
 
 * Add `Connection::into_prepared` to allow for prepared queries to take ownership of the connection.
 * `Prepared::describe_param` now requires an exclusive reference

@@ -186,6 +186,45 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
+    /// 
+    /// ```no_run
+    /// use lazy_static::lazy_static;
+    /// use odbc_api::{
+    ///     Environment, Error, ColumnarBulkInserter, StatementConnection,
+    ///     buffers::{BufferKind, BufferDescription, AnyColumnBuffer},
+    /// };
+    ///
+    /// lazy_static! {
+    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
+    /// }
+    ///
+    /// const CONNECTION_STRING: &str =
+    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     Server=localhost;UID=SA;\
+    ///     PWD=My@Test@Password1;";
+    ///
+    /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
+    /// /// takes ownership of a connection created using an environment with static lifetime.
+    /// type Inserter = ColumnarBulkInserter<StatementConnection<'static>, AnyColumnBuffer>;
+    /// 
+    /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
+    /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
+    ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
+    ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
+    ///     let buffers = [
+    ///         BufferDescription {
+    ///             kind: BufferKind::Text { max_str_len: 255},
+    ///             nullable: false
+    ///         },
+    ///         BufferDescription {
+    ///             kind: BufferKind::I16,
+    ///             nullable: false
+    ///         }
+    ///     ];
+    ///     let capacity = 400;
+    ///     prepared.into_any_column_inserter(capacity, buffers)
+    /// }
+    /// ```
     pub fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<'c>>, Error> {
         let query = SqlText::new(query);
         let mut stmt = self.allocate_statement()?;
