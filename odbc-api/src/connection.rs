@@ -175,6 +175,27 @@ impl<'c> Connection<'c> {
         Ok(Prepared::new(stmt))
     }
 
+    /// Prepares an SQL statement which takes ownership of the connection. The advantage over
+    /// [`Self::prepare`] is, that you do not need to keep track of the lifetime of the connection
+    /// seperatly and can create types which do own the prepared query and only depend on the
+    /// lifetime of the environment. The downside is that you can not use the connection for
+    /// anything else anymore.
+    ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
+    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
+    ///   execution.
+    pub fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<'c>>, Error> {
+        let query = SqlText::new(query);
+        let mut stmt = self.allocate_statement()?;
+        stmt.prepare(&query).into_result(&stmt)?;
+        // Safe: `handle` is a valid statement, and we are giving up ownership of `self`.
+        let stmt = unsafe { StatementConnection::new(stmt.into_sys(), self) };
+        Ok(Prepared::new(stmt))
+    }
+
+
     /// Allocates an SQL statement handle. This is recommended if you want to sequentially execute
     /// different queries over the same connection, as you avoid the overhead of allocating a
     /// statement handle for each query.

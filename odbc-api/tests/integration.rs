@@ -3271,6 +3271,39 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     assert_eq!("1\n2\n3", actual);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn bulk_inserter_owning_connection(profile: &Profile) {
+    // Given a table
+    let table_name = "BulkInserterOwningConnection";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+
+    // When insert two batches with size one and two.
+    let mut prepared = conn
+        .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let desc = BufferDescription {
+        nullable: false,
+        kind: BufferKind::I32,
+    };
+    // Insert a batch
+    let mut prebound = prepared.any_column_inserter(1, [desc]).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+
+    // Then
+    let conn = profile.connection().unwrap();
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1", actual);
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]
