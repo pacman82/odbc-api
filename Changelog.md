@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.45.0 (next)
+
+* `Prepared::describe_param` now requires an exclusive reference
+* Remove `Prebound`.
+
 ## 0.44.3
 
 * Add `NullableSliceMut::set_cell`

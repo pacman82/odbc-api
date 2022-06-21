@@ -436,7 +436,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     let statement_text = format!("INSERT INTO {} ({}) VALUES ({});", table, columns, values);
     info!("Insert statement Text: {}", statement_text);
 
-    let statement = connection.prepare(&statement_text)?;
+    let mut statement = connection.prepare(&statement_text)?;
 
     // Log column types.
     // Could get required buffer sizes from parameter description.

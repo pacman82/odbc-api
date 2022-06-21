@@ -168,7 +168,7 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
-    pub fn prepare(&self, query: &str) -> Result<Prepared<'_>, Error> {
+    pub fn prepare(&self, query: &str) -> Result<Prepared<StatementImpl<'_>>, Error> {
         let query = SqlText::new(query);
         let mut stmt = self.allocate_statement()?;
         stmt.prepare(&query).into_result(&stmt)?;
