@@ -230,15 +230,15 @@ impl<'a, T> NullableSliceMut<'a, T> {
         self.values.len()
     }
 
-        /// Sets the value at the specified index. Use `None` to specify a `NULL` value.
-        pub fn set_cell(&mut self, index: usize, cell: Option<T>) {
-            if let Some(value) = cell {
-                self.indicators[index] = 0;
-                self.values[index] = value;
-            } else {
-                self.indicators[index] = NULL_DATA;
-            }
+    /// Sets the value at the specified index. Use `None` to specify a `NULL` value.
+    pub fn set_cell(&mut self, index: usize, cell: Option<T>) {
+        if let Some(value) = cell {
+            self.indicators[index] = 0;
+            self.values[index] = value;
+        } else {
+            self.indicators[index] = NULL_DATA;
         }
+    }
 
     /// Write access to the underlying raw value and indicator buffer.
     ///

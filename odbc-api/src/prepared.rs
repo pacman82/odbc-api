@@ -1,9 +1,7 @@
 use crate::{
     buffers::{AnyColumnBuffer, BufferDescription, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
-    handles::{
-        AsStatementRef, HasDataType, ParameterDescription, Statement, StatementImpl, StatementRef,
-    },
+    handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
 };
 
@@ -31,25 +29,10 @@ impl<S> Prepared<S> {
     }
 }
 
-impl<S> Prepared<S> where S: AsStatementRef {
-
-    /// Describes parameter marker associated with a prepared SQL statement.
-    ///
-    /// # Parameters
-    ///
-    /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
-    ///   order, starting at 1.
-    pub fn describe_param(&mut self, parameter_number: u16) -> Result<ParameterDescription, Error> {
-        let stmt = self.as_stmt_ref();
-
-        stmt
-            .describe_param(parameter_number)
-            .into_result(&stmt)
-    }
-}
-
-impl<'o> Prepared<StatementImpl<'o>> {
-
+impl<S> Prepared<S>
+where
+    S: AsStatementRef,
+{
     /// Execute the prepared statement.
     ///
     /// * `params`: Used to bind these parameters before executing the statement. You can use `()`
@@ -60,8 +43,21 @@ impl<'o> Prepared<StatementImpl<'o>> {
     pub fn execute(
         &mut self,
         params: impl ParameterCollectionRef,
-    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
-        execute_with_parameters(move || Ok(&mut self.statement), None, params)
+    ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
+        let stmt = self.statement.as_stmt_ref();
+        execute_with_parameters(move || Ok(stmt), None, params)
+    }
+
+    /// Describes parameter marker associated with a prepared SQL statement.
+    ///
+    /// # Parameters
+    ///
+    /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
+    ///   order, starting at 1.
+    pub fn describe_param(&mut self, parameter_number: u16) -> Result<ParameterDescription, Error> {
+        let stmt = self.as_stmt_ref();
+
+        stmt.describe_param(parameter_number).into_result(&stmt)
     }
 
     /// Unless you want to roll your own column buffer implementation users are encouraged to use
@@ -75,7 +71,7 @@ impl<'o> Prepared<StatementImpl<'o>> {
     pub unsafe fn unchecked_bind_columnar_array_parameters<C>(
         self,
         parameter_buffers: Vec<C>,
-    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, C>, Error>
+    ) -> Result<ColumnarBulkInserter<S, C>, Error>
     where
         C: ColumnBuffer + HasDataType,
     {
@@ -126,7 +122,7 @@ impl<'o> Prepared<StatementImpl<'o>> {
         self,
         capacity: usize,
         max_str_len: impl IntoIterator<Item = usize>,
-    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, TextColumn<u8>>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, TextColumn<u8>>, Error> {
         let max_str_len = max_str_len.into_iter();
         let parameter_buffers = max_str_len
             .map(|max_str_len| TextColumn::new(capacity, max_str_len))
@@ -195,7 +191,7 @@ impl<'o> Prepared<StatementImpl<'o>> {
         self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDescription>,
-    ) -> Result<ColumnarBulkInserter<StatementImpl<'o>, AnyColumnBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, AnyColumnBuffer>, Error> {
         let parameter_buffers = descriptions
             .into_iter()
             .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
@@ -214,17 +210,22 @@ impl<'o> Prepared<StatementImpl<'o>> {
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDescription>,
     ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyColumnBuffer>, Error> {
+        let stmt = self.statement.as_stmt_ref();
+
         let parameter_buffers = descriptions
             .into_iter()
             .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
             .collect();
-        unsafe { ColumnarBulkInserter::new(self.statement.as_stmt_ref(), parameter_buffers) }
+        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
     }
 }
 
 impl<S> ResultSetMetadata for Prepared<S> where S: AsStatementRef {}
 
-impl<S> AsStatementRef for Prepared<S> where S: AsStatementRef {
+impl<S> AsStatementRef for Prepared<S>
+where
+    S: AsStatementRef,
+{
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
