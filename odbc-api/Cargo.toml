@@ -65,7 +65,7 @@ default=["odbc_version_3_80"]
 odbc-sys = { version = "0.21.2", default-features = false }
 thiserror = "1.0.31"
 log = "0.4.17"
-widestring = "0.5.1"
+widestring = "1.0.0"
 force-send-sync = "1.0.0"
 
 [target.'cfg(windows)'.dependencies]
