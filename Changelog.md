@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.45.1
+
+* `TextRowSet::for_cursor` now only performs a faliable allocation, if no upper bound for string length is specified. This has been changed to remidy performance regressions, but still have the faliable allocation in situation there it could likely occurr.
+
 ## 0.45.0
 
 * Add `Connection::into_prepared` to allow for prepared queries to take ownership of the connection.

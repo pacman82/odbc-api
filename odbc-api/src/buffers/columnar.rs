@@ -1,13 +1,13 @@
 use std::{
-    cmp::min,
     collections::HashSet,
-    str::{from_utf8, Utf8Error},
+    str::{from_utf8, Utf8Error}, cmp::min,
 };
 
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
+    result_set_metadata::utf8_display_sizes,
     Cursor, Error, ResultSetMetadata, RowSetBuffer,
 };
 
@@ -278,6 +278,10 @@ pub type TextRowSet = ColumnarBuffer<TextColumn<u8>>;
 impl TextRowSet {
     /// The resulting text buffer is not in any way tied to the cursor, other than that its buffer
     /// sizes a tailor fitted to result set the cursor is iterating over.
+    /// 
+    /// This method performs faliable buffer allocations, if no upper bound is set, so you may see
+    /// a speedup, by setting an upper bound using `max_str_limit`.
+    /// 
     ///
     /// # Parameters
     ///
@@ -294,32 +298,27 @@ impl TextRowSet {
         cursor: &mut impl ResultSetMetadata,
         max_str_len: Option<usize>,
     ) -> Result<TextRowSet, Error> {
-        let num_cols: u16 = cursor.num_result_cols()?.try_into().unwrap();
-        let buffers = (1..(num_cols + 1))
-            .map(|col_index| {
-                // Ask driver for buffer length
-                let reported_len =
-                    if let Some(encoded_len) = cursor.col_data_type(col_index)?.utf8_len() {
-                        encoded_len
-                    } else {
-                        cursor.col_display_size(col_index)? as usize
-                    };
-                // Apply upper bound if specified
-                let max_str_len = max_str_len
-                    .map(|limit| min(limit, reported_len))
-                    .unwrap_or(reported_len);
-                Ok((
-                    col_index,
-                    TextColumn::try_new(batch_size, max_str_len).map_err(|source| {
+        let buffers = utf8_display_sizes(cursor)?
+            .enumerate()
+            .map(|(buffer_index, reported_len)| {
+                let buffer_index = buffer_index as u16;
+                let col_index = buffer_index + 1;
+                let buffer = if let Some(upper_bound) = max_str_len {
+                    let max_str_len = min(reported_len?, upper_bound);
+                    TextColumn::new(batch_size, max_str_len)
+                } else {
+                    TextColumn::try_new(batch_size, reported_len?).map_err(|source| {
                         Error::TooLargeColumnBufferSize {
-                            buffer_index: col_index - 1,
+                            buffer_index,
                             num_elements: source.num_elements,
                             element_size: source.element_size,
                         }
-                    })?,
-                ))
+                    })?
+                };
+                
+                Ok((col_index, buffer))
             })
-            .collect::<Result<_, Error>>()?;
+            .collect::<Result<_, _>>()?;
         Ok(TextRowSet {
             row_capacity: batch_size,
             num_rows: Box::new(0),

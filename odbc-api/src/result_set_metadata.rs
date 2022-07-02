@@ -172,6 +172,33 @@ pub trait ResultSetMetadata: AsStatementRef {
     }
 }
 
+/// Buffer sizes able to hold the display size of each column in utf-8 encoding. You may call this
+/// method to figure out suitable buffer sizes for text columns. [`buffers::TextRowSet::for_cursor`]
+/// will invoke this function for you.
+///
+/// # Parameters
+///
+/// * `metadata`: Used to query the display size for each column of the row set. For character
+///   data the length in characters is multiplied by 4 in order to have enough space for 4 byte
+///   utf-8 characters. This is a pessimization for some data sources (e.g. SQLite 3) which do
+///   interpret the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
+pub fn utf8_display_sizes(
+    metadata: &mut impl ResultSetMetadata,
+) -> Result<impl Iterator<Item = Result<usize, Error>> + '_, Error> {
+    let num_cols: u16 = metadata.num_result_cols()?.try_into().unwrap();
+    let it = (1..(num_cols + 1)).map(move |col_index| {
+        // Ask driver for buffer length
+        let max_str_len =
+            if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
+                encoded_len
+            } else {
+                metadata.col_display_size(col_index)? as usize
+            };
+        Ok(max_str_len)
+    });
+    Ok(it)
+}
+
 /// An iterator calling `col_name` for each column_name and converting the result into UTF-8. See
 /// [`ResultSetMetada::column_names`].
 pub struct ColumnNamesIt<'c, C: ?Sized> {
