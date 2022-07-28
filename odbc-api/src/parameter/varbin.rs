@@ -254,5 +254,5 @@ unsafe impl<const LENGTH: usize> InputParameter for VarBinaryArray<LENGTH> {}
 unsafe impl<'a> OutputParameter for VarBinarySliceMut<'a> {}
 unsafe impl<'a> InputParameter for VarBinarySliceMut<'a> {}
 
-unsafe impl<'a> OutputParameter for VarBinaryBox {}
-unsafe impl<'a> InputParameter for VarBinaryBox {}
+unsafe impl OutputParameter for VarBinaryBox {}
+unsafe impl InputParameter for VarBinaryBox {}

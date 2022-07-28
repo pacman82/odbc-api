@@ -2356,7 +2356,6 @@ fn use_truncated_output_as_input(profile: &Profile) {
     row.get_data(1, &mut buf).unwrap();
     assert_eq!(b"Hell", buf.as_bytes().unwrap());
     assert!(!buf.is_complete());
-    drop(row);
     drop(cursor);
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);

@@ -204,7 +204,7 @@ pub struct CursorImpl<Stmt: AsStatementRef> {
     statement: Stmt,
 }
 
-impl<'o, S> Drop for CursorImpl<S>
+impl<S> Drop for CursorImpl<S>
 where
     S: AsStatementRef,
 {

@@ -56,7 +56,7 @@ impl IntoParameter for String {
     }
 }
 
-impl<'a> IntoParameter for Option<String> {
+impl IntoParameter for Option<String> {
     type Parameter = VarCharBox;
 
     fn into_parameter(self) -> Self::Parameter {
@@ -94,7 +94,7 @@ impl IntoParameter for Vec<u8> {
     }
 }
 
-impl<'a> IntoParameter for Option<Vec<u8>> {
+impl IntoParameter for Option<Vec<u8>> {
     type Parameter = VarBinaryBox;
 
     fn into_parameter(self) -> Self::Parameter {

@@ -310,5 +310,5 @@ unsafe impl<const LENGTH: usize> InputParameter for VarCharArray<LENGTH> {}
 unsafe impl<'a> OutputParameter for VarCharSliceMut<'a> {}
 unsafe impl<'a> InputParameter for VarCharSliceMut<'a> {}
 
-unsafe impl<'a> OutputParameter for VarCharBox {}
-unsafe impl<'a> InputParameter for VarCharBox {}
+unsafe impl OutputParameter for VarCharBox {}
+unsafe impl InputParameter for VarCharBox {}
