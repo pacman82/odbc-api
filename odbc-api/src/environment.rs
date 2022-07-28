@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, sync::Mutex};
+use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
     error::ExtendResult,
@@ -372,8 +372,8 @@ impl Environment {
         #[cfg(target_os = "windows")]
         let hwnd = parent_window
             .as_ref()
-            .map(|window| window.hwnd())
-            .unwrap_or(0) as HWnd; // Winit uses isize, odbc uses of *mut c_void
+            .map(|window| window.hwnd() as HWnd)
+            .unwrap_or(null_mut());
         #[cfg(not(target_os = "windows"))]
         let hwnd = null_mut();
         unsafe {
