@@ -188,12 +188,11 @@ pub fn utf8_display_sizes(
     let num_cols: u16 = metadata.num_result_cols()?.try_into().unwrap();
     let it = (1..(num_cols + 1)).map(move |col_index| {
         // Ask driver for buffer length
-        let max_str_len =
-            if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
-                encoded_len
-            } else {
-                metadata.col_display_size(col_index)? as usize
-            };
+        let max_str_len = if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
+            encoded_len
+        } else {
+            metadata.col_display_size(col_index)? as usize
+        };
         Ok(max_str_len)
     });
     Ok(it)

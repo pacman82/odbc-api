@@ -186,7 +186,7 @@ impl<'c> Connection<'c> {
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
     ///   may be used as a placeholder in the statement text, to be replaced with parameters during
     ///   execution.
-    /// 
+    ///
     /// ```no_run
     /// use lazy_static::lazy_static;
     /// use odbc_api::{
@@ -206,7 +206,7 @@ impl<'c> Connection<'c> {
     /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
     /// /// takes ownership of a connection created using an environment with static lifetime.
     /// type Inserter = ColumnarBulkInserter<StatementConnection<'static>, AnyColumnBuffer>;
-    /// 
+    ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
     ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
@@ -233,7 +233,6 @@ impl<'c> Connection<'c> {
         let stmt = unsafe { StatementConnection::new(stmt.into_sys(), self) };
         Ok(Prepared::new(stmt))
     }
-
 
     /// Allocates an SQL statement handle. This is recommended if you want to sequentially execute
     /// different queries over the same connection, as you avoid the overhead of allocating a

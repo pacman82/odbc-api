@@ -1,6 +1,7 @@
 use std::{
+    cmp::min,
     collections::HashSet,
-    str::{from_utf8, Utf8Error}, cmp::min,
+    str::{from_utf8, Utf8Error},
 };
 
 use crate::{
@@ -278,10 +279,10 @@ pub type TextRowSet = ColumnarBuffer<TextColumn<u8>>;
 impl TextRowSet {
     /// The resulting text buffer is not in any way tied to the cursor, other than that its buffer
     /// sizes a tailor fitted to result set the cursor is iterating over.
-    /// 
+    ///
     /// This method performs faliable buffer allocations, if no upper bound is set, so you may see
     /// a speedup, by setting an upper bound using `max_str_limit`.
-    /// 
+    ///
     ///
     /// # Parameters
     ///
@@ -315,7 +316,7 @@ impl TextRowSet {
                         }
                     })?
                 };
-                
+
                 Ok((col_index, buffer))
             })
             .collect::<Result<_, _>>()?;
