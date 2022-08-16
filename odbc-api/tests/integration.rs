@@ -3303,6 +3303,22 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     assert_eq!("1", actual);
 }
 
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn async_statement_execution(profile: &Profile) {
+    // Given a table
+    let table_name = "AsyncStatementExecution";
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+
+    // When
+    let statement = conn.preallocate().unwrap();
+    let mut statement = statement.into_statement();
+
+    statement.set_async_enable(true).unwrap();
+}
+
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
 #[test]

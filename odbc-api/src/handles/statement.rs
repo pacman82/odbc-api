@@ -442,6 +442,26 @@ pub trait Statement: AsHandle {
         }
     }
 
+    /// Enables or disables asynchronous execution for this statement handle. If asynchronous
+    /// execution is not enabled on connection level it is disabled by default and everything is
+    /// executed synchronously.
+    /// 
+    /// This is equivalent to stetting `SQL_ATTR_ASYNC_ENABLE` in the bare C API.
+    /// 
+    /// See
+    /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/executing-statements-odbc>
+    fn set_async_enable(&mut self, on: bool) -> SqlResult<()> {
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::AsyncEnable,
+                on as usize as Pointer,
+                0,
+            )
+            .into_sql_result("SQLSetStmtAttr")
+        }
+    }
+
     /// Binds a buffer holding an input parameter to a parameter marker in an SQL statement. This
     /// specialized version takes a constant reference to parameter, but is therefore limited to
     /// binding input parameters. See [`Statement::bind_parameter`] for the version which can bind
