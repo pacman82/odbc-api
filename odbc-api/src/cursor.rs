@@ -12,7 +12,8 @@ use std::{cmp::max, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: ResultSetMetadata {
-    /// Advances the cursor to the next row in the result set.
+    /// Advances the cursor to the next row in the result set. This is **Slow**. Bind buffers
+    /// instead, for good performance.
     ///
     /// While this method is very convenient due to the fact that the application does not have to
     /// declare and bind specific buffers it is also in many situations extremely slow. Concrete
