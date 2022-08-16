@@ -97,6 +97,7 @@ impl Environment {
         match handles::Environment::set_connection_pooling(scheme) {
             SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPooling),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
+            SqlResult::StillExecuting => panic!("Unexpected return value `STILL_EXECUTING`"),
         }
     }
 
@@ -142,6 +143,7 @@ impl Environment {
                 env
             }
             SqlResult::Error { .. } => return Err(Error::FailedAllocatingEnvironment),
+            SqlResult::StillExecuting => panic!("Unexpected return value `STILL_EXECUTING`"),
         };
 
         debug!("ODBC Environment created.");

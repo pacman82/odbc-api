@@ -13,7 +13,7 @@ use odbc_api::{
     buffers::{
         BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, Statement},
+    handles::{OutputStringBuffer, Statement, SqlText, SqlResult},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -3310,13 +3310,31 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
 fn async_statement_execution(profile: &Profile) {
     // Given a table
     let table_name = "AsyncStatementExecution";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile.setup_empty_table(table_name, &["VARCHAR(50)"]).unwrap();
+    let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
 
     // When
     let statement = conn.preallocate().unwrap();
     let mut statement = statement.into_statement();
-
+    let query = SqlText::new(&query);
     statement.set_async_enable(true).unwrap();
+
+    let mut result = SqlResult::StillExecuting;
+
+    unsafe {
+        while result == SqlResult::StillExecuting {
+            result = statement.exec_direct(&query);
+        }
+    }
+    result.into_result(&statement).unwrap();
+
+    // Then
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("Hello, World!", actual);
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
