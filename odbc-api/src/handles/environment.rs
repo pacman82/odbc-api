@@ -31,7 +31,7 @@ pub struct Environment {
     handle: HEnv,
 }
 
-/// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading?view=sql-server-ver15>
+/// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
 unsafe impl Send for Environment {}
 
 // We are not declaring Environment as Sync due to its interior mutablity with regards to iterator
@@ -73,7 +73,7 @@ impl Environment {
             null_mut(),
             odbc_sys::EnvironmentAttribute::ConnectionPooling,
             scheme.into(),
-            0,
+            odbc_sys::IS_INTEGER,
         )
         .into_sql_result("SQLSetEnvAttr")
     }
@@ -84,7 +84,7 @@ impl Environment {
                 self.handle,
                 odbc_sys::EnvironmentAttribute::CpMatch,
                 matching.into(),
-                0,
+                odbc_sys::IS_INTEGER,
             )
         }
         .into_sql_result("SQLSetEnvAttr")
