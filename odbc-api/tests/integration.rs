@@ -24,7 +24,7 @@ use odbc_api::{
 use std::{
     ffi::CString,
     io::{self, Write},
-    iter, str, thread,
+    iter, str, thread, time::Duration,
 };
 
 const MSSQL_CONNECTION: &str =
@@ -3306,13 +3306,15 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn async_statement_execution(profile: &Profile) {
+#[tokio::test]
+async fn async_statement_execution(profile: &Profile) {
     // Given a table
     let table_name = "AsyncStatementExecution";
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(50)"])
         .unwrap();
     let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
+    let sleep = || tokio::time::sleep(Duration::from_millis(10));
 
     // When
     let statement = conn.preallocate().unwrap();
@@ -3320,14 +3322,14 @@ fn async_statement_execution(profile: &Profile) {
     let query = SqlText::new(&query);
     statement.set_async_enable(true).unwrap();
 
-    let mut result = SqlResult::StillExecuting;
-
     unsafe {
+        let mut result = statement.exec_direct(&query);
         while result == SqlResult::StillExecuting {
+            sleep().await;
             result = statement.exec_direct(&query);
         }
+        result.into_result(&statement).unwrap();
     }
-    result.into_result(&statement).unwrap();
 
     // Then
     let cursor = conn
