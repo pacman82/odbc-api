@@ -61,11 +61,9 @@ impl<T> SqlResult<T> {
 pub trait ExtSqlReturn {
     fn into_sql_result(self, function_name: &'static str) -> SqlResult<()>;
 
-    /// Translates NO_DATA to None
-    #[deprecated(note = "Not suitable for asynchronous code. Use into_sql_result_bool instead")]
-    fn into_opt_sql_result(self, function_name: &'static str) -> Option<SqlResult<()>>;
-
-    /// Translates NO_DATA to `false`.
+    /// Use this instead of [`Self::into_sql_result`] if you expect [`SqlReturn::NO_DATA`] to be a
+    /// valid value. [`SqlReturn::NO_DATA`] is mapped to `Ok(false)`, all other success values are
+    /// `Ok(true)`.
     fn into_sql_result_bool(self, function_name: &'static str) -> SqlResult<bool>;
 }
 
@@ -80,13 +78,6 @@ impl ExtSqlReturn for SqlReturn {
                 "Unexpected return value '{:?}' for ODBC function '{}'",
                 r, function
             ),
-        }
-    }
-
-    fn into_opt_sql_result(self, function: &'static str) -> Option<SqlResult<()>> {
-        match self {
-            SqlReturn::NO_DATA => None,
-            other => Some(other.into_sql_result(function)),
         }
     }
 
