@@ -196,8 +196,8 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// Fetch dereferences bound column pointers.
-    unsafe fn fetch(&mut self) -> Option<SqlResult<()>> {
-        SQLFetch(self.as_sys()).into_opt_sql_result("SQLFetch")
+    unsafe fn fetch(&mut self) -> SqlResult<bool> {
+        SQLFetch(self.as_sys()).into_sql_result_bool("SQLFetch")
     }
 
     /// Retrieves data for a single column in the result set or for a single parameter.
@@ -445,9 +445,9 @@ pub trait Statement: AsHandle {
     /// Enables or disables asynchronous execution for this statement handle. If asynchronous
     /// execution is not enabled on connection level it is disabled by default and everything is
     /// executed synchronously.
-    /// 
+    ///
     /// This is equivalent to stetting `SQL_ATTR_ASYNC_ENABLE` in the bare C API.
-    /// 
+    ///
     /// See
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/executing-statements-odbc>
     fn set_async_enable(&mut self, on: bool) -> SqlResult<()> {

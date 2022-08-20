@@ -13,7 +13,7 @@ use odbc_api::{
     buffers::{
         BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, Statement, SqlText, SqlResult},
+    handles::{OutputStringBuffer, SqlResult, SqlText, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -3303,14 +3303,15 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     assert_eq!("1", actual);
 }
 
-
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn async_statement_execution(profile: &Profile) {
     // Given a table
     let table_name = "AsyncStatementExecution";
-    let conn = profile.setup_empty_table(table_name, &["VARCHAR(50)"]).unwrap();
+    let conn = profile
+        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .unwrap();
     let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
 
     // When

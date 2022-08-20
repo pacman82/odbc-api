@@ -993,7 +993,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.45.1"
+version = "0.46.0"
 dependencies = [
  "anyhow",
  "criterion",

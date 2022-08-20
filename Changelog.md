@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.46.0
+
+* Minimal support for asynchronous code in the `handle` module.
+* `SqlResult` has a new variant `SqlResult::StillExecuting`.
+* New function `Statement::set_async_enable` can be used to enable polling for statements.
+* Functions returning `Option<SqlResult<_>>` now return `SqlResult<Option<_>>` or `SqlResult<bool>` in order to allow for top level asynchronous code to build on the same abstraction as the synchronous code.
+
+Since most users would not engage with the `unsafe` functions of the `handle` module their code should be unaffected.
+
 ## 0.45.1
 
 * `TextRowSet::for_cursor` now only performs a faliable allocation, if no upper bound for string length is specified. This has been changed to remidy performance regressions, but still have the faliable allocation in situation there it could likely occurr.

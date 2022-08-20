@@ -211,7 +211,7 @@ impl<T> SqlResult<T> {
             }
             SqlResult::StillExecuting => panic!(
                 "SqlResult must not be converted to result while the function is still executing."
-            )
+            ),
         }
     }
 }

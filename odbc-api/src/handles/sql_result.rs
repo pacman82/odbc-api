@@ -62,7 +62,11 @@ pub trait ExtSqlReturn {
     fn into_sql_result(self, function_name: &'static str) -> SqlResult<()>;
 
     /// Translates NO_DATA to None
+    #[deprecated(note = "Not suitable for asynchronous code. Use into_sql_result_bool instead")]
     fn into_opt_sql_result(self, function_name: &'static str) -> Option<SqlResult<()>>;
+
+    /// Translates NO_DATA to `false`.
+    fn into_sql_result_bool(self, function_name: &'static str) -> SqlResult<bool>;
 }
 
 impl ExtSqlReturn for SqlReturn {
@@ -83,6 +87,13 @@ impl ExtSqlReturn for SqlReturn {
         match self {
             SqlReturn::NO_DATA => None,
             other => Some(other.into_sql_result(function)),
+        }
+    }
+
+    fn into_sql_result_bool(self, function: &'static str) -> SqlResult<bool> {
+        match self {
+            SqlReturn::NO_DATA => SqlResult::Success(false),
+            other => other.into_sql_result(function).on_success(|| true),
         }
     }
 }

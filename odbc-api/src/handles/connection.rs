@@ -120,7 +120,7 @@ impl<'c> Connection<'c> {
                 DriverConnectOption::NoPrompt,
             )
             // Since we did pass NoPrompt we know the user can not abort the prompt.
-            .unwrap()
+            .map(|_connection_string_is_complete| ())
         }
     }
 
@@ -140,7 +140,7 @@ impl<'c> Connection<'c> {
         parent_window: HWnd,
         completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverConnectOption,
-    ) -> Option<SqlResult<()>> {
+    ) -> SqlResult<bool> {
         sql_driver_connect(
             self.handle,
             parent_window,
@@ -151,7 +151,7 @@ impl<'c> Connection<'c> {
             completed_connection_string.mut_actual_len_ptr(),
             driver_completion,
         )
-        .into_opt_sql_result("SQLDriverConnect")
+        .into_sql_result_bool("SQLDriverConnect")
     }
 
     /// Disconnect from an ODBC data source.

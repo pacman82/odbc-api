@@ -26,9 +26,7 @@ pub trait Cursor: ResultSetMetadata {
         let row_available = unsafe {
             self.as_stmt_ref()
                 .fetch()
-                .map(|res| res.into_result(&self.as_stmt_ref()))
-                .transpose()?
-                .is_some()
+                .into_result(&self.as_stmt_ref())?
         };
         let ret = if row_available {
             Some(unsafe { CursorRow::new(self.as_stmt_ref()) })
@@ -410,27 +408,23 @@ where
         error_for_truncation: bool,
     ) -> Result<Option<&B>, Error> {
         unsafe {
-            if let Some(sql_result) = self.cursor.as_stmt_ref().fetch() {
-                sql_result
-                    .into_result_with_trunaction_check(
-                        &self.cursor.as_stmt_ref(),
-                        error_for_truncation,
-                    )
-                    // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
-                    // tell the it to the user than binding parameters, but rather now then we fetch
-                    // results. The error code retruned is `HY004` rather then `HY003` which should
-                    // be used to indicate invalid buffer types.
-                    .provide_context_for_diagnostic(|record, function| {
-                        if record.state == State::INVALID_SQL_DATA_TYPE {
-                            Error::OracleOdbcDriverDoesNotSupport64Bit(record)
-                        } else {
-                            Error::Diagnostics { record, function }
-                        }
-                    })?;
-                Ok(Some(&self.buffer))
-            } else {
-                Ok(None)
-            }
+            let has_row = self
+                .cursor
+                .as_stmt_ref()
+                .fetch()
+                .into_result_with_trunaction_check(&self.cursor.as_stmt_ref(), error_for_truncation)
+                // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
+                // tell the it to the user than binding parameters, but rather now then we fetch
+                // results. The error code retruned is `HY004` rather then `HY003` which should
+                // be used to indicate invalid buffer types.
+                .provide_context_for_diagnostic(|record, function| {
+                    if record.state == State::INVALID_SQL_DATA_TYPE {
+                        Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+                    } else {
+                        Error::Diagnostics { record, function }
+                    }
+                })?;
+            Ok(has_row.then_some(&self.buffer))
         }
     }
 }

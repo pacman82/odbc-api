@@ -407,15 +407,17 @@ impl Environment {
         let mut connection = self.allocate_connection()?;
         let connection_string = SqlText::new(connection_string);
 
-        connection
+        let connection_string_is_complete = connection
             .driver_connect(
                 &connection_string,
                 parent_window,
                 completed_connection_string,
                 driver_completion.as_sys(),
             )
-            .map(|res| res.into_result(&connection))
-            .unwrap_or(Err(Error::AbortedConnectionStringCompletion))?;
+            .into_result(&connection)?;
+        if !connection_string_is_complete {
+            return Err(Error::AbortedConnectionStringCompletion);
+        }
         Ok(Connection::new(connection))
     }
 
@@ -447,17 +449,20 @@ impl Environment {
                 .environment
                 // Start with first so we are independent of state
                 .drivers_buffer_len(FetchOrientation::First)
+                .into_result(&self.environment)?
             {
-                res.into_result(&self.environment)?
+                res
             } else {
                 // No drivers present
                 return Ok(Vec::new());
             };
 
-            // If there are let's loop over the rest
-            while let Some(res) = self.environment.drivers_buffer_len(FetchOrientation::Next) {
-                let (candidate_desc_len, candidate_attr_len) =
-                    res.into_result(&self.environment)?;
+            // If there are, let's loop over the remaining drivers
+            while let Some((candidate_desc_len, candidate_attr_len)) = self
+                .environment
+                .drivers_buffer_len(FetchOrientation::Next)
+                .into_result(&self.environment)?
+            {
                 desc_len = max(candidate_desc_len, desc_len);
                 attr_len = max(candidate_attr_len, attr_len);
             }
@@ -473,9 +478,7 @@ impl Environment {
                     desc_buf.mut_buf(),
                     attr_buf.mut_buf(),
                 )
-                .map(|res| res.into_result(&self.environment))
-                .transpose()?
-                .is_some()
+                .into_result(&self.environment)?
             {
                 let description = desc_buf.to_utf8();
                 let attributes = attr_buf.to_utf8();
@@ -555,20 +558,22 @@ impl Environment {
         let _lock = self.internal_state.lock().unwrap();
         unsafe {
             // Find required buffer size to avoid truncation.
-            let (mut server_name_len, mut driver_len) =
-                if let Some(res) = self.environment.data_source_buffer_len(direction) {
-                    res.into_result(&self.environment)?
-                } else {
-                    // No drivers present
-                    return Ok(Vec::new());
-                };
+            let (mut server_name_len, mut driver_len) = if let Some(res) = self
+                .environment
+                .data_source_buffer_len(direction)
+                .into_result(&self.environment)?
+            {
+                res
+            } else {
+                // No drivers present
+                return Ok(Vec::new());
+            };
 
             // If there are let's loop over the rest
             while let Some((candidate_name_len, candidate_decs_len)) = self
                 .environment
                 .drivers_buffer_len(FetchOrientation::Next)
-                .map(|res| res.into_result(&self.environment))
-                .transpose()?
+                .into_result(&self.environment)?
             {
                 server_name_len = max(candidate_name_len, server_name_len);
                 driver_len = max(candidate_decs_len, driver_len);
@@ -580,9 +585,7 @@ impl Environment {
             let mut not_empty = self
                 .environment
                 .data_source_buffer_fill(direction, server_name_buf.mut_buf(), driver_buf.mut_buf())
-                .map(|res| res.into_result(&self.environment))
-                .transpose()?
-                .is_some();
+                .into_result(&self.environment)?;
 
             while not_empty {
                 let server_name = server_name_buf.to_utf8();
@@ -599,9 +602,7 @@ impl Environment {
                         server_name_buf.mut_buf(),
                         driver_buf.mut_buf(),
                     )
-                    .map(|res| res.into_result(&self.environment))
-                    .transpose()?
-                    .is_some()
+                    .into_result(&self.environment)?;
             }
         }
 

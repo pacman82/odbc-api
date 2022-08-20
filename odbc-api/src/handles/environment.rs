@@ -168,7 +168,7 @@ impl Environment {
         direction: FetchOrientation,
         buffer_description: &mut [SqlChar],
         buffer_attributes: &mut [SqlChar],
-    ) -> Option<SqlResult<()>> {
+    ) -> SqlResult<bool> {
         sql_drivers(
             self.handle,
             direction,
@@ -179,7 +179,7 @@ impl Environment {
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_opt_sql_result("SQLDrivers")
+        .into_sql_result_bool("SQLDrivers")
     }
 
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and
@@ -209,7 +209,7 @@ impl Environment {
     pub unsafe fn drivers_buffer_len(
         &self,
         direction: FetchOrientation,
-    ) -> Option<SqlResult<(i16, i16)>> {
+    ) -> SqlResult<Option<(i16, i16)>> {
         // Lengths in characters minus terminating zero
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
@@ -224,8 +224,8 @@ impl Environment {
             0,
             &mut length_attributes,
         )
-        .into_opt_sql_result("SQLDrivers")
-        .map(|res| res.on_success(|| (length_description, length_attributes)))
+        .into_sql_result_bool("SQLDrivers")
+        .map(|res| res.then_some((length_description, length_attributes)))
     }
 
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
@@ -251,7 +251,7 @@ impl Environment {
     pub unsafe fn data_source_buffer_len(
         &self,
         direction: FetchOrientation,
-    ) -> Option<SqlResult<(i16, i16)>> {
+    ) -> SqlResult<Option<(i16, i16)>> {
         // Lengths in characters minus terminating zero
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
@@ -266,8 +266,8 @@ impl Environment {
             0,
             &mut length_description,
         )
-        .into_opt_sql_result("SQLDataSources")
-        .map(|res| res.on_success(|| (length_name, length_description)))
+        .into_sql_result_bool("SQLDataSources")
+        .map(|res| res.then_some((length_name, length_description)))
     }
 
     /// List drivers descriptions and driver attribute keywords.
@@ -296,7 +296,7 @@ impl Environment {
         direction: FetchOrientation,
         buffer_name: &mut [SqlChar],
         buffer_description: &mut [SqlChar],
-    ) -> Option<SqlResult<()>> {
+    ) -> SqlResult<bool> {
         sql_data_sources(
             self.handle,
             direction,
@@ -307,6 +307,6 @@ impl Environment {
             buffer_description.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_opt_sql_result("SQLDataSources")
+        .into_sql_result_bool("SQLDataSources")
     }
 }
