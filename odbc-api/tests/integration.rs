@@ -1382,7 +1382,7 @@ fn wchar(profile: &Profile) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
-fn wchar_as_char(profile: Profile) {
+fn wchar_as_char(profile: &Profile) {
     let table_name = table_name!();
 
     let conn = profile
