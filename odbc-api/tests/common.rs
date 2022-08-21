@@ -1,3 +1,5 @@
+use std::iter::repeat;
+
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextColumn},
@@ -37,32 +39,89 @@ impl Profile {
         column_types: &[&str],
     ) -> Result<Connection<'static>, odbc_api::Error> {
         let conn = self.connection()?;
-        let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
-
-        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
-        let cols = column_types
-            .iter()
-            .zip(column_names)
-            .map(|(ty, name)| format!("{} {}", name, ty))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        let create_table = format!(
-            "CREATE TABLE {} (id {},{});",
-            table_name, self.index_type, cols
-        );
-        conn.execute(drop_table, ())?;
-        conn.execute(&create_table, ())?;
+        let table = Table::new(table_name, column_types);
+        conn.execute(&table.sql_drop_if_exists(), ())?;
+        conn.execute(&table.sql_create_table(self.index_type), ())?;
         Ok(conn)
+    }
+
+    /// Convinience function, setting up an empty table, and returning the connection used to create
+    /// it.
+    pub fn given<'a>(
+        &self,
+        table_name: &'a str,
+        column_types: &'a [&'a str],
+    ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
+        let conn = self.connection()?;
+        let table = Table::new(table_name, column_types);
+        conn.execute(&table.sql_drop_if_exists(), ())?;
+        conn.execute(&table.sql_create_table(self.index_type), ())?;
+        Ok((conn, table))
     }
 }
 
-/// Query the table and prints it contents to a string
-pub fn table_to_string(conn: &Connection<'_>, table_name: &str, column_names: &[&str]) -> String {
-    let cols = column_names.join(", ");
-    let query = format!("SELECT {} FROM {}", cols, table_name);
-    let cursor = conn.execute(&query, ()).unwrap().unwrap();
-    cursor_to_string(cursor)
+/// Declarative description for a table to conviniently build queries for it
+pub struct Table<'a> {
+    pub name: &'a str,
+    pub column_types: &'a [&'a str],
+    pub column_names: &'a [&'a str],
+}
+
+impl<'a> Table<'a> {
+    pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
+        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+        Table {
+            name,
+            column_types,
+            column_names: &column_names[..column_types.len()],
+        }
+    }
+
+    /// SQL statement text dropping the table, if it exists
+    pub fn sql_drop_if_exists(&self) -> String {
+        format!("DROP TABLE IF EXISTS {};", self.name)
+    }
+
+    /// SQL statement text creating the table
+    pub fn sql_create_table(&self, index_type: &str) -> String {
+        let cols = self
+            .column_types
+            .iter()
+            .zip(self.column_names)
+            .map(|(ty, name)| format!("{} {}", name, ty))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("CREATE TABLE {} (id {index_type},{cols});", self.name)
+    }
+
+    /// Select all columns but the Id column. Results ordered by id.
+    pub fn sql_all_ordered_by_id(&self) -> String {
+        let cols = self.column_names.join(",");
+        format!("SELECT {cols} FROM {} ORDER BY Id;", self.name)
+    }
+
+    /// Parameterized insert statement
+    pub fn sql_insert(&self) -> String {
+        let cols = self.column_names.join(",");
+        let placeholders = repeat("?")
+            .take(self.column_names.len())
+            .collect::<Vec<_>>()
+            .join(",");
+        format!(
+            "INSERT INTO {} ({cols}) VALUES ({placeholders});",
+            self.name
+        )
+    }
+
+    /// Queries all the tables fields and concatinates them to a single string. Rows separated by
+    /// `\n` and fields separated by `,`.
+    pub fn content_as_string(&self, conn: &Connection<'_>) -> String {
+        let cursor = conn
+            .execute(&self.sql_all_ordered_by_id(), ())
+            .unwrap()
+            .unwrap();
+        cursor_to_string(cursor)
+    }
 }
 
 pub fn cursor_to_string(mut cursor: impl Cursor) -> String {

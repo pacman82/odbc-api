@@ -6,7 +6,7 @@ use sys::NULL_DATA;
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
-use common::{cursor_to_string, table_to_string, Profile, SingleColumnRowSetBuffer, ENV};
+use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
@@ -69,7 +69,10 @@ const MARIADB: &Profile = &Profile {
 
 macro_rules! table_name {
     () => {
-        function_name!().replace("::", "_")
+        // Make function name a valid table name
+        function_name!()
+            .replace("::", "_")
+            .replace(r#"_{{closure}}"#, "")
     };
 }
 
@@ -107,8 +110,8 @@ fn connect_to_db(profile: &Profile) {
 fn describe_columns(profile: &Profile) {
     let table_name = table_name!();
 
-    let conn = profile
-        .setup_empty_table(
+    let (conn, table) = profile
+        .given(
             &table_name,
             &[
                 "VARCHAR(255) NOT NULL",
@@ -125,8 +128,8 @@ fn describe_columns(profile: &Profile) {
             ],
         )
         .unwrap();
-    let sql = &format!("SELECT a,b,c,d,e,f,g,h,i,j,k FROM {table_name} ORDER BY Id;");
-    let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
+    let sql = table.sql_all_ordered_by_id();
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
@@ -211,8 +214,8 @@ fn describe_columns(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_fetch_text(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
+    let (conn, table) = profile
+        .given(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
     // Insert data
@@ -230,7 +233,7 @@ fn bulk_fetch_text(profile: &Profile) {
     )
     .unwrap();
 
-    let query = format!("SELECT a,b FROM {} ORDER BY id;", table_name);
+    let query = table.sql_all_ordered_by_id();
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     // Cursor to string helper utilizes the text buffer
     let actual = cursor_to_string(cursor);
@@ -244,8 +247,8 @@ fn bulk_fetch_text(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn into_cursor(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
+    let (conn, table) = profile
+        .given(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
     // Insert data
@@ -265,7 +268,7 @@ fn into_cursor(profile: &Profile) {
 
     let make_cursor = || {
         let conn = profile.connection().unwrap();
-        let query = format!("SELECT a,b FROM {} ORDER BY id;", table_name);
+        let query = table.sql_all_ordered_by_id();
         conn.into_cursor(&query, ()).unwrap().unwrap()
     };
     let cursor = make_cursor();
@@ -681,18 +684,14 @@ fn columnar_fetch_timestamp(profile: &Profile) {
 fn columnar_insert_timestamp(profile: &Profile) {
     let table_name = table_name!();
     // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["DATETIME2"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["DATETIME2"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
         kind: BufferKind::Timestamp,
         nullable: true,
     };
-    let prepared = conn
-        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
-        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
@@ -728,7 +727,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
     prebound.execute().unwrap();
 
     // Query values and compare with expectation
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
     assert_eq!(expected, actual);
 }
@@ -740,18 +739,14 @@ fn columnar_insert_timestamp(profile: &Profile) {
 fn columnar_insert_int_raw(profile: &Profile) {
     let table_name = table_name!();
     // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
         kind: BufferKind::I32,
         nullable: true,
     };
-    let prepared = conn
-        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
-        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert.
@@ -771,7 +766,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
     prebound.execute().unwrap();
 
     // Query values and compare with expectation
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     let expected = "1\nNULL\n3";
     assert_eq!(expected, actual);
 }
@@ -1159,14 +1154,12 @@ fn bind_integer_parameter(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite only cares for terminating zero, not the indicator
 fn insert_string_ending_with_nul(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(10)"])
-        .unwrap();
-    let sql = format!("INSERT INTO {} (a) VALUES(?)", table_name);
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
+    let sql = table.sql_insert();
     let param = "Hell\0";
     conn.execute(&sql, &param.into_parameter()).unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     assert_eq!("Hell\0", actual);
 }
 
@@ -1678,9 +1671,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_connection(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     // Insert in one thread, query in another, using the same connection.
     let insert_sql = format!("INSERT INTO {} (a) VALUES (1),(2),(3)", table_name);
@@ -1688,9 +1679,10 @@ fn send_connection(profile: &Profile) {
 
     let conn = unsafe { conn.promote_to_send() };
 
-    let handle = thread::spawn(move || table_to_string(&conn, &table_name, &["a"]));
-
-    let actual = handle.join().unwrap();
+    let actual = thread::scope(|s| {
+        let handle = s.spawn(|| move || table.content_as_string(&conn));
+        handle.join().unwrap()()
+    });
     assert_eq!("1\n2\n3", actual)
 }
 
@@ -1753,10 +1745,8 @@ fn parameter_option_bytes(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_varchar_512(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(50)"])
-        .unwrap();
-    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
     prepared.execute(&VarCharArray::<512>::NULL).unwrap();
@@ -1764,7 +1754,8 @@ fn parameter_varchar_512(profile: &Profile) {
         .execute(&VarCharArray::<512>::new(b"Bernd"))
         .unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    // Then
+    let actual = table.content_as_string(&conn);
     let expected = "NULL\nBernd";
     assert_eq!(expected, actual);
 }
@@ -1774,10 +1765,8 @@ fn parameter_varchar_512(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
 fn parameter_varbinary_512(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARBINARY(50)"])
-        .unwrap();
-    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let (conn, table) = profile.given(&table_name, &["VARBINARY(50)"]).unwrap();
+    let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
     prepared.execute(&VarBinaryArray::<512>::NULL).unwrap();
@@ -1785,7 +1774,7 @@ fn parameter_varbinary_512(profile: &Profile) {
         .execute(&VarBinaryArray::<512>::new(&[1, 2, 3]))
         .unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     let expected = "NULL\n010203";
     assert_eq!(expected, actual);
 }
@@ -1795,10 +1784,8 @@ fn parameter_varbinary_512(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_cstr(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(50)"])
-        .unwrap();
-    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
     let param = CString::new("Hello, World!").unwrap();
@@ -1806,7 +1793,7 @@ fn parameter_cstr(profile: &Profile) {
     prepared.execute(&param).unwrap();
     prepared.execute(param.as_c_str()).unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     let expected = "Hello, World!\nHello, World!";
     assert_eq!(expected, actual);
 }
@@ -2362,9 +2349,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     let table_name = table_name!();
 
     // Prepare table content
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(13)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(13)"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
         (),
@@ -2382,11 +2367,11 @@ fn use_truncated_output_as_input(profile: &Profile) {
     assert!(!buf.is_complete());
     drop(cursor);
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = table.sql_insert();
     buf.hide_truncation();
     conn.execute(&insert, &buf).unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     assert_eq!("Hello, World!\nHell", actual);
 }
 
@@ -2396,19 +2381,14 @@ fn use_truncated_output_as_input(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_value(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(50)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
 
     let memory = "Hello\0INVALID MEMORY\0";
     // Contains hello plus terminating zero.
     let valid = &memory.as_bytes()[..6];
     // Truncated value.
     let parameter = VarCharSlice::from_buffer(valid, Indicator::Length(memory.len()));
-    let result = conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
-        &parameter,
-    );
+    let result = conn.execute(&table.sql_insert(), &parameter);
 
     match result {
         Err(e) => {
@@ -2419,8 +2399,7 @@ fn insert_truncated_value(profile: &Profile) {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
             // wrong, but we are only interessted in unsafe behaviour.
-            let actual = table_to_string(&conn, &table_name, &["a"]);
-            assert_eq!("Hello", actual)
+            assert_eq!("Hello", table.content_as_string(&conn))
         }
         _ => panic!("Unexpected cursor"),
     }
@@ -2433,17 +2412,12 @@ fn insert_truncated_var_char_array(profile: &Profile) {
     let table_name = table_name!();
 
     // Prepare table content
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(50)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
 
     let memory = "Hello, World!";
     // Truncated value. Buffer can only hold 'Hello'
     let parameter = VarCharArray::<5>::new(memory.as_bytes());
-    let result = conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?);", table_name),
-        &parameter,
-    );
+    let result = conn.execute(&table.sql_insert(), &parameter);
 
     match result {
         Err(e) => {
@@ -2454,7 +2428,7 @@ fn insert_truncated_var_char_array(profile: &Profile) {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
             // wrong, but we are only interessted in unsafe behaviour.
-            let actual = table_to_string(&conn, &table_name, &["a"]);
+            let actual = table.content_as_string(&conn);
             eprintln!("{}", actual);
             // SQLite just emmits 'Hell' instead of 'Hello'. It's not beautiful, but it is not
             // invalid memory access either.
@@ -2469,8 +2443,8 @@ fn insert_truncated_var_char_array(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn arbitrary_input_parameters(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(20)", "INTEGER"])
+    let (conn, table) = profile
+        .given(&table_name, &["VARCHAR(20)", "INTEGER"])
         .unwrap();
 
     let insert_statement = format!("INSERT INTO {} (a, b) VALUES (?, ?);", table_name);
@@ -2481,7 +2455,7 @@ fn arbitrary_input_parameters(profile: &Profile) {
     conn.execute(&insert_statement, parameters.as_slice())
         .unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a", "b"]);
+    let actual = table.content_as_string(&conn);
     assert_eq!("Hello, World!,42", actual)
 }
 
@@ -2521,7 +2495,7 @@ fn synchronized_access_to_driver_and_data_source_info() {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_large_texts(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile.setup_empty_table(&table_name, &["Text"]).unwrap();
+    let (conn, table) = profile.given(&table_name, &["Text"]).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
 
@@ -2531,7 +2505,7 @@ fn insert_large_texts(profile: &Profile) {
     conn.execute(&insert, &data.as_str().into_parameter())
         .unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
+    let actual = table.content_as_string(&conn);
     assert_eq!(data.len(), actual.len());
     assert!(data == actual);
 }
@@ -2721,16 +2695,13 @@ fn escape_hatch(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn varchar_null(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(10)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
 
     conn.execute(&insert, &VarCharSlice::NULL).unwrap();
 
-    let actual = table_to_string(&conn, &table_name, &["a"]);
-    assert_eq!("NULL", actual)
+    assert_eq!("NULL", table.content_as_string(&conn))
 }
 
 /// Connect to database with connection string, and check the output connection string with
@@ -2966,9 +2937,7 @@ fn no_data(profile: &Profile) {
 fn list_tables(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListTables";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let cursor = conn.tables("", "", table_name, "").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
@@ -2983,9 +2952,7 @@ fn list_tables(profile: &Profile, expected: &str) {
 fn list_tables_preallocated(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListTablesPreallocated";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
     let cursor = preallocated.tables("", "", table_name, "").unwrap();
@@ -3001,9 +2968,7 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
 fn list_columns(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListColumns";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
 
     let cursor = conn.columns("", "", table_name, "a").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
@@ -3018,9 +2983,7 @@ fn list_columns(profile: &Profile, expected: &str) {
 fn list_columns_preallocated(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListColumnsPreallocated";
-    let conn = profile
-        .setup_empty_table(table_name, &["INTEGER"])
-        .unwrap();
+    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
     let cursor = preallocated.columns("", "", table_name, "a").unwrap();
@@ -3354,10 +3317,8 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
 #[tokio::test]
 async fn async_statement_execution(profile: &Profile) {
     // Given a table
-    let table_name = "AsyncStatementExecution";
-    let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)"])
-        .unwrap();
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
     let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
     let sleep = || tokio::time::sleep(Duration::from_millis(10));
 
@@ -3377,11 +3338,7 @@ async fn async_statement_execution(profile: &Profile) {
     }
 
     // Then
-    let cursor = conn
-        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table.content_as_string(&conn);
     assert_eq!("Hello, World!", actual);
 }
 
