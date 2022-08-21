@@ -517,8 +517,8 @@ fn bind_numeric_to_i64(profile: &Profile) {
 fn columnar_fetch_varbinary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARBINARY(10)"])
+    let (conn, table) = profile
+        .given(&table_name, &["VARBINARY(10)"])
         .unwrap();
     let insert_sql = format!(
         "INSERT INTO {} (a) Values \
@@ -531,7 +531,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
 
     // Retrieve values
     let mut cursor = conn
-        .execute("SELECT a FROM ColumnarFetchVarbinary ORDER BY Id", ())
+        .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
@@ -2662,8 +2662,8 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn escape_hatch(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
+    let (conn, table) = profile
+        .given(&table_name, &["INTEGER"])
         .unwrap();
 
     let preallocated = conn.preallocate().unwrap();
@@ -2672,8 +2672,9 @@ fn escape_hatch(profile: &Profile) {
     statement.reset_parameters().unwrap();
 
     unsafe {
+        let select_utf8 = table.sql_all_ordered_by_id();
         // TableName does not exist, but we won't execute the query anyway
-        let select = U16String::from_str("SELECT * FROM EscapeHatch");
+        let select = U16String::from_str(&select_utf8);
         let ret = sys::SQLPrepareW(
             statement.as_sys(),
             select.as_ptr(),
