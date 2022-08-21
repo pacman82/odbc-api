@@ -1,13 +1,12 @@
 mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
+use stdext::function_name;
 use sys::NULL_DATA;
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
-use common::{
-    cursor_to_string, setup_empty_table, table_to_string, Profile, SingleColumnRowSetBuffer, ENV,
-};
+use common::{cursor_to_string, table_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
@@ -24,7 +23,8 @@ use odbc_api::{
 use std::{
     ffi::CString,
     io::{self, Write},
-    iter, str, thread, time::Duration,
+    iter, str, thread,
+    time::Duration,
 };
 
 const MSSQL_CONNECTION: &str =
@@ -67,6 +67,12 @@ const MARIADB: &Profile = &Profile {
     blob_type: "BLOB",
 };
 
+macro_rules! table_name {
+    () => {
+        function_name!().replace("::", "_")
+    };
+}
+
 #[test]
 fn bogus_connection_string() {
     // When
@@ -97,29 +103,29 @@ fn connect_to_db(profile: &Profile) {
     assert!(!conn.is_dead().unwrap())
 }
 
-#[test]
-fn describe_columns() {
-    let conn = MSSQL.connection().unwrap();
-    setup_empty_table(
-        &conn,
-        MSSQL.index_type,
-        "DescribeColumns",
-        &[
-            "VARCHAR(255) NOT NULL",
-            "INTEGER",
-            "BINARY(12)",
-            "VARBINARY(100)",
-            "NCHAR(10)",
-            "NUMERIC(3,2)",
-            "DATETIME2",
-            "TIME",
-            "text",
-            "Image",
-            "DOUBLE PRECISION",
-        ],
-    )
-    .unwrap();
-    let sql = "SELECT a,b,c,d,e,f,g,h,i,j,k FROM DescribeColumns ORDER BY Id;";
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn describe_columns(profile: &Profile) {
+    let table_name = table_name!();
+
+    let conn = profile
+        .setup_empty_table(
+            &table_name,
+            &[
+                "VARCHAR(255) NOT NULL",
+                "INTEGER",
+                "BINARY(12)",
+                "VARBINARY(100)",
+                "NCHAR(10)",
+                "NUMERIC(3,2)",
+                "DATETIME2",
+                "TIME",
+                "text",
+                "Image",
+                "DOUBLE PRECISION",
+            ],
+        )
+        .unwrap();
+    let sql = &format!("SELECT a,b,c,d,e,f,g,h,i,j,k FROM {table_name} ORDER BY Id;");
     let mut cursor = conn.execute(sql, ()).unwrap().unwrap();
 
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
@@ -204,9 +210,9 @@ fn describe_columns() {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_fetch_text(profile: &Profile) {
-    let table_name = "TextBuffer";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(255)", "INT"])
+        .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
     // Insert data
@@ -237,9 +243,9 @@ fn bulk_fetch_text(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn into_cursor(profile: &Profile) {
-    let table_name = "IntoCursor";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(255)", "INT"])
+        .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
     // Insert data
@@ -274,9 +280,9 @@ fn into_cursor(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn column_name(profile: &Profile) {
-    let table_name = "ColumnName";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(255)", "INT"])
+        .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
     let sql = format!("SELECT a, b FROM {};", table_name);
@@ -303,9 +309,11 @@ fn column_name(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_char(profile: &Profile) {
-    let table_name = "BindChar";
+    let table_name = table_name!();
 
-    let conn = profile.setup_empty_table(table_name, &["CHAR(5)"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["CHAR(5)"])
+        .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -324,8 +332,10 @@ fn bind_char(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_char_to_wchar(profile: &Profile) {
-    let table_name = "BindCharToWChar";
-    let conn = profile.setup_empty_table(table_name, &["CHAR(5)"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["CHAR(5)"])
+        .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -344,9 +354,9 @@ fn bind_char_to_wchar(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_bit(profile: &Profile) {
-    let table_name = "BindBit";
+    let table_name = table_name!();
 
-    let conn = profile.setup_empty_table(table_name, &["BIT"]).unwrap();
+    let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES (0),(1);", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -367,8 +377,10 @@ fn bind_bit(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn truncate_fixed_sized(profile: &Profile) {
-    let table_name = "TruncateFixedSized";
-    let conn = profile.setup_empty_table(table_name, &["CHAR(5)"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["CHAR(5)"])
+        .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -387,9 +399,9 @@ fn truncate_fixed_sized(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_varchar(profile: &Profile) {
-    let table_name = "BindVarchar";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(100)"])
+        .setup_empty_table(&table_name, &["VARCHAR(100)"])
         .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
@@ -409,9 +421,9 @@ fn bind_varchar(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_varchar_to_wchar(profile: &Profile) {
-    let table_name = "BindVarcharToWChar";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(100)"])
+        .setup_empty_table(&table_name, &["VARCHAR(100)"])
         .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
     conn.execute(&insert_sql, ()).unwrap();
@@ -436,9 +448,9 @@ fn bind_varchar_to_wchar(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] //Doesn't work on Linux
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn nvarchar_to_text(profile: &Profile) {
-    let table_name = "NvarcharToText";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["NVARCHAR(1)"])
+        .setup_empty_table(&table_name, &["NVARCHAR(1)"])
         .unwrap();
     // Trade mark sign (`™`) is longer in utf-8 (3 Bytes) than in utf-16 (2 Bytes).
     let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
@@ -456,9 +468,9 @@ fn nvarchar_to_text(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_numeric_to_float(profile: &Profile) {
     // Setup table
-    let table_name = "BindNumericToFloat";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["NUMERIC(3,2)"])
+        .setup_empty_table(&table_name, &["NUMERIC(3,2)"])
         .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     conn.execute(&insert_sql, &1.23).unwrap();
@@ -478,9 +490,9 @@ fn bind_numeric_to_float(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_numeric_to_i64(profile: &Profile) {
     // Setup table
-    let table_name = "BindNumericToI64";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["NUMERIC(10,0)"])
+        .setup_empty_table(&table_name, &["NUMERIC(10,0)"])
         .unwrap();
     let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     conn.execute(&insert_sql, &1234567890i64).unwrap();
@@ -501,9 +513,9 @@ fn bind_numeric_to_i64(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_fetch_varbinary(profile: &Profile) {
     // Setup
-    let table_name = "ColumnarFetchVarbinary";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARBINARY(10)"])
+        .setup_empty_table(&table_name, &["VARBINARY(10)"])
         .unwrap();
     let insert_sql = format!(
         "INSERT INTO {} (a) Values \
@@ -586,10 +598,10 @@ fn columnar_fetch_binary(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_fetch_timestamp(profile: &Profile) {
-    let table_name = "ColumnarFetchTimestamp";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["DATETIME2(3)"])
+        .setup_empty_table(&table_name, &["DATETIME2(3)"])
         .unwrap();
     conn.execute(
         &format!(
@@ -667,10 +679,10 @@ fn columnar_fetch_timestamp(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 // #[test_case(SQLITE_3; "SQLite 3")] default precision of 3 instead 7
 fn columnar_insert_timestamp(profile: &Profile) {
-    let table_name = "ColumnarInsertTimestamp";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["DATETIME2"])
+        .setup_empty_table(&table_name, &["DATETIME2"])
         .unwrap();
 
     // Fill buffer with values
@@ -716,7 +728,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
     prebound.execute().unwrap();
 
     // Query values and compare with expectation
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     let expected = "2020-03-20 16:13:54.0000000\n2021-03-20 16:13:54.1234567\nNULL";
     assert_eq!(expected, actual);
 }
@@ -726,9 +738,11 @@ fn columnar_insert_timestamp(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_int_raw(profile: &Profile) {
-    let table_name = "ColumnarInsertIntRaw";
+    let table_name = table_name!();
     // Setup
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     // Fill buffer with values
     let desc = BufferDescription {
@@ -757,7 +771,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
     prebound.execute().unwrap();
 
     // Query values and compare with expectation
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     let expected = "1\nNULL\n3";
     assert_eq!(expected, actual);
 }
@@ -768,10 +782,10 @@ fn columnar_insert_int_raw(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_timestamp_ms(profile: &Profile) {
-    let table_name = "ColmunarInsertTimestampMs";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["DATETIME2(3)"])
+        .setup_empty_table(&table_name, &["DATETIME2(3)"])
         .unwrap();
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
@@ -876,10 +890,10 @@ fn columnar_insert_varbinary(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_varchar(profile: &Profile) {
-    let table_name = "ColumnarInsertVarchar";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
     let prepared = conn
         .prepare(&format!("INSERT INTO {} (a) VALUES (?)", table_name))
@@ -927,9 +941,11 @@ fn columnar_insert_varchar(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_text_as_sql_integer(profile: &Profile) {
-    let table_name = "ColumnarInsertTextAsSqlInteger";
+    let table_name = table_name!();
     // Setup
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
@@ -965,10 +981,10 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn adaptive_columnar_insert_varchar(profile: &Profile) {
-    let table_name = "AdaptiveColumnarInsertVarchar";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
 
     // Fill buffer with values
@@ -1017,10 +1033,10 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(SQLITE_3; "SQLite 3")]
 fn adaptive_columnar_insert_varbin(profile: &Profile) {
-    let table_name = "AdaptiveColumnarInsertVarbin";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["VARBINARY(13)"])
+        .setup_empty_table(&table_name, &["VARBINARY(13)"])
         .unwrap();
     // Fill buffer with values
     let desc = BufferDescription {
@@ -1071,10 +1087,10 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_wide_varchar(profile: &Profile) {
-    let table_name = "ColumnarInsertWideVarchar";
+    let table_name = table_name!();
     // Setup
     let conn = profile
-        .setup_empty_table(table_name, &["NVARCHAR(13)"])
+        .setup_empty_table(&table_name, &["NVARCHAR(13)"])
         .unwrap();
 
     let prepared = conn
@@ -1119,9 +1135,9 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_integer_parameter(profile: &Profile) {
-    let table_name = "BindIntegerParam";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
+        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
     let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
     conn.execute(&insert, ()).unwrap();
@@ -1142,15 +1158,15 @@ fn bind_integer_parameter(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite only cares for terminating zero, not the indicator
 fn insert_string_ending_with_nul(profile: &Profile) {
-    let table_name = "InsertStringEndingWithNul";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(10)"])
+        .setup_empty_table(&table_name, &["VARCHAR(10)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES(?)", table_name);
     let param = "Hell\0";
     conn.execute(&sql, &param.into_parameter()).unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     assert_eq!("Hell\0", actual);
 }
 
@@ -1159,9 +1175,9 @@ fn insert_string_ending_with_nul(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn prepared_statement(profile: &Profile) {
     // Setup
-    let table_name = "PreparedStatement";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(13)", "INTEGER"])
+        .setup_empty_table(&table_name, &["VARCHAR(13)", "INTEGER"])
         .unwrap();
     let insert = format!(
         "INSERT INTO {} (a,b) VALUES ('First', 1), ('Second', 2);",
@@ -1266,9 +1282,9 @@ fn preallocation_soundness(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn integer_parameter_as_string(profile: &Profile) {
-    let table_name = "IntegerParameterAsString";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
+        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
     let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
     conn.execute(&insert, ()).unwrap();
@@ -1284,9 +1300,9 @@ fn integer_parameter_as_string(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bind_optional_integer_parameter(profile: &Profile) {
-    let table_name = "ParameterOptionIntegerSome";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "INTEGER"])
+        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
     let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
     conn.execute(&insert, ()).unwrap();
@@ -1313,10 +1329,10 @@ fn bind_optional_integer_parameter(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite will work only if increasing length to VARCHAR(2).
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn non_ascii_char(profile: &Profile) {
-    let table_name = "NonAsciiChar";
+    let table_name = table_name!();
 
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(1)"])
+        .setup_empty_table(&table_name, &["VARCHAR(1)"])
         .unwrap();
 
     conn.execute(
@@ -1336,9 +1352,9 @@ fn non_ascii_char(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn wchar(profile: &Profile) {
-    let table_name = "WChar";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["NVARCHAR(1)"])
+        .setup_empty_table(&table_name, &["NVARCHAR(1)"])
         .unwrap();
 
     conn.execute(
@@ -1371,14 +1387,14 @@ fn wchar(profile: &Profile) {
     assert!(row_set_cursor.fetch().unwrap().is_none());
 }
 
-#[test]
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
-fn wchar_as_char() {
-    let conn = ENV
-        .connect_with_connection_string(MSSQL.connection_string)
-        .unwrap();
+fn wchar_as_char(profile: Profile) {
+    let table_name = table_name!();
 
-    setup_empty_table(&conn, MSSQL.index_type, "WCharAsChar", &["NVARCHAR(1)"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["NVARCHAR(1)"])
+        .unwrap();
 
     // With the wide character ODBC function calls passing the arguments as literals worked but with
     // the narrow version "INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');" fails. It erroneously
@@ -1386,12 +1402,12 @@ fn wchar_as_char() {
     // such confusing character and binary length.
 
     conn.execute(
-        "INSERT INTO WCharAsChar (a) VALUES (?), (?);",
+        &format!("INSERT INTO {table_name} (a) VALUES (?), (?);"),
         (&"A".into_parameter(), &"Ü".into_parameter()),
     )
     .unwrap();
 
-    let sql = "SELECT a FROM WCharAsChar ORDER BY id;";
+    let sql = &format!("SELECT a FROM WCharAsChar ORDER BY id;");
     let cursor = conn.execute(sql, ()).unwrap().unwrap();
     let output = cursor_to_string(cursor);
     assert_eq!("A\nÜ", output);
@@ -1401,8 +1417,10 @@ fn wchar_as_char() {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn two_parameters_in_tuple(profile: &Profile) {
-    let table_name = "TwoParmetersInTuple";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
     let insert = format!("INSERT INTO {} (a) VALUES (1), (2), (3), (4);", table_name);
     conn.execute(&insert, ()).unwrap();
 
@@ -1420,9 +1438,9 @@ fn two_parameters_in_tuple(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn heterogenous_parameters_in_array(profile: &Profile) {
-    let table_name = "heterogenous_parameters_in_array";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let insert_sql = format!(
         "INSERT INTO {} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')",
@@ -1443,9 +1461,9 @@ fn heterogenous_parameters_in_array(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn column_names_iterator(profile: &Profile) {
-    let table_name = "column_names_iterator";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("SELECT a, b FROM {};", table_name);
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -1462,9 +1480,9 @@ fn column_names_iterator(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn column_names_from_prepared_query(profile: &Profile) {
-    let table_name = "column_names_from_prepared_query";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("SELECT a, b FROM {};", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1481,9 +1499,9 @@ fn column_names_from_prepared_query(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn metadata_from_prepared_insert_query(profile: &Profile) {
-    let table_name = "metadata_from_prepared_insert_query";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", "VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a, b) VALUES (42, 'Hello');", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1588,9 +1606,9 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // Given
-    let table_name = "BulkInsertWithMultipleBatches";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)", "INTEGER"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)", "INTEGER"])
         .unwrap();
 
     // When
@@ -1659,8 +1677,10 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_connection(profile: &Profile) {
-    let table_name = "SendConnection";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     // Insert in one thread, query in another, using the same connection.
     let insert_sql = format!("INSERT INTO {} (a) VALUES (1),(2),(3)", table_name);
@@ -1668,7 +1688,7 @@ fn send_connection(profile: &Profile) {
 
     let conn = unsafe { conn.promote_to_send() };
 
-    let handle = thread::spawn(move || table_to_string(&conn, table_name, &["a"]));
+    let handle = thread::spawn(move || table_to_string(&conn, &table_name, &["a"]));
 
     let actual = handle.join().unwrap();
     assert_eq!("1\n2\n3", actual)
@@ -1703,10 +1723,10 @@ fn parameter_option_strings(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
 fn parameter_option_bytes(profile: &Profile) {
-    let table_name = "ParameterOptionByteSlice";
+    let table_name = table_name!();
 
     let conn = profile
-        .setup_empty_table(table_name, &["VARBINARY(50)"])
+        .setup_empty_table(&table_name, &["VARBINARY(50)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1732,9 +1752,9 @@ fn parameter_option_bytes(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_varchar_512(profile: &Profile) {
-    let table_name = "ParameterVarchar512";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1744,7 +1764,7 @@ fn parameter_varchar_512(profile: &Profile) {
         .execute(&VarCharArray::<512>::new(b"Bernd"))
         .unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     let expected = "NULL\nBernd";
     assert_eq!(expected, actual);
 }
@@ -1753,9 +1773,9 @@ fn parameter_varchar_512(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
 fn parameter_varbinary_512(profile: &Profile) {
-    let table_name = "ParameterVarbinary512";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARBINARY(50)"])
+        .setup_empty_table(&table_name, &["VARBINARY(50)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1765,7 +1785,7 @@ fn parameter_varbinary_512(profile: &Profile) {
         .execute(&VarBinaryArray::<512>::new(&[1, 2, 3]))
         .unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     let expected = "NULL\n010203";
     assert_eq!(expected, actual);
 }
@@ -1774,9 +1794,9 @@ fn parameter_varbinary_512(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn parameter_cstr(profile: &Profile) {
-    let table_name = "ParameterCStr";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)"])
         .unwrap();
     let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
@@ -1786,7 +1806,7 @@ fn parameter_cstr(profile: &Profile) {
     prepared.execute(&param).unwrap();
     prepared.execute(param.as_c_str()).unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     let expected = "Hello, World!\nHello, World!";
     assert_eq!(expected, actual);
 }
@@ -1990,9 +2010,11 @@ fn interior_nul(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_int(profile: &Profile) {
-    let table_name = "GetDataInt";
+    let table_name = table_name!();
 
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"),
@@ -2027,9 +2049,11 @@ fn get_data_int(profile: &Profile) {
 // windows this is the case.
 // #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_int_null(profile: &Profile) {
-    let table_name = "GetDataIntNull";
+    let table_name = table_name!();
 
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
         .unwrap();
@@ -2058,10 +2082,10 @@ fn get_data_int_null(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_string(profile: &Profile) {
-    let table_name = "GetDataString";
+    let table_name = table_name!();
 
     let conn = profile
-        .setup_empty_table(table_name, &["Varchar(50)"])
+        .setup_empty_table(&table_name, &["Varchar(50)"])
         .unwrap();
 
     conn.execute(
@@ -2098,10 +2122,10 @@ fn get_data_string(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn get_data_binary(profile: &Profile) {
-    let table_name = "GetDataBinary";
+    let table_name = table_name!();
 
     let conn = profile
-        .setup_empty_table(table_name, &["Varbinary(50)"])
+        .setup_empty_table(&table_name, &["Varbinary(50)"])
         .unwrap();
 
     conn.execute(
@@ -2238,9 +2262,9 @@ fn short_strings_get_text(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn short_get_binary(profile: &Profile) {
-    let table_name = "ShortGetBinary";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["Varbinary(15)"])
+        .setup_empty_table(&table_name, &["Varbinary(15)"])
         .unwrap();
 
     conn.execute(
@@ -2270,9 +2294,9 @@ fn short_get_binary(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
 // #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
 fn large_get_binary(profile: &Profile) {
-    let table_name = "LargeGetBinary";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["Varbinary(max)"])
+        .setup_empty_table(&table_name, &["Varbinary(max)"])
         .unwrap();
 
     let input = vec![42; 2000];
@@ -2301,11 +2325,11 @@ fn large_get_binary(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn capped_text_buffer(profile: &Profile) {
-    let table_name = "CappedTextBuffer";
+    let table_name = table_name!();
 
     // Prepare table content
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
@@ -2335,11 +2359,11 @@ fn capped_text_buffer(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn use_truncated_output_as_input(profile: &Profile) {
-    let table_name = "UseTruncatedOutputAsInput";
+    let table_name = table_name!();
 
     // Prepare table content
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(13)"])
+        .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
@@ -2362,7 +2386,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     buf.hide_truncation();
     conn.execute(&insert, &buf).unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     assert_eq!("Hello, World!\nHell", actual);
 }
 
@@ -2371,9 +2395,9 @@ fn use_truncated_output_as_input(profile: &Profile) {
 //#[test_case(MARIADB => inconclusive; "Maria DB")] Expected fail. Inconclusive seems not to work.
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_value(profile: &Profile) {
-    let table_name = "InsertedTruncatedValue";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)"])
         .unwrap();
 
     let memory = "Hello\0INVALID MEMORY\0";
@@ -2395,7 +2419,7 @@ fn insert_truncated_value(profile: &Profile) {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
             // wrong, but we are only interessted in unsafe behaviour.
-            let actual = table_to_string(&conn, table_name, &["a"]);
+            let actual = table_to_string(&conn, &table_name, &["a"]);
             assert_eq!("Hello", actual)
         }
         _ => panic!("Unexpected cursor"),
@@ -2406,11 +2430,11 @@ fn insert_truncated_value(profile: &Profile) {
 // #[test_case(MARIADB => inconclusive; "Maria DB expected fail")] Expected failure.
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_truncated_var_char_array(profile: &Profile) {
-    let table_name = "InsertedTruncatedVarCharArray";
+    let table_name = table_name!();
 
     // Prepare table content
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)"])
         .unwrap();
 
     let memory = "Hello, World!";
@@ -2430,7 +2454,7 @@ fn insert_truncated_var_char_array(profile: &Profile) {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
             // wrong, but we are only interessted in unsafe behaviour.
-            let actual = table_to_string(&conn, table_name, &["a"]);
+            let actual = table_to_string(&conn, &table_name, &["a"]);
             eprintln!("{}", actual);
             // SQLite just emmits 'Hell' instead of 'Hello'. It's not beautiful, but it is not
             // invalid memory access either.
@@ -2444,9 +2468,9 @@ fn insert_truncated_var_char_array(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn arbitrary_input_parameters(profile: &Profile) {
-    let table_name = "ArbitraryInputParameters";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(20)", "INTEGER"])
+        .setup_empty_table(&table_name, &["VARCHAR(20)", "INTEGER"])
         .unwrap();
 
     let insert_statement = format!("INSERT INTO {} (a, b) VALUES (?, ?);", table_name);
@@ -2457,7 +2481,7 @@ fn arbitrary_input_parameters(profile: &Profile) {
     conn.execute(&insert_statement, parameters.as_slice())
         .unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a", "b"]);
+    let actual = table_to_string(&conn, &table_name, &["a", "b"]);
     assert_eq!("Hello, World!,42", actual)
 }
 
@@ -2496,8 +2520,8 @@ fn synchronized_access_to_driver_and_data_source_info() {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn insert_large_texts(profile: &Profile) {
-    let table_name = "InsertLargeTexts";
-    let conn = profile.setup_empty_table(table_name, &["Text"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile.setup_empty_table(&table_name, &["Text"]).unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
 
@@ -2507,7 +2531,7 @@ fn insert_large_texts(profile: &Profile) {
     conn.execute(&insert, &data.as_str().into_parameter())
         .unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     assert_eq!(data.len(), actual.len());
     assert!(data == actual);
 }
@@ -2516,9 +2540,9 @@ fn insert_large_texts(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_long_data_binary_vec(profile: &Profile) {
-    let table_name = "SendLongDataBinaryVec";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &[profile.blob_type])
+        .setup_empty_table(&table_name, &[profile.blob_type])
         .unwrap();
 
     // Large vector with successive numbers. It's too large to send to the database in one go.
@@ -2544,9 +2568,9 @@ fn send_long_data_binary_vec(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
     // Given
-    let table_name = "SendBlobAsPartOfTuple";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["INTEGER", profile.blob_type])
+        .setup_empty_table(&table_name, &["INTEGER", profile.blob_type])
         .unwrap();
     // Large vector with successive numbers. It's too large to send to the database in one go.
     let input: Vec<_> = (0..12000).map(|i| (i % 256) as u8).collect();
@@ -2575,8 +2599,8 @@ fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_long_data_string(profile: &Profile) {
-    let table_name = "SendLongDataString";
-    let conn = profile.setup_empty_table(table_name, &["Text"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile.setup_empty_table(&table_name, &["Text"]).unwrap();
 
     // Large vector with successive numbers. It's too large to send to the database in one go.
     let input: String = (0..1200).map(|_| "abcdefghijklmnopqrstuvwxyz").collect();
@@ -2602,9 +2626,9 @@ fn send_long_data_string(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite does not write anything to the database if there is no
 // size hint given
 fn send_long_data_binary_read(profile: &Profile) {
-    let table_name = "SendLongDataBinaryRead";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &[profile.blob_type])
+        .setup_empty_table(&table_name, &[profile.blob_type])
         .unwrap();
 
     // Large vector with successive numbers. It's too large to send to the database in one go.
@@ -2630,9 +2654,9 @@ fn send_long_data_binary_read(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn send_long_data_binary_file(profile: &Profile) {
-    let table_name = "SendLongDataBinaryFile";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &[profile.blob_type])
+        .setup_empty_table(&table_name, &[profile.blob_type])
         .unwrap();
 
     // Large vector with successive numbers. It's too large to send to the database in one go.
@@ -2663,8 +2687,10 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn escape_hatch(profile: &Profile) {
-    let table_name = "EscapeHatch";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     let preallocated = conn.preallocate().unwrap();
     let mut statement = preallocated.into_statement();
@@ -2694,16 +2720,16 @@ fn escape_hatch(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn varchar_null(profile: &Profile) {
-    let table_name = "VarcharNull";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(10)"])
+        .setup_empty_table(&table_name, &["VARCHAR(10)"])
         .unwrap();
 
     let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
 
     conn.execute(&insert, &VarCharSlice::NULL).unwrap();
 
-    let actual = table_to_string(&conn, table_name, &["a"]);
+    let actual = table_to_string(&conn, &table_name, &["a"]);
     assert_eq!("NULL", actual)
 }
 
@@ -2825,9 +2851,9 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
 #[test_case(MARIADB, ""; "Maria DB")]
 #[test_case(SQLITE_3, "dbo"; "SQLite 3")]
 fn columns_query(profile: &Profile, schema: &str) {
-    let table_name = "ColumnsQuery";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(10)"])
+        .setup_empty_table(&table_name, &["VARCHAR(10)"])
         .unwrap();
 
     let row_set_buffer = ColumnarAnyBuffer::try_from_description(
@@ -2839,7 +2865,7 @@ fn columns_query(profile: &Profile, schema: &str) {
     .unwrap();
     // Mariadb does not support schemas
     let columns = conn
-        .columns(&conn.current_catalog().unwrap(), schema, table_name, "a")
+        .columns(&conn.current_catalog().unwrap(), schema, &table_name, "a")
         .unwrap();
 
     let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
@@ -2864,9 +2890,9 @@ fn columns_query(profile: &Profile, schema: &str) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn fill_vec_of_rows(profile: &Profile) {
-    let table_name = "FillVecOfRows";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(50)", "INTEGER"])
+        .setup_empty_table(&table_name, &["VARCHAR(50)", "INTEGER"])
         .unwrap();
     let insert_sql = format!("INSERT INTO {} (a,b) VALUES ('A', 1), ('B',2)", table_name);
     conn.execute(&insert_sql, ()).unwrap();
@@ -2921,8 +2947,10 @@ fn fill_vec_of_rows(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn no_data(profile: &Profile) {
-    let table_name = "NoData";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
     let sql = format!("DELETE FROM {} WHERE id=5", table_name);
     // Assert no panic on direct execution
     conn.execute(&sql, ()).unwrap();
@@ -2936,8 +2964,11 @@ fn no_data(profile: &Profile) {
 #[test_case(MARIADB, "test_db,NULL,ListTables,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTables,TABLE,NULL"; "SQLite 3")]
 fn list_tables(profile: &Profile, expected: &str) {
+    // Table name is part of test expectation for this test
     let table_name = "ListTables";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
 
     let cursor = conn.tables("", "", table_name, "").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
@@ -2950,8 +2981,11 @@ fn list_tables(profile: &Profile, expected: &str) {
 #[test_case(MARIADB, "test_db,NULL,ListTablesPreallocated,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTablesPreallocated,TABLE,NULL"; "SQLite 3")]
 fn list_tables_preallocated(profile: &Profile, expected: &str) {
+    // Table name is part of test expectation for this test
     let table_name = "ListTablesPreallocated";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
     let cursor = preallocated.tables("", "", table_name, "").unwrap();
@@ -2965,8 +2999,11 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
 #[test_case(MARIADB, "test_db,NULL,ListColumns,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
 #[test_case(SQLITE_3, ",,ListColumns,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
 fn list_columns(profile: &Profile, expected: &str) {
+    // Table name is part of test expectation for this test
     let table_name = "ListColumns";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
 
     let cursor = conn.columns("", "", table_name, "a").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
@@ -2979,8 +3016,11 @@ fn list_columns(profile: &Profile, expected: &str) {
 #[test_case(MARIADB, "test_db,NULL,ListColumnsPreallocated,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
 #[test_case(SQLITE_3, ",,ListColumnsPreallocated,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
 fn list_columns_preallocated(profile: &Profile, expected: &str) {
+    // Table name is part of test expectation for this test
     let table_name = "ListColumnsPreallocated";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let conn = profile
+        .setup_empty_table(table_name, &["INTEGER"])
+        .unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
     let cursor = preallocated.columns("", "", table_name, "a").unwrap();
@@ -3009,8 +3049,8 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
     // deadlock or transaction collision with other tests. Since the other tests destroy and create
     // tables a lot, listing them in parallel is dangerous. This filter gets rid of most of the
     // weirdness.
-    let table_name = "table_does_not_exist";
-    let mut cursor = conn.columns("", "", table_name, "").unwrap();
+    let table_name = table_name!();
+    let mut cursor = conn.columns("", "", &table_name, "").unwrap();
     let mut column_description = ColumnDescription::default();
     let mut size_of_row = 0;
     for index in 0..cursor.num_result_cols().unwrap() {
@@ -3032,8 +3072,8 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 fn row_array_size_66536(profile: &Profile) {
-    let table_name = "RowArraySize66536";
-    let conn = profile.setup_empty_table(table_name, &["BIT"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
     let sql = format!("SELECT a FROM {}", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let row_set_buffer = ColumnarAnyBuffer::try_from_description(
@@ -3087,8 +3127,10 @@ fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn memcopy_values_from_nullable_slice(profile: &Profile) {
     // Given
-    let table_name = "MemcopyValuesFromNullableSlice";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (42), (NULL), (5);"),
         (),
@@ -3134,7 +3176,6 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
     // Given
-
     let table_name = "TextColumnViewShouldAllowForFillingArrowArrays";
     let conn = profile
         .setup_empty_table(table_name, &["VARCHAR(50)"])
@@ -3206,9 +3247,9 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     // Given a text entry with a length of ten.
-    let table_name = "DetectTruncatedOutputInBulkFetch";
+    let table_name = table_name!();
     let conn = profile
-        .setup_empty_table(table_name, &["VARCHAR(10)"])
+        .setup_empty_table(&table_name, &["VARCHAR(10)"])
         .unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES ('0123456789')"),
@@ -3234,8 +3275,10 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     // Given a table
-    let table_name = "GrowBatchSizeDuringBulkInsert";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     // When insert two batches with size one and two.
     let mut prepared = conn
@@ -3275,8 +3318,10 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn bulk_inserter_owning_connection(profile: &Profile) {
     // Given a table
-    let table_name = "BulkInserterOwningConnection";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
 
     // When insert two batches with size one and two.
     let mut prepared = conn
@@ -3342,15 +3387,14 @@ async fn async_statement_execution(profile: &Profile) {
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
 /// messages.
-#[test]
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[ignore = "Runs for a very long time"]
-fn many_diagnostic_messages() {
-    let table_name = "ManyDiagnosticMessages";
-    let conn = ENV
-        .connect_with_connection_string(MSSQL.connection_string)
-        .unwrap();
+fn many_diagnostic_messages(profile: &Profile) {
+    let table_name = table_name!();
     // Setup table
-    setup_empty_table(&conn, MSSQL.index_type, table_name, &["VARCHAR(2)"]).unwrap();
+    let conn = profile
+        .setup_empty_table(&table_name, &["VARCHAR(2)"])
+        .unwrap();
 
     // In order to generate a lot of diagnostic messages with one function call, we try a bulk
     // insert for which each row generates a warning.

@@ -1,7 +1,6 @@
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers,
-    buffers::TextColumn,
+    buffers::{self, TextColumn},
     handles::{CDataMut, Statement},
     Connection, Cursor, Environment, Error, RowSetBuffer, U16Str,
 };
@@ -38,32 +37,24 @@ impl Profile {
         column_types: &[&str],
     ) -> Result<Connection<'static>, odbc_api::Error> {
         let conn = self.connection()?;
-        setup_empty_table(&conn, self.index_type, table_name, column_types)?;
+        let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+
+        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+        let cols = column_types
+            .iter()
+            .zip(column_names)
+            .map(|(ty, name)| format!("{} {}", name, ty))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let create_table = format!(
+            "CREATE TABLE {} (id {},{});",
+            table_name, self.index_type, cols
+        );
+        conn.execute(drop_table, ())?;
+        conn.execute(&create_table, ())?;
         Ok(conn)
     }
-}
-
-/// Creates the table and assures it is empty. Columns are named a,b,c, etc.
-pub fn setup_empty_table(
-    conn: &Connection<'_>,
-    index_type: &str,
-    table_name: &str,
-    column_types: &[&str],
-) -> Result<(), odbc_api::Error> {
-    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
-
-    let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
-    let cols = column_types
-        .iter()
-        .zip(column_names)
-        .map(|(ty, name)| format!("{} {}", name, ty))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    let create_table = format!("CREATE TABLE {} (id {},{});", table_name, index_type, cols);
-    conn.execute(drop_table, ())?;
-    conn.execute(&create_table, ())?;
-    Ok(())
 }
 
 /// Query the table and prints it contents to a string

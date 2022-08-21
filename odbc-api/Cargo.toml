@@ -80,6 +80,7 @@ test-case = "2.2.1"
 tempfile = "3.3.0"
 criterion = { version = "0.3.6", features = ["html_reports"] }
 tokio = { version = "1.20.1", features = ["rt", "macros", "time"] }
+stdext = "0.3.1" # Used for function_name macro to generate unique table names for tests
 
 
 [[bench]]
