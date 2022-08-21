@@ -1384,26 +1384,21 @@ fn wchar(profile: &Profile) {
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn wchar_as_char(profile: &Profile) {
     let table_name = table_name!();
-
-    let conn = profile
-        .setup_empty_table(&table_name, &["NVARCHAR(1)"])
+    let (conn, table) = profile
+        .given(&table_name, &["NVARCHAR(1)"])
         .unwrap();
 
     // With the wide character ODBC function calls passing the arguments as literals worked but with
     // the narrow version "INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');" fails. It erroneously
     // assumes the data wouldn't fit into the column, probably because the binary length is 2. As
     // such confusing character and binary length.
-
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?), (?);"),
         (&"A".into_parameter(), &"Ü".into_parameter()),
     )
     .unwrap();
 
-    let sql = &format!("SELECT a FROM WCharAsChar ORDER BY id;");
-    let cursor = conn.execute(sql, ()).unwrap().unwrap();
-    let output = cursor_to_string(cursor);
-    assert_eq!("A\nÜ", output);
+    assert_eq!("A\nÜ", table.content_as_string(&conn));
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
