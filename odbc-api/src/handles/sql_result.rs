@@ -3,7 +3,7 @@ use odbc_sys::SqlReturn;
 /// Result of an ODBC function call. Variants hold the same meaning as the constants associated with
 /// [`SqlReturn`]. This type may hold results, but it is still the responsibility of the user to
 /// fetch and handle the diagnostics in case of an Error.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum SqlResult<T> {
     /// The function has been executed successfully.
     Success(T),

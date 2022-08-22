@@ -131,7 +131,14 @@ pub fn cursor_to_string(mut cursor: impl Cursor) -> String {
 
     let mut text = String::new();
 
+    let mut first_batch = true;
+
     while let Some(row_set) = row_set_cursor.fetch().unwrap() {
+        if first_batch {
+            first_batch = false;
+        } else {
+            text.push('\n');
+        }
         for row_index in 0..row_set.num_rows() {
             if row_index != 0 {
                 text.push('\n');

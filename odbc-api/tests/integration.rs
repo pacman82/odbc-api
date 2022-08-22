@@ -10,7 +10,7 @@ use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
+        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet, CharColumn,
     },
     handles::{OutputStringBuffer, SqlResult, SqlText, Statement},
     parameter::InputParameter,
@@ -18,7 +18,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter, Nullability,
-    Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    Nullable, Out, ResultSetMetadata, U16Str, U16String
 };
 use std::{
     ffi::CString,
@@ -517,9 +517,7 @@ fn bind_numeric_to_i64(profile: &Profile) {
 fn columnar_fetch_varbinary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["VARBINARY(10)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARBINARY(10)"]).unwrap();
     let insert_sql = format!(
         "INSERT INTO {} (a) Values \
         (CONVERT(Varbinary(10), 'Hello')),\
@@ -1384,9 +1382,7 @@ fn wchar(profile: &Profile) {
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn wchar_as_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["NVARCHAR(1)"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["NVARCHAR(1)"]).unwrap();
 
     // With the wide character ODBC function calls passing the arguments as literals worked but with
     // the narrow version "INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');" fails. It erroneously
@@ -2657,9 +2653,7 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn escape_hatch(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["INTEGER"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     let preallocated = conn.preallocate().unwrap();
     let mut statement = preallocated.into_statement();
@@ -3336,6 +3330,60 @@ async fn async_statement_execution(profile: &Profile) {
     // Then
     let actual = table.content_as_string(&conn);
     assert_eq!("Hello, World!", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[tokio::test]
+async fn async_bulk_fetch(profile: &Profile) {
+    // Given a table with a thousand records
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
+    for index in 0..1000 {
+        inserter.append([Some(index.to_string().as_bytes())].iter().copied()).unwrap();
+    }
+    inserter.execute().unwrap();
+    let sleep = || tokio::time::sleep(Duration::from_millis(50));
+
+    // When
+    let statement = conn.preallocate().unwrap();
+    let mut statement = statement.into_statement();
+    let query = table.sql_all_ordered_by_id();
+    let query = SqlText::new(&query);
+    statement.set_async_enable(true).unwrap();
+    unsafe {
+        // Executing statement
+        let mut result = statement.exec_direct(&query);
+        while result == SqlResult::StillExecuting {
+            sleep().await;
+            result = statement.exec_direct(&query);
+        }
+        result.into_result(&statement).unwrap();
+        // Fetching results in ten batches
+        let mut num_rows_fetched = 0;
+        let mut sum_rows_fetched = 0;
+        statement.set_row_bind_type(0).unwrap();
+        statement.set_row_array_size(100).unwrap();
+        statement.set_num_rows_fetched(Some(&mut num_rows_fetched));
+        let mut buffer = CharColumn::new(100, 50);
+        statement.bind_col(1, &mut buffer);
+        let mut has_batches = true; // `false` as soon as end is reached
+        result = statement.fetch();
+        while has_batches {
+            sum_rows_fetched += num_rows_fetched;
+            while result == SqlResult::StillExecuting {
+                sleep().await;
+                result = statement.fetch();
+            }
+            result = statement.fetch();
+            has_batches = result.into_result(&statement).unwrap();
+        }
+        assert_eq!(1000, sum_rows_fetched)
+    }
+    
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
