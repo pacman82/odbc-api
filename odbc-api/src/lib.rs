@@ -28,7 +28,7 @@ pub mod parameter;
 pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
     connection::{escape_attribute_value, Connection},
-    cursor::{Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
+    cursor::{AsyncCursor, Cursor, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor},
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
     error::{Error, TooLargeBufferSize},

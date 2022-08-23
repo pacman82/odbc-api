@@ -3,7 +3,7 @@ use std::iter::repeat;
 use lazy_static::lazy_static;
 use odbc_api::{
     buffers::{self, TextColumn},
-    handles::{CDataMut, Statement},
+    handles::{CDataMut, Statement, StatementRef},
     Connection, Cursor, Environment, Error, RowSetBuffer, U16Str,
 };
 
@@ -239,11 +239,11 @@ where
         self.num_rows_fetched.as_mut()
     }
 
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), odbc_api::Error> {
-        cursor
-            .as_stmt_ref()
-            .bind_col(1, &mut self.column)
-            .into_result(&cursor.as_stmt_ref())?;
+    unsafe fn bind_to_cursor(
+        &mut self,
+        mut cursor: StatementRef<'_>,
+    ) -> Result<(), odbc_api::Error> {
+        cursor.bind_col(1, &mut self.column).into_result(&cursor)?;
         Ok(())
     }
 }

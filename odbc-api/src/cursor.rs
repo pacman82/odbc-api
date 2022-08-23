@@ -200,6 +200,7 @@ impl<'s> CursorRow<'s> {
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
 pub struct CursorImpl<Stmt: AsStatementRef> {
+    /// A statement handle in cursor mode.
     statement: Stmt,
 }
 
@@ -257,7 +258,7 @@ where
                 })?;
             stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
                 .into_result(&stmt)?;
-            row_set_buffer.bind_to_cursor(&mut self)?;
+            row_set_buffer.bind_to_cursor(stmt)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
     }
@@ -283,6 +284,59 @@ where
 
     pub(crate) fn as_sys(&mut self) -> HStmt {
         self.as_stmt_ref().as_sys()
+    }
+}
+
+/// The asynchronous sibiling of [`CursorImpl`]. Use this to fetch results in asynchronous code.
+///
+/// Like [`CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
+/// synchronous sibling this statement handle is in asynchronous polling mode.
+pub struct AsyncCursor<Stmt: AsStatementRef> {
+    /// A statement handle in cursor state with asynchronous mode enabled.
+    statement: Stmt,
+}
+
+impl<S> AsyncCursor<S>
+where
+    S: AsStatementRef,
+{
+    /// Users of this library are encouraged not to call this constructor directly. This method is
+    /// pubilc so users with an understanding of the raw ODBC C-API have a way to create an
+    /// asynchronous cursor, after they left the safety rails of the Rust type System, in order to
+    /// implement a use case not covered yet, by the safe abstractions within this crate.
+    ///
+    /// # Safety
+    ///
+    /// `statement` must be in Cursor state, for the invariants of this type to hold. Preferable
+    /// `statement` should also have asynchrous mode enabled, otherwise constructing a synchronous
+    /// [`CursorImpl`] is more suitable.
+    pub unsafe fn new(statement: S) -> Self {
+        Self { statement }
+    }
+}
+
+impl<S> AsStatementRef for AsyncCursor<S>
+where
+    S: AsStatementRef,
+{
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
+    }
+}
+
+impl<S> Drop for AsyncCursor<S>
+where
+    S: AsStatementRef,
+{
+    fn drop(&mut self) {
+        let mut stmt = self.statement.as_stmt_ref();
+        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexpected error closing cursor: {:?}", e)
+            }
+        }
     }
 }
 
@@ -317,7 +371,7 @@ pub unsafe trait RowSetBuffer {
     ///
     /// It's the implementations responsibility to ensure that all bound buffers are valid until
     /// unbound or the statement handle is deleted.
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error>;
+    unsafe fn bind_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -333,7 +387,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).mut_num_fetch_rows()
     }
 
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
+    unsafe fn bind_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
         (*self).bind_to_cursor(cursor)
     }
 }

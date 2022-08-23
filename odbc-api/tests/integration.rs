@@ -10,15 +10,15 @@ use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet, CharColumn,
+        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, SqlResult, SqlText, Statement},
+    handles::{AsStatementRef, OutputStringBuffer, SqlResult, SqlText, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter, Nullability,
-    Nullable, Out, ResultSetMetadata, U16Str, U16String
+    sys, AsyncCursor, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter,
+    Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -3343,12 +3343,15 @@ async fn async_bulk_fetch(profile: &Profile) {
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
     for index in 0..1000 {
-        inserter.append([Some(index.to_string().as_bytes())].iter().copied()).unwrap();
+        inserter
+            .append([Some(index.to_string().as_bytes())].iter().copied())
+            .unwrap();
     }
     inserter.execute().unwrap();
     let sleep = || tokio::time::sleep(Duration::from_millis(50));
 
     // When
+    let mut sum_rows_fetched = 0;
     let statement = conn.preallocate().unwrap();
     let mut statement = statement.into_statement();
     let query = table.sql_all_ordered_by_id();
@@ -3363,27 +3366,30 @@ async fn async_bulk_fetch(profile: &Profile) {
         }
         result.into_result(&statement).unwrap();
         // Fetching results in ten batches
+        let mut cursor = AsyncCursor::new(statement);
         let mut num_rows_fetched = 0;
-        let mut sum_rows_fetched = 0;
-        statement.set_row_bind_type(0).unwrap();
-        statement.set_row_array_size(100).unwrap();
-        statement.set_num_rows_fetched(Some(&mut num_rows_fetched));
-        let mut buffer = CharColumn::new(100, 50);
-        statement.bind_col(1, &mut buffer);
+        cursor.as_stmt_ref().set_row_bind_type(0).unwrap();
+        cursor.as_stmt_ref().set_row_array_size(100).unwrap();
+        cursor
+            .as_stmt_ref()
+            .set_num_rows_fetched(Some(&mut num_rows_fetched));
+        let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
+        buffer.bind_to_cursor(cursor.as_stmt_ref()).unwrap();
         let mut has_batches = true; // `false` as soon as end is reached
-        result = statement.fetch();
+        result = cursor.as_stmt_ref().fetch();
         while has_batches {
             sum_rows_fetched += num_rows_fetched;
             while result == SqlResult::StillExecuting {
                 sleep().await;
-                result = statement.fetch();
+                result = cursor.as_stmt_ref().fetch();
             }
-            result = statement.fetch();
-            has_batches = result.into_result(&statement).unwrap();
+            result = cursor.as_stmt_ref().fetch();
+            has_batches = result.into_result(&cursor.as_stmt_ref()).unwrap();
         }
-        assert_eq!(1000, sum_rows_fetched)
     }
-    
+
+    // Then
+    assert_eq!(1000, sum_rows_fetched)
 }
 
 /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
@@ -3420,7 +3426,7 @@ fn many_diagnostic_messages(profile: &Profile) {
     statement.execute().unwrap();
 
     let query_sql = format!("SELECT a FROM {}", table_name);
-    let buffer = TextRowSet::from_max_str_lens(batch_size, iter::once(1)).unwrap();
+    let buffer = TextRowSet::from_max_str_lens(batch_size, [1]).unwrap();
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
 

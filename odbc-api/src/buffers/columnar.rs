@@ -9,7 +9,7 @@ use crate::{
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Cursor, Error, ResultSetMetadata, RowSetBuffer,
+    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -35,8 +35,9 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// valid rows is considered to be zero).
     ///
     /// You do not want to call this constructor directly unless you want to provide your own buffer
-    /// implentation. Most users of this crate may want to use the constructors on
-    /// [`crate::buffers::ColumnarAnyBuffer`] or [`crate::buffers::TextRowSet`] instead.
+    /// implentation. Most users of this crate may want to use the constructors like
+    /// [`crate::buffers::ColumnarAnyBuffer::from_description`] or
+    /// [`crate::buffers::TextRowSet::from_max_str_lens`] instead.
     pub fn new(columns: Vec<(u16, C)>) -> Self {
         // Assert capacity
         let capacity = columns
@@ -110,12 +111,9 @@ where
         self.num_rows.as_mut()
     }
 
-    unsafe fn bind_to_cursor(&mut self, cursor: &mut impl Cursor) -> Result<(), Error> {
+    unsafe fn bind_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
-            cursor
-                .as_stmt_ref()
-                .bind_col(*col_number, column)
-                .into_result(&cursor.as_stmt_ref())?;
+            cursor.bind_col(*col_number, column).into_result(&cursor)?;
         }
         Ok(())
     }
@@ -331,9 +329,10 @@ impl TextRowSet {
     /// `max_str_lengths` of respective size.
     pub fn from_max_str_lens(
         row_capacity: usize,
-        max_str_lengths: impl Iterator<Item = usize>,
+        max_str_lengths: impl IntoIterator<Item = usize>,
     ) -> Result<Self, Error> {
         let buffers = max_str_lengths
+            .into_iter()
             .enumerate()
             .map(|(index, max_str_len)| {
                 Ok((

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.47.0
+
+* `TextRowSet::from_max_str_lens` now takes `IntoIterator<Item=usize>` instead of `Iterator<Item=usize>`.
+* trait method `RowSetBuffer::bind_to_cursor` now takes a `StatementRef` instead of a `Cursor`. This change is unlikely to affect user code, as so far I know all downstream crates use the provided `RowSetBuffer` implementations and do not implement their own versions.
+
 ## 0.46.0
 
 * Minimal support for asynchronous code in the `handle` module.
