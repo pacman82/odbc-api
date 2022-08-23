@@ -258,7 +258,7 @@ where
                 })?;
             stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
                 .into_result(&stmt)?;
-            row_set_buffer.bind_to_cursor(stmt)?;
+            row_set_buffer.bind_colmuns_to_cursor(stmt)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
     }
@@ -371,7 +371,7 @@ pub unsafe trait RowSetBuffer {
     ///
     /// It's the implementations responsibility to ensure that all bound buffers are valid until
     /// unbound or the statement handle is deleted.
-    unsafe fn bind_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
+    unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -387,8 +387,8 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).mut_num_fetch_rows()
     }
 
-    unsafe fn bind_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
-        (*self).bind_to_cursor(cursor)
+    unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
+        (*self).bind_colmuns_to_cursor(cursor)
     }
 }
 

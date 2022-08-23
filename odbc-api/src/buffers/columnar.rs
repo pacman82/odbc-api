@@ -111,7 +111,7 @@ where
         self.num_rows.as_mut()
     }
 
-    unsafe fn bind_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+    unsafe fn bind_colmuns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
         for (col_number, column) in &mut self.columns {
             cursor.bind_col(*col_number, column).into_result(&cursor)?;
         }

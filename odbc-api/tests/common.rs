@@ -239,7 +239,7 @@ where
         self.num_rows_fetched.as_mut()
     }
 
-    unsafe fn bind_to_cursor(
+    unsafe fn bind_colmuns_to_cursor(
         &mut self,
         mut cursor: StatementRef<'_>,
     ) -> Result<(), odbc_api::Error> {

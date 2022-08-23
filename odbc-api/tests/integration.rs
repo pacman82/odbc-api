@@ -3374,7 +3374,7 @@ async fn async_bulk_fetch(profile: &Profile) {
             .as_stmt_ref()
             .set_num_rows_fetched(Some(&mut num_rows_fetched));
         let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
-        buffer.bind_to_cursor(cursor.as_stmt_ref()).unwrap();
+        buffer.bind_colmuns_to_cursor(cursor.as_stmt_ref()).unwrap();
         let mut has_batches = true; // `false` as soon as end is reached
         result = cursor.as_stmt_ref().fetch();
         while has_batches {
