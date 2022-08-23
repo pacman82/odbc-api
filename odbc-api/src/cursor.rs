@@ -287,59 +287,6 @@ where
     }
 }
 
-/// The asynchronous sibiling of [`CursorImpl`]. Use this to fetch results in asynchronous code.
-///
-/// Like [`CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
-/// synchronous sibling this statement handle is in asynchronous polling mode.
-pub struct AsyncCursor<Stmt: AsStatementRef> {
-    /// A statement handle in cursor state with asynchronous mode enabled.
-    statement: Stmt,
-}
-
-impl<S> AsyncCursor<S>
-where
-    S: AsStatementRef,
-{
-    /// Users of this library are encouraged not to call this constructor directly. This method is
-    /// pubilc so users with an understanding of the raw ODBC C-API have a way to create an
-    /// asynchronous cursor, after they left the safety rails of the Rust type System, in order to
-    /// implement a use case not covered yet, by the safe abstractions within this crate.
-    ///
-    /// # Safety
-    ///
-    /// `statement` must be in Cursor state, for the invariants of this type to hold. Preferable
-    /// `statement` should also have asynchrous mode enabled, otherwise constructing a synchronous
-    /// [`CursorImpl`] is more suitable.
-    pub unsafe fn new(statement: S) -> Self {
-        Self { statement }
-    }
-}
-
-impl<S> AsStatementRef for AsyncCursor<S>
-where
-    S: AsStatementRef,
-{
-    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
-        self.statement.as_stmt_ref()
-    }
-}
-
-impl<S> Drop for AsyncCursor<S>
-where
-    S: AsStatementRef,
-{
-    fn drop(&mut self) {
-        let mut stmt = self.statement.as_stmt_ref();
-        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
-            // Avoid panicking, if we already have a panic. We don't want to mask the original
-            // error.
-            if !panicking() {
-                panic!("Unexpected error closing cursor: {:?}", e)
-            }
-        }
-    }
-}
-
 /// A Row set buffer binds row, or column wise buffers to a cursor in order to fill them with row
 /// sets with each call to fetch.
 ///
@@ -392,8 +339,8 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 }
 
-/// A row set cursor iterates in blocks over row sets, filling them in buffers, instead of iterating
-/// the result set row by row. This is usually much faster.
+/// Iterates in blocks (called row sets) over a result set, filling a buffers with a lot of rows at
+/// once, instead of iterating the result set row by row. This is usually much faster.
 pub struct RowSetCursor<C: Cursor, B> {
     buffer: B,
     cursor: C,
@@ -503,4 +450,65 @@ where
             }
         }
     }
+}
+
+/// The asynchronous sibiling of [`CursorImpl`]. Use this to fetch results in asynchronous code.
+///
+/// Like [`CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
+/// synchronous sibling this statement handle is in asynchronous polling mode.
+pub struct CursorAsync<Stmt: AsStatementRef> {
+    /// A statement handle in cursor state with asynchronous mode enabled.
+    statement: Stmt,
+}
+
+impl<S> CursorAsync<S>
+where
+    S: AsStatementRef,
+{
+    /// Users of this library are encouraged not to call this constructor directly. This method is
+    /// pubilc so users with an understanding of the raw ODBC C-API have a way to create an
+    /// asynchronous cursor, after they left the safety rails of the Rust type System, in order to
+    /// implement a use case not covered yet, by the safe abstractions within this crate.
+    ///
+    /// # Safety
+    ///
+    /// `statement` must be in Cursor state, for the invariants of this type to hold. Preferable
+    /// `statement` should also have asynchrous mode enabled, otherwise constructing a synchronous
+    /// [`CursorImpl`] is more suitable.
+    pub unsafe fn new(statement: S) -> Self {
+        Self { statement }
+    }
+}
+
+impl<S> AsStatementRef for CursorAsync<S>
+where
+    S: AsStatementRef,
+{
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
+    }
+}
+
+impl<S> Drop for CursorAsync<S>
+where
+    S: AsStatementRef,
+{
+    fn drop(&mut self) {
+        let mut stmt = self.statement.as_stmt_ref();
+        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexpected error closing cursor: {:?}", e)
+            }
+        }
+    }
+}
+
+/// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
+/// a lot of rows at once, instead of iterating the result set row by row. This is usually much
+/// faster.
+pub struct RowSetCursorAsync<C, B> {
+    pub buffer: B,
+    pub cursor: C,
 }

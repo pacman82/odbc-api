@@ -17,8 +17,8 @@ use odbc_api::{
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, AsyncCursor, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, U16Str, U16String,
+    sys, CursorAsync, RowSetCursorAsync, Bit, ColumnDescription, Cursor, DataType, Error, InOut,
+    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -3366,7 +3366,7 @@ async fn async_bulk_fetch(profile: &Profile) {
         }
         result.into_result(&statement).unwrap();
         // Fetching results in ten batches
-        let mut cursor = AsyncCursor::new(statement);
+        let mut cursor = CursorAsync::new(statement);
         let mut num_rows_fetched = 0;
         cursor.as_stmt_ref().set_row_bind_type(0).unwrap();
         cursor.as_stmt_ref().set_row_array_size(100).unwrap();
@@ -3375,16 +3375,19 @@ async fn async_bulk_fetch(profile: &Profile) {
             .set_num_rows_fetched(Some(&mut num_rows_fetched));
         let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
         buffer.bind_colmuns_to_cursor(cursor.as_stmt_ref()).unwrap();
+        let mut row_set_cursor = RowSetCursorAsync { cursor, buffer };
         let mut has_batches = true; // `false` as soon as end is reached
-        result = cursor.as_stmt_ref().fetch();
+        result = row_set_cursor.cursor.as_stmt_ref().fetch();
         while has_batches {
             sum_rows_fetched += num_rows_fetched;
             while result == SqlResult::StillExecuting {
                 sleep().await;
-                result = cursor.as_stmt_ref().fetch();
+                result = row_set_cursor.cursor.as_stmt_ref().fetch();
             }
-            result = cursor.as_stmt_ref().fetch();
-            has_batches = result.into_result(&cursor.as_stmt_ref()).unwrap();
+            result = row_set_cursor.cursor.as_stmt_ref().fetch();
+            has_batches = result
+                .into_result(&row_set_cursor.cursor.as_stmt_ref())
+                .unwrap();
         }
     }
 
