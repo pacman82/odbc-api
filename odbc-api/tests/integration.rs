@@ -17,8 +17,9 @@ use odbc_api::{
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, CursorAsync, RowSetCursorAsync, Bit, ColumnDescription, Cursor, DataType, Error, InOut,
-    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, U16Str, U16String,
+    sys, Bit, ColumnDescription, Cursor, CursorAsync, DataType, Error, InOut, IntoParameter,
+    Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, RowSetCursorAsync, U16Str,
+    U16String,
 };
 use std::{
     ffi::CString,
@@ -3375,19 +3376,19 @@ async fn async_bulk_fetch(profile: &Profile) {
             .set_num_rows_fetched(Some(&mut num_rows_fetched));
         let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
         buffer.bind_colmuns_to_cursor(cursor.as_stmt_ref()).unwrap();
-        let mut row_set_cursor = RowSetCursorAsync { cursor, buffer };
+        let mut row_set_cursor = RowSetCursorAsync {
+            cursor,
+            buffer,
+            sleep,
+        };
         let mut has_batches = true; // `false` as soon as end is reached
-        result = row_set_cursor.cursor.as_stmt_ref().fetch();
         while has_batches {
             sum_rows_fetched += num_rows_fetched;
-            while result == SqlResult::StillExecuting {
-                sleep().await;
-                result = row_set_cursor.cursor.as_stmt_ref().fetch();
-            }
-            result = row_set_cursor.cursor.as_stmt_ref().fetch();
-            has_batches = result
-                .into_result(&row_set_cursor.cursor.as_stmt_ref())
-                .unwrap();
+            has_batches = row_set_cursor
+                .fetch_with_truncation_check(true)
+                .await
+                .unwrap()
+                .is_some();
         }
     }
 

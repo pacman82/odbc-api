@@ -3,12 +3,12 @@ use odbc_sys::HStmt;
 use crate::{
     buffers::Indicator,
     error::ExtendResult,
-    handles::{AsStatementRef, State, Statement, StatementRef},
+    handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
     Error, OutputParameter, ResultSetMetadata,
 };
 
-use std::{cmp::max, thread::panicking};
+use std::{cmp::max, thread::panicking, future::Future};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: ResultSetMetadata {
@@ -341,7 +341,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
 
 /// Iterates in blocks (called row sets) over a result set, filling a buffers with a lot of rows at
 /// once, instead of iterating the result set row by row. This is usually much faster.
-pub struct RowSetCursor<C: Cursor, B> {
+pub struct RowSetCursor<C: AsStatementRef, B> {
     buffer: B,
     cursor: C,
 }
@@ -432,7 +432,7 @@ where
 
 impl<C, B> Drop for RowSetCursor<C, B>
 where
-    C: Cursor,
+    C: AsStatementRef,
 {
     fn drop(&mut self) {
         unsafe {
@@ -508,7 +508,70 @@ where
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
 /// faster.
-pub struct RowSetCursorAsync<C, B> {
+pub struct RowSetCursorAsync<C, B, S>
+where
+    C: AsStatementRef,
+{
     pub buffer: B,
     pub cursor: C,
+    pub sleep: S,
+}
+
+impl<C, B, S, F> RowSetCursorAsync<C, B, S>
+where
+    C: AsStatementRef,
+    S: FnMut() -> F,
+    F: Future
+{
+    pub async fn fetch_with_truncation_check(
+        &mut self,
+        error_for_truncation: bool,
+    ) -> Result<Option<&B>, Error> {
+        let mut stmt = self.cursor.as_stmt_ref();
+        unsafe {
+            let mut result = stmt.fetch();
+            // Wait for operation to finish, using polling method
+            while SqlResult::StillExecuting == result {
+                (self.sleep)().await;
+                result = stmt.fetch();
+            }
+
+            let has_row = result
+                .into_result_with_trunaction_check(&stmt.as_stmt_ref(), error_for_truncation)
+                // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
+                // tell the it to the user than binding parameters, but rather now then we fetch
+                // results. The error code retruned is `HY004` rather then `HY003` which should
+                // be used to indicate invalid buffer types.
+                .provide_context_for_diagnostic(|record, function| {
+                    if record.state == State::INVALID_SQL_DATA_TYPE {
+                        Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+                    } else {
+                        Error::Diagnostics { record, function }
+                    }
+                })?;
+            Ok(has_row.then_some(&self.buffer))
+        }
+    }
+}
+
+impl<C, B, S> Drop for RowSetCursorAsync<C, B, S>
+where
+    C: AsStatementRef,
+{
+    fn drop(&mut self) {
+        unsafe {
+            let mut stmt = self.cursor.as_stmt_ref();
+            if let Err(e) = stmt
+                .unbind_cols()
+                .into_result(&stmt)
+                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(&stmt))
+            {
+                // Avoid panicking, if we already have a panic. We don't want to mask the original
+                // error.
+                if !panicking() {
+                    panic!("Unexpected error unbinding columns: {:?}", e)
+                }
+            }
+        }
+    }
 }
