@@ -8,7 +8,7 @@ use crate::{
     Error, OutputParameter, ResultSetMetadata,
 };
 
-use std::{cmp::max, thread::panicking, future::Future};
+use std::{cmp::max, future::Future, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: ResultSetMetadata {
@@ -408,23 +408,10 @@ where
         &mut self,
         error_for_truncation: bool,
     ) -> Result<Option<&B>, Error> {
+        let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
-            let has_row = self
-                .cursor
-                .as_stmt_ref()
-                .fetch()
-                .into_result_with_trunaction_check(&self.cursor.as_stmt_ref(), error_for_truncation)
-                // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
-                // tell the it to the user than binding parameters, but rather now then we fetch
-                // results. The error code retruned is `HY004` rather then `HY003` which should
-                // be used to indicate invalid buffer types.
-                .provide_context_for_diagnostic(|record, function| {
-                    if record.state == State::INVALID_SQL_DATA_TYPE {
-                        Error::OracleOdbcDriverDoesNotSupport64Bit(record)
-                    } else {
-                        Error::Diagnostics { record, function }
-                    }
-                })?;
+            let result = stmt.fetch();
+            let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
             Ok(has_row.then_some(&self.buffer))
         }
     }
@@ -521,7 +508,7 @@ impl<C, B, S, F> RowSetCursorAsync<C, B, S>
 where
     C: AsStatementRef,
     S: FnMut() -> F,
-    F: Future
+    F: Future,
 {
     pub async fn fetch_with_truncation_check(
         &mut self,
@@ -536,22 +523,32 @@ where
                 result = stmt.fetch();
             }
 
-            let has_row = result
-                .into_result_with_trunaction_check(&stmt.as_stmt_ref(), error_for_truncation)
-                // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
-                // tell the it to the user than binding parameters, but rather now then we fetch
-                // results. The error code retruned is `HY004` rather then `HY003` which should
-                // be used to indicate invalid buffer types.
-                .provide_context_for_diagnostic(|record, function| {
-                    if record.state == State::INVALID_SQL_DATA_TYPE {
-                        Error::OracleOdbcDriverDoesNotSupport64Bit(record)
-                    } else {
-                        Error::Diagnostics { record, function }
-                    }
-                })?;
+            let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
             Ok(has_row.then_some(&self.buffer))
         }
     }
+}
+
+/// Error handling for bulk fetching is shared between synchronous and asynchronous usecase.
+fn error_handling_for_fetch(
+    result: SqlResult<bool>,
+    mut stmt: StatementRef,
+    error_for_truncation: bool,
+) -> Result<bool, Error> {
+    let has_row = result
+        .into_result_with_trunaction_check(&stmt.as_stmt_ref(), error_for_truncation)
+        // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
+        // tell the it to the user than binding parameters, but rather now then we fetch
+        // results. The error code retruned is `HY004` rather then `HY003` which should
+        // be used to indicate invalid buffer types.
+        .provide_context_for_diagnostic(|record, function| {
+            if record.state == State::INVALID_SQL_DATA_TYPE {
+                Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+            } else {
+                Error::Diagnostics { record, function }
+            }
+        })?;
+    Ok(has_row)
 }
 
 impl<C, B, S> Drop for RowSetCursorAsync<C, B, S>
