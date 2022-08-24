@@ -3385,7 +3385,7 @@ async fn async_bulk_fetch(profile: &Profile) {
         while has_batches {
             sum_rows_fetched += num_rows_fetched;
             has_batches = row_set_cursor
-                .fetch_with_truncation_check(true)
+                .fetch()
                 .await
                 .unwrap()
                 .is_some();

@@ -510,6 +510,10 @@ where
     S: FnMut() -> F,
     F: Future,
 {
+    pub async fn fetch(&mut self) -> Result<Option<&B>, Error> {
+        self.fetch_with_truncation_check(false).await
+    }
+
     pub async fn fetch_with_truncation_check(
         &mut self,
         error_for_truncation: bool,
