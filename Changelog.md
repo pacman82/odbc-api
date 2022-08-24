@@ -2,6 +2,9 @@
 
 ## 0.47.0
 
+* Support getting number of rows affected by `INSERT`, `UPDATE` or `DELETE`.
+  * New method `Preallocated::row_count`
+  * New method `Prepared::row_count`
 * `TextRowSet::from_max_str_lens` now takes `IntoIterator<Item=usize>` instead of `Iterator<Item=usize>`.
 * trait method `RowSetBuffer::bind_to_cursor` has been renamed to `bind_columns_to_cursor` and now takes a `StatementRef` instead of a `Cursor`. This change is unlikely to affect user code, as so far I know all downstream crates use the provided `RowSetBuffer` implementations and do not implement their own versions.
 
