@@ -3302,6 +3302,32 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     assert_eq!("1", actual);
 }
 
+/// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn row_count_one_shot_query(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2)");
+
+    // When
+    let preallocated = conn.preallocate().unwrap();
+    let mut stmt = preallocated.into_statement();
+    let mut row_count: isize = 0;
+    unsafe {
+        stmt.exec_direct(&SqlText::new(&insert)).unwrap();
+        let raw_handle = stmt.as_sys();
+        if odbc_sys::SQLRowCount(raw_handle, &mut row_count as * mut isize) != odbc_sys::SqlReturn::SUCCESS {
+            panic!("Error fetching row count")
+        };
+    }
+
+    // Then
+    assert_eq!(2, row_count);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
