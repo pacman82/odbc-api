@@ -1,6 +1,6 @@
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
-    handles::{SqlText, StatementImpl},
+    handles::{SqlText, Statement, StatementImpl},
     CursorImpl, Error, ParameterCollectionRef,
 };
 
@@ -152,5 +152,30 @@ impl<'o> Preallocated<'o> {
             &SqlText::new(table_name),
             &SqlText::new(column_name),
         )
+    }
+
+    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return `-1`
+    /// if row count is not available. Some drivers may also allow to use this to determine how many
+    /// rows have been fetched using `SELECT`. Most drivers however only know how many rows have
+    /// been fetched after they have been fetched.
+    /// 
+    /// ```
+    /// use odbc_api::{Connection, Error};
+    /// 
+    /// /// Make everyone rich and return how many colleagues are happy now.
+    /// fn raise_minimum_salary(conn: &Connection<'_>, new_min_salary: i32) -> Result<isize, Error> {
+    ///     // We won't use conn.execute directly, because we need a handle to ask about the number
+    ///     // of changed rows. So let's allocate the statement explicitly.
+    ///     let mut stmt = conn.preallocate()?;
+    ///     stmt.execute(
+    ///         "UPDATE Salaries SET salary = ? WHERE salary < ?",
+    ///         (&new_min_salary, &new_min_salary),
+    ///     )?;
+    ///     let number_of_updated_rows = stmt.row_count()?;
+    ///     Ok(number_of_updated_rows)
+    /// }
+    /// ```
+    pub fn row_count(&self) -> Result<isize, Error> {
+        self.statement.row_count().into_result(&self.statement)
     }
 }

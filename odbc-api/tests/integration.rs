@@ -3315,8 +3315,7 @@ fn row_count_one_shot_query(profile: &Profile) {
     // When
     let mut preallocated = conn.preallocate().unwrap();
     preallocated.execute(&insert, ()).unwrap();
-    let stmt = preallocated.into_statement();
-    let row_count = stmt.row_count().unwrap();
+    let row_count = preallocated.row_count().unwrap();
 
     // Then
     assert_eq!(2, row_count);
