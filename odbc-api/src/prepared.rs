@@ -218,6 +218,37 @@ where
             .collect();
         unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
     }
+
+    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return `-1`
+    /// if row count is not available. Some drivers may also allow to use this to determine how many
+    /// rows have been fetched using `SELECT`. Most drivers however only know how many rows have
+    /// been fetched after they have been fetched.
+    /// 
+    /// ```
+    /// use odbc_api::{Connection, Error, IntoParameter};
+    /// 
+    /// /// Deletes all comments for every user in the slice. Returns the number of deleted
+    /// /// comments.
+    /// pub fn delete_all_comments_from(
+    ///     users: &[&str],
+    ///     conn: Connection<'_>,
+    /// ) -> Result<isize, Error>
+    /// {
+    ///     // Store prepared query for fast repeated execution.
+    ///     let mut prepared = conn.prepare("DELETE FROM Comments WHERE user=?")?;
+    ///     let mut total_deleted_comments = 0;
+    ///     for user in users {
+    ///         prepared.execute(&user.into_parameter())?;
+    ///         total_deleted_comments += prepared.row_count()?;
+    ///     }
+    ///     Ok(total_deleted_comments)
+    /// }
+    /// ```
+    pub fn row_count(&mut self) -> Result<isize, Error> {
+        let stmt = self.statement.as_stmt_ref();
+        let number_of_affected_rows = stmt.row_count().into_result(&stmt)?;
+        Ok(number_of_affected_rows)
+    }
 }
 
 impl<S> ResultSetMetadata for Prepared<S> where S: AsStatementRef {}

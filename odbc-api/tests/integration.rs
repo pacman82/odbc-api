@@ -3321,6 +3321,25 @@ fn row_count_one_shot_query(profile: &Profile) {
     assert_eq!(2, row_count);
 }
 
+/// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+fn row_count_prepared_query(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?), (?)");
+
+    // When
+    let mut prepared = conn.prepare(&insert).unwrap();
+    prepared.execute((&1, &2)).unwrap();
+    let row_count = prepared.row_count().unwrap();
+
+    // Then
+    assert_eq!(2, row_count);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]

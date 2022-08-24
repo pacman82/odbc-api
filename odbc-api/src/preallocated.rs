@@ -168,14 +168,14 @@ impl<'o> Preallocated<'o> {
     ///     // of changed rows. So let's allocate the statement explicitly.
     ///     let mut stmt = conn.preallocate()?;
     ///     stmt.execute(
-    ///         "UPDATE Salaries SET salary = ? WHERE salary < ?",
+    ///         "UPDATE Employees SET salary = ? WHERE salary < ?",
     ///         (&new_min_salary, &new_min_salary),
     ///     )?;
     ///     let number_of_updated_rows = stmt.row_count()?;
     ///     Ok(number_of_updated_rows)
     /// }
     /// ```
-    pub fn row_count(&self) -> Result<isize, Error> {
+    pub fn row_count(&mut self) -> Result<isize, Error> {
         self.statement.row_count().into_result(&self.statement)
     }
 }
