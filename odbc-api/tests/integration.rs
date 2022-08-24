@@ -3376,19 +3376,11 @@ async fn async_bulk_fetch(profile: &Profile) {
             .set_num_rows_fetched(Some(&mut num_rows_fetched));
         let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
         buffer.bind_colmuns_to_cursor(cursor.as_stmt_ref()).unwrap();
-        let mut row_set_cursor = RowSetCursorAsync {
-            cursor,
-            buffer,
-            sleep,
-        };
+        let mut row_set_cursor = RowSetCursorAsync { cursor, buffer };
         let mut has_batches = true; // `false` as soon as end is reached
         while has_batches {
             sum_rows_fetched += num_rows_fetched;
-            has_batches = row_set_cursor
-                .fetch()
-                .await
-                .unwrap()
-                .is_some();
+            has_batches = row_set_cursor.fetch(sleep).await.unwrap().is_some();
         }
     }
 

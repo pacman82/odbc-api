@@ -495,35 +495,41 @@ where
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
 /// faster.
-pub struct RowSetCursorAsync<C, B, S>
+pub struct RowSetCursorAsync<C, B>
 where
     C: AsStatementRef,
 {
     pub buffer: B,
     pub cursor: C,
-    pub sleep: S,
 }
 
-impl<C, B, S, F> RowSetCursorAsync<C, B, S>
+impl<C, B> RowSetCursorAsync<C, B>
 where
     C: AsStatementRef,
-    S: FnMut() -> F,
-    F: Future,
 {
-    pub async fn fetch(&mut self) -> Result<Option<&B>, Error> {
-        self.fetch_with_truncation_check(false).await
+    pub async fn fetch<S, F>(&mut self, sleep: S) -> Result<Option<&B>, Error>
+    where
+        S: FnMut() -> F,
+        F: Future,
+    {
+        self.fetch_with_truncation_check(false, sleep).await
     }
 
-    pub async fn fetch_with_truncation_check(
+    pub async fn fetch_with_truncation_check<S, F>(
         &mut self,
         error_for_truncation: bool,
-    ) -> Result<Option<&B>, Error> {
+        mut sleep: S,
+    ) -> Result<Option<&B>, Error>
+    where
+        S: FnMut() -> F,
+        F: Future,
+    {
         let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
             let mut result = stmt.fetch();
             // Wait for operation to finish, using polling method
             while SqlResult::StillExecuting == result {
-                (self.sleep)().await;
+                sleep().await;
                 result = stmt.fetch();
             }
 
@@ -555,7 +561,7 @@ fn error_handling_for_fetch(
     Ok(has_row)
 }
 
-impl<C, B, S> Drop for RowSetCursorAsync<C, B, S>
+impl<C, B> Drop for RowSetCursorAsync<C, B>
 where
     C: AsStatementRef,
 {
