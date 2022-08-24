@@ -3315,13 +3315,10 @@ fn row_count_one_shot_query(profile: &Profile) {
     // When
     let preallocated = conn.preallocate().unwrap();
     let mut stmt = preallocated.into_statement();
-    let mut row_count: isize = 0;
+    let row_count;
     unsafe {
         stmt.exec_direct(&SqlText::new(&insert)).unwrap();
-        let raw_handle = stmt.as_sys();
-        if odbc_sys::SQLRowCount(raw_handle, &mut row_count as * mut isize) != odbc_sys::SqlReturn::SUCCESS {
-            panic!("Error fetching row count")
-        };
+        row_count = stmt.row_count().unwrap();
     }
 
     // Then

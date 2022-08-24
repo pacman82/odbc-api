@@ -12,7 +12,7 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SqlDataType, SqlReturn,
+    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount, SqlDataType, SqlReturn,
     StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
@@ -810,6 +810,21 @@ pub trait Statement: AsHandle {
                 SqlReturn::NEED_DATA => SqlResult::Success(true),
                 other => other.into_sql_result("SQLPutData").on_success(|| false),
             }
+        }
+    }
+
+    /// Number of rows affected by an `UPDATE`, `INSERT`, or `DELETE` statement.
+    /// 
+    /// See:
+    /// 
+    /// <https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlrowcount>
+    /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function>
+    fn row_count(&self) -> SqlResult<isize> {
+        let mut ret = 0isize;
+        unsafe {
+            SQLRowCount(self.as_sys(), &mut ret as *mut isize)
+                .into_sql_result("SQLRowCount")
+                .on_success(|| ret)
         }
     }
 }
