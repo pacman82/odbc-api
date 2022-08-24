@@ -3313,13 +3313,10 @@ fn row_count_one_shot_query(profile: &Profile) {
     let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2)");
 
     // When
-    let preallocated = conn.preallocate().unwrap();
-    let mut stmt = preallocated.into_statement();
-    let row_count;
-    unsafe {
-        stmt.exec_direct(&SqlText::new(&insert)).unwrap();
-        row_count = stmt.row_count().unwrap();
-    }
+    let mut preallocated = conn.preallocate().unwrap();
+    preallocated.execute(&insert, ()).unwrap();
+    let stmt = preallocated.into_statement();
+    let row_count = stmt.row_count().unwrap();
 
     // Then
     assert_eq!(2, row_count);
