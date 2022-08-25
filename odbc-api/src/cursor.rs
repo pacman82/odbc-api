@@ -239,26 +239,9 @@ where
     where
         B: RowSetBuffer,
     {
-        let mut stmt = self.statement.as_stmt_ref();
+        let stmt = self.statement.as_stmt_ref();
         unsafe {
-            stmt.set_row_bind_type(row_set_buffer.bind_type())
-                .into_result(&stmt)?;
-            let size = row_set_buffer.row_array_size();
-            stmt.set_row_array_size(size)
-                .into_result(&stmt)
-                // SAP anywhere has been seen to return with an "invalid attribute" error instead of
-                // a success with "option value changed" info. Let us map invalid attributes during
-                // setting row set array size to something more precise.
-                .provide_context_for_diagnostic(|record, function| {
-                    if record.state == State::INVALID_ATTRIBUTE_VALUE {
-                        Error::InvalidRowArraySize { record, size }
-                    } else {
-                        Error::Diagnostics { record, function }
-                    }
-                })?;
-            stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
-                .into_result(&stmt)?;
-            row_set_buffer.bind_colmuns_to_cursor(stmt)?;
+            bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
         }
         Ok(RowSetCursor::new(row_set_buffer, self))
     }
@@ -465,6 +448,20 @@ where
     pub unsafe fn new(statement: S) -> Self {
         Self { statement }
     }
+
+    pub fn bind_buffer<B>(
+        mut self,
+        mut row_set_buffer: B,
+    ) -> Result<RowSetCursorAsync<Self, B>, Error>
+    where
+        B: RowSetBuffer,
+    {
+        let stmt = self.statement.as_stmt_ref();
+        unsafe {
+            bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
+        }
+        Ok(RowSetCursorAsync::new(row_set_buffer, self))
+    }
 }
 
 impl<S> AsStatementRef for CursorAsync<S>
@@ -507,6 +504,10 @@ impl<C, B> RowSetCursorAsync<C, B>
 where
     C: AsStatementRef,
 {
+    fn new(buffer: B, cursor: C) -> Self {
+        Self { buffer, cursor }
+    }
+
     pub async fn fetch<S, F>(&mut self, sleep: S) -> Result<Option<&B>, Error>
     where
         S: FnMut() -> F,
@@ -537,6 +538,33 @@ where
             Ok(has_row.then_some(&self.buffer))
         }
     }
+}
+
+/// Binds a row set buffer to a statment. Implementation is shared between synchronous and
+/// asynchronous cursors.
+unsafe fn bind_row_set_buffer_to_statement(
+    mut stmt: StatementRef<'_>,
+    row_set_buffer: &mut impl RowSetBuffer,
+) -> Result<(), Error> {
+    stmt.set_row_bind_type(row_set_buffer.bind_type())
+        .into_result(&stmt)?;
+    let size = row_set_buffer.row_array_size();
+    stmt.set_row_array_size(size)
+        .into_result(&stmt)
+        // SAP anywhere has been seen to return with an "invalid attribute" error instead of
+        // a success with "option value changed" info. Let us map invalid attributes during
+        // setting row set array size to something more precise.
+        .provide_context_for_diagnostic(|record, function| {
+            if record.state == State::INVALID_ATTRIBUTE_VALUE {
+                Error::InvalidRowArraySize { record, size }
+            } else {
+                Error::Diagnostics { record, function }
+            }
+        })?;
+    stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
+        .into_result(&stmt)?;
+    row_set_buffer.bind_colmuns_to_cursor(stmt)?;
+    Ok(())
 }
 
 /// Error handling for bulk fetching is shared between synchronous and asynchronous usecase.

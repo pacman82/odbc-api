@@ -12,14 +12,13 @@ use odbc_api::{
     buffers::{
         BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{AsStatementRef, OutputStringBuffer, SqlResult, SqlText, Statement},
+    handles::{OutputStringBuffer, SqlResult, SqlText, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Cursor, CursorAsync, DataType, Error, InOut, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, RowSetBuffer, RowSetCursorAsync, U16Str,
-    U16String,
+    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -3347,7 +3346,8 @@ fn row_count_create_table_preallocated(profile: &Profile, expectation: Option<us
     // Given a name for a table which does not exist
     let table_name = table_name!();
     let conn = profile.connection().unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ()).unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ())
+        .unwrap();
 
     // When
     let mut preallocated = conn.preallocate().unwrap();
@@ -3360,7 +3360,6 @@ fn row_count_create_table_preallocated(profile: &Profile, expectation: Option<us
     assert_eq!(expectation, row_count);
 }
 
-
 /// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
 #[test_case(MSSQL, Some(0); "Microsoft SQL Server")]
 #[test_case(MARIADB, Some(0); "Maria DB")]
@@ -3369,10 +3368,13 @@ fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>
     // Given a name for a table which does not exist
     let table_name = table_name!();
     let conn = profile.connection().unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ()).unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ())
+        .unwrap();
 
     // When
-    let mut prepared = conn.prepare(&format!("CREATE TABLE {table_name} (a INTEGER);")).unwrap();
+    let mut prepared = conn
+        .prepare(&format!("CREATE TABLE {table_name} (a INTEGER);"))
+        .unwrap();
     prepared.execute(()).unwrap();
     let row_count = prepared.row_count().unwrap();
 
@@ -3445,20 +3447,13 @@ async fn async_bulk_fetch(profile: &Profile) {
         }
         result.into_result(&statement).unwrap();
         // Fetching results in ten batches
-        let mut cursor = CursorAsync::new(statement);
-        let mut num_rows_fetched = 0;
-        cursor.as_stmt_ref().set_row_bind_type(0).unwrap();
-        cursor.as_stmt_ref().set_row_array_size(100).unwrap();
-        cursor
-            .as_stmt_ref()
-            .set_num_rows_fetched(Some(&mut num_rows_fetched));
-        let mut buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
-        buffer.bind_colmuns_to_cursor(cursor.as_stmt_ref()).unwrap();
-        let mut row_set_cursor = RowSetCursorAsync { cursor, buffer };
-        let mut has_batches = true; // `false` as soon as end is reached
-        while has_batches {
-            sum_rows_fetched += num_rows_fetched;
-            has_batches = row_set_cursor.fetch(sleep).await.unwrap().is_some();
+        let cursor = CursorAsync::new(statement);
+        let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
+        let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+        let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+        while let Some(batch) = maybe_batch {
+            sum_rows_fetched += batch.num_rows();
+            maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
         }
     }
 
