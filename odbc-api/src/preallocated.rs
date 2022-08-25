@@ -1,6 +1,6 @@
 use crate::{
     execute::{execute_columns, execute_tables, execute_with_parameters},
-    handles::{SqlText, Statement, StatementImpl},
+    handles::{AsStatementRef, SqlText, Statement, StatementImpl, StatementRef},
     CursorImpl, Error, ParameterCollectionRef,
 };
 
@@ -154,16 +154,19 @@ impl<'o> Preallocated<'o> {
         )
     }
 
-    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return `-1`
-    /// if row count is not available. Some drivers may also allow to use this to determine how many
-    /// rows have been fetched using `SELECT`. Most drivers however only know how many rows have
-    /// been fetched after they have been fetched.
-    /// 
+    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return
+    /// `None` if row count is not available. Some drivers may also allow to use this to determine
+    /// how many rows have been fetched using `SELECT`. Most drivers however only know how many rows
+    /// have been fetched after they have been fetched.
+    ///
     /// ```
     /// use odbc_api::{Connection, Error};
-    /// 
+    ///
     /// /// Make everyone rich and return how many colleagues are happy now.
-    /// fn raise_minimum_salary(conn: &Connection<'_>, new_min_salary: i32) -> Result<isize, Error> {
+    /// fn raise_minimum_salary(
+    ///     conn: &Connection<'_>,
+    ///     new_min_salary: i32
+    /// ) -> Result<usize, Error> {
     ///     // We won't use conn.execute directly, because we need a handle to ask about the number
     ///     // of changed rows. So let's allocate the statement explicitly.
     ///     let mut stmt = conn.preallocate()?;
@@ -171,11 +174,29 @@ impl<'o> Preallocated<'o> {
     ///         "UPDATE Employees SET salary = ? WHERE salary < ?",
     ///         (&new_min_salary, &new_min_salary),
     ///     )?;
-    ///     let number_of_updated_rows = stmt.row_count()?;
+    ///     let number_of_updated_rows = stmt
+    ///         .row_count()?
+    ///         .expect("For UPDATE statements row count must always be available.");
     ///     Ok(number_of_updated_rows)
     /// }
     /// ```
-    pub fn row_count(&mut self) -> Result<isize, Error> {
-        self.statement.row_count().into_result(&self.statement)
+    pub fn row_count(&mut self) -> Result<Option<usize>, Error> {
+        self.statement
+            .row_count()
+            .into_result(&self.statement)
+            .map(|count| {
+                // ODBC returns -1 in case a row count is not available
+                if count == -1 {
+                    None
+                } else {
+                    Some(count.try_into().unwrap())
+                }
+            })
+    }
+}
+
+impl<'o> AsStatementRef for Preallocated<'o> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
     }
 }

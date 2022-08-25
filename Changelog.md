@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.48.0
+
+* Both `Preallocated::row_count` and `Prepared::row_count` now return `Option<usize>` instead of `isize`.
+
 ## 0.47.0
 
 * Support getting number of rows affected by `INSERT`, `UPDATE` or `DELETE`.

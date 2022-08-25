@@ -3318,14 +3318,14 @@ fn row_count_one_shot_query(profile: &Profile) {
     let row_count = preallocated.row_count().unwrap();
 
     // Then
-    assert_eq!(2, row_count);
+    assert_eq!(Some(2), row_count);
 }
 
 /// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
-fn row_count_prepared_query(profile: &Profile) {
+fn row_count_prepared_insert(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
@@ -3337,7 +3337,47 @@ fn row_count_prepared_query(profile: &Profile) {
     let row_count = prepared.row_count().unwrap();
 
     // Then
-    assert_eq!(2, row_count);
+    assert_eq!(Some(2), row_count);
+}
+
+#[test_case(MSSQL, None; "Microsoft SQL Server")]
+#[test_case(MARIADB, Some(0); "Maria DB")]
+#[test_case(SQLITE_3, Some(0); "SQLite 3")]
+fn row_count_create_table_preallocated(profile: &Profile, expectation: Option<usize>) {
+    // Given a name for a table which does not exist
+    let table_name = table_name!();
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ()).unwrap();
+
+    // When
+    let mut preallocated = conn.preallocate().unwrap();
+    preallocated
+        .execute(&format!("CREATE TABLE {table_name} (a INTEGER);"), ())
+        .unwrap();
+    let row_count = preallocated.row_count().unwrap();
+
+    // Then
+    assert_eq!(expectation, row_count);
+}
+
+
+/// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
+#[test_case(MSSQL, Some(0); "Microsoft SQL Server")]
+#[test_case(MARIADB, Some(0); "Maria DB")]
+#[test_case(SQLITE_3, Some(0); "SQLite 3")]
+fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>) {
+    // Given a name for a table which does not exist
+    let table_name = table_name!();
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name};"), ()).unwrap();
+
+    // When
+    let mut prepared = conn.prepare(&format!("CREATE TABLE {table_name} (a INTEGER);")).unwrap();
+    prepared.execute(()).unwrap();
+    let row_count = prepared.row_count().unwrap();
+
+    // Then
+    assert_eq!(expectation, row_count);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
