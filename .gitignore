@@ -1,4 +1,7 @@
 /target
+# Criterion seems to use the wrong target folder in a workspace. Not a big issue, let's just ignore
+# it here, too.
+/odbc-api/target
 
 # Let's commit Cargo.lock sinc `odbcsv` is a binary.
 # Cargo.lock
