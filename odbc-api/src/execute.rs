@@ -59,8 +59,10 @@ where
 {
     let mut stmt = statement.as_stmt_ref();
     let need_data = if let Some(sql) = query {
+        // We execute an unprepared "one shot query"
         stmt.exec_direct(sql).into_result(&stmt)?
     } else {
+        // We execute a prepared query
         stmt.execute().into_result(&stmt)?
     };
 
