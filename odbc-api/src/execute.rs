@@ -52,7 +52,7 @@ where
 /// * Furthermore all bound delayed parameters must be of type `*mut &mut dyn Blob`.
 pub unsafe fn execute<S>(
     mut statement: S,
-    query: Option<&SqlText>,
+    query: Option<&SqlText<'_>>,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
     S: AsStatementRef,

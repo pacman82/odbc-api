@@ -283,10 +283,10 @@ fn interactive(conn: &Connection) -> io::Result<()>{
 
 ### Executing prepared queries
 
-Should your use case require you to execute the same query several times with different
-parameters, prepared queries are the way to go. These give the ODBC driver a chance to store
-cache the access plan associated with your SQL statement. It is not unlike compiling your
-program once and executing it several times.
+Should your use case require you to execute the same query several times with different parameters,
+prepared queries are the way to go. These give the database a chance to cache the access plan
+associated with your SQL statement. It is not unlike compiling your program once and executing it
+several times.
 
 ```
 use odbc_api::{Connection, Error, IntoParameter};
@@ -301,7 +301,7 @@ fn interactive(conn: &Connection) -> io::Result<()>{
             Err(e) => println!("{}", e),
             // Most drivers would return a result set even if no Movie with the title is found,
             // the result set would just be empty. Well, most drivers.
-            Ok(None) => println!("No results set generated."),
+            Ok(None) => println!("No result set generated."),
             Ok(Some(cursor)) => {
                 // ...print cursor contents...
             }

@@ -6,7 +6,7 @@ use crate::{
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
-/// once.
+/// once. See [`crate::Connection::prepare`].
 pub struct Prepared<S> {
     statement: S,
 }
