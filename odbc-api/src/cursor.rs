@@ -5,10 +5,11 @@ use crate::{
     error::ExtendResult,
     handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
+    sleep::Sleep,
     Error, OutputParameter, ResultSetMetadata,
 };
 
-use std::{cmp::max, future::Future, thread::panicking};
+use std::{cmp::max, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 pub trait Cursor: ResultSetMetadata {
@@ -496,8 +497,8 @@ pub struct RowSetCursorAsync<C, B>
 where
     C: AsStatementRef,
 {
-    pub buffer: B,
-    pub cursor: C,
+    buffer: B,
+    cursor: C,
 }
 
 impl<C, B> RowSetCursorAsync<C, B>
@@ -508,29 +509,21 @@ where
         Self { buffer, cursor }
     }
 
-    pub async fn fetch<S, F>(&mut self, sleep: S) -> Result<Option<&B>, Error>
-    where
-        S: FnMut() -> F,
-        F: Future,
-    {
+    pub async fn fetch(&mut self, sleep: impl Sleep) -> Result<Option<&B>, Error> {
         self.fetch_with_truncation_check(false, sleep).await
     }
 
-    pub async fn fetch_with_truncation_check<S, F>(
+    pub async fn fetch_with_truncation_check(
         &mut self,
         error_for_truncation: bool,
-        mut sleep: S,
-    ) -> Result<Option<&B>, Error>
-    where
-        S: FnMut() -> F,
-        F: Future,
-    {
+        mut sleep: impl Sleep,
+    ) -> Result<Option<&B>, Error> {
         let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
             let mut result = stmt.fetch();
             // Wait for operation to finish, using polling method
             while SqlResult::StillExecuting == result {
-                sleep().await;
+                sleep.next_poll().await;
                 result = stmt.fetch();
             }
 

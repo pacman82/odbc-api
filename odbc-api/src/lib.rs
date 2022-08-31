@@ -18,6 +18,7 @@ mod parameter_collection;
 mod preallocated;
 mod prepared;
 mod result_set_metadata;
+mod sleep;
 mod statement_connection;
 
 pub mod buffers;
@@ -43,6 +44,7 @@ pub use self::{
     preallocated::Preallocated,
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
+    sleep::Sleep,
     statement_connection::StatementConnection,
 };
 // Reexports

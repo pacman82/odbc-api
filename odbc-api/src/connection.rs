@@ -167,11 +167,11 @@ impl<'c> Connection<'c> {
     /// parameters, prepared queries are the way to go. These gives the database a chance to cache
     /// the access plan associated with your SQL statement. It is not unlike compiling your program
     /// once and executing it several times.
-    /// 
+    ///
     /// ```
     /// use odbc_api::{Connection, Error, IntoParameter};
     /// use std::io::{self, stdin, Read};
-    /// 
+    ///
     /// fn interactive(conn: &Connection) -> io::Result<()>{
     ///     let mut prepared = conn.prepare("SELECT * FROM Movies WHERE title=?;").unwrap();
     ///     let mut title = String::new();

@@ -814,9 +814,9 @@ pub trait Statement: AsHandle {
     }
 
     /// Number of rows affected by an `UPDATE`, `INSERT`, or `DELETE` statement.
-    /// 
+    ///
     /// See:
-    /// 
+    ///
     /// <https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlrowcount>
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function>
     fn row_count(&self) -> SqlResult<isize> {
