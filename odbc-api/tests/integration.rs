@@ -12,13 +12,13 @@ use odbc_api::{
     buffers::{
         BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, SqlResult, SqlText, Statement},
+    handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, Bit, ColumnDescription, Cursor, CursorAsync, DataType, Error, InOut, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    sys, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter, Nullability,
+    Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -3394,19 +3394,8 @@ async fn async_statement_execution(profile: &Profile) {
     let sleep = || tokio::time::sleep(Duration::from_millis(10));
 
     // When
-    let statement = conn.preallocate().unwrap();
-    let mut statement = statement.into_statement();
-    let query = SqlText::new(&query);
-    statement.set_async_enable(true).unwrap();
-
-    unsafe {
-        let mut result = statement.exec_direct(&query);
-        while result == SqlResult::StillExecuting {
-            sleep().await;
-            result = statement.exec_direct(&query);
-        }
-        result.into_result(&statement).unwrap();
-    }
+    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
+    statement.execute(&query, (), sleep).await.unwrap();
 
     // Then
     let actual = table.content_as_string(&conn);
@@ -3433,28 +3422,16 @@ async fn async_bulk_fetch(profile: &Profile) {
 
     // When
     let mut sum_rows_fetched = 0;
-    let statement = conn.preallocate().unwrap();
-    let mut statement = statement.into_statement();
+    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
     let query = table.sql_all_ordered_by_id();
-    let query = SqlText::new(&query);
-    statement.set_async_enable(true).unwrap();
-    unsafe {
-        // Executing statement
-        let mut result = statement.exec_direct(&query);
-        while result == SqlResult::StillExecuting {
-            sleep().await;
-            result = statement.exec_direct(&query);
-        }
-        result.into_result(&statement).unwrap();
-        // Fetching results in ten batches
-        let cursor = CursorAsync::new(statement);
-        let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
-        let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-        let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
-        while let Some(batch) = maybe_batch {
-            sum_rows_fetched += batch.num_rows();
-            maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
-        }
+    let cursor = statement.execute(&query, (), sleep).await.unwrap().unwrap();
+    // Fetching results in ten batches
+    let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    while let Some(batch) = maybe_batch {
+        sum_rows_fetched += batch.num_rows();
+        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
     }
 
     // Then

@@ -5,7 +5,7 @@ use crate::{
     error::ExtendResult,
     handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
-    sleep::Sleep,
+    sleep::{wait_for, Sleep},
     Error, OutputParameter, ResultSetMetadata,
 };
 
@@ -427,12 +427,12 @@ where
 ///
 /// Like [`CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
 /// synchronous sibling this statement handle is in asynchronous polling mode.
-pub struct CursorAsync<Stmt: AsStatementRef> {
+pub struct CursorPolling<Stmt: AsStatementRef> {
     /// A statement handle in cursor state with asynchronous mode enabled.
     statement: Stmt,
 }
 
-impl<S> CursorAsync<S>
+impl<S> CursorPolling<S>
 where
     S: AsStatementRef,
 {
@@ -453,7 +453,7 @@ where
     pub fn bind_buffer<B>(
         mut self,
         mut row_set_buffer: B,
-    ) -> Result<RowSetCursorAsync<Self, B>, Error>
+    ) -> Result<RowSetCursorPolling<Self, B>, Error>
     where
         B: RowSetBuffer,
     {
@@ -461,11 +461,11 @@ where
         unsafe {
             bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
         }
-        Ok(RowSetCursorAsync::new(row_set_buffer, self))
+        Ok(RowSetCursorPolling::new(row_set_buffer, self))
     }
 }
 
-impl<S> AsStatementRef for CursorAsync<S>
+impl<S> AsStatementRef for CursorPolling<S>
 where
     S: AsStatementRef,
 {
@@ -474,7 +474,7 @@ where
     }
 }
 
-impl<S> Drop for CursorAsync<S>
+impl<S> Drop for CursorPolling<S>
 where
     S: AsStatementRef,
 {
@@ -493,7 +493,7 @@ where
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
 /// faster.
-pub struct RowSetCursorAsync<C, B>
+pub struct RowSetCursorPolling<C, B>
 where
     C: AsStatementRef,
 {
@@ -501,7 +501,7 @@ where
     cursor: C,
 }
 
-impl<C, B> RowSetCursorAsync<C, B>
+impl<C, B> RowSetCursorPolling<C, B>
 where
     C: AsStatementRef,
 {
@@ -520,13 +520,7 @@ where
     ) -> Result<Option<&B>, Error> {
         let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
-            let mut result = stmt.fetch();
-            // Wait for operation to finish, using polling method
-            while SqlResult::StillExecuting == result {
-                sleep.next_poll().await;
-                result = stmt.fetch();
-            }
-
+            let result = wait_for(|| stmt.fetch(), &mut sleep).await;
             let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
             Ok(has_row.then_some(&self.buffer))
         }
@@ -582,7 +576,7 @@ fn error_handling_for_fetch(
     Ok(has_row)
 }
 
-impl<C, B> Drop for RowSetCursorAsync<C, B>
+impl<C, B> Drop for RowSetCursorPolling<C, B>
 where
     C: AsStatementRef,
 {

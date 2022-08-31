@@ -1,7 +1,9 @@
 use crate::{
-    execute::{execute_columns, execute_tables, execute_with_parameters},
+    execute::{
+        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
+    },
     handles::{AsStatementRef, SqlText, Statement, StatementImpl, StatementRef},
-    CursorImpl, Error, ParameterCollectionRef,
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -31,6 +33,7 @@ use crate::{
 /// }
 /// ```
 pub struct Preallocated<'open_connection> {
+    /// A valid statement handle.
     statement: StatementImpl<'open_connection>,
 }
 
@@ -193,9 +196,51 @@ impl<'o> Preallocated<'o> {
                 }
             })
     }
+
+    /// Call this method to enable asynchronous polling mode on the statement
+    pub fn into_polling(mut self) -> Result<PreallocatedPolling<'o>, Error> {
+        self.statement
+            .set_async_enable(true)
+            .into_result(&self.statement)?;
+        Ok(PreallocatedPolling::new(self.statement))
+    }
 }
 
 impl<'o> AsStatementRef for Preallocated<'o> {
+    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
+        self.statement.as_stmt_ref()
+    }
+}
+
+/// Asynchronous sibling of [`Preallocated`] using polling mode for execution.
+pub struct PreallocatedPolling<'open_connection> {
+    /// A valid statement handle in polling mode
+    statement: StatementImpl<'open_connection>,
+}
+
+impl<'o> PreallocatedPolling<'o> {
+    fn new(statement: StatementImpl<'o>) -> Self {
+        Self { statement }
+    }
+
+    pub async fn execute(
+        &mut self,
+        query: &str,
+        params: impl ParameterCollectionRef,
+        sleep: impl Sleep,
+    ) -> Result<Option<CursorPolling<&mut StatementImpl<'o>>>, Error> {
+        let query = SqlText::new(query);
+        execute_with_parameters_polling(
+            move || Ok(&mut self.statement),
+            Some(&query),
+            params,
+            sleep,
+        )
+        .await
+    }
+}
+
+impl<'o> AsStatementRef for PreallocatedPolling<'o> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }

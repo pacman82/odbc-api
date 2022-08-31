@@ -30,7 +30,8 @@ pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
     connection::{escape_attribute_value, Connection},
     cursor::{
-        Cursor, CursorAsync, CursorImpl, CursorRow, RowSetBuffer, RowSetCursor, RowSetCursorAsync,
+        Cursor, CursorImpl, CursorPolling, CursorRow, RowSetBuffer, RowSetCursor,
+        RowSetCursorPolling,
     },
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
@@ -41,7 +42,7 @@ pub use self::{
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
-    preallocated::Preallocated,
+    preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     sleep::Sleep,

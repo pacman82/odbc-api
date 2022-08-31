@@ -3,7 +3,8 @@ use std::intrinsics::transmute;
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
-    CursorImpl, Error, ParameterCollectionRef,
+    sleep::wait_for,
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
 /// Shared implementation for executing a query with parameters between [`crate::Connection`],
@@ -19,9 +20,44 @@ use crate::{
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
     lazy_statement: impl FnOnce() -> Result<S, Error>,
-    query: Option<&SqlText>,
-    mut params: impl ParameterCollectionRef,
+    query: Option<&SqlText<'_>>,
+    params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
+where
+    S: AsStatementRef,
+{
+    unsafe {
+        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+            execute(statement, query)
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+/// Asynchronous sibiling of [`execute_with_parameters`]
+pub async fn execute_with_parameters_polling<S>(
+    lazy_statement: impl FnOnce() -> Result<S, Error>,
+    query: Option<&SqlText<'_>>,
+    params: impl ParameterCollectionRef,
+    sleep: impl Sleep,
+) -> Result<Option<CursorPolling<S>>, Error>
+where
+    S: AsStatementRef,
+{
+    unsafe {
+        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+            execute_polling(statement, query, sleep).await
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+unsafe fn bind_parameters<S>(
+    lazy_statement: impl FnOnce() -> Result<S, Error>,
+    mut params: impl ParameterCollectionRef,
+) -> Result<Option<S>, Error>
 where
     S: AsStatementRef,
 {
@@ -36,13 +72,11 @@ where
     // Reset parameters so we do not dereference stale once by mistake if we call
     // `exec_direct`.
     stmt.reset_parameters().into_result(&stmt)?;
-    unsafe {
-        stmt.set_paramset_size(parameter_set_size)
-            .into_result(&stmt)?;
-        // Bind new parameters passed by caller.
-        params.bind_parameters_to(&mut stmt)?;
-        execute(statement, query)
-    }
+    stmt.set_paramset_size(parameter_set_size)
+        .into_result(&stmt)?;
+    // Bind new parameters passed by caller.
+    params.bind_parameters_to(&mut stmt)?;
+    Ok(Some(statement))
 }
 
 /// # Safety
@@ -86,6 +120,58 @@ where
     } else {
         // Safe: `statement` is in cursor state.
         let cursor = CursorImpl::new(statement);
+        Ok(Some(cursor))
+    }
+}
+
+/// # Safety
+///
+/// * Execute may dereference pointers to bound parameters, so these must guaranteed to be valid
+///   then calling this function.
+/// * Furthermore all bound delayed parameters must be of type `*mut &mut dyn Blob`.
+pub async unsafe fn execute_polling<S>(
+    mut statement: S,
+    query: Option<&SqlText<'_>>,
+    mut sleep: impl Sleep,
+) -> Result<Option<CursorPolling<S>>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+    let need_data = if let Some(sql) = query {
+        // We execute an unprepared "one shot query"
+        wait_for(|| stmt.exec_direct(sql), &mut sleep).await
+    } else {
+        // We execute a prepared query
+        wait_for(|| stmt.execute(), &mut sleep).await
+    }
+    .into_result(&stmt)?;
+
+    if need_data {
+        // Check if any delayed parameters have been bound which stream data to the database at
+        // statement execution time. Loops over each bound stream.
+        while let Some(blob_ptr) = stmt.param_data().into_result(&stmt)? {
+            // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
+            let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
+            let blob_ref = &mut *blob_ptr;
+            // Loop over all batches within each blob
+            while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
+                wait_for(|| stmt.put_binary_batch(batch), &mut sleep)
+                    .await
+                    .into_result(&stmt)?;
+            }
+        }
+    }
+
+    // Check if a result set has been created.
+    let num_result_cols = wait_for(|| stmt.num_result_cols(), &mut sleep)
+        .await
+        .into_result(&stmt)?;
+    if num_result_cols == 0 {
+        Ok(None)
+    } else {
+        // Safe: `statement` is in cursor state.
+        let cursor = CursorPolling::new(statement);
         Ok(Some(cursor))
     }
 }
