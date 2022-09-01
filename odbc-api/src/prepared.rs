@@ -44,12 +44,8 @@ where
         &mut self,
         params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
-        // Early return in case parameters are empty. The unit type `()` has parameter set size 1
-        if params.parameter_set_size() == 0 {
-            return Ok(None);
-        }
         let stmt = self.statement.as_stmt_ref();
-        execute_with_parameters(stmt, None, params)
+        execute_with_parameters(move || Ok(stmt), None, params)
     }
 
     /// Describes parameter marker associated with a prepared SQL statement.

@@ -1,7 +1,7 @@
 use std::intrinsics::transmute;
 
 use crate::{
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
     sleep::wait_for,
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
@@ -19,7 +19,7 @@ use crate::{
 ///   executed.
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
-    mut statement: S,
+    lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
@@ -27,14 +27,17 @@ where
     S: AsStatementRef,
 {
     unsafe {
-        bind_parameters(statement.as_stmt_ref(), params)?;
-        execute(statement, query)
+        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+            execute(statement, query)
+        } else {
+            Ok(None)
+        }
     }
 }
 
 /// Asynchronous sibiling of [`execute_with_parameters`]
 pub async fn execute_with_parameters_polling<S>(
-    mut statement: S,
+    lazy_statement: impl FnOnce() -> Result<S, Error>,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
     sleep: impl Sleep,
@@ -43,24 +46,37 @@ where
     S: AsStatementRef,
 {
     unsafe {
-        bind_parameters(statement.as_stmt_ref(), params)?;
-        execute_polling(statement, query, sleep).await
+        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+            execute_polling(statement, query, sleep).await
+        } else {
+            Ok(None)
+        }
     }
 }
 
-unsafe fn bind_parameters(
-    mut stmt: StatementRef<'_>,
+unsafe fn bind_parameters<S>(
+    lazy_statement: impl FnOnce() -> Result<S, Error>,
     mut params: impl ParameterCollectionRef,
-) -> Result<(), Error> {
+) -> Result<Option<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let parameter_set_size = params.parameter_set_size();
+    if parameter_set_size == 0 {
+        return Ok(None);
+    }
+
+    // Only allocate the statement, if we know we are going to execute something.
+    let mut statement = lazy_statement()?;
+    let mut stmt = statement.as_stmt_ref();
     // Reset parameters so we do not dereference stale once by mistake if we call
     // `exec_direct`.
     stmt.reset_parameters().into_result(&stmt)?;
-    let parameter_set_size = params.parameter_set_size();
     stmt.set_paramset_size(parameter_set_size)
         .into_result(&stmt)?;
     // Bind new parameters passed by caller.
     params.bind_parameters_to(&mut stmt)?;
-    Ok(())
+    Ok(Some(statement))
 }
 
 /// # Safety
