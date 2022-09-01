@@ -15,7 +15,7 @@ use crate::{
 /// use odbc_api::{Connection, Error};
 /// use std::io::{self, stdin, Read};
 ///
-/// fn interactive(conn: &Connection) -> io::Result<()>{
+/// fn interactive(conn: &Connection<'_>) -> io::Result<()>{
 ///     let mut statement = conn.preallocate().unwrap();
 ///     let mut query = String::new();
 ///     stdin().read_line(&mut query)?;
@@ -246,15 +246,15 @@ impl<'o> PreallocatedPolling<'o> {
     ///
     /// ```
     /// use odbc_api::{Connection, Error};
-    /// use std::io::{self, stdin, Read};
+    /// use std::{io::{self, stdin, Read}, time::Duration};
     ///
     /// /// Execute many different queries sequentially.
-    /// async fn execute_all(conn: &Connection, queries: &[&str]) -> Result<(), Error>{
-    ///     let statement = conn.preallocate()?.into_polling()?;
+    /// async fn execute_all(conn: &Connection<'_>, queries: &[&str]) -> Result<(), Error>{
+    ///     let mut statement = conn.preallocate()?.into_polling()?;
     ///     let sleep = || tokio::time::sleep(Duration::from_millis(20));
     ///     for query in queries {
     ///         println!("Executing {query}");
-    ///         match statement.execute(&query, (), sleep) {
+    ///         match statement.execute(&query, (), sleep).await {
     ///             Err(e) => println!("{}", e),
     ///             Ok(None) => println!("No results set generated."),
     ///             Ok(Some(cursor)) => {
