@@ -110,9 +110,13 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
+        // Early return in case parameters are empty. The unit type `()` has parameter set size 1
+        if params.parameter_set_size() == 0 {
+            return Ok(None);
+        }
         let query = SqlText::new(query);
-        let lazy_statement = move || self.allocate_statement();
-        execute_with_parameters(lazy_statement, Some(&query), params)
+        let statement = self.allocate_statement()?;
+        execute_with_parameters(statement, Some(&query), params)
     }
 
     /// In some use cases there you only execute a single statement, or the time to open a

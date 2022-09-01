@@ -87,8 +87,12 @@ impl<'o> Preallocated<'o> {
         query: &str,
         params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
+        // Early return in case parameters are empty. The unit type `()` has parameter set size 1
+        if params.parameter_set_size() == 0 {
+            return Ok(None);
+        }
         let query = SqlText::new(query);
-        execute_with_parameters(move || Ok(&mut self.statement), Some(&query), params)
+        execute_with_parameters(&mut self.statement, Some(&query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.
@@ -271,14 +275,12 @@ impl<'o> PreallocatedPolling<'o> {
         params: impl ParameterCollectionRef,
         sleep: impl Sleep,
     ) -> Result<Option<CursorPolling<&mut StatementImpl<'o>>>, Error> {
+        // Early return in case parameters are empty. The unit type `()` has parameter set size 1
+        if params.parameter_set_size() == 0 {
+            return Ok(None);
+        }
         let query = SqlText::new(query);
-        execute_with_parameters_polling(
-            move || Ok(&mut self.statement),
-            Some(&query),
-            params,
-            sleep,
-        )
-        .await
+        execute_with_parameters_polling(&mut self.statement, Some(&query), params, sleep).await
     }
 }
 
