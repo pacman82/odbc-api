@@ -115,23 +115,29 @@ impl<'c> Connection<'c> {
         execute_with_parameters(lazy_statement, Some(&query), params)
     }
 
-    /// Asynchronous sibling of [`execute`]. Uses polling mode to be asynchronous. `sleep` does
-    /// govern the behaviour of polling, by waiting for the future in between polling. Sleep should
-    /// not be implemented using a sleep which blocks the system thread, but rather utilize the
-    /// methods provided by your async runtime. E.g.:
+    /// Asynchronous sibling of [`Self::execute`]. Uses polling mode to be asynchronous. `sleep`
+    /// does govern the behaviour of polling, by waiting for the future in between polling. Sleep
+    /// should not be implemented using a sleep which blocks the system thread, but rather utilize
+    /// the methods provided by your async runtime. E.g.:
     /// 
     /// ```
-    /// use odbc_api::{Connection, Error, ParameterCollectionRef, CursorPolling, handles::StatementImpl};
+    /// use odbc_api::{Connection, IntoParameter, Error};
     /// use std::time::Duration;
     /// 
-    /// async fn execute_query_async_with_tokio<'a>(
+    /// async fn insert_post<'a>(
     ///     connection: &'a Connection<'a>,
-    ///     query: &str,
-    ///     params: impl ParameterCollectionRef,
-    /// ) -> Result<Option<CursorPolling<StatementImpl<'a>>>, Error> {
+    ///     user: &str,
+    ///     post: &str,
+    /// ) -> Result<(), Error> {
+    ///     // Poll every 50 ms.
     ///     let sleep = || tokio::time::sleep(Duration::from_millis(50));
-    ///     connection.execute_polling(query, params, sleep).await
+    ///     let sql = "INSERT INTO POSTS (user, post) VALUES (?, ?)";
+    ///     // Execute query using ODBC polling method
+    ///     let params = (&user.into_parameter(), &post.into_parameter());
+    ///     connection.execute_polling(&sql, params, sleep).await?;
+    ///     Ok(())
     /// }
+    /// ```
     pub async fn execute_polling(
         &self,
         query: &str,
