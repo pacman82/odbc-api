@@ -401,7 +401,7 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     ///
-    /// /// Call this method to find out wether there are any truncated values in the batch, without
+    /// Call this method to find out wether there are any truncated values in the batch, without
     /// inspecting all its rows and columns.
     ///
     /// ```
@@ -480,6 +480,7 @@ where
         Self { statement }
     }
 
+    /// Binds this cursor to a buffer holding a row set.
     pub fn bind_buffer<B>(
         mut self,
         mut row_set_buffer: B,
@@ -522,7 +523,7 @@ where
 
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
-/// faster.
+/// faster. Asynchronous sibiling of [`self::RowSetCursor`].
 pub struct RowSetCursorPolling<C, B>
 where
     C: AsStatementRef,
@@ -539,10 +540,26 @@ where
         Self { buffer, cursor }
     }
 
+    /// Fills the bound buffer with the next row set.
+    ///
+    /// # Return
+    ///
+    /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
+    /// reference to the internal buffer otherwise.
     pub async fn fetch(&mut self, sleep: impl Sleep) -> Result<Option<&B>, Error> {
         self.fetch_with_truncation_check(false, sleep).await
     }
 
+    /// Fills the bound buffer with the next row set. Should `error_for_truncation` be `true`and any
+    /// diagnostic indicate truncation of a value an error is returned.
+    ///
+    /// # Return
+    ///
+    /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
+    /// reference to the internal buffer otherwise.
+    ///
+    /// Call this method to find out wether there are any truncated values in the batch, without
+    /// inspecting all its rows and columns.
     pub async fn fetch_with_truncation_check(
         &mut self,
         error_for_truncation: bool,
