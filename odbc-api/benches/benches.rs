@@ -16,7 +16,7 @@ fn infalliable_buffer_allocation(capacity: usize, max_str_len: usize) {
         kind: odbc_api::buffers::BufferKind::Text { max_str_len },
         nullable: true,
     };
-    ColumnarAnyBuffer::from_description(capacity, iter::once(description));
+    ColumnarAnyBuffer::from_description(capacity, [description]);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

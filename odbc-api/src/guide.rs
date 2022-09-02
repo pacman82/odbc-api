@@ -381,10 +381,7 @@ let buffer_description = [
 ];
 
 /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-let mut buffer = ColumnarAnyBuffer::from_description(
-    batch_size,
-    buffer_description.iter().copied()
-);
+let mut buffer = ColumnarAnyBuffer::from_description(batch_size, buffer_description);
 
 let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
@@ -444,7 +441,7 @@ fn get_birthdays<'a>(conn: &'a mut Connection)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = ColumnarAnyBuffer::from_description(5000, buffer_description.into_iter());
+    let buffer = ColumnarAnyBuffer::from_description(5000, buffer_description);
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }

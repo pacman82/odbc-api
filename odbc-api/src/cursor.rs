@@ -12,6 +12,36 @@ use crate::{
 use std::{cmp::max, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
+///
+/// # Example: Fetching result in batches
+///
+/// ```rust
+/// use odbc_api::{Cursor, buffers::{BufferDescription, BufferKind, ColumnarAnyBuffer}, Error};
+///
+/// /// Fetches all values from the first column of the cursor as i32 in batches of 100 and stores
+/// /// them in a vector.
+/// fn fetch_all_ints(cursor: impl Cursor) -> Result<Vec<i32>, Error> {
+///     let mut all_ints = Vec::new();
+///     // Batch size determines how many values we fetch at once.
+///     let batch_size = 100;
+///     // We expect the first column to hold INTEGERs (or a type convertible to INTEGER). Use
+///     // the metadata on the result set, if you want to investige the types of the columns at
+///     // runtime.
+///     let description = BufferDescription {
+///         kind: BufferKind::I32,
+///         nullable: false,
+///     };
+///     // This is the buffer we bind to the driver, and repeatedly use to fetch each batch
+///     let buffer = ColumnarAnyBuffer::from_description(batch_size, [description]);
+///     // Bind buffer to cursor
+///     let mut row_set_buffer = cursor.bind_buffer(buffer)?;
+///     // Fetch data batch by batch
+///     while let Some(batch) = row_set_buffer.fetch()? {
+///         all_ints.extend_from_slice(batch.column(0).as_slice().unwrap())
+///     }
+///     Ok(all_ints)
+/// }
+/// ```
 pub trait Cursor: ResultSetMetadata {
     /// Advances the cursor to the next row in the result set. This is **Slow**. Bind buffers
     /// instead, for good performance.

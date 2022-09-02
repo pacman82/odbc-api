@@ -304,10 +304,11 @@ impl ColumnarAnyBuffer {
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
     pub fn from_description(
         capacity: usize,
-        descs: impl Iterator<Item = BufferDescription>,
+        descs: impl IntoIterator<Item = BufferDescription>,
     ) -> Self {
         let mut column_index = 0;
         let columns = descs
+            .into_iter()
             .map(move |desc| {
                 let buffer = AnyColumnBuffer::from_description(capacity, desc);
                 column_index += 1;
