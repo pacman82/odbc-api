@@ -1,9 +1,9 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
-    execute::{execute_columns, execute_tables, execute_with_parameters},
+    execute::{execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling},
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     statement_connection::StatementConnection,
-    CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared,
+    CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep, CursorPolling,
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
@@ -113,6 +113,34 @@ impl<'c> Connection<'c> {
         let query = SqlText::new(query);
         let lazy_statement = move || self.allocate_statement();
         execute_with_parameters(lazy_statement, Some(&query), params)
+    }
+
+    /// Asynchronous sibling of [`execute`]. Uses polling mode to be asynchronous. `sleep` does
+    /// govern the behaviour of polling, by waiting for the future in between polling. Sleep should
+    /// not be implemented using a sleep which blocks the system thread, but rather utilize the
+    /// methods provided by your async runtime. E.g.:
+    /// 
+    /// ```
+    /// use odbc_api::{Connection, Error, ParameterCollectionRef, CursorPolling, handles::StatementImpl};
+    /// use std::time::Duration;
+    /// 
+    /// async fn execute_query_async_with_tokio<'a>(
+    ///     connection: &'a Connection<'a>,
+    ///     query: &str,
+    ///     params: impl ParameterCollectionRef,
+    /// ) -> Result<Option<CursorPolling<StatementImpl<'a>>>, Error> {
+    ///     let sleep = || tokio::time::sleep(Duration::from_millis(50));
+    ///     connection.execute_polling(query, params, sleep).await
+    /// }
+    pub async fn execute_polling(
+        &self,
+        query: &str,
+        params: impl ParameterCollectionRef,
+        sleep: impl Sleep,
+    ) -> Result<Option<CursorPolling<StatementImpl<'_>>>, Error> {
+        let query = SqlText::new(query);
+        let lazy_statement = move || self.allocate_statement();
+        execute_with_parameters_polling(lazy_statement, Some(&query), params, sleep).await
     }
 
     /// In some use cases there you only execute a single statement, or the time to open a

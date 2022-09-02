@@ -3386,7 +3386,7 @@ fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[tokio::test]
-async fn async_statement_execution(profile: &Profile) {
+async fn async_preallocated_statement_execution(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
@@ -3418,13 +3418,16 @@ async fn async_bulk_fetch(profile: &Profile) {
             .unwrap();
     }
     inserter.execute().unwrap();
+    let query = table.sql_all_ordered_by_id();
     let sleep = || tokio::time::sleep(Duration::from_millis(50));
 
     // When
     let mut sum_rows_fetched = 0;
-    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let cursor = statement.execute(&query, (), sleep).await.unwrap().unwrap();
+    let cursor = conn
+        .execute_polling(&query, (), sleep)
+        .await
+        .unwrap()
+        .unwrap();
     // Fetching results in ten batches
     let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();

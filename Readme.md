@@ -58,21 +58,23 @@ You can also install unixODBC from source:
 
 ## Features
 
-* [x] Connect using either Data Source names (DSN)
-* [x] Connect using connection strings
+* [x] Connect using Data Source names (DSN)
+* [x] Connect using ODBC connection strings
 * [x] Connect using prompts (windows)
-* [x] Support for logging ODBC diagnostics and warnings (via `log` crate).
-* [x] Support for columnar bulk inserts.
-* [x] Support for columnar bulk queries.
-* [ ] Support for rowise bulk inserts.
-* [ ] Support for rowise bulk queries.
-* [x] Support for Output parameters of stored procedures.
-* [x] Support prepared and 'one shot' queries.
+* [x] Log ODBC diagnostics and warnings (via `log` crate).
+* [x] Columnar bulk inserts.
+* [x] Columnar bulk queries.
+* [ ] Rowise bulk inserts.
+* [ ] Rowise bulk queries.
+* [x] Output parameters of stored procedures.
+* [x] prepared and 'one shot' queries.
 * [x] Transactions
 * [x] Pass parameters to queries
-* [ ] Support for async
-* [x] Support for Multithreading
-* [x] Support for inserting large binary / text data in stream
-* [x] Support for fetching arbitrary large text / binary data in stream
-* [x] Support for connection pooling
+* [x] Asynchronous execution of one shot queries
+* [ ] Asynchronous execution of prepared queries
+* [ ] Asynchronous connecting to database
+* [x] Multithreading
+* [x] Inserting large binary / text data in stream
+* [x] Fetching arbitrary large text / binary data in stream
+* [x] Connection pooling
 * [x] List tables of data sources
