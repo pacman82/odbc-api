@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.14
+
+* Updated dependencies
+
+## 0.4.13
+
+* Updated dependencies
+
 ## 0.4.12
 
 * Faliable buffer allocation is only performed if no upper bound for string length is specified.

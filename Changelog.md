@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.48.1
+
+* Asynchronous execution of one shot queries using `Connection::execute_polling`.
+* Asynchronous bulk fetching of results using `RowSetCursorPolling`.
+
 ## 0.48.0
 
 * Both `Preallocated::row_count` and `Prepared::row_count` now return `Option<usize>` instead of `isize`.
