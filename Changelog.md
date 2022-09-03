@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.48.1
+## 0.49.0
 
+* No breaking changes. Messed up setting version. Should have been `0.48.1` 😅.
 * Asynchronous execution of one shot queries using `Connection::execute_polling`.
 * Asynchronous bulk fetching of results using `RowSetCursorPolling`.
 
