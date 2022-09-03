@@ -61,10 +61,23 @@ const MARIADB_CONNECTION: &str = "Driver={MariaDB 3.1 Driver};\
     UID=root;PWD=my-secret-pw;\
     Port=3306";
 
+const POSTGRES_CONNECTION: &str = "Driver={PostgreSQL UNICODE};\
+    Server=localhost;\
+    Port=5432;\
+    Database=test;\
+    Uid=test;\
+    Pwd=test;";
+
 const MARIADB: &Profile = &Profile {
     connection_string: MARIADB_CONNECTION,
     index_type: "INTEGER AUTO_INCREMENT PRIMARY KEY",
     blob_type: "BLOB",
+};
+
+const POSTGRES: &Profile = &Profile {
+    connection_string: POSTGRES_CONNECTION,
+    index_type: "SERIAL PRIMARY KEY",
+    blob_type: "BYTEA",
 };
 
 macro_rules! table_name {
@@ -101,6 +114,7 @@ fn bogus_connection_string() {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn connect_to_db(profile: &Profile) {
     let conn = profile.connection().unwrap();
     assert!(!conn.is_dead().unwrap())
@@ -212,6 +226,7 @@ fn describe_columns(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_fetch_text(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile
@@ -245,6 +260,7 @@ fn bulk_fetch_text(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn into_cursor(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile
@@ -282,6 +298,7 @@ fn into_cursor(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn column_name(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -311,6 +328,7 @@ fn column_name(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_char(profile: &Profile) {
     let table_name = table_name!();
 
@@ -334,6 +352,7 @@ fn bind_char(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_char_to_wchar(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -356,12 +375,13 @@ fn bind_char_to_wchar(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_bit(profile: &Profile) {
     let table_name = table_name!();
-
     let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (0),(1);", table_name);
-    conn.execute(&insert_sql, ()).unwrap();
+    let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?),(?);");
+    conn.execute(&insert_sql, (&Bit::from_bool(false), &Bit::from_bool(true)))
+        .unwrap();
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -379,6 +399,7 @@ fn bind_bit(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn truncate_fixed_sized(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -401,6 +422,7 @@ fn truncate_fixed_sized(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_varchar(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -423,6 +445,7 @@ fn bind_varchar(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_varchar_to_wchar(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -469,6 +492,7 @@ fn nvarchar_to_text(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_numeric_to_float(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
@@ -491,6 +515,7 @@ fn bind_numeric_to_float(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_numeric_to_i64(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
@@ -734,6 +759,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_int_raw(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -882,6 +908,7 @@ fn columnar_insert_varbinary(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_varchar(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -933,6 +960,7 @@ fn columnar_insert_varchar(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -973,6 +1001,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn adaptive_columnar_insert_varchar(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -1079,6 +1108,7 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")] Type NVARCHAR does not exist
 fn columnar_insert_wide_varchar(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -1127,6 +1157,7 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_integer_parameter(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1147,10 +1178,11 @@ fn bind_integer_parameter(profile: &Profile) {
 
 /// Learning test. Insert a string ending with \0. Not a terminating zero, but the payload ending
 /// itself having zero as the last element.
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")] SQLite only cares for terminating zero, not the indicator
-fn insert_string_ending_with_nul(profile: &Profile) {
+#[test_case(MSSQL, "Hell\0"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "Hell\0"; "Maria DB")]
+#[test_case(SQLITE_3, "Hell"; "SQLite 3")]
+#[test_case(POSTGRES, "Hell"; "PostgreSQL")]
+fn insert_string_ending_with_nul(profile: &Profile, expected: &str) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
     let sql = table.sql_insert();
@@ -1158,12 +1190,13 @@ fn insert_string_ending_with_nul(profile: &Profile) {
     conn.execute(&sql, &param.into_parameter()).unwrap();
 
     let actual = table.content_as_string(&conn);
-    assert_eq!("Hell\0", actual);
+    assert_eq!(actual, expected);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn prepared_statement(profile: &Profile) {
     // Setup
     let table_name = table_name!();
@@ -1198,6 +1231,7 @@ fn prepared_statement(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn preallocated(profile: &Profile) {
     // Prepare the statement once
     let conn = profile
@@ -1229,6 +1263,7 @@ fn preallocated(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn preallocation_soundness(profile: &Profile) {
     // Prepare the statement once
     let conn = profile
@@ -1272,6 +1307,7 @@ fn preallocation_soundness(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn integer_parameter_as_string(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1290,6 +1326,7 @@ fn integer_parameter_as_string(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_optional_integer_parameter(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1342,6 +1379,7 @@ fn non_ascii_char(profile: &Profile) {
 // #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")] NVARCHAR does not exist
 fn wchar(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1400,6 +1438,7 @@ fn wchar_as_char(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn two_parameters_in_tuple(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1421,6 +1460,7 @@ fn two_parameters_in_tuple(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn heterogenous_parameters_in_array(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1444,6 +1484,7 @@ fn heterogenous_parameters_in_array(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn column_names_iterator(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1463,6 +1504,7 @@ fn column_names_iterator(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn column_names_from_prepared_query(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1482,6 +1524,7 @@ fn column_names_from_prepared_query(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn metadata_from_prepared_insert_query(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -1495,6 +1538,7 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_text_buffer(profile: &Profile) {
     // Given
     let conn = profile
@@ -1534,6 +1578,7 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_columnar_buffer(profile: &Profile) {
     let conn = profile
         .setup_empty_table("BulkInsertWithColumnarBuffer", &["VARCHAR(50)", "INTEGER"])
@@ -1588,6 +1633,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -1660,6 +1706,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_connection(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
@@ -1680,6 +1727,7 @@ fn send_connection(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn parameter_option_strings(profile: &Profile) {
     let conn = profile
         .setup_empty_table("ParameterOptionStr", &["VARCHAR(50)"])
@@ -1705,6 +1753,7 @@ fn parameter_option_strings(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
+// #[test_case(POSTGRES; "PostgreSQL")] Varbinary does not exist
 fn parameter_option_bytes(profile: &Profile) {
     let table_name = table_name!();
 
@@ -1734,6 +1783,7 @@ fn parameter_option_bytes(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn parameter_varchar_512(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
@@ -1754,6 +1804,7 @@ fn parameter_varchar_512(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] Different string representation of binary data
 // #[test_case(SQLITE_3; "SQLite 3")] Different string representation of binary data
+// #[test_case(POSTGRES; "PostgreSQL")] Varbinary does not exist
 fn parameter_varbinary_512(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARBINARY(50)"]).unwrap();
@@ -1773,6 +1824,7 @@ fn parameter_varbinary_512(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn parameter_cstr(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
@@ -1792,6 +1844,7 @@ fn parameter_cstr(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn read_into_columnar_buffer(profile: &Profile) {
     let conn = profile
         .setup_empty_table("ReadIntoColumnarBuffer", &["INTEGER", "VARCHAR(20)"])
@@ -1839,6 +1892,7 @@ fn read_into_columnar_buffer(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn ignore_output_column(profile: &Profile) {
     let conn = profile
         .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
@@ -1947,6 +2001,7 @@ fn manual_commit_mode(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn unfinished_transaction(profile: &Profile) {
     let conn = profile
         .setup_empty_table("UnfinishedTransaction", &["INTEGER"])
@@ -1961,10 +2016,11 @@ fn unfinished_transaction(profile: &Profile) {
 }
 
 /// Test behavior of strings with interior nul
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")]
-fn interior_nul(profile: &Profile) {
+#[test_case(MSSQL, "a\0b"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "a\0b"; "Maria DB")]
+#[test_case(SQLITE_3, "a"; "SQLite 3")]
+#[test_case(POSTGRES, "a"; "PostgreSQL")]
+fn interior_nul(profile: &Profile, expected: &str) {
     let conn = profile
         .setup_empty_table("InteriorNul", &["VARCHAR(10)"])
         .unwrap();
@@ -1979,7 +2035,6 @@ fn interior_nul(profile: &Profile) {
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
-    let expected = "a\0b";
     assert_eq!(expected, actual);
 }
 
@@ -1987,6 +2042,7 @@ fn interior_nul(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn get_data_int(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2026,6 +2082,7 @@ fn get_data_int(profile: &Profile) {
 // SQLITE has a bug. It does not return an error but simply fills the integer with `0`. At least on
 // windows this is the case.
 // #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")] Return generic error HY000 instead
 fn get_data_int_null(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2059,6 +2116,7 @@ fn get_data_int_null(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn get_data_string(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2099,6 +2157,7 @@ fn get_data_string(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")] Varbinary does not exist
 fn get_data_binary(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2137,6 +2196,7 @@ fn get_data_binary(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
 // #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varchar(max) syntax
 fn large_strings(profile: &Profile) {
     let conn = profile
         .setup_empty_table("LargeStrings", &["Varchar(max)"])
@@ -2175,6 +2235,7 @@ fn large_strings(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
 // #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varchar(max) syntax
 fn large_strings_get_text(profile: &Profile) {
     let conn = profile
         .setup_empty_table("LargeStringsGetText", &["Varchar(max)"])
@@ -2207,6 +2268,7 @@ fn large_strings_get_text(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn short_strings_get_text(profile: &Profile) {
     let conn = profile
         .setup_empty_table("ShortStringsGetText", &["Varchar(15)"])
@@ -2239,6 +2301,7 @@ fn short_strings_get_text(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varbinary syntax
 fn short_get_binary(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2269,8 +2332,9 @@ fn short_get_binary(profile: &Profile) {
 /// Test insertion and retrieving of values larger than the initially provided buffer using
 /// get_binary.
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
-// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
+// #[test_case(MARIADB; "Maria DB")] Does not support Varbinary(max) syntax
+// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varbinary(max) syntax
+// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varbinary(max) syntax
 fn large_get_binary(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2302,6 +2366,7 @@ fn large_get_binary(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn capped_text_buffer(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2336,6 +2401,7 @@ fn capped_text_buffer(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn use_truncated_output_as_input(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2370,6 +2436,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 //#[test_case(MARIADB => inconclusive; "Maria DB")] Expected fail. Inconclusive seems not to work.
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn insert_truncated_value(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
@@ -2399,6 +2466,7 @@ fn insert_truncated_value(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB => inconclusive; "Maria DB expected fail")] Expected failure.
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn insert_truncated_var_char_array(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2432,6 +2500,7 @@ fn insert_truncated_var_char_array(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn arbitrary_input_parameters(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile
@@ -2484,6 +2553,7 @@ fn synchronized_access_to_driver_and_data_source_info() {
 // #[test_case(MSSQL; "Microsoft SQL Server")] Linux driver allocates 42 GiB
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn insert_large_texts(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["Text"]).unwrap();
@@ -2504,6 +2574,7 @@ fn insert_large_texts(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_long_data_binary_vec(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2531,6 +2602,7 @@ fn send_long_data_binary_vec(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -2563,6 +2635,7 @@ fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_long_data_string(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile.setup_empty_table(&table_name, &["Text"]).unwrap();
@@ -2590,6 +2663,7 @@ fn send_long_data_string(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite does not write anything to the database if there is no
 // size hint given
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_long_data_binary_read(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2618,6 +2692,7 @@ fn send_long_data_binary_read(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_long_data_binary_file(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2651,6 +2726,7 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn escape_hatch(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
@@ -2683,6 +2759,7 @@ fn escape_hatch(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn varchar_null(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
@@ -2699,6 +2776,7 @@ fn varchar_null(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn get_full_connection_string(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1024);
     ENV.driver_connect(
@@ -2723,6 +2801,7 @@ fn get_full_connection_string(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] STATUS_STACK_BUFFER_OVERRUN
 // #[test_case(SQLITE_3; "SQLite 3")] Does not write truncated connection string at all
+#[test_case(POSTGRES; "PostgreSQL")]
 fn get_full_connection_string_truncated(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(2);
     ENV.driver_connect(
@@ -2745,6 +2824,7 @@ fn get_full_connection_string_truncated(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn driver_connect_with_empty_out_connection_sring(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::empty();
     ENV.driver_connect(
@@ -2761,6 +2841,7 @@ fn driver_connect_with_empty_out_connection_sring(profile: &Profile) {
 #[test_case(MSSQL, "Microsoft SQL Server"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "MariaDB"; "Maria DB")]
 #[test_case(SQLITE_3, "SQLite"; "SQLite 3")]
+#[test_case(POSTGRES, "PostgreSQL"; "PostgreSQL")]
 fn database_management_system_name(profile: &Profile, expected_name: &'static str) {
     let conn = profile.connection().unwrap();
     let actual_name = conn.database_management_system_name().unwrap();
@@ -2771,6 +2852,7 @@ fn database_management_system_name(profile: &Profile, expected_name: &'static st
 #[test_case(MSSQL, 128, 128, 128, 128; "Microsoft SQL Server")]
 #[test_case(MARIADB, 256, 0, 256, 255; "Maria DB")]
 #[test_case(SQLITE_3, 255, 255, 255, 255; "SQLite 3")]
+#[test_case(POSTGRES, 0, 63, 63, 63; "PostgreSQL")]
 fn name_limits(
     profile: &Profile,
     expected_max_catalog_name_len: u16,
@@ -2802,6 +2884,7 @@ fn name_limits(
 #[test_case(MSSQL, "master"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db"; "Maria DB")]
 #[test_case(SQLITE_3, ""; "SQLite 3")]
+#[test_case(POSTGRES, "test"; "PostgreSQL")]
 fn current_catalog(profile: &Profile, expected_catalog: &str) {
     let conn = profile.connection().unwrap();
 
@@ -2811,6 +2894,7 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
 #[test_case(MSSQL, "dbo"; "Microsoft SQL Server")]
 #[test_case(MARIADB, ""; "Maria DB")]
 #[test_case(SQLITE_3, "dbo"; "SQLite 3")]
+#[test_case(POSTGRES, "test"; "PostgreSQL")]
 fn columns_query(profile: &Profile, schema: &str) {
     let table_name = table_name!();
     let conn = profile
@@ -2850,6 +2934,7 @@ fn columns_query(profile: &Profile, schema: &str) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn fill_vec_of_rows(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2907,6 +2992,7 @@ fn fill_vec_of_rows(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn no_data(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
@@ -2924,6 +3010,7 @@ fn no_data(profile: &Profile) {
 #[test_case(MSSQL, "master,dbo,ListTables,TABLE,NULL"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListTables,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTables,TABLE,NULL"; "SQLite 3")]
+#[test_case(POSTGRES, ""; "PostgreSQL")]
 fn list_tables(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListTables";
@@ -2939,6 +3026,7 @@ fn list_tables(profile: &Profile, expected: &str) {
 #[test_case(MSSQL, "master,dbo,ListTablesPreallocated,TABLE,NULL"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListTablesPreallocated,TABLE,"; "Maria DB")]
 #[test_case(SQLITE_3, "NULL,NULL,ListTablesPreallocated,TABLE,NULL"; "SQLite 3")]
+#[test_case(POSTGRES, ""; "PostgreSQL")]
 fn list_tables_preallocated(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListTablesPreallocated";
@@ -2955,6 +3043,7 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
 #[test_case(MSSQL, "master,dbo,ListColumns,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListColumns,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
 #[test_case(SQLITE_3, ",,ListColumns,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
+#[test_case(POSTGRES, ""; "PostgreSQL")]
 fn list_columns(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListColumns";
@@ -2970,6 +3059,7 @@ fn list_columns(profile: &Profile, expected: &str) {
 #[test_case(MSSQL, "master,dbo,ListColumnsPreallocated,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db,NULL,ListColumnsPreallocated,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
 #[test_case(SQLITE_3, ",,ListColumnsPreallocated,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
+#[test_case(POSTGRES, ""; "PostgreSQL")]
 fn list_columns_preallocated(profile: &Profile, expected: &str) {
     // Table name is part of test expectation for this test
     let table_name = "ListColumnsPreallocated";
@@ -2994,6 +3084,7 @@ const MARIADB_EXPECTED_ROW_SIZE_IN_BYTES: usize = 537068874;
 #[test_case(MSSQL, 10039; "Microsoft SQL Server")]
 #[test_case(MARIADB, MARIADB_EXPECTED_ROW_SIZE_IN_BYTES; "Maria DB")]
 #[test_case(SQLITE_3, 986; "SQLite 3")]
+#[test_case(POSTGRES, 1676; "PostgreSQL")]
 fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
     let conn = profile.connection().unwrap();
 
@@ -3024,6 +3115,7 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn row_array_size_66536(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
@@ -3043,6 +3135,7 @@ fn row_array_size_66536(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 #[should_panic(expected = "SQLFreeHandle failed with error code: -1")]
 fn should_panic_if_connection_cannot_be_freed(profile: &Profile) {
     let conn = profile.connection().unwrap();
@@ -3059,6 +3152,7 @@ fn should_panic_if_connection_cannot_be_freed(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 #[should_panic(expected = "original error")]
 fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
     let conn = profile.connection().unwrap();
@@ -3078,6 +3172,7 @@ fn panic_in_drop_handlers_should_not_mask_original_error(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn memcopy_values_from_nullable_slice(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -3127,6 +3222,7 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
     // Given
     let table_name = "TextColumnViewShouldAllowForFillingArrowArrays";
@@ -3198,6 +3294,7 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     // Given a text entry with a length of ten.
     let table_name = table_name!();
@@ -3226,6 +3323,7 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
@@ -3269,6 +3367,7 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_inserter_owning_connection(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
@@ -3305,6 +3404,7 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn row_count_one_shot_query(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -3324,6 +3424,7 @@ fn row_count_one_shot_query(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn row_count_prepared_insert(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -3342,6 +3443,7 @@ fn row_count_prepared_insert(profile: &Profile) {
 #[test_case(MSSQL, None; "Microsoft SQL Server")]
 #[test_case(MARIADB, Some(0); "Maria DB")]
 #[test_case(SQLITE_3, Some(0); "SQLite 3")]
+#[test_case(POSTGRES, Some(0); "PostgreSQL")]
 fn row_count_create_table_preallocated(profile: &Profile, expectation: Option<usize>) {
     // Given a name for a table which does not exist
     let table_name = table_name!();
@@ -3360,10 +3462,10 @@ fn row_count_create_table_preallocated(profile: &Profile, expectation: Option<us
     assert_eq!(expectation, row_count);
 }
 
-/// Fire an insert statement adding two rows and verify that the count of changed rows is 2.
 #[test_case(MSSQL, Some(0); "Microsoft SQL Server")]
 #[test_case(MARIADB, Some(0); "Maria DB")]
 #[test_case(SQLITE_3, Some(0); "SQLite 3")]
+#[test_case(POSTGRES, Some(0); "PostgreSQL")]
 fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>) {
     // Given a name for a table which does not exist
     let table_name = table_name!();
@@ -3385,6 +3487,7 @@ fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 #[tokio::test]
 async fn async_preallocated_statement_execution(profile: &Profile) {
     // Given a table
@@ -3405,6 +3508,7 @@ async fn async_preallocated_statement_execution(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 #[tokio::test]
 async fn async_bulk_fetch(profile: &Profile) {
     // Given a table with a thousand records

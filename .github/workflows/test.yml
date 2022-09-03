@@ -48,8 +48,8 @@ jobs:
 
       - name: Test
         run: |
-          cargo test --release
-          cargo test --features narrow --release
+          cargo test --release -- --skip postgresql
+          cargo test --features narrow --release -- --skip postgresql
 
   win32:
     name: Build Win32

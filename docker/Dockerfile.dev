@@ -26,11 +26,16 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	msodbcsql17 \
 	# odbc-mariadb/buster-backports \
 	sqlite3 \
-	libsqliteodbc
+	libsqliteodbc \
+	odbc-postgresql
 
 # Fix SQLite driver paths
 RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
 RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
+
+# Fix PostgreSQL driver paths
+RUN sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
+RUN sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
 
 # Install MariaDB driver from tar bundle
 COPY mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz .
