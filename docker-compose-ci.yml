@@ -20,12 +20,23 @@ services:
     ports:
       - 3306:3306
 
+  postgres:
+    container_name: 'postgres'
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+
   test_linux:
     build: .
     # Firing up the databases will take a while, fortunately so does compilating the library
     depends_on:
       - mssql
       - mariadb
+      - postgres
     network_mode: host
     environment:
       RUST_LOG: DEBUG

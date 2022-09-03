@@ -8,6 +8,7 @@
 Rust ODBC bindings. ODBC (Open Database Connectivity) is an open standard to connect to a variaty of data sources. Most data sources offer ODBC drivers. This crate is currently tested against:
 
 * Microsoft SQL Server
+* PostgreSQL
 * MariaDB
 * SQLite
 

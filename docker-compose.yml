@@ -20,6 +20,16 @@ services:
     ports:
       - 3306:3306
 
+  postgres:
+    container_name: 'postgres'
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+
   dev:
     build:
       context: ./docker
