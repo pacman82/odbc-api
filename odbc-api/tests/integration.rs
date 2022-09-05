@@ -10,7 +10,8 @@ use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDescription, BufferKind, ColumnarAnyBuffer, Indicator, Item, TextColumn, TextRowSet,
+        BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item,
+        TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
@@ -363,12 +364,15 @@ fn bind_char_to_wchar(profile: &Profile) {
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let mut buf = SingleColumnRowSetBuffer::with_wide_text_column(1, 5);
+    let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::<u16>::new(1, 5))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
     drop(row_set_cursor);
 
-    assert_eq!(Some(U16String::from_str("Hello").as_ustr()), buf.ustr_at(0));
+    assert_eq!(
+        Some(U16String::from_str("Hello").as_ustr()),
+        buf.column(0).get(0).map(U16Str::from_slice)
+    );
 }
 
 /// Bind a BIT column to a Bit buffer.
