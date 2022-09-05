@@ -437,12 +437,13 @@ fn bind_varchar(profile: &Profile) {
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
+    let mut buf = TextRowSet::from_max_str_lens(1, [100]).unwrap();
+    // let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     row_set_cursor.fetch().unwrap();
     drop(row_set_cursor);
 
-    assert_eq!(Some(&b"Hello, World!"[..]), buf.value_at(0));
+    assert_eq!(Some(&b"Hello, World!"[..]), buf.column(0).get(0));
 }
 
 /// Bind a VARCHAR column to a wchar buffer
