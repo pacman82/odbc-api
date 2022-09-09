@@ -50,6 +50,9 @@ impl<'conn> Drop for Connection<'conn> {
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
+/// 
+/// If you want to enable the connection pooling support build into the ODBC driver manager have a
+/// look at [`crate::Environment::set_connection_pooling`].
 pub struct Connection<'c> {
     connection: handles::Connection<'c>,
 }
