@@ -74,6 +74,7 @@ You can also install unixODBC from source:
 * [x] Asynchronous execution of one shot queries
 * [ ] Asynchronous execution of prepared queries
 * [ ] Asynchronous connecting to database
+* [ ] Asynchronous fetching of Metainformation
 * [x] Multithreading
 * [x] Inserting large binary / text data in stream
 * [x] Fetching arbitrary large text / binary data in stream
