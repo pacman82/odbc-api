@@ -21,7 +21,6 @@ services:
       - 3306:3306
 
   postgres:
-    container_name: 'postgres'
     image: postgres:13
     ports:
       - "5432:5432"

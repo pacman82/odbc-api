@@ -18,7 +18,7 @@ RUN echo msodbcsql17 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections
 # 
 # RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
 
-# This section to installs additional packages.
+# This section installs additional packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	&& apt-get -y install --no-install-recommends \
 	build-essential \
