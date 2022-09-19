@@ -684,3 +684,47 @@ unsafe impl ColumnBuffer for AnyColumnBuffer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::buffers::{ColumnBuffer, AnyColumnSliceMut, AnyColumnView};
+
+    use super::AnyColumnBuffer;
+
+    #[test]
+    fn slice_should_only_contain_part_of_the_buffer() {
+        let buffer = AnyColumnBuffer::I32(vec![1,2,3]);
+
+        let view = buffer.view(2);
+
+        assert_eq!(Some([1,2].as_slice()), view.as_slice::<i32>());
+    }
+
+    #[test]
+    fn slice_should_be_none_if_types_mismatch() {
+        let buffer = [1,2,3];
+        let view = AnyColumnView::I32(&buffer);
+        assert_eq!(None, view.as_slice::<i16>());
+    }
+
+    #[test]
+    fn slice_mut_should_be_none_if_types_mismatch() {
+        let mut buffer = [1,2,3];
+        let view = AnyColumnSliceMut::I32(&mut buffer);
+        assert_eq!(None, view.as_slice::<i16>());
+    }
+
+    #[test]
+    fn nullable_slice_should_be_none_if_buffer_is_non_nullable() {
+        let buffer = [1,2,3];
+        let view = AnyColumnView::I32(&buffer);
+        assert!(view.as_nullable_slice::<i32>().is_none());
+    }
+
+    #[test]
+    fn nullable_slice_mut_should_be_none_if_buffer_is_non_nullable() {
+        let mut buffer = [1,2,3];
+        let view = AnyColumnSliceMut::I32(&mut buffer);
+        assert!(view.as_nullable_slice::<i32>().is_none());
+    }
+}
