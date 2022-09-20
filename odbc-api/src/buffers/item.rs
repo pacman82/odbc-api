@@ -1,6 +1,6 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnyColumnSliceMut, AnyColumnView, BufferKind, NullableSlice, NullableSliceMut};
+use super::{AnySliceMut, AnySlice, BufferKind, NullableSlice, NullableSliceMut};
 use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnyColumnView`]. This allows
@@ -12,15 +12,15 @@ pub trait Item: Sized + Copy {
     const BUFFER_KIND: BufferKind;
 
     /// Extract the array type from an [`AnyColumnView`].
-    fn as_slice(variant: AnyColumnView<'_>) -> Option<&[Self]>;
+    fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]>;
     /// Extract the typed nullable buffer from an [`AnyColumnView`].
-    fn as_nullable_slice(variant: AnyColumnView<'_>) -> Option<NullableSlice<Self>>;
+    fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<Self>>;
 
     /// Extract the array type from an [`AnyColumnSliceMut`].
-    fn as_slice_mut(variant: AnyColumnSliceMut<'_>) -> Option<&'_ mut [Self]>;
+    fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]>;
 
     /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
-    fn as_nullable_slice_mut(variant: AnyColumnSliceMut<'_>) -> Option<NullableSliceMut<'_, Self>>;
+    fn as_nullable_slice_mut(variant: AnySliceMut<'_>) -> Option<NullableSliceMut<'_, Self>>;
 }
 
 macro_rules! impl_item {
@@ -28,32 +28,32 @@ macro_rules! impl_item {
         impl Item for $t {
             const BUFFER_KIND: BufferKind = BufferKind::$plain;
 
-            fn as_slice(variant: AnyColumnView<'_>) -> Option<&[Self]> {
+            fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]> {
                 match variant {
-                    AnyColumnView::$plain(vals) => Some(vals),
+                    AnySlice::$plain(vals) => Some(vals),
                     _ => None,
                 }
             }
 
-            fn as_nullable_slice(variant: AnyColumnView<'_>) -> Option<NullableSlice<Self>> {
+            fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<Self>> {
                 match variant {
-                    AnyColumnView::$null(vals) => Some(vals),
+                    AnySlice::$null(vals) => Some(vals),
                     _ => None,
                 }
             }
 
-            fn as_slice_mut<'a>(variant: AnyColumnSliceMut<'a>) -> Option<&'a mut [Self]> {
+            fn as_slice_mut<'a>(variant: AnySliceMut<'a>) -> Option<&'a mut [Self]> {
                 match variant {
-                    AnyColumnSliceMut::$plain(vals) => Some(vals),
+                    AnySliceMut::$plain(vals) => Some(vals),
                     _ => None,
                 }
             }
 
             fn as_nullable_slice_mut<'a>(
-                variant: AnyColumnSliceMut<'a>,
+                variant: AnySliceMut<'a>,
             ) -> Option<NullableSliceMut<'a, Self>> {
                 match variant {
-                    AnyColumnSliceMut::$null(vals) => Some(vals),
+                    AnySliceMut::$null(vals) => Some(vals),
                     _ => None,
                 }
             }

@@ -372,13 +372,16 @@ impl ColumnarAnyBuffer {
     }
 }
 
+#[deprecated(note = "Use new name `AnySlice` instead")]
+pub type AnyColumnView<'a> = AnySlice<'a>;
+
 /// A borrowed view on the valid rows in a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// For columns of fixed size types, which are guaranteed to not contain null, a direct access to
 /// the slice is offered. Buffers over nullable columns can be accessed via an iterator over
 /// options.
 #[derive(Debug, Clone, Copy)]
-pub enum AnyColumnView<'a> {
+pub enum AnySlice<'a> {
     /// Nullable character data in the system encoding.
     Text(TextColumnView<'a, u8>),
     /// Nullable character data encoded in UTF-16.
@@ -408,7 +411,7 @@ pub enum AnyColumnView<'a> {
     NullableBit(NullableSlice<'a, Bit>),
 }
 
-impl<'a> AnyColumnView<'a> {
+impl<'a> AnySlice<'a> {
     /// This method is useful if you expect the variant to be [`AnyColumnView::Text`]. It allows you
     /// to unwrap the inner column view without explictly matching it.
     pub fn as_text_view(self) -> Option<TextColumnView<'a, u8>> {
@@ -451,7 +454,7 @@ impl<'a> AnyColumnView<'a> {
 }
 
 unsafe impl<'a> BoundInputSlice<'a> for AnyBuffer {
-    type SliceMut = AnyColumnSliceMut<'a>;
+    type SliceMut = AnySliceMut<'a>;
 
     unsafe fn as_view_mut(
         &'a mut self,
@@ -461,65 +464,68 @@ unsafe impl<'a> BoundInputSlice<'a> for AnyBuffer {
         let num_rows = self.capacity();
         match self {
             AnyBuffer::Binary(column) => {
-                AnyColumnSliceMut::Binary(column.as_view_mut(parameter_index, stmt))
+                AnySliceMut::Binary(column.as_view_mut(parameter_index, stmt))
             }
             AnyBuffer::Text(column) => {
-                AnyColumnSliceMut::Text(column.as_view_mut(parameter_index, stmt))
+                AnySliceMut::Text(column.as_view_mut(parameter_index, stmt))
             }
             AnyBuffer::WText(column) => {
-                AnyColumnSliceMut::WText(column.as_view_mut(parameter_index, stmt))
+                AnySliceMut::WText(column.as_view_mut(parameter_index, stmt))
             }
-            AnyBuffer::Date(column) => AnyColumnSliceMut::Date(column),
-            AnyBuffer::Time(column) => AnyColumnSliceMut::Time(column),
-            AnyBuffer::Timestamp(column) => AnyColumnSliceMut::Timestamp(column),
-            AnyBuffer::F64(column) => AnyColumnSliceMut::F64(column),
-            AnyBuffer::F32(column) => AnyColumnSliceMut::F32(column),
-            AnyBuffer::I8(column) => AnyColumnSliceMut::I8(column),
-            AnyBuffer::I16(column) => AnyColumnSliceMut::I16(column),
-            AnyBuffer::I32(column) => AnyColumnSliceMut::I32(column),
-            AnyBuffer::I64(column) => AnyColumnSliceMut::I64(column),
-            AnyBuffer::U8(column) => AnyColumnSliceMut::U8(column),
-            AnyBuffer::Bit(column) => AnyColumnSliceMut::Bit(column),
+            AnyBuffer::Date(column) => AnySliceMut::Date(column),
+            AnyBuffer::Time(column) => AnySliceMut::Time(column),
+            AnyBuffer::Timestamp(column) => AnySliceMut::Timestamp(column),
+            AnyBuffer::F64(column) => AnySliceMut::F64(column),
+            AnyBuffer::F32(column) => AnySliceMut::F32(column),
+            AnyBuffer::I8(column) => AnySliceMut::I8(column),
+            AnyBuffer::I16(column) => AnySliceMut::I16(column),
+            AnyBuffer::I32(column) => AnySliceMut::I32(column),
+            AnyBuffer::I64(column) => AnySliceMut::I64(column),
+            AnyBuffer::U8(column) => AnySliceMut::U8(column),
+            AnyBuffer::Bit(column) => AnySliceMut::Bit(column),
             AnyBuffer::NullableDate(column) => {
-                AnyColumnSliceMut::NullableDate(column.writer_n(num_rows))
+                AnySliceMut::NullableDate(column.writer_n(num_rows))
             }
             AnyBuffer::NullableTime(column) => {
-                AnyColumnSliceMut::NullableTime(column.writer_n(num_rows))
+                AnySliceMut::NullableTime(column.writer_n(num_rows))
             }
             AnyBuffer::NullableTimestamp(column) => {
-                AnyColumnSliceMut::NullableTimestamp(column.writer_n(num_rows))
+                AnySliceMut::NullableTimestamp(column.writer_n(num_rows))
             }
             AnyBuffer::NullableF64(column) => {
-                AnyColumnSliceMut::NullableF64(column.writer_n(num_rows))
+                AnySliceMut::NullableF64(column.writer_n(num_rows))
             }
             AnyBuffer::NullableF32(column) => {
-                AnyColumnSliceMut::NullableF32(column.writer_n(num_rows))
+                AnySliceMut::NullableF32(column.writer_n(num_rows))
             }
             AnyBuffer::NullableI8(column) => {
-                AnyColumnSliceMut::NullableI8(column.writer_n(num_rows))
+                AnySliceMut::NullableI8(column.writer_n(num_rows))
             }
             AnyBuffer::NullableI16(column) => {
-                AnyColumnSliceMut::NullableI16(column.writer_n(num_rows))
+                AnySliceMut::NullableI16(column.writer_n(num_rows))
             }
             AnyBuffer::NullableI32(column) => {
-                AnyColumnSliceMut::NullableI32(column.writer_n(num_rows))
+                AnySliceMut::NullableI32(column.writer_n(num_rows))
             }
             AnyBuffer::NullableI64(column) => {
-                AnyColumnSliceMut::NullableI64(column.writer_n(num_rows))
+                AnySliceMut::NullableI64(column.writer_n(num_rows))
             }
             AnyBuffer::NullableU8(column) => {
-                AnyColumnSliceMut::NullableU8(column.writer_n(num_rows))
+                AnySliceMut::NullableU8(column.writer_n(num_rows))
             }
             AnyBuffer::NullableBit(column) => {
-                AnyColumnSliceMut::NullableBit(column.writer_n(num_rows))
+                AnySliceMut::NullableBit(column.writer_n(num_rows))
             }
         }
     }
 }
 
+#[deprecated(note = "Use new name `AnySliceMut` instead")]
+pub type AnyColumnSliceMut<'a> = AnySliceMut<'a>;
+
 /// A mutable slice of an input buffer, with runtime type information. Edit values in this slice in
 /// order to send parameters in bulk to a database.
-pub enum AnyColumnSliceMut<'a> {
+pub enum AnySliceMut<'a> {
     Text(TextColumnSliceMut<'a, u8>),
     /// Nullable character data encoded in UTF-16.
     WText(TextColumnSliceMut<'a, u16>),
@@ -548,7 +554,7 @@ pub enum AnyColumnSliceMut<'a> {
     NullableBit(NullableSliceMut<'a, Bit>),
 }
 
-impl<'a> AnyColumnSliceMut<'a> {
+impl<'a> AnySliceMut<'a> {
     /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Binary`]. It
     /// allows to you unwrap the inner column view without explictly matching it.
     pub fn as_bin_view(self) -> Option<BinColumnSliceMut<'a>> {
@@ -591,7 +597,7 @@ impl<'a> AnyColumnSliceMut<'a> {
 }
 
 unsafe impl<'a> ColumnProjections<'a> for AnyBuffer {
-    type View = AnyColumnView<'a>;
+    type View = AnySlice<'a>;
 }
 
 unsafe impl ColumnBuffer for AnyBuffer {
@@ -625,35 +631,35 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 
-    fn view(&self, valid_rows: usize) -> AnyColumnView {
+    fn view(&self, valid_rows: usize) -> AnySlice {
         match self {
-            AnyBuffer::Binary(col) => AnyColumnView::Binary(col.view(valid_rows)),
-            AnyBuffer::Text(col) => AnyColumnView::Text(col.view(valid_rows)),
-            AnyBuffer::WText(col) => AnyColumnView::WText(col.view(valid_rows)),
-            AnyBuffer::Date(col) => AnyColumnView::Date(&col[0..valid_rows]),
-            AnyBuffer::Time(col) => AnyColumnView::Time(&col[0..valid_rows]),
-            AnyBuffer::Timestamp(col) => AnyColumnView::Timestamp(&col[0..valid_rows]),
-            AnyBuffer::F64(col) => AnyColumnView::F64(&col[0..valid_rows]),
-            AnyBuffer::F32(col) => AnyColumnView::F32(&col[0..valid_rows]),
-            AnyBuffer::I8(col) => AnyColumnView::I8(&col[0..valid_rows]),
-            AnyBuffer::I16(col) => AnyColumnView::I16(&col[0..valid_rows]),
-            AnyBuffer::I32(col) => AnyColumnView::I32(&col[0..valid_rows]),
-            AnyBuffer::I64(col) => AnyColumnView::I64(&col[0..valid_rows]),
-            AnyBuffer::U8(col) => AnyColumnView::U8(&col[0..valid_rows]),
-            AnyBuffer::Bit(col) => AnyColumnView::Bit(&col[0..valid_rows]),
-            AnyBuffer::NullableDate(col) => AnyColumnView::NullableDate(col.iter(valid_rows)),
-            AnyBuffer::NullableTime(col) => AnyColumnView::NullableTime(col.iter(valid_rows)),
+            AnyBuffer::Binary(col) => AnySlice::Binary(col.view(valid_rows)),
+            AnyBuffer::Text(col) => AnySlice::Text(col.view(valid_rows)),
+            AnyBuffer::WText(col) => AnySlice::WText(col.view(valid_rows)),
+            AnyBuffer::Date(col) => AnySlice::Date(&col[0..valid_rows]),
+            AnyBuffer::Time(col) => AnySlice::Time(&col[0..valid_rows]),
+            AnyBuffer::Timestamp(col) => AnySlice::Timestamp(&col[0..valid_rows]),
+            AnyBuffer::F64(col) => AnySlice::F64(&col[0..valid_rows]),
+            AnyBuffer::F32(col) => AnySlice::F32(&col[0..valid_rows]),
+            AnyBuffer::I8(col) => AnySlice::I8(&col[0..valid_rows]),
+            AnyBuffer::I16(col) => AnySlice::I16(&col[0..valid_rows]),
+            AnyBuffer::I32(col) => AnySlice::I32(&col[0..valid_rows]),
+            AnyBuffer::I64(col) => AnySlice::I64(&col[0..valid_rows]),
+            AnyBuffer::U8(col) => AnySlice::U8(&col[0..valid_rows]),
+            AnyBuffer::Bit(col) => AnySlice::Bit(&col[0..valid_rows]),
+            AnyBuffer::NullableDate(col) => AnySlice::NullableDate(col.iter(valid_rows)),
+            AnyBuffer::NullableTime(col) => AnySlice::NullableTime(col.iter(valid_rows)),
             AnyBuffer::NullableTimestamp(col) => {
-                AnyColumnView::NullableTimestamp(col.iter(valid_rows))
+                AnySlice::NullableTimestamp(col.iter(valid_rows))
             }
-            AnyBuffer::NullableF64(col) => AnyColumnView::NullableF64(col.iter(valid_rows)),
-            AnyBuffer::NullableF32(col) => AnyColumnView::NullableF32(col.iter(valid_rows)),
-            AnyBuffer::NullableI8(col) => AnyColumnView::NullableI8(col.iter(valid_rows)),
-            AnyBuffer::NullableI16(col) => AnyColumnView::NullableI16(col.iter(valid_rows)),
-            AnyBuffer::NullableI32(col) => AnyColumnView::NullableI32(col.iter(valid_rows)),
-            AnyBuffer::NullableI64(col) => AnyColumnView::NullableI64(col.iter(valid_rows)),
-            AnyBuffer::NullableU8(col) => AnyColumnView::NullableU8(col.iter(valid_rows)),
-            AnyBuffer::NullableBit(col) => AnyColumnView::NullableBit(col.iter(valid_rows)),
+            AnyBuffer::NullableF64(col) => AnySlice::NullableF64(col.iter(valid_rows)),
+            AnyBuffer::NullableF32(col) => AnySlice::NullableF32(col.iter(valid_rows)),
+            AnyBuffer::NullableI8(col) => AnySlice::NullableI8(col.iter(valid_rows)),
+            AnyBuffer::NullableI16(col) => AnySlice::NullableI16(col.iter(valid_rows)),
+            AnyBuffer::NullableI32(col) => AnySlice::NullableI32(col.iter(valid_rows)),
+            AnyBuffer::NullableI64(col) => AnySlice::NullableI64(col.iter(valid_rows)),
+            AnyBuffer::NullableU8(col) => AnySlice::NullableU8(col.iter(valid_rows)),
+            AnyBuffer::NullableBit(col) => AnySlice::NullableBit(col.iter(valid_rows)),
         }
     }
 
@@ -691,7 +697,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffers::{ColumnBuffer, AnyColumnSliceMut, AnyColumnView};
+    use crate::buffers::{ColumnBuffer, AnySliceMut, AnySlice};
 
     use super::AnyBuffer;
 
@@ -707,28 +713,28 @@ mod tests {
     #[test]
     fn slice_should_be_none_if_types_mismatch() {
         let buffer = [1,2,3];
-        let view = AnyColumnView::I32(&buffer);
+        let view = AnySlice::I32(&buffer);
         assert_eq!(None, view.as_slice::<i16>());
     }
 
     #[test]
     fn slice_mut_should_be_none_if_types_mismatch() {
         let mut buffer = [1,2,3];
-        let view = AnyColumnSliceMut::I32(&mut buffer);
+        let view = AnySliceMut::I32(&mut buffer);
         assert_eq!(None, view.as_slice::<i16>());
     }
 
     #[test]
     fn nullable_slice_should_be_none_if_buffer_is_non_nullable() {
         let buffer = [1,2,3];
-        let view = AnyColumnView::I32(&buffer);
+        let view = AnySlice::I32(&buffer);
         assert!(view.as_nullable_slice::<i32>().is_none());
     }
 
     #[test]
     fn nullable_slice_mut_should_be_none_if_buffer_is_non_nullable() {
         let mut buffer = [1,2,3];
-        let view = AnyColumnSliceMut::I32(&mut buffer);
+        let view = AnySliceMut::I32(&mut buffer);
         assert!(view.as_nullable_slice::<i32>().is_none());
     }
 }

@@ -1,6 +1,6 @@
 //! This module contains buffers intended to be bound to ODBC statement handles.
 
-mod any_column_buffer;
+mod any_buffer;
 mod bin_column;
 mod column_with_indicator;
 mod columnar;
@@ -10,7 +10,7 @@ mod item;
 mod text_column;
 
 pub use self::{
-    any_column_buffer::{AnyBuffer, AnyColumnBuffer, AnyColumnSliceMut, AnyColumnView, ColumnarAnyBuffer},
+    any_buffer::{AnyBuffer, AnyColumnBuffer, AnyColumnView, AnyColumnSliceMut, AnySliceMut, AnySlice, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},
