@@ -27,8 +27,12 @@ use super::{
 /// precision. This was the highest precision still supported by MSSQL in the tests.
 const DEFAULT_TIME_PRECISION: i16 = 7;
 
+#[deprecated(note = "Use new name `AnyBuffer` instead.")]
+pub type AnyColumnBuffer = AnyBuffer; 
+
+/// Buffer holding a single column of either a result set or paramater
 #[derive(Debug)]
-pub enum AnyColumnBuffer {
+pub enum AnyBuffer {
     /// A buffer for holding both nullable and required binary data.
     Binary(BinColumn),
     /// A buffer for holding both nullable and required text data. Uses the system encoding for
@@ -60,7 +64,7 @@ pub enum AnyColumnBuffer {
     NullableBit(OptBitColumn),
 }
 
-impl AnyColumnBuffer {
+impl AnyBuffer {
     /// Map buffer description to actual buffer.
     pub fn try_from_description(
         max_rows: usize,
@@ -85,86 +89,86 @@ impl AnyColumnBuffer {
         let buffer = match (desc.kind, desc.nullable) {
             (BufferKind::Binary { length }, _) => {
                 if fallible_allocations {
-                    AnyColumnBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
+                    AnyBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
                 } else {
-                    AnyColumnBuffer::Binary(BinColumn::new(max_rows as usize, length))
+                    AnyBuffer::Binary(BinColumn::new(max_rows as usize, length))
                 }
             }
             (BufferKind::Text { max_str_len }, _) => {
                 if fallible_allocations {
-                    AnyColumnBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                    AnyBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
                 } else {
-                    AnyColumnBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+                    AnyBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
                 }
             }
             (BufferKind::WText { max_str_len }, _) => {
                 if fallible_allocations {
-                    AnyColumnBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                    AnyBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
                 } else {
-                    AnyColumnBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
+                    AnyBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
                 }
             }
             (BufferKind::Date, false) => {
-                AnyColumnBuffer::Date(vec![Date::default(); max_rows as usize])
+                AnyBuffer::Date(vec![Date::default(); max_rows as usize])
             }
             (BufferKind::Time, false) => {
-                AnyColumnBuffer::Time(vec![Time::default(); max_rows as usize])
+                AnyBuffer::Time(vec![Time::default(); max_rows as usize])
             }
             (BufferKind::Timestamp, false) => {
-                AnyColumnBuffer::Timestamp(vec![Timestamp::default(); max_rows as usize])
+                AnyBuffer::Timestamp(vec![Timestamp::default(); max_rows as usize])
             }
             (BufferKind::F64, false) => {
-                AnyColumnBuffer::F64(vec![f64::default(); max_rows as usize])
+                AnyBuffer::F64(vec![f64::default(); max_rows as usize])
             }
             (BufferKind::F32, false) => {
-                AnyColumnBuffer::F32(vec![f32::default(); max_rows as usize])
+                AnyBuffer::F32(vec![f32::default(); max_rows as usize])
             }
-            (BufferKind::I8, false) => AnyColumnBuffer::I8(vec![i8::default(); max_rows as usize]),
+            (BufferKind::I8, false) => AnyBuffer::I8(vec![i8::default(); max_rows as usize]),
             (BufferKind::I16, false) => {
-                AnyColumnBuffer::I16(vec![i16::default(); max_rows as usize])
+                AnyBuffer::I16(vec![i16::default(); max_rows as usize])
             }
             (BufferKind::I32, false) => {
-                AnyColumnBuffer::I32(vec![i32::default(); max_rows as usize])
+                AnyBuffer::I32(vec![i32::default(); max_rows as usize])
             }
             (BufferKind::I64, false) => {
-                AnyColumnBuffer::I64(vec![i64::default(); max_rows as usize])
+                AnyBuffer::I64(vec![i64::default(); max_rows as usize])
             }
-            (BufferKind::U8, false) => AnyColumnBuffer::U8(vec![u8::default(); max_rows as usize]),
+            (BufferKind::U8, false) => AnyBuffer::U8(vec![u8::default(); max_rows as usize]),
             (BufferKind::Bit, false) => {
-                AnyColumnBuffer::Bit(vec![Bit::default(); max_rows as usize])
+                AnyBuffer::Bit(vec![Bit::default(); max_rows as usize])
             }
             (BufferKind::Date, true) => {
-                AnyColumnBuffer::NullableDate(OptDateColumn::new(max_rows as usize))
+                AnyBuffer::NullableDate(OptDateColumn::new(max_rows as usize))
             }
             (BufferKind::Time, true) => {
-                AnyColumnBuffer::NullableTime(OptTimeColumn::new(max_rows as usize))
+                AnyBuffer::NullableTime(OptTimeColumn::new(max_rows as usize))
             }
             (BufferKind::Timestamp, true) => {
-                AnyColumnBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows as usize))
+                AnyBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows as usize))
             }
             (BufferKind::F64, true) => {
-                AnyColumnBuffer::NullableF64(OptF64Column::new(max_rows as usize))
+                AnyBuffer::NullableF64(OptF64Column::new(max_rows as usize))
             }
             (BufferKind::F32, true) => {
-                AnyColumnBuffer::NullableF32(OptF32Column::new(max_rows as usize))
+                AnyBuffer::NullableF32(OptF32Column::new(max_rows as usize))
             }
             (BufferKind::I8, true) => {
-                AnyColumnBuffer::NullableI8(OptI8Column::new(max_rows as usize))
+                AnyBuffer::NullableI8(OptI8Column::new(max_rows as usize))
             }
             (BufferKind::I16, true) => {
-                AnyColumnBuffer::NullableI16(OptI16Column::new(max_rows as usize))
+                AnyBuffer::NullableI16(OptI16Column::new(max_rows as usize))
             }
             (BufferKind::I32, true) => {
-                AnyColumnBuffer::NullableI32(OptI32Column::new(max_rows as usize))
+                AnyBuffer::NullableI32(OptI32Column::new(max_rows as usize))
             }
             (BufferKind::I64, true) => {
-                AnyColumnBuffer::NullableI64(OptI64Column::new(max_rows as usize))
+                AnyBuffer::NullableI64(OptI64Column::new(max_rows as usize))
             }
             (BufferKind::U8, true) => {
-                AnyColumnBuffer::NullableU8(OptU8Column::new(max_rows as usize))
+                AnyBuffer::NullableU8(OptU8Column::new(max_rows as usize))
             }
             (BufferKind::Bit, true) => {
-                AnyColumnBuffer::NullableBit(OptBitColumn::new(max_rows as usize))
+                AnyBuffer::NullableBit(OptBitColumn::new(max_rows as usize))
             }
         };
         Ok(buffer)
@@ -179,66 +183,66 @@ impl AnyColumnBuffer {
 
     fn inner_cdata(&self) -> &dyn CData {
         match self {
-            AnyColumnBuffer::Binary(col) => col,
-            AnyColumnBuffer::Text(col) => col,
-            AnyColumnBuffer::WText(col) => col,
-            AnyColumnBuffer::F64(col) => col,
-            AnyColumnBuffer::F32(col) => col,
-            AnyColumnBuffer::Date(col) => col,
-            AnyColumnBuffer::Time(col) => col,
-            AnyColumnBuffer::Timestamp(col) => col,
-            AnyColumnBuffer::I8(col) => col,
-            AnyColumnBuffer::I16(col) => col,
-            AnyColumnBuffer::I32(col) => col,
-            AnyColumnBuffer::I64(col) => col,
-            AnyColumnBuffer::Bit(col) => col,
-            AnyColumnBuffer::U8(col) => col,
-            AnyColumnBuffer::NullableF64(col) => col,
-            AnyColumnBuffer::NullableF32(col) => col,
-            AnyColumnBuffer::NullableDate(col) => col,
-            AnyColumnBuffer::NullableTime(col) => col,
-            AnyColumnBuffer::NullableTimestamp(col) => col,
-            AnyColumnBuffer::NullableI8(col) => col,
-            AnyColumnBuffer::NullableI16(col) => col,
-            AnyColumnBuffer::NullableI32(col) => col,
-            AnyColumnBuffer::NullableI64(col) => col,
-            AnyColumnBuffer::NullableBit(col) => col,
-            AnyColumnBuffer::NullableU8(col) => col,
+            AnyBuffer::Binary(col) => col,
+            AnyBuffer::Text(col) => col,
+            AnyBuffer::WText(col) => col,
+            AnyBuffer::F64(col) => col,
+            AnyBuffer::F32(col) => col,
+            AnyBuffer::Date(col) => col,
+            AnyBuffer::Time(col) => col,
+            AnyBuffer::Timestamp(col) => col,
+            AnyBuffer::I8(col) => col,
+            AnyBuffer::I16(col) => col,
+            AnyBuffer::I32(col) => col,
+            AnyBuffer::I64(col) => col,
+            AnyBuffer::Bit(col) => col,
+            AnyBuffer::U8(col) => col,
+            AnyBuffer::NullableF64(col) => col,
+            AnyBuffer::NullableF32(col) => col,
+            AnyBuffer::NullableDate(col) => col,
+            AnyBuffer::NullableTime(col) => col,
+            AnyBuffer::NullableTimestamp(col) => col,
+            AnyBuffer::NullableI8(col) => col,
+            AnyBuffer::NullableI16(col) => col,
+            AnyBuffer::NullableI32(col) => col,
+            AnyBuffer::NullableI64(col) => col,
+            AnyBuffer::NullableBit(col) => col,
+            AnyBuffer::NullableU8(col) => col,
         }
     }
 
     fn inner_cdata_mut(&mut self) -> &mut dyn CDataMut {
         match self {
-            AnyColumnBuffer::Binary(col) => col,
-            AnyColumnBuffer::Text(col) => col,
-            AnyColumnBuffer::WText(col) => col,
-            AnyColumnBuffer::F64(col) => col,
-            AnyColumnBuffer::F32(col) => col,
-            AnyColumnBuffer::Date(col) => col,
-            AnyColumnBuffer::Time(col) => col,
-            AnyColumnBuffer::Timestamp(col) => col,
-            AnyColumnBuffer::I8(col) => col,
-            AnyColumnBuffer::I16(col) => col,
-            AnyColumnBuffer::I32(col) => col,
-            AnyColumnBuffer::I64(col) => col,
-            AnyColumnBuffer::Bit(col) => col,
-            AnyColumnBuffer::U8(col) => col,
-            AnyColumnBuffer::NullableF64(col) => col,
-            AnyColumnBuffer::NullableF32(col) => col,
-            AnyColumnBuffer::NullableDate(col) => col,
-            AnyColumnBuffer::NullableTime(col) => col,
-            AnyColumnBuffer::NullableTimestamp(col) => col,
-            AnyColumnBuffer::NullableI8(col) => col,
-            AnyColumnBuffer::NullableI16(col) => col,
-            AnyColumnBuffer::NullableI32(col) => col,
-            AnyColumnBuffer::NullableI64(col) => col,
-            AnyColumnBuffer::NullableBit(col) => col,
-            AnyColumnBuffer::NullableU8(col) => col,
+            AnyBuffer::Binary(col) => col,
+            AnyBuffer::Text(col) => col,
+            AnyBuffer::WText(col) => col,
+            AnyBuffer::F64(col) => col,
+            AnyBuffer::F32(col) => col,
+            AnyBuffer::Date(col) => col,
+            AnyBuffer::Time(col) => col,
+            AnyBuffer::Timestamp(col) => col,
+            AnyBuffer::I8(col) => col,
+            AnyBuffer::I16(col) => col,
+            AnyBuffer::I32(col) => col,
+            AnyBuffer::I64(col) => col,
+            AnyBuffer::Bit(col) => col,
+            AnyBuffer::U8(col) => col,
+            AnyBuffer::NullableF64(col) => col,
+            AnyBuffer::NullableF32(col) => col,
+            AnyBuffer::NullableDate(col) => col,
+            AnyBuffer::NullableTime(col) => col,
+            AnyBuffer::NullableTimestamp(col) => col,
+            AnyBuffer::NullableI8(col) => col,
+            AnyBuffer::NullableI16(col) => col,
+            AnyBuffer::NullableI32(col) => col,
+            AnyBuffer::NullableI64(col) => col,
+            AnyBuffer::NullableBit(col) => col,
+            AnyBuffer::NullableU8(col) => col,
         }
     }
 }
 
-unsafe impl CData for AnyColumnBuffer {
+unsafe impl CData for AnyBuffer {
     fn cdata_type(&self) -> CDataType {
         self.inner_cdata().cdata_type()
     }
@@ -256,7 +260,7 @@ unsafe impl CData for AnyColumnBuffer {
     }
 }
 
-unsafe impl CDataMut for AnyColumnBuffer {
+unsafe impl CDataMut for AnyBuffer {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.inner_cdata_mut().mut_indicator_ptr()
     }
@@ -266,39 +270,39 @@ unsafe impl CDataMut for AnyColumnBuffer {
     }
 }
 
-impl HasDataType for AnyColumnBuffer {
+impl HasDataType for AnyBuffer {
     fn data_type(&self) -> DataType {
         match self {
-            AnyColumnBuffer::Binary(col) => col.data_type(),
-            AnyColumnBuffer::Text(col) => col.data_type(),
-            AnyColumnBuffer::WText(col) => col.data_type(),
-            AnyColumnBuffer::Date(_) | AnyColumnBuffer::NullableDate(_) => DataType::Date,
-            AnyColumnBuffer::Time(_) | AnyColumnBuffer::NullableTime(_) => DataType::Time {
+            AnyBuffer::Binary(col) => col.data_type(),
+            AnyBuffer::Text(col) => col.data_type(),
+            AnyBuffer::WText(col) => col.data_type(),
+            AnyBuffer::Date(_) | AnyBuffer::NullableDate(_) => DataType::Date,
+            AnyBuffer::Time(_) | AnyBuffer::NullableTime(_) => DataType::Time {
                 precision: DEFAULT_TIME_PRECISION,
             },
-            AnyColumnBuffer::Timestamp(_) | AnyColumnBuffer::NullableTimestamp(_) => {
+            AnyBuffer::Timestamp(_) | AnyBuffer::NullableTimestamp(_) => {
                 DataType::Timestamp {
                     precision: DEFAULT_TIME_PRECISION,
                 }
             }
-            AnyColumnBuffer::F64(_) | AnyColumnBuffer::NullableF64(_) => DataType::Double,
-            AnyColumnBuffer::F32(_) | AnyColumnBuffer::NullableF32(_) => DataType::Real,
-            AnyColumnBuffer::I8(_) | AnyColumnBuffer::NullableI8(_) => DataType::TinyInt,
-            AnyColumnBuffer::I16(_) | AnyColumnBuffer::NullableI16(_) => DataType::SmallInt,
-            AnyColumnBuffer::I32(_) | AnyColumnBuffer::NullableI32(_) => DataType::Integer,
-            AnyColumnBuffer::I64(_) | AnyColumnBuffer::NullableI64(_) => DataType::BigInt,
+            AnyBuffer::F64(_) | AnyBuffer::NullableF64(_) => DataType::Double,
+            AnyBuffer::F32(_) | AnyBuffer::NullableF32(_) => DataType::Real,
+            AnyBuffer::I8(_) | AnyBuffer::NullableI8(_) => DataType::TinyInt,
+            AnyBuffer::I16(_) | AnyBuffer::NullableI16(_) => DataType::SmallInt,
+            AnyBuffer::I32(_) | AnyBuffer::NullableI32(_) => DataType::Integer,
+            AnyBuffer::I64(_) | AnyBuffer::NullableI64(_) => DataType::BigInt,
             // Few databases support unsigned types, binding U8 as tiny int might lead to weird
             // stuff if the database has type is signed. I guess. Let's bind it as SmallInt by
             // default, just to be on the safe side.
-            AnyColumnBuffer::U8(_) | AnyColumnBuffer::NullableU8(_) => DataType::SmallInt,
-            AnyColumnBuffer::Bit(_) | AnyColumnBuffer::NullableBit(_) => DataType::Bit,
+            AnyBuffer::U8(_) | AnyBuffer::NullableU8(_) => DataType::SmallInt,
+            AnyBuffer::Bit(_) | AnyBuffer::NullableBit(_) => DataType::Bit,
         }
     }
 }
 
 /// Flexible columnar buffer implementation. Bind this to a cursor to fetch values in bulk, or pass
 /// this as a parameter to a statement, to submit many parameters at once.
-pub type ColumnarAnyBuffer = ColumnarBuffer<AnyColumnBuffer>;
+pub type ColumnarAnyBuffer = ColumnarBuffer<AnyBuffer>;
 
 impl ColumnarAnyBuffer {
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
@@ -310,7 +314,7 @@ impl ColumnarAnyBuffer {
         let columns = descs
             .into_iter()
             .map(move |desc| {
-                let buffer = AnyColumnBuffer::from_description(capacity, desc);
+                let buffer = AnyBuffer::from_description(capacity, desc);
                 column_index += 1;
                 (column_index, buffer)
             })
@@ -329,7 +333,7 @@ impl ColumnarAnyBuffer {
         let mut column_index = 0;
         let columns = descs
             .map(move |desc| {
-                let buffer = AnyColumnBuffer::try_from_description(capacity, desc)
+                let buffer = AnyBuffer::try_from_description(capacity, desc)
                     .map_err(|source| source.add_context(column_index))?;
                 column_index += 1;
                 Ok((column_index, buffer))
@@ -345,12 +349,12 @@ impl ColumnarAnyBuffer {
     pub fn from_description_and_indices(
         max_rows: usize,
         description: impl Iterator<Item = (u16, BufferDescription)>,
-    ) -> ColumnarBuffer<AnyColumnBuffer> {
+    ) -> ColumnarBuffer<AnyBuffer> {
         let columns: Vec<_> = description
             .map(|(col_index, buffer_desc)| {
                 (
                     col_index,
-                    AnyColumnBuffer::from_description(max_rows, buffer_desc),
+                    AnyBuffer::from_description(max_rows, buffer_desc),
                 )
             })
             .collect();
@@ -446,7 +450,7 @@ impl<'a> AnyColumnView<'a> {
     }
 }
 
-unsafe impl<'a> BoundInputSlice<'a> for AnyColumnBuffer {
+unsafe impl<'a> BoundInputSlice<'a> for AnyBuffer {
     type SliceMut = AnyColumnSliceMut<'a>;
 
     unsafe fn as_view_mut(
@@ -456,57 +460,57 @@ unsafe impl<'a> BoundInputSlice<'a> for AnyColumnBuffer {
     ) -> Self::SliceMut {
         let num_rows = self.capacity();
         match self {
-            AnyColumnBuffer::Binary(column) => {
+            AnyBuffer::Binary(column) => {
                 AnyColumnSliceMut::Binary(column.as_view_mut(parameter_index, stmt))
             }
-            AnyColumnBuffer::Text(column) => {
+            AnyBuffer::Text(column) => {
                 AnyColumnSliceMut::Text(column.as_view_mut(parameter_index, stmt))
             }
-            AnyColumnBuffer::WText(column) => {
+            AnyBuffer::WText(column) => {
                 AnyColumnSliceMut::WText(column.as_view_mut(parameter_index, stmt))
             }
-            AnyColumnBuffer::Date(column) => AnyColumnSliceMut::Date(column),
-            AnyColumnBuffer::Time(column) => AnyColumnSliceMut::Time(column),
-            AnyColumnBuffer::Timestamp(column) => AnyColumnSliceMut::Timestamp(column),
-            AnyColumnBuffer::F64(column) => AnyColumnSliceMut::F64(column),
-            AnyColumnBuffer::F32(column) => AnyColumnSliceMut::F32(column),
-            AnyColumnBuffer::I8(column) => AnyColumnSliceMut::I8(column),
-            AnyColumnBuffer::I16(column) => AnyColumnSliceMut::I16(column),
-            AnyColumnBuffer::I32(column) => AnyColumnSliceMut::I32(column),
-            AnyColumnBuffer::I64(column) => AnyColumnSliceMut::I64(column),
-            AnyColumnBuffer::U8(column) => AnyColumnSliceMut::U8(column),
-            AnyColumnBuffer::Bit(column) => AnyColumnSliceMut::Bit(column),
-            AnyColumnBuffer::NullableDate(column) => {
+            AnyBuffer::Date(column) => AnyColumnSliceMut::Date(column),
+            AnyBuffer::Time(column) => AnyColumnSliceMut::Time(column),
+            AnyBuffer::Timestamp(column) => AnyColumnSliceMut::Timestamp(column),
+            AnyBuffer::F64(column) => AnyColumnSliceMut::F64(column),
+            AnyBuffer::F32(column) => AnyColumnSliceMut::F32(column),
+            AnyBuffer::I8(column) => AnyColumnSliceMut::I8(column),
+            AnyBuffer::I16(column) => AnyColumnSliceMut::I16(column),
+            AnyBuffer::I32(column) => AnyColumnSliceMut::I32(column),
+            AnyBuffer::I64(column) => AnyColumnSliceMut::I64(column),
+            AnyBuffer::U8(column) => AnyColumnSliceMut::U8(column),
+            AnyBuffer::Bit(column) => AnyColumnSliceMut::Bit(column),
+            AnyBuffer::NullableDate(column) => {
                 AnyColumnSliceMut::NullableDate(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableTime(column) => {
+            AnyBuffer::NullableTime(column) => {
                 AnyColumnSliceMut::NullableTime(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableTimestamp(column) => {
+            AnyBuffer::NullableTimestamp(column) => {
                 AnyColumnSliceMut::NullableTimestamp(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableF64(column) => {
+            AnyBuffer::NullableF64(column) => {
                 AnyColumnSliceMut::NullableF64(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableF32(column) => {
+            AnyBuffer::NullableF32(column) => {
                 AnyColumnSliceMut::NullableF32(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableI8(column) => {
+            AnyBuffer::NullableI8(column) => {
                 AnyColumnSliceMut::NullableI8(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableI16(column) => {
+            AnyBuffer::NullableI16(column) => {
                 AnyColumnSliceMut::NullableI16(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableI32(column) => {
+            AnyBuffer::NullableI32(column) => {
                 AnyColumnSliceMut::NullableI32(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableI64(column) => {
+            AnyBuffer::NullableI64(column) => {
                 AnyColumnSliceMut::NullableI64(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableU8(column) => {
+            AnyBuffer::NullableU8(column) => {
                 AnyColumnSliceMut::NullableU8(column.writer_n(num_rows))
             }
-            AnyColumnBuffer::NullableBit(column) => {
+            AnyBuffer::NullableBit(column) => {
                 AnyColumnSliceMut::NullableBit(column.writer_n(num_rows))
             }
         }
@@ -586,101 +590,101 @@ impl<'a> AnyColumnSliceMut<'a> {
     }
 }
 
-unsafe impl<'a> ColumnProjections<'a> for AnyColumnBuffer {
+unsafe impl<'a> ColumnProjections<'a> for AnyBuffer {
     type View = AnyColumnView<'a>;
 }
 
-unsafe impl ColumnBuffer for AnyColumnBuffer {
+unsafe impl ColumnBuffer for AnyBuffer {
     fn capacity(&self) -> usize {
         match self {
-            AnyColumnBuffer::Binary(col) => col.capacity(),
-            AnyColumnBuffer::Text(col) => col.capacity(),
-            AnyColumnBuffer::WText(col) => col.capacity(),
-            AnyColumnBuffer::Date(col) => col.capacity(),
-            AnyColumnBuffer::Time(col) => col.capacity(),
-            AnyColumnBuffer::Timestamp(col) => col.capacity(),
-            AnyColumnBuffer::F64(col) => col.capacity(),
-            AnyColumnBuffer::F32(col) => col.capacity(),
-            AnyColumnBuffer::I8(col) => col.capacity(),
-            AnyColumnBuffer::I16(col) => col.capacity(),
-            AnyColumnBuffer::I32(col) => col.capacity(),
-            AnyColumnBuffer::I64(col) => col.capacity(),
-            AnyColumnBuffer::U8(col) => col.capacity(),
-            AnyColumnBuffer::Bit(col) => col.capacity(),
-            AnyColumnBuffer::NullableDate(col) => col.capacity(),
-            AnyColumnBuffer::NullableTime(col) => col.capacity(),
-            AnyColumnBuffer::NullableTimestamp(col) => col.capacity(),
-            AnyColumnBuffer::NullableF64(col) => col.capacity(),
-            AnyColumnBuffer::NullableF32(col) => col.capacity(),
-            AnyColumnBuffer::NullableI8(col) => col.capacity(),
-            AnyColumnBuffer::NullableI16(col) => col.capacity(),
-            AnyColumnBuffer::NullableI32(col) => col.capacity(),
-            AnyColumnBuffer::NullableI64(col) => col.capacity(),
-            AnyColumnBuffer::NullableU8(col) => col.capacity(),
-            AnyColumnBuffer::NullableBit(col) => col.capacity(),
+            AnyBuffer::Binary(col) => col.capacity(),
+            AnyBuffer::Text(col) => col.capacity(),
+            AnyBuffer::WText(col) => col.capacity(),
+            AnyBuffer::Date(col) => col.capacity(),
+            AnyBuffer::Time(col) => col.capacity(),
+            AnyBuffer::Timestamp(col) => col.capacity(),
+            AnyBuffer::F64(col) => col.capacity(),
+            AnyBuffer::F32(col) => col.capacity(),
+            AnyBuffer::I8(col) => col.capacity(),
+            AnyBuffer::I16(col) => col.capacity(),
+            AnyBuffer::I32(col) => col.capacity(),
+            AnyBuffer::I64(col) => col.capacity(),
+            AnyBuffer::U8(col) => col.capacity(),
+            AnyBuffer::Bit(col) => col.capacity(),
+            AnyBuffer::NullableDate(col) => col.capacity(),
+            AnyBuffer::NullableTime(col) => col.capacity(),
+            AnyBuffer::NullableTimestamp(col) => col.capacity(),
+            AnyBuffer::NullableF64(col) => col.capacity(),
+            AnyBuffer::NullableF32(col) => col.capacity(),
+            AnyBuffer::NullableI8(col) => col.capacity(),
+            AnyBuffer::NullableI16(col) => col.capacity(),
+            AnyBuffer::NullableI32(col) => col.capacity(),
+            AnyBuffer::NullableI64(col) => col.capacity(),
+            AnyBuffer::NullableU8(col) => col.capacity(),
+            AnyBuffer::NullableBit(col) => col.capacity(),
         }
     }
 
     fn view(&self, valid_rows: usize) -> AnyColumnView {
         match self {
-            AnyColumnBuffer::Binary(col) => AnyColumnView::Binary(col.view(valid_rows)),
-            AnyColumnBuffer::Text(col) => AnyColumnView::Text(col.view(valid_rows)),
-            AnyColumnBuffer::WText(col) => AnyColumnView::WText(col.view(valid_rows)),
-            AnyColumnBuffer::Date(col) => AnyColumnView::Date(&col[0..valid_rows]),
-            AnyColumnBuffer::Time(col) => AnyColumnView::Time(&col[0..valid_rows]),
-            AnyColumnBuffer::Timestamp(col) => AnyColumnView::Timestamp(&col[0..valid_rows]),
-            AnyColumnBuffer::F64(col) => AnyColumnView::F64(&col[0..valid_rows]),
-            AnyColumnBuffer::F32(col) => AnyColumnView::F32(&col[0..valid_rows]),
-            AnyColumnBuffer::I8(col) => AnyColumnView::I8(&col[0..valid_rows]),
-            AnyColumnBuffer::I16(col) => AnyColumnView::I16(&col[0..valid_rows]),
-            AnyColumnBuffer::I32(col) => AnyColumnView::I32(&col[0..valid_rows]),
-            AnyColumnBuffer::I64(col) => AnyColumnView::I64(&col[0..valid_rows]),
-            AnyColumnBuffer::U8(col) => AnyColumnView::U8(&col[0..valid_rows]),
-            AnyColumnBuffer::Bit(col) => AnyColumnView::Bit(&col[0..valid_rows]),
-            AnyColumnBuffer::NullableDate(col) => AnyColumnView::NullableDate(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableTime(col) => AnyColumnView::NullableTime(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableTimestamp(col) => {
+            AnyBuffer::Binary(col) => AnyColumnView::Binary(col.view(valid_rows)),
+            AnyBuffer::Text(col) => AnyColumnView::Text(col.view(valid_rows)),
+            AnyBuffer::WText(col) => AnyColumnView::WText(col.view(valid_rows)),
+            AnyBuffer::Date(col) => AnyColumnView::Date(&col[0..valid_rows]),
+            AnyBuffer::Time(col) => AnyColumnView::Time(&col[0..valid_rows]),
+            AnyBuffer::Timestamp(col) => AnyColumnView::Timestamp(&col[0..valid_rows]),
+            AnyBuffer::F64(col) => AnyColumnView::F64(&col[0..valid_rows]),
+            AnyBuffer::F32(col) => AnyColumnView::F32(&col[0..valid_rows]),
+            AnyBuffer::I8(col) => AnyColumnView::I8(&col[0..valid_rows]),
+            AnyBuffer::I16(col) => AnyColumnView::I16(&col[0..valid_rows]),
+            AnyBuffer::I32(col) => AnyColumnView::I32(&col[0..valid_rows]),
+            AnyBuffer::I64(col) => AnyColumnView::I64(&col[0..valid_rows]),
+            AnyBuffer::U8(col) => AnyColumnView::U8(&col[0..valid_rows]),
+            AnyBuffer::Bit(col) => AnyColumnView::Bit(&col[0..valid_rows]),
+            AnyBuffer::NullableDate(col) => AnyColumnView::NullableDate(col.iter(valid_rows)),
+            AnyBuffer::NullableTime(col) => AnyColumnView::NullableTime(col.iter(valid_rows)),
+            AnyBuffer::NullableTimestamp(col) => {
                 AnyColumnView::NullableTimestamp(col.iter(valid_rows))
             }
-            AnyColumnBuffer::NullableF64(col) => AnyColumnView::NullableF64(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableF32(col) => AnyColumnView::NullableF32(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableI8(col) => AnyColumnView::NullableI8(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableI16(col) => AnyColumnView::NullableI16(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableI32(col) => AnyColumnView::NullableI32(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableI64(col) => AnyColumnView::NullableI64(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableU8(col) => AnyColumnView::NullableU8(col.iter(valid_rows)),
-            AnyColumnBuffer::NullableBit(col) => AnyColumnView::NullableBit(col.iter(valid_rows)),
+            AnyBuffer::NullableF64(col) => AnyColumnView::NullableF64(col.iter(valid_rows)),
+            AnyBuffer::NullableF32(col) => AnyColumnView::NullableF32(col.iter(valid_rows)),
+            AnyBuffer::NullableI8(col) => AnyColumnView::NullableI8(col.iter(valid_rows)),
+            AnyBuffer::NullableI16(col) => AnyColumnView::NullableI16(col.iter(valid_rows)),
+            AnyBuffer::NullableI32(col) => AnyColumnView::NullableI32(col.iter(valid_rows)),
+            AnyBuffer::NullableI64(col) => AnyColumnView::NullableI64(col.iter(valid_rows)),
+            AnyBuffer::NullableU8(col) => AnyColumnView::NullableU8(col.iter(valid_rows)),
+            AnyBuffer::NullableBit(col) => AnyColumnView::NullableBit(col.iter(valid_rows)),
         }
     }
 
     /// Fills the column with the default representation of values, between `from` and `to` index.
     fn fill_default(&mut self, from: usize, to: usize) {
         match self {
-            AnyColumnBuffer::Binary(col) => col.fill_null(from, to),
-            AnyColumnBuffer::Text(col) => col.fill_null(from, to),
-            AnyColumnBuffer::WText(col) => col.fill_null(from, to),
-            AnyColumnBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::Timestamp(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::F64(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::F32(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::I8(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::I16(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::I32(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::I64(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::U8(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::Bit(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyColumnBuffer::NullableDate(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableTime(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableTimestamp(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableF64(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableF32(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableI8(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableI16(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableI32(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableI64(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableU8(col) => col.fill_null(from, to),
-            AnyColumnBuffer::NullableBit(col) => col.fill_null(from, to),
+            AnyBuffer::Binary(col) => col.fill_null(from, to),
+            AnyBuffer::Text(col) => col.fill_null(from, to),
+            AnyBuffer::WText(col) => col.fill_null(from, to),
+            AnyBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::Timestamp(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::F64(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::F32(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::I8(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::I16(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::I32(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::I64(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::U8(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::Bit(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::NullableDate(col) => col.fill_null(from, to),
+            AnyBuffer::NullableTime(col) => col.fill_null(from, to),
+            AnyBuffer::NullableTimestamp(col) => col.fill_null(from, to),
+            AnyBuffer::NullableF64(col) => col.fill_null(from, to),
+            AnyBuffer::NullableF32(col) => col.fill_null(from, to),
+            AnyBuffer::NullableI8(col) => col.fill_null(from, to),
+            AnyBuffer::NullableI16(col) => col.fill_null(from, to),
+            AnyBuffer::NullableI32(col) => col.fill_null(from, to),
+            AnyBuffer::NullableI64(col) => col.fill_null(from, to),
+            AnyBuffer::NullableU8(col) => col.fill_null(from, to),
+            AnyBuffer::NullableBit(col) => col.fill_null(from, to),
         }
     }
 }
@@ -689,11 +693,11 @@ unsafe impl ColumnBuffer for AnyColumnBuffer {
 mod tests {
     use crate::buffers::{ColumnBuffer, AnyColumnSliceMut, AnyColumnView};
 
-    use super::AnyColumnBuffer;
+    use super::AnyBuffer;
 
     #[test]
     fn slice_should_only_contain_part_of_the_buffer() {
-        let buffer = AnyColumnBuffer::I32(vec![1,2,3]);
+        let buffer = AnyBuffer::I32(vec![1,2,3]);
 
         let view = buffer.view(2);
 

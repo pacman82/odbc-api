@@ -1,5 +1,5 @@
 use crate::{
-    buffers::{AnyColumnBuffer, BufferDescription, ColumnBuffer, TextColumn},
+    buffers::{AnyBuffer, BufferDescription, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
     handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
@@ -191,10 +191,10 @@ where
         self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDescription>,
-    ) -> Result<ColumnarBulkInserter<S, AnyColumnBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
         let parameter_buffers = descriptions
             .into_iter()
-            .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
+            .map(|desc| AnyBuffer::from_description(capacity, desc))
             .collect();
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
     }
@@ -209,12 +209,12 @@ where
         &mut self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDescription>,
-    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyColumnBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
         let stmt = self.statement.as_stmt_ref();
 
         let parameter_buffers = descriptions
             .into_iter()
-            .map(|desc| AnyColumnBuffer::from_description(capacity, desc))
+            .map(|desc| AnyBuffer::from_description(capacity, desc))
             .collect();
         unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
     }
