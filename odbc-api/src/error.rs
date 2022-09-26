@@ -182,10 +182,18 @@ impl<T> SqlResult<T> {
         self.into_result_with(handle, error_for_truncation, None)
     }
 
+    /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
+    /// is mapped to `Some`.
+    pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
+        let error_for_truncation = false;
+        self.map(Some)
+            .into_result_with(handle, error_for_truncation, Some(None))
+    }
+
     /// Most flexible way of converting an `SqlResult` to an idiomatic `Result`.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// * `handle`: This handle is used to extract diagnostics in case `self` is
     ///   [`SqlResult::SuccessWithInfo`] or [`SqlResult::Error`].
     /// * `error_for_truncation`: Intended to be used to be used after bulk fetching into a buffer.

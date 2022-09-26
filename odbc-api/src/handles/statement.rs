@@ -847,7 +847,8 @@ pub trait Statement: AsHandle {
             //   operation is not in progress.
             SQLCompleteAsync(self.handle_type(), self.as_handle(), &mut ret.0 as *mut _)
                 .into_sql_result("SQLCompleteAsync")
-        }.on_success(|| ret)
+        }
+        .on_success(|| ret)
     }
 }
 

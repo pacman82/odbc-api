@@ -1,6 +1,6 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnySliceMut, AnySlice, BufferKind, NullableSlice, NullableSliceMut};
+use super::{AnySlice, AnySliceMut, BufferKind, NullableSlice, NullableSliceMut};
 use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnyColumnView`]. This allows

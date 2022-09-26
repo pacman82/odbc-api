@@ -1,9 +1,11 @@
 use crate::{
     buffers::{BufferDescription, BufferKind},
-    execute::{execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling},
+    execute::{
+        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
+    },
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     statement_connection::StatementConnection,
-    CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep, CursorPolling,
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
@@ -50,7 +52,7 @@ impl<'conn> Drop for Connection<'conn> {
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
-/// 
+///
 /// If you want to enable the connection pooling support build into the ODBC driver manager have a
 /// look at [`crate::Environment::set_connection_pooling`].
 pub struct Connection<'c> {
@@ -122,11 +124,11 @@ impl<'c> Connection<'c> {
     /// does govern the behaviour of polling, by waiting for the future in between polling. Sleep
     /// should not be implemented using a sleep which blocks the system thread, but rather utilize
     /// the methods provided by your async runtime. E.g.:
-    /// 
+    ///
     /// ```
     /// use odbc_api::{Connection, IntoParameter, Error};
     /// use std::time::Duration;
-    /// 
+    ///
     /// async fn insert_post<'a>(
     ///     connection: &'a Connection<'a>,
     ///     user: &str,

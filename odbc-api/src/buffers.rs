@@ -10,7 +10,10 @@ mod item;
 mod text_column;
 
 pub use self::{
-    any_buffer::{AnyBuffer, AnyColumnBuffer, AnyColumnView, AnyColumnSliceMut, AnySliceMut, AnySlice, ColumnarAnyBuffer},
+    any_buffer::{
+        AnyBuffer, AnyColumnBuffer, AnyColumnSliceMut, AnyColumnView, AnySlice, AnySliceMut,
+        ColumnarAnyBuffer,
+    },
     bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnProjections, ColumnarBuffer, TextRowSet},

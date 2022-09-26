@@ -206,10 +206,7 @@ impl Environment {
     /// See [SQLDrivers][1]
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/syntax/sqldrivers-function
-    pub unsafe fn drivers_buffer_len(
-        &self,
-        direction: FetchOrientation,
-    ) -> SqlResult<Option<(i16, i16)>> {
+    pub unsafe fn drivers_buffer_len(&self, direction: FetchOrientation) -> SqlResult<(i16, i16)> {
         // Lengths in characters minus terminating zero
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
@@ -224,8 +221,8 @@ impl Environment {
             0,
             &mut length_attributes,
         )
-        .into_sql_result_bool("SQLDrivers")
-        .map(|res| res.then_some((length_description, length_attributes)))
+        .into_sql_result("SQLDrivers")
+        .on_success(|| (length_description, length_attributes))
     }
 
     /// Use together with [`Environment::data_source_buffer_fill`] to list drivers descriptions and
