@@ -129,7 +129,7 @@ impl<'c> Connection<'c> {
     ///
     /// # Return
     ///
-    /// `None` in case the prompt completing the connection string has been aborted.
+    /// [`SqlResult::NoData`] in case the prompt completing the connection string has been aborted.
     ///
     /// # Safety
     ///
@@ -140,7 +140,7 @@ impl<'c> Connection<'c> {
         parent_window: HWnd,
         completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverConnectOption,
-    ) -> SqlResult<bool> {
+    ) -> SqlResult<()> {
         sql_driver_connect(
             self.handle,
             parent_window,
@@ -151,7 +151,7 @@ impl<'c> Connection<'c> {
             completed_connection_string.mut_actual_len_ptr(),
             driver_completion,
         )
-        .into_sql_result_bool("SQLDriverConnect")
+        .into_sql_result("SQLDriverConnect")
     }
 
     /// Disconnect from an ODBC data source.

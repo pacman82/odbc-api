@@ -55,9 +55,9 @@ impl<T> SqlResult<T> {
     pub fn unwrap(self) -> T {
         match self {
             SqlResult::Success(v) | SqlResult::SuccessWithInfo(v) => v,
-            SqlResult::Error { .. } => panic!("Unwraping SqlResult::Error"),
-            SqlResult::NoData => panic!("Unwraping SqlResult::NoData"),
-            SqlResult::StillExecuting => panic!("Unwraping SqlResult::StillExecuting"),
+            SqlResult::Error { .. } => panic!("Unwrapping SqlResult::Error"),
+            SqlResult::NoData => panic!("Unwrapping SqlResult::NoData"),
+            SqlResult::StillExecuting => panic!("Unwrapping SqlResult::StillExecuting"),
         }
     }
 }
@@ -77,6 +77,7 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::SUCCESS => SqlResult::Success(()),
             SqlReturn::SUCCESS_WITH_INFO => SqlResult::SuccessWithInfo(()),
             SqlReturn::ERROR => SqlResult::Error { function },
+            SqlReturn::NO_DATA => SqlResult::NoData,
             SqlReturn::STILL_EXECUTING => SqlResult::StillExecuting,
             r => panic!(
                 "Unexpected return value '{:?}' for ODBC function '{}'",

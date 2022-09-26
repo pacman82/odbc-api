@@ -162,6 +162,38 @@ impl<T> ExtendResult for Result<T, Error> {
     }
 }
 
+impl SqlResult<()> {
+    /// Use this instead of [`Self::into_result`] if you expect [`SqlResult::NoData`] to be a
+    /// valid value. [`SqlReturn::NoData`] is mapped to `Ok(false)`, all other success values are
+    /// `Ok(true)`.
+    pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
+        match self {
+            SqlResult::Success(()) => Ok(true),
+            SqlResult::SuccessWithInfo(()) => {
+                log_diagnostics(handle);
+                Ok(true)
+            },
+            SqlResult::NoData => Ok(false),
+            SqlResult::StillExecuting => panic!(
+                "SqlResult must not be converted to result while the function is still executing."
+            ),
+            SqlResult::Error { function } => {
+                let mut record = DiagnosticRecord::default();
+                if record.fill_from(handle, 1) {
+                    log_diagnostics(handle);
+                    Err(Error::Diagnostics { record, function })
+                } else {
+                    // Anecdotal ways to reach this code paths:
+                    //
+                    // * Inserting a 64Bit integers into an Oracle Database.
+                    // * Specifying invalid drivers (e.g. missing .so the driver itself depends on)
+                    Err(Error::NoDiagnostics { function })
+                }
+            }
+        }
+    }
+}
+
 // Define that here rather than in `sql_result` mod to keep the `handles` module entirely agnostic
 // about the top level `Error` type.
 impl<T> SqlResult<T> {

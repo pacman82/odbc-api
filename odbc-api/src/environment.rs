@@ -416,7 +416,7 @@ impl Environment {
                 completed_connection_string,
                 driver_completion.as_sys(),
             )
-            .into_result(&connection)?;
+            .into_result_bool(&connection)?;
         if !connection_string_is_complete {
             return Err(Error::AbortedConnectionStringCompletion);
         }

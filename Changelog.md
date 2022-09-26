@@ -5,6 +5,7 @@
 ### Breaking
 
 * `SqlResult` has now a new variant `SqlResult::NoData`.
+* `handles::Environment::driver_connect` now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 
 ### Non Breaking
 
