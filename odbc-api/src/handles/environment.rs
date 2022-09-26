@@ -138,8 +138,8 @@ impl Environment {
         self.handle
     }
 
-    /// List drivers descriptions and driver attribute keywords. Returns `None` to indicate the end
-    /// of the list.
+    /// List drivers descriptions and driver attribute keywords. Returns `NoData` to indicate the
+    /// end of the list.
     ///
     /// # Safety
     ///
@@ -168,7 +168,7 @@ impl Environment {
         direction: FetchOrientation,
         buffer_description: &mut [SqlChar],
         buffer_attributes: &mut [SqlChar],
-    ) -> SqlResult<bool> {
+    ) -> SqlResult<()> {
         sql_drivers(
             self.handle,
             direction,
@@ -179,7 +179,7 @@ impl Environment {
             buffer_attributes.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_sql_result_bool("SQLDrivers")
+        .into_sql_result("SQLDrivers")
     }
 
     /// Use together with [`Environment::drivers_buffer_fill`] to list drivers descriptions and

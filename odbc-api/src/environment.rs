@@ -480,7 +480,7 @@ impl Environment {
                     desc_buf.mut_buf(),
                     attr_buf.mut_buf(),
                 )
-                .into_result(&self.environment)?
+                .into_result_bool(&self.environment)?
             {
                 let description = desc_buf.to_utf8();
                 let attributes = attr_buf.to_utf8();
