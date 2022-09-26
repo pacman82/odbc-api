@@ -11,9 +11,9 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount, SqlDataType, SqlReturn,
-    StatementAttribute, IS_POINTER,
+    SQLBindParameter, SQLCloseCursor, SQLCompleteAsync, SQLDescribeParam, SQLExecute, SQLFetch,
+    SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount, SqlDataType,
+    SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
@@ -826,6 +826,30 @@ pub trait Statement: AsHandle {
                 .into_sql_result("SQLRowCount")
                 .on_success(|| ret)
         }
+    }
+
+    /// In polling mode can be used instead of repeating the function call. In notification mode
+    /// this completes the asynchronous operation. This method panics, in case asynchronous mode is
+    /// not enabled. `None` if no asynchronous operation is in progress, or (specific to
+    /// notification mode) the driver manager has not notified the application.
+    ///
+    /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcompleteasync-function>
+    fn complete_async(&mut self) -> Option<SqlReturn> {
+        let mut ret = SqlReturn::ERROR;
+        unsafe {
+            // Possible return codes are (according to MS ODBC docs):
+            // * INVALID_HANDLE: The handle indicated by HandleType and Handle is not a valid
+            //   handle. => Must not happen due self always being a valid statement handle.
+            // * ERROR: ret is NULL or asynchronous processing is not enabled on the handle. => ret
+            //   is never NULL. User may choose not to enable asynchronous processing though.
+            // * NO_DATA: In notification mode, an asynchronous operation is not in progress or the
+            //   Driver Manager has not notified the application. In polling mode, an asynchronous
+            //   operation is not in progress.
+            SQLCompleteAsync(self.handle_type(), self.as_handle(), &mut ret.0 as *mut _)
+                .into_sql_result_bool("SQLCompleteAsync")
+        }
+        .unwrap()
+        .then_some(ret)
     }
 }
 
