@@ -9,6 +9,7 @@
 * `handles::Environment::driver_connect` now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 * `handles::Environment::drivers_buffer_fill` now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 * `handles::Environment::drivers_buffer_len` now returns `SqlResult<(i16, i16)>` instead of `SqlResult<Option<(i16, i16)>>`.
+* `handles::Environment::data_source_buffer_len` now returns `SqlResult<(i16, i16)>` instead of `SqlResult<Option<(i16, i16)>>`.
 * `handles::Statement::fetch` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 
 ### Non Breaking

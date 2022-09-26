@@ -64,11 +64,6 @@ impl<T> SqlResult<T> {
 
 pub trait ExtSqlReturn {
     fn into_sql_result(self, function_name: &'static str) -> SqlResult<()>;
-
-    /// Use this instead of [`Self::into_sql_result`] if you expect [`SqlReturn::NO_DATA`] to be a
-    /// valid value. [`SqlReturn::NO_DATA`] is mapped to `Ok(false)`, all other success values are
-    /// `Ok(true)`.
-    fn into_sql_result_bool(self, function_name: &'static str) -> SqlResult<bool>;
 }
 
 impl ExtSqlReturn for SqlReturn {
@@ -83,13 +78,6 @@ impl ExtSqlReturn for SqlReturn {
                 "Unexpected return value '{:?}' for ODBC function '{}'",
                 r, function
             ),
-        }
-    }
-
-    fn into_sql_result_bool(self, function: &'static str) -> SqlResult<bool> {
-        match self {
-            SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result(function).on_success(|| true),
         }
     }
 }

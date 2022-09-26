@@ -248,7 +248,7 @@ impl Environment {
     pub unsafe fn data_source_buffer_len(
         &self,
         direction: FetchOrientation,
-    ) -> SqlResult<Option<(i16, i16)>> {
+    ) -> SqlResult<(i16, i16)> {
         // Lengths in characters minus terminating zero
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
@@ -263,8 +263,8 @@ impl Environment {
             0,
             &mut length_description,
         )
-        .into_sql_result_bool("SQLDataSources")
-        .map(|res| res.then_some((length_name, length_description)))
+        .into_sql_result("SQLDataSources")
+        .on_success(|| (length_name, length_description))
     }
 
     /// List drivers descriptions and driver attribute keywords.
@@ -274,7 +274,7 @@ impl Environment {
     /// Callers need to make sure only one thread is iterating over data source information at a
     /// time. Method changes environment state. This method would be safe to call via an exclusive
     /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
-    /// be possible before connections borrow a reference.
+    /// be possible before connections borrow a reference. [`SqlResult::NoData`] 
     ///
     /// # Parameters
     ///
@@ -282,10 +282,8 @@ impl Environment {
     ///   ([`FetchOrientation::Next`]) or whether the search starts from the beginning of the list
     ///   ([`FetchOrientation::First`], [`FetchOrientation::FirstSystem`],
     ///   [`FetchOrientation::FirstUser`]).
-    /// * `buffer_name`: In case `true` is returned this buffer is filled with the name of the
-    ///   datasource.
-    /// * `buffer_description`: In case `true` is returned this buffer is filled with a description
-    ///   of the datasource (i.e. Driver name).
+    /// * `buffer_name`: 0illed with the name of the datasource if available
+    /// * `buffer_description`: Filled with a description of the datasource (i.e. Driver name).
     ///
     ///  Use [`Environment::data_source_buffer_len`] to determine buffer lengths.
     pub unsafe fn data_source_buffer_fill(
@@ -293,7 +291,7 @@ impl Environment {
         direction: FetchOrientation,
         buffer_name: &mut [SqlChar],
         buffer_description: &mut [SqlChar],
-    ) -> SqlResult<bool> {
+    ) -> SqlResult<()> {
         sql_data_sources(
             self.handle,
             direction,
@@ -304,6 +302,6 @@ impl Environment {
             buffer_description.len().try_into().unwrap(),
             null_mut(),
         )
-        .into_sql_result_bool("SQLDataSources")
+        .into_sql_result("SQLDataSources")
     }
 }

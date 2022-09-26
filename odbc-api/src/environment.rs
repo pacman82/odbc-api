@@ -563,7 +563,7 @@ impl Environment {
             let (mut server_name_len, mut driver_len) = if let Some(res) = self
                 .environment
                 .data_source_buffer_len(direction)
-                .into_result(&self.environment)?
+                .into_result_option(&self.environment)?
             {
                 res
             } else {
@@ -587,7 +587,7 @@ impl Environment {
             let mut not_empty = self
                 .environment
                 .data_source_buffer_fill(direction, server_name_buf.mut_buf(), driver_buf.mut_buf())
-                .into_result(&self.environment)?;
+                .into_result_bool(&self.environment)?;
 
             while not_empty {
                 let server_name = server_name_buf.to_utf8();
@@ -604,7 +604,7 @@ impl Environment {
                         server_name_buf.mut_buf(),
                         driver_buf.mut_buf(),
                     )
-                    .into_result(&self.environment)?;
+                    .into_result_bool(&self.environment)?;
             }
         }
 
