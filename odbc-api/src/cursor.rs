@@ -57,7 +57,7 @@ pub trait Cursor: ResultSetMetadata {
         let row_available = unsafe {
             self.as_stmt_ref()
                 .fetch()
-                .into_result(&self.as_stmt_ref())?
+                .into_result_bool(&self.as_stmt_ref())?
         };
         let ret = if row_available {
             Some(unsafe { CursorRow::new(self.as_stmt_ref()) })
@@ -603,12 +603,13 @@ unsafe fn bind_row_set_buffer_to_statement(
 
 /// Error handling for bulk fetching is shared between synchronous and asynchronous usecase.
 fn error_handling_for_fetch(
-    result: SqlResult<bool>,
+    result: SqlResult<()>,
     mut stmt: StatementRef,
     error_for_truncation: bool,
 ) -> Result<bool, Error> {
     let has_row = result
-        .into_result_with_trunaction_check(&stmt.as_stmt_ref(), error_for_truncation)
+        .on_success(|| true)
+        .into_result_with(&stmt.as_stmt_ref(), error_for_truncation, Some(false))
         // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
         // tell the it to the user than binding parameters, but rather now then we fetch
         // results. The error code retruned is `HY004` rather then `HY003` which should

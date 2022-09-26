@@ -196,8 +196,8 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// Fetch dereferences bound column pointers.
-    unsafe fn fetch(&mut self) -> SqlResult<bool> {
-        SQLFetch(self.as_sys()).into_sql_result_bool("SQLFetch")
+    unsafe fn fetch(&mut self) -> SqlResult<()> {
+        SQLFetch(self.as_sys()).into_sql_result("SQLFetch")
     }
 
     /// Retrieves data for a single column in the result set or for a single parameter.
@@ -830,11 +830,11 @@ pub trait Statement: AsHandle {
 
     /// In polling mode can be used instead of repeating the function call. In notification mode
     /// this completes the asynchronous operation. This method panics, in case asynchronous mode is
-    /// not enabled. `None` if no asynchronous operation is in progress, or (specific to
-    /// notification mode) the driver manager has not notified the application.
+    /// not enabled. [`SqlResult::NoData`] if no asynchronous operation is in progress, or (specific
+    /// to notification mode) the driver manager has not notified the application.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcompleteasync-function>
-    fn complete_async(&mut self) -> Option<SqlReturn> {
+    fn complete_async(&mut self) -> SqlResult<SqlReturn> {
         let mut ret = SqlReturn::ERROR;
         unsafe {
             // Possible return codes are (according to MS ODBC docs):
@@ -846,10 +846,8 @@ pub trait Statement: AsHandle {
             //   Driver Manager has not notified the application. In polling mode, an asynchronous
             //   operation is not in progress.
             SQLCompleteAsync(self.handle_type(), self.as_handle(), &mut ret.0 as *mut _)
-                .into_sql_result_bool("SQLCompleteAsync")
-        }
-        .unwrap()
-        .then_some(ret)
+                .into_sql_result("SQLCompleteAsync")
+        }.on_success(|| ret)
     }
 }
 

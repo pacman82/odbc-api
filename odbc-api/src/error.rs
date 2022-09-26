@@ -167,30 +167,8 @@ impl SqlResult<()> {
     /// valid value. [`SqlReturn::NoData`] is mapped to `Ok(false)`, all other success values are
     /// `Ok(true)`.
     pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
-        match self {
-            SqlResult::Success(()) => Ok(true),
-            SqlResult::SuccessWithInfo(()) => {
-                log_diagnostics(handle);
-                Ok(true)
-            },
-            SqlResult::NoData => Ok(false),
-            SqlResult::StillExecuting => panic!(
-                "SqlResult must not be converted to result while the function is still executing."
-            ),
-            SqlResult::Error { function } => {
-                let mut record = DiagnosticRecord::default();
-                if record.fill_from(handle, 1) {
-                    log_diagnostics(handle);
-                    Err(Error::Diagnostics { record, function })
-                } else {
-                    // Anecdotal ways to reach this code paths:
-                    //
-                    // * Inserting a 64Bit integers into an Oracle Database.
-                    // * Specifying invalid drivers (e.g. missing .so the driver itself depends on)
-                    Err(Error::NoDiagnostics { function })
-                }
-            }
-        }
+        self.on_success(|| true)
+            .into_result_with(handle, false, Some(false))
     }
 }
 
@@ -201,16 +179,26 @@ impl<T> SqlResult<T> {
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
         let error_for_truncation = false;
-        self.into_result_with_trunaction_check(handle, error_for_truncation)
+        self.into_result_with(handle, error_for_truncation, None)
     }
 
-    /// Intended to be used to be used after bulk fetching into a buffer. Mostly the same as
-    /// [`Self::into_result`], but if `error_for_truncation` is `true` any diagnostics are inspected
-    /// for truncation. If any truncation is found an error is returned.
-    pub fn into_result_with_trunaction_check(
+    /// Most flexible way of converting an `SqlResult` to an idiomatic `Result`.
+    /// 
+    /// # Parameters
+    /// 
+    /// * `handle`: This handle is used to extract diagnostics in case `self` is
+    ///   [`SqlResult::SuccessWithInfo`] or [`SqlResult::Error`].
+    /// * `error_for_truncation`: Intended to be used to be used after bulk fetching into a buffer.
+    ///   If `error_for_truncation` is `true` any diagnostics are inspected for truncation. If any
+    ///   truncation is found an error is returned.
+    /// * `no_data`: Controls the behaviour for [`SqlResult::NoData`]. `None` indicates that the
+    ///   result is never expected to be [`SqlResult::NoData`] and would panic in that case.
+    ///   `Some(value)` would cause [`SqlResult::NoData`] to be mapped to `Ok(value)`.
+    pub fn into_result_with(
         self,
         handle: &impl Diagnostics,
         error_for_truncation: bool,
+        no_data: Option<T>,
     ) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
@@ -241,7 +229,9 @@ impl<T> SqlResult<T> {
                     Err(Error::NoDiagnostics { function })
                 }
             }
-            SqlResult::NoData => panic!("Unexepcted SQL_NO_DATA returned by ODBC function."),
+            SqlResult::NoData => {
+                Ok(no_data.expect("Unexepcted SQL_NO_DATA returned by ODBC function"))
+            }
             SqlResult::StillExecuting => panic!(
                 "SqlResult must not be converted to result while the function is still executing."
             ),

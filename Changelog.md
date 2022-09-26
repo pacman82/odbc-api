@@ -5,7 +5,9 @@
 ### Breaking
 
 * `SqlResult` has now a new variant `SqlResult::NoData`.
+* `SqlResult::into_result_with_trunaction_check` has been replaced by `SqlResult::into_result_with`.
 * `handles::Environment::driver_connect` now returns `SqlResult<()>` instead of `SqlResult<bool>`.
+* `handles::Statement::fetch` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 
 ### Non Breaking
 
