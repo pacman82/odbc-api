@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.0 (next)
+
+* `SqlResult` has now a new variant `SqlResult::NoData`.
+
 ## 0.49.1
 
 * Reserve an extra word (2 Bytes) when querying Catalog length in order to compensate for an of by one error in PostgreSQL driver when using wide character encoding. The issue would have resulted in the last letter being replaced with `\0` in previous versions.

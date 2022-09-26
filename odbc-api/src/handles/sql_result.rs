@@ -9,6 +9,8 @@ pub enum SqlResult<T> {
     Success(T),
     /// The function has been executed successfully. There have been warnings.
     SuccessWithInfo(T),
+    /// No more data is available
+    NoData,
     /// The function was started asynchronously and is still executing.
     StillExecuting,
     /// The function returned an error state. Check diagnostics.
@@ -46,6 +48,7 @@ impl<T> SqlResult<T> {
             SqlResult::SuccessWithInfo(v) => SqlResult::SuccessWithInfo(f(v)),
             SqlResult::Error { function } => SqlResult::Error { function },
             SqlResult::StillExecuting => SqlResult::StillExecuting,
+            SqlResult::NoData => SqlResult::NoData,
         }
     }
 
@@ -53,6 +56,7 @@ impl<T> SqlResult<T> {
         match self {
             SqlResult::Success(v) | SqlResult::SuccessWithInfo(v) => v,
             SqlResult::Error { .. } => panic!("Unwraping SqlResult::Error"),
+            SqlResult::NoData => panic!("Unwraping SqlResult::NoData"),
             SqlResult::StillExecuting => panic!("Unwraping SqlResult::StillExecuting"),
         }
     }
