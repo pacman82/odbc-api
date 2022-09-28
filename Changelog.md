@@ -13,6 +13,7 @@
 * `handles::Connection::execute` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 * `handles::Connection::exec_direct` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 * `handles::Statement::fetch` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
+* `handles::Statement::put_binary_batch` now returns now returns `SqlResult<()>` instead of `SqlResult<bool>`.
 
 ### Non Breaking
 

@@ -3,7 +3,7 @@ use std::intrinsics::transmute;
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
-    sleep::{wait_for, poll_until_completed},
+    sleep::{poll_until_completed, wait_for},
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
@@ -171,9 +171,10 @@ where
             let blob_ref = &mut *blob_ptr;
             // Loop over all batches within each blob
             while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
-                wait_for(|| stmt.put_binary_batch(batch), &mut sleep)
-                    .await
-                    .into_result(&stmt)?;
+                let mut result = stmt.put_binary_batch(batch);
+                poll_until_completed(&mut result, "put_binary_batch", &mut stmt, &mut sleep)
+                    .await?;
+                result.into_result(&stmt)?;
             }
         }
     }

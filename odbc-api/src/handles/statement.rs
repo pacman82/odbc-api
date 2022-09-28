@@ -783,11 +783,11 @@ pub trait Statement: AsHandle {
         }
     }
 
-    /// To put a batch of binary data into the data source at statement execution time. Returns true
-    /// if the `NEED_DATA` is returned by the driver.
+    /// To put a batch of binary data into the data source at statement execution time. May return
+    /// [`SqlResult::NeedData`]
     ///
     /// Panics if batch is empty.
-    fn put_binary_batch(&mut self, batch: &[u8]) -> SqlResult<bool> {
+    fn put_binary_batch(&mut self, batch: &[u8]) -> SqlResult<()> {
         // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
         // Still strikes me as a programming error. Maybe we could also do nothing instead.
         if batch.is_empty() {
@@ -795,14 +795,12 @@ pub trait Statement: AsHandle {
         }
 
         unsafe {
-            match SQLPutData(
+            SQLPutData(
                 self.as_sys(),
                 batch.as_ptr() as Pointer,
                 batch.len().try_into().unwrap(),
-            ) {
-                SqlReturn::NEED_DATA => SqlResult::Success(true),
-                other => other.into_sql_result("SQLPutData").on_success(|| false),
-            }
+            )
+            .into_sql_result("SQLPutData")
         }
     }
 
