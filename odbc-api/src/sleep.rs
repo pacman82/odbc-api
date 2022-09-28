@@ -1,6 +1,9 @@
 use std::future::Future;
 
-use crate::{handles::{SqlResult, Statement}, Error};
+use crate::{
+    handles::{SqlResult, Statement},
+    Error,
+};
 
 /// Governs the behaviour of of polling in async functions.
 ///

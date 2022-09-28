@@ -274,7 +274,7 @@ impl Environment {
     /// Callers need to make sure only one thread is iterating over data source information at a
     /// time. Method changes environment state. This method would be safe to call via an exclusive
     /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
-    /// be possible before connections borrow a reference. [`SqlResult::NoData`] 
+    /// be possible before connections borrow a reference. [`SqlResult::NoData`]
     ///
     /// # Parameters
     ///

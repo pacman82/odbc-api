@@ -5,7 +5,7 @@ use crate::{
     error::ExtendResult,
     handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
-    sleep::{Sleep, poll_until_completed},
+    sleep::{poll_until_completed, Sleep},
     Error, OutputParameter, ResultSetMetadata,
 };
 
