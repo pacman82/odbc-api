@@ -3,7 +3,7 @@ use std::intrinsics::transmute;
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
-    sleep::wait_for,
+    sleep::{wait_for, poll_until_completed},
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
@@ -145,13 +145,15 @@ where
     S: AsStatementRef,
 {
     let mut stmt = statement.as_stmt_ref();
-    let result = if let Some(sql) = query {
+    let mut result = if let Some(sql) = query {
         // We execute an unprepared "one shot query"
-        wait_for(|| stmt.exec_direct(sql), &mut sleep).await
+        stmt.exec_direct(sql)
     } else {
         // We execute a prepared query
-        wait_for(|| stmt.execute(), &mut sleep).await
+        stmt.execute()
     };
+
+    poll_until_completed(&mut result, "execute", &mut stmt, &mut sleep).await?;
 
     // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
     // execute.
