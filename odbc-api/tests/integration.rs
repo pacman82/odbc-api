@@ -2993,7 +2993,7 @@ fn fill_vec_of_rows(profile: &Profile) {
 }
 
 /// Provoke return of NO_DATA from SQLExecute and SQLDirectExecute by deleting a non existing row.
-/// The bindings most not panic, even though the result is not SQL_SUCCESS
+/// The bindings must not panic, even though the result is not SQL_SUCCESS
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]

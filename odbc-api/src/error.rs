@@ -168,7 +168,7 @@ impl SqlResult<()> {
     /// `Ok(true)`.
     pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
         self.on_success(|| true)
-            .into_result_with(handle, false, Some(false))
+            .into_result_with(handle, false, Some(false), None)
     }
 }
 
@@ -179,7 +179,7 @@ impl<T> SqlResult<T> {
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
         let error_for_truncation = false;
-        self.into_result_with(handle, error_for_truncation, None)
+        self.into_result_with(handle, error_for_truncation, None, None)
     }
 
     /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
@@ -187,7 +187,7 @@ impl<T> SqlResult<T> {
     pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
         let error_for_truncation = false;
         self.map(Some)
-            .into_result_with(handle, error_for_truncation, Some(None))
+            .into_result_with(handle, error_for_truncation, Some(None), None)
     }
 
     /// Most flexible way of converting an `SqlResult` to an idiomatic `Result`.
@@ -202,11 +202,15 @@ impl<T> SqlResult<T> {
     /// * `no_data`: Controls the behaviour for [`SqlResult::NoData`]. `None` indicates that the
     ///   result is never expected to be [`SqlResult::NoData`] and would panic in that case.
     ///   `Some(value)` would cause [`SqlResult::NoData`] to be mapped to `Ok(value)`.
+    /// * `need_data`: Controls the behaviour for [`SqlResult::NeedData`]. `None` indicates that the
+    ///   result is never expected to be [`SqlResult::NeedData`] and would panic in that case.
+    ///   `Some(value)` would cause [`SqlResult::NeedData`] to be mapped to `Ok(value)`.
     pub fn into_result_with(
         self,
         handle: &impl Diagnostics,
         error_for_truncation: bool,
         no_data: Option<T>,
+        need_data: Option<T>,
     ) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
@@ -240,7 +244,9 @@ impl<T> SqlResult<T> {
             SqlResult::NoData => {
                 Ok(no_data.expect("Unexepcted SQL_NO_DATA returned by ODBC function"))
             }
-            SqlResult::NeedData => panic!("Unexpected SQL_NEED_DATA returned by ODBC function"),
+            SqlResult::NeedData => {
+                Ok(need_data.expect("Unexepcted SQL_NEED_DATA returned by ODBC function"))
+            }
             SqlResult::StillExecuting => panic!(
                 "SqlResult must not be converted to result while the function is still executing."
             ),

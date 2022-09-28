@@ -92,13 +92,20 @@ where
     S: AsStatementRef,
 {
     let mut stmt = statement.as_stmt_ref();
-    let need_data = if let Some(sql) = query {
+    let result = if let Some(sql) = query {
         // We execute an unprepared "one shot query"
-        stmt.exec_direct(sql).into_result(&stmt)?
+        stmt.exec_direct(sql)
     } else {
         // We execute a prepared query
-        stmt.execute().into_result(&stmt)?
+        stmt.execute()
     };
+
+    // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
+    // execute.
+    let need_data =
+        result
+            .on_success(|| false)
+            .into_result_with(&stmt, false, Some(false), Some(true))?;
 
     if need_data {
         // Check if any delayed parameters have been bound which stream data to the database at
@@ -138,14 +145,20 @@ where
     S: AsStatementRef,
 {
     let mut stmt = statement.as_stmt_ref();
-    let need_data = if let Some(sql) = query {
+    let result = if let Some(sql) = query {
         // We execute an unprepared "one shot query"
         wait_for(|| stmt.exec_direct(sql), &mut sleep).await
     } else {
         // We execute a prepared query
         wait_for(|| stmt.execute(), &mut sleep).await
-    }
-    .into_result(&stmt)?;
+    };
+
+    // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
+    // execute.
+    let need_data =
+        result
+            .on_success(|| false)
+            .into_result_with(&stmt, false, Some(false), Some(true))?;
 
     if need_data {
         // Check if any delayed parameters have been bound which stream data to the database at

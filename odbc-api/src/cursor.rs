@@ -610,7 +610,7 @@ fn error_handling_for_fetch(
 ) -> Result<bool, Error> {
     let has_row = result
         .on_success(|| true)
-        .into_result_with(&stmt.as_stmt_ref(), error_for_truncation, Some(false))
+        .into_result_with(&stmt.as_stmt_ref(), error_for_truncation, Some(false), None)
         // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
         // tell the it to the user than binding parameters, but rather now then we fetch
         // results. The error code retruned is `HY004` rather then `HY003` which should

@@ -307,19 +307,16 @@ pub trait Statement: AsHandle {
     ///
     /// # Return
     ///
-    /// Returns `true` if execution requires additional data from delayed parameters.
-    unsafe fn exec_direct(&mut self, statement: &SqlText) -> SqlResult<bool> {
-        match sql_exec_direc(
+    /// * [`SqlResult::NeedData`] if execution requires additional data from delayed parameters.
+    /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
+    ///   the data source.
+    unsafe fn exec_direct(&mut self, statement: &SqlText) -> SqlResult<()> {
+        sql_exec_direc(
             self.as_sys(),
             statement.ptr(),
             statement.len_char().try_into().unwrap(),
-        ) {
-            SqlReturn::NEED_DATA => SqlResult::Success(true),
-            // A searched update or delete statement that does not affect any rows at the data
-            // source.
-            SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result("SQLExecDirect").on_success(|| false),
-        }
+        )
+        .into_sql_result("SQLExecDirect")
     }
 
     /// Close an open cursor.
@@ -354,15 +351,11 @@ pub trait Statement: AsHandle {
     ///
     /// # Return
     ///
-    /// `true` if data from a delayed parameter is needed.
-    unsafe fn execute(&mut self) -> SqlResult<bool> {
-        match SQLExecute(self.as_sys()) {
-            SqlReturn::NEED_DATA => SqlResult::Success(true),
-            // A searched update or delete statement that does not affect any rows at the data
-            // source.
-            SqlReturn::NO_DATA => SqlResult::Success(false),
-            other => other.into_sql_result("SQLExecute").on_success(|| false),
-        }
+    /// * [`SqlResult::NeedData`] if execution requires additional data from delayed parameters.
+    /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
+    ///   the data source.
+    unsafe fn execute(&mut self) -> SqlResult<()> {
+        SQLExecute(self.as_sys()).into_sql_result("SQLExecute")
     }
 
     /// Number of columns in result set.
