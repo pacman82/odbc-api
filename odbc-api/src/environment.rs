@@ -97,7 +97,7 @@ impl Environment {
         match handles::Environment::set_connection_pooling(scheme) {
             SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPooling),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
-            other @ (SqlResult::StillExecuting | SqlResult::NoData) => {
+            other => {
                 panic!("Unexpected return value `{:?}`.", other)
             }
         }

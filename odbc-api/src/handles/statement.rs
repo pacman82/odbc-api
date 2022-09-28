@@ -834,7 +834,7 @@ pub trait Statement: AsHandle {
     /// to notification mode) the driver manager has not notified the application.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcompleteasync-function>
-    fn complete_async(&mut self) -> SqlResult<SqlReturn> {
+    fn complete_async(&mut self, function_name: &'static str) -> SqlResult<SqlResult<()>> {
         let mut ret = SqlReturn::ERROR;
         unsafe {
             // Possible return codes are (according to MS ODBC docs):
@@ -848,7 +848,7 @@ pub trait Statement: AsHandle {
             SQLCompleteAsync(self.handle_type(), self.as_handle(), &mut ret.0 as *mut _)
                 .into_sql_result("SQLCompleteAsync")
         }
-        .on_success(|| ret)
+        .on_success(|| ret.into_sql_result(function_name))
     }
 }
 

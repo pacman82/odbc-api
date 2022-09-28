@@ -240,6 +240,7 @@ impl<T> SqlResult<T> {
             SqlResult::NoData => {
                 Ok(no_data.expect("Unexepcted SQL_NO_DATA returned by ODBC function"))
             }
+            SqlResult::NeedData => panic!("Unexpected SQL_NEED_DATA returned by ODBC function"),
             SqlResult::StillExecuting => panic!(
                 "SqlResult must not be converted to result while the function is still executing."
             ),
