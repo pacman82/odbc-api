@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Error};
-use clap::{Args, Parser};
+use clap::{Args, Parser, ArgAction};
 use log::info;
 use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection, Cursor,
@@ -16,9 +16,9 @@ use std::{
 #[clap(version)]
 struct Cli {
     /// Verbose mode (-v, -vv, -vvv, etc)
-    #[clap(short = 'v', long, parse(from_occurrences))]
-    verbose: usize,
-    #[clap(subcommand)]
+    #[arg(short = 'v', long, action = ArgAction::Count)]
+    verbose: u8,
+    #[command(subcommand)]
     command: Command,
 }
 
@@ -60,27 +60,27 @@ enum Command {
 // Command line arguments used to establish a connection with the ODBC data source
 #[derive(Args)]
 struct ConnectOpts {
-    #[clap(long, conflicts_with = "dsn")]
+    #[arg(long, conflicts_with = "dsn")]
     /// Prompts the user for missing information from the connection string. Only supported on
     /// windows platform.
     prompt: bool,
     /// The connection string used to connect to the ODBC data source. Alternatively you may specify
     /// the ODBC dsn.
-    #[clap(long, short = 'c')]
+    #[arg(long, short = 'c')]
     connection_string: Option<String>,
     /// ODBC Data Source Name. Either this or the connection string must be specified to identify
     /// the datasource. Data source name (dsn) and connection string, may not be specified both.
-    #[clap(long, conflicts_with = "connection-string")]
+    #[arg(long, conflicts_with = "connection_string")]
     dsn: Option<String>,
     /// User used to access the datasource specified in dsn. Should you specify a connection string
     /// instead of a Data Source Name the user name is going to be appended at the end of it as the
     /// `UID` attribute.
-    #[clap(long, short = 'u', env = "ODBC_USER")]
+    #[arg(long, short = 'u', env = "ODBC_USER")]
     user: Option<String>,
     /// Password used to log into the datasource. Only used if dsn is specified, instead of a
     /// connection string. Should you specify a Connection string instead of a Data Source Name the
     /// password is going to be appended at the end of it as the `PWD` attribute.
-    #[clap(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
+    #[arg(long, short = 'p', env = "ODBC_PASSWORD", hide_env_values = true)]
     password: Option<String>,
 }
 
@@ -90,22 +90,22 @@ struct QueryOpt {
     connect_opts: ConnectOpts,
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[clap(long, default_value = "5000")]
+    #[arg(long, default_value = "5000")]
     batch_size: usize,
     /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
-    #[clap(long, short = 'm')]
+    #[arg(long, short = 'm')]
     max_str_len: Option<usize>,
     /// Setting a maximum string length does help with avoiding allocating really large buffers, and
     /// save memory, but it may lead to values being truncated, if any fields are larger than the
     /// number of bytes specified with `max-str-len`. By default a truncation will raise an error
     /// and cause the tool to exit with a non-zero status code. Set this flag to continue execution
     /// and just write the truncated values into the csv.
-    #[clap(long)]
+    #[arg(long)]
     ignore_truncation: bool,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
-    #[clap(long, short = 'o')]
+    #[arg(long, short = 'o')]
     output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Question marks (`?`) can be used as
     /// placeholders for positional parameters.
@@ -121,24 +121,24 @@ struct FetchOpt {
     connect_opts: ConnectOpts,
     /// Number of rows queried from the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[clap(long, default_value = "5000")]
+    #[arg(long, default_value = "5000")]
     batch_size: usize,
     /// Maximum string length in bytes. If omitted no limit is applied and the ODBC driver is taken
     /// for its word regarding the maximum length of the columns.
-    #[clap(long, short = 'm')]
+    #[arg(long, short = 'm')]
     max_str_len: Option<usize>,
     /// Path to the output csv file the returned values are going to be written to. If omitted the
     /// csv is going to be printed to standard out.
-    #[clap(long, short = 'o')]
+    #[arg(long, short = 'o')]
     output: Option<PathBuf>,
     /// Query executed against the ODBC data source. Within the SQL text Question marks (`?`) can be
     /// used as placeholders for positional parameters.
-    #[clap(long, short = 'q', conflicts_with = "sql-file")]
+    #[arg(long, short = 'q', conflicts_with = "sql_file")]
     query: Option<String>,
     /// Read the SQL query from a file, rather than a literal passed at the command line. Argument
     /// specifies path to that file. Within the SQL text question marks (`?`) can be used as
     /// placeholders for positional parameters.
-    #[clap(long, short = 'f', conflicts_with = "query")]
+    #[arg(long, short = 'f', conflicts_with = "query")]
     sql_file: Option<PathBuf>,
     /// For each placeholder question mark (`?`) in the query text one parameter must be passed at
     /// the end of the command line.
@@ -150,11 +150,11 @@ struct InsertOpt {
     connect_opts: ConnectOpts,
     /// Number of rows inserted into the database on block. Larger numbers may reduce io overhead,
     /// but require more memory during execution.
-    #[clap(long, default_value = "5000")]
+    #[arg(long, default_value = "5000")]
     batch_size: usize,
     /// Path to the input csv file which is used to fill the database table with values. If
     /// omitted standard input is used.
-    #[clap(long, short = 'i')]
+    #[arg(long, short = 'i')]
     input: Option<PathBuf>,
     /// Name of the table to insert the values into. No precautions against SQL injection are
     /// taken.
@@ -167,17 +167,17 @@ struct ListTablesOpt {
     connect_opts: ConnectOpts,
     /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
     /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
-    #[clap(long)]
+    #[arg(long)]
     catalog: Option<String>,
     /// Filter result by schema. Accepts patterns in the same way as `catalog`.
-    #[clap(long)]
+    #[arg(long)]
     schema: Option<String>,
     /// Filter result by table name. Accepts patterns in the same way as `catalog`.
-    #[clap(long)]
+    #[arg(long)]
     name: Option<String>,
     /// Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a comma separeted
     /// list of table types. Ommit it to not filter the result by table type at all.
-    #[clap(long = "type")]
+    #[arg(long = "type")]
     type_: Option<String>,
 }
 
@@ -187,16 +187,16 @@ struct ListColumnsOpt {
     connect_opts: ConnectOpts,
     /// Filter result by catalog name. Accept search patterns. Use `%` to match any number of
     /// characters. Use `_` to match exactly on character. Use `\` to escape characeters.
-    #[clap(long)]
+    #[arg(long)]
     catalog: Option<String>,
     /// Filter result by schema. Accepts patterns in the same way as `catalog`.
-    #[clap(long)]
+    #[arg(long)]
     schema: Option<String>,
     /// Filter result by table name. Accepts patterns in the same way as `catalog`.
-    #[clap(long)]
+    #[arg(long)]
     table: Option<String>,
     /// Filter result by column name. Accepts patterns in the same way as `catalog`.
-    #[clap(long)]
+    #[arg(long)]
     column: Option<String>,
 }
 
@@ -209,7 +209,7 @@ fn main() -> Result<(), Error> {
         .module(module_path!())
         .module("odbc_api")
         .quiet(false)
-        .verbosity(opt.verbose)
+        .verbosity(opt.verbose as usize)
         .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
