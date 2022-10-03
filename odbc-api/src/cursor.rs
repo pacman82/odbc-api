@@ -5,7 +5,7 @@ use crate::{
     error::ExtendResult,
     handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
     parameter::{VarBinarySliceMut, VarCharSliceMut},
-    sleep::{poll_until_completed, Sleep},
+    sleep::{wait_for, Sleep},
     Error, OutputParameter, ResultSetMetadata,
 };
 
@@ -567,8 +567,7 @@ where
     ) -> Result<Option<&B>, Error> {
         let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
-            let mut result = stmt.fetch();
-            poll_until_completed(&mut result, "SQLFetch", &mut stmt, &mut sleep).await?;
+            let result = wait_for(|| stmt.fetch(), &mut sleep).await;
             let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
             Ok(has_row.then_some(&self.buffer))
         }

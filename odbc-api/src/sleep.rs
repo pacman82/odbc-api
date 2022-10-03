@@ -1,9 +1,6 @@
 use std::future::Future;
 
-use crate::{
-    handles::{SqlResult, Statement},
-    Error,
-};
+use crate::handles::SqlResult;
 
 /// Governs the behaviour of of polling in async functions.
 ///
@@ -40,17 +37,4 @@ where
         ret = (f)();
     }
     ret
-}
-
-pub async fn poll_until_completed(
-    result: &mut SqlResult<()>,
-    function_name: &'static str,
-    stmt: &mut impl Statement,
-    sleep: &mut impl Sleep,
-) -> Result<(), Error> {
-    while *result == SqlResult::StillExecuting {
-        sleep.next_poll().await;
-        *result = stmt.complete_async(function_name).into_result(stmt)?;
-    }
-    Ok(())
 }

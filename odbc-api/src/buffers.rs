@@ -9,6 +9,7 @@ mod indicator;
 mod item;
 mod text_column;
 
+#[allow(deprecated)]
 pub use self::{
     any_buffer::{
         AnyBuffer, AnyColumnBuffer, AnyColumnSliceMut, AnyColumnView, AnySlice, AnySliceMut,

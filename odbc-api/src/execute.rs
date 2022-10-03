@@ -3,7 +3,7 @@ use std::intrinsics::transmute;
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
-    sleep::{poll_until_completed, wait_for},
+    sleep::wait_for,
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
@@ -145,15 +145,13 @@ where
     S: AsStatementRef,
 {
     let mut stmt = statement.as_stmt_ref();
-    let mut result = if let Some(sql) = query {
+    let result = if let Some(sql) = query {
         // We execute an unprepared "one shot query"
-        stmt.exec_direct(sql)
+        wait_for(|| stmt.exec_direct(sql), &mut sleep).await
     } else {
         // We execute a prepared query
-        stmt.execute()
+        wait_for(|| stmt.execute(), &mut sleep).await
     };
-
-    poll_until_completed(&mut result, "execute", &mut stmt, &mut sleep).await?;
 
     // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
     // execute.
@@ -171,9 +169,7 @@ where
             let blob_ref = &mut *blob_ptr;
             // Loop over all batches within each blob
             while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
-                let mut result = stmt.put_binary_batch(batch);
-                poll_until_completed(&mut result, "put_binary_batch", &mut stmt, &mut sleep)
-                    .await?;
+                let result = wait_for(|| stmt.put_binary_batch(batch), &mut sleep).await;
                 result.into_result(&stmt)?;
             }
         }
