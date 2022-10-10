@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Error};
-use clap::{Args, Parser, ArgAction};
+use clap::{ArgAction, Args, Parser};
 use log::info;
 use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection, Cursor,

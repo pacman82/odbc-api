@@ -2,7 +2,9 @@ use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
     error::ExtendResult,
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer},
+    handles::{
+        self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer,
+    },
     Connection, DriverCompleteOption, Error,
 };
 use log::debug;

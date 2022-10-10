@@ -229,7 +229,7 @@ impl<T> SqlResult<T> {
                 Ok(value)
             }
             SqlResult::Error { function } => {
-                let mut record = DiagnosticRecord::default();
+                let mut record = DiagnosticRecord::with_capacity(512);
                 if record.fill_from(handle, 1) {
                     log_diagnostics(handle);
                     Err(Error::Diagnostics { record, function })

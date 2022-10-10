@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.50.0 (next)
+## 0.50.0
+
+* Fetching diagnostic records now starts with a message buffer size of 512 instead of 0 in order to recduce calls to `SQLGetDiagRec`.
 
 ### Breaking
 
