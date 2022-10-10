@@ -226,6 +226,16 @@ pub struct Record {
 }
 
 impl Record {
+    /// Creates an empty diagnostic record with at least the specified capacity for the message.
+    /// Using a buffer with a size different from zero then filling the diagnostic record may safe a
+    /// second function call to `SQLGetDiagRec`.
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            message: Vec::with_capacity(capacity),
+            ..Default::default()
+        }
+    }
+
     /// Fill this diagnostic `Record` from any ODBC handle.
     ///
     /// # Return

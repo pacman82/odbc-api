@@ -1,4 +1,4 @@
-use super::{diagnostics::Record, Diagnostics};
+use super::{Diagnostics, Record};
 use log::{warn, Level};
 
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
@@ -10,8 +10,8 @@ pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
         return;
     }
 
+    let mut rec = Record::with_capacity(512);
     let mut rec_number = 1;
-    let mut rec = Record::default();
 
     // Log results, while there are diagnostic records
     while rec.fill_from(handle, rec_number) {
