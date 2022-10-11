@@ -29,7 +29,7 @@ readme = "Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-odbc-api = { version = "0.49.0", path = "../odbc-api" }
+odbc-api = { version = "0.50.0", path = "../odbc-api" }
 csv = "1.1.6"
 anyhow = "1.0.65"
 stderrlog = "0.5.3"
