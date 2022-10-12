@@ -10,7 +10,7 @@ use crate::{Bit, DataType};
 /// different as it does not describe the type of the data source but the format the data is going
 /// to be represented in memory. While the data source is often considered to choose the buffer type
 /// the kind of processing which is supposed to be applied to the data may be even more important
-/// if choosing the a buffer for the cursor type. I.e. if you intend to print a date to standard out
+/// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug)]
 pub struct BufferDescription {
@@ -47,8 +47,11 @@ impl BufferDescription {
     }
 }
 
-/// This class is used together with [`crate::buffers::BufferDescription`] to specify the layout of
-/// buffers bound to ODBC cursors and statements.
+/// This class is used together with [`BufferDescription`] to specify the layout of buffers bound to
+/// ODBC cursors and statements. Then choosing a [`BufferKind`] based on a [`DataType`], take care
+/// to reflect on wether or not you want to place some upper bound on the size of variadically sized
+/// columns. Relational types likes `VARCHAR(max)` or `TEXT` may report a maximum field size for
+///  individual values of several GiB, despite the actual values in the database being much smaller.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferKind {
     /// Variable sized binary buffer, holding up to `length` bytes per value.

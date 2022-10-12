@@ -164,7 +164,7 @@ impl<T> ExtendResult for Result<T, Error> {
 
 impl SqlResult<()> {
     /// Use this instead of [`Self::into_result`] if you expect [`SqlResult::NoData`] to be a
-    /// valid value. [`SqlReturn::NoData`] is mapped to `Ok(false)`, all other success values are
+    /// valid value. [`SqlResult::NoData`] is mapped to `Ok(false)`, all other success values are
     /// `Ok(true)`.
     pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
         self.on_success(|| true)

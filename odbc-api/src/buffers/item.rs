@@ -3,23 +3,23 @@ use odbc_sys::{Date, Time, Timestamp};
 use super::{AnySlice, AnySliceMut, BufferKind, NullableSlice, NullableSliceMut};
 use crate::Bit;
 
-/// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnyColumnView`]. This allows
-/// the user to avoid matching on all possibile variants of an [`AnyColumnView`] in case the
+/// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
+/// the user to avoid matching on all possibile variants of an [`AnySlice`] in case the
 /// buffered type is known at compile time.
 pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
     /// instantiate a [`super::ColumnarBuffer`].
     const BUFFER_KIND: BufferKind;
 
-    /// Extract the array type from an [`AnyColumnView`].
+    /// Extract the array type from an [`AnySlice`].
     fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]>;
-    /// Extract the typed nullable buffer from an [`AnyColumnView`].
+    /// Extract the typed nullable buffer from an [`AnySlice`].
     fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<Self>>;
 
-    /// Extract the array type from an [`AnyColumnSliceMut`].
+    /// Extract the array type from an [`AnySliceMut`].
     fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]>;
 
-    /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
+    /// Extract the typed nullable buffer from an [`AnySliceMut`].
     fn as_nullable_slice_mut(variant: AnySliceMut<'_>) -> Option<NullableSliceMut<'_, Self>>;
 }
 
