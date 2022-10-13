@@ -291,22 +291,29 @@ impl TextRowSet {
     ///   interpret the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
     /// * `max_str_limit`: Some queries make it hard to estimate a sensible upper bound and
     ///   sometimes drivers are just not that good at it. This argument allows you to specify an
-    ///   upper bound for the length of character data.
+    ///   upper bound for the length of character data. Any size reported by the driver is capped to
+    ///   this value. In case the database returns a size of 0 (which some systems used to indicate)
+    ///   arbitrariely large values, the element size is set to upper bound.
     pub fn for_cursor(
         batch_size: usize,
         cursor: &mut impl ResultSetMetadata,
-        max_str_len: Option<usize>,
+        max_str_limit: Option<usize>,
     ) -> Result<TextRowSet, Error> {
         let buffers = utf8_display_sizes(cursor)?
             .enumerate()
             .map(|(buffer_index, reported_len)| {
                 let buffer_index = buffer_index as u16;
                 let col_index = buffer_index + 1;
-                let buffer = if let Some(upper_bound) = max_str_len {
-                    let max_str_len = min(reported_len?, upper_bound);
+                let max_str_len = reported_len?;
+                let buffer = if let Some(upper_bound) = max_str_limit {
+                    let max_str_len = if max_str_len == 0 {
+                        upper_bound
+                    } else {
+                        min(max_str_len, upper_bound)
+                    };
                     TextColumn::new(batch_size, max_str_len)
                 } else {
-                    TextColumn::try_new(batch_size, reported_len?).map_err(|source| {
+                    TextColumn::try_new(batch_size, max_str_len).map_err(|source| {
                         Error::TooLargeColumnBufferSize {
                             buffer_index,
                             num_elements: source.num_elements,

@@ -582,6 +582,30 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
 
+#[test_case(MSSQL, "VARCHAR(max)"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "TEXT"; "Maria DB")]
+#[test_case(SQLITE_3, "TEXT"; "SQLite 3")]
+#[test_case(POSTGRES, "TEXT"; "PostgreSQL")]
+fn upper_limit_for_varchar_max(profile: &Profile, large_text_type: &'static str) {
+    // Given
+    let table_name = table_name!();
+    let types = [large_text_type];
+    let (conn, table) = profile.given(&table_name, &types).unwrap();
+    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter()).unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), ())
+        .unwrap()
+        .unwrap();
+    let text_buffer = TextRowSet::for_cursor(10, &mut cursor, Some(50)).unwrap();
+    let mut cursor = cursor.bind_buffer(text_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    
+    // Then
+    assert_eq!("Hello, World!", str::from_utf8(batch.column(0).get(0).unwrap()).unwrap());
+}
+
 /// Bind a columnar buffer to a BINARY(5) column and fetch data.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // different convert syntax
