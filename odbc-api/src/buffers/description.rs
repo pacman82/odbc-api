@@ -48,10 +48,7 @@ impl BufferDescription {
 }
 
 /// This class is used together with [`BufferDescription`] to specify the layout of buffers bound to
-/// ODBC cursors and statements. Then choosing a [`BufferKind`] based on a [`DataType`], take care
-/// to reflect on wether or not you want to place some upper bound on the size of variadically sized
-/// columns. Relational types likes `VARCHAR(max)` or `TEXT` may report a maximum field size for
-///  individual values of several GiB, despite the actual values in the database being much smaller.
+/// ODBC cursors and statements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferKind {
     /// Variable sized binary buffer, holding up to `length` bytes per value.
@@ -60,6 +57,16 @@ pub enum BufferKind {
         length: usize,
     },
     /// Text buffer holding strings with binary length of up to `max_str_len`.
+    /// 
+    /// If choosing this based on the information in a [`DataType::Varchar`] column it is
+    /// recommended to think about an upper bound. E.g. PostgreSQL may return a field size of
+    /// several GiB for individual values if a column is specified as `TEXT`, or Microsoft SQL
+    /// Server may return `0` for a column of type `VARCHAR(max)`. In such situations, if values are
+    /// truly that large, bulk fetching data is not recommended, but streaming individual fields one
+    /// by one. Usually though, the actual cells of the table in the database contain much shorter
+    /// value. The best thing todo is to adapt the database schema to better reflect the actual size
+    /// of the values. Lacking control over the database schema, you can always choose a smaller
+    /// buffer size than initializing the buffer in disagreement with the database schema.
     Text {
         /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
         /// implicitly allocated if required.
