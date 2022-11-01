@@ -57,7 +57,7 @@ pub enum BufferKind {
         length: usize,
     },
     /// Text buffer holding strings with binary length of up to `max_str_len`.
-    /// 
+    ///
     /// If choosing this based on the information in a [`DataType::Varchar`] column it is
     /// recommended to think about an upper bound. E.g. PostgreSQL may return a field size of
     /// several GiB for individual values if a column is specified as `TEXT`, or Microsoft SQL
