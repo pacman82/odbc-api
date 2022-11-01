@@ -2,7 +2,7 @@ use odbc_sys::SqlDataType;
 
 /// The relational type of the column. Think of it as the type used in the `CREATE TABLE` statement
 /// then creating the database.
-/// 
+///
 /// There might be a mismatch between the types supported by your database and the types defined in
 /// ODBC. E.g. ODBC does not have a timestamp with timezone type, theras Postgersql and Microsoft
 /// SQL Server both have one. In such cases it is up to the specific ODBC driver what happens.

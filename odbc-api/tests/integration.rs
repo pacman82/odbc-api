@@ -591,7 +591,8 @@ fn upper_limit_for_varchar_max(profile: &Profile, large_text_type: &'static str)
     let table_name = table_name!();
     let types = [large_text_type];
     let (conn, table) = profile.given(&table_name, &types).unwrap();
-    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter()).unwrap();
+    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
+        .unwrap();
 
     // When
     let mut cursor = conn
@@ -601,9 +602,12 @@ fn upper_limit_for_varchar_max(profile: &Profile, large_text_type: &'static str)
     let text_buffer = TextRowSet::for_cursor(10, &mut cursor, Some(50)).unwrap();
     let mut cursor = cursor.bind_buffer(text_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    
+
     // Then
-    assert_eq!("Hello, World!", str::from_utf8(batch.column(0).get(0).unwrap()).unwrap());
+    assert_eq!(
+        "Hello, World!",
+        str::from_utf8(batch.column(0).get(0).unwrap()).unwrap()
+    );
 }
 
 /// Bind a columnar buffer to a BINARY(5) column and fetch data.
