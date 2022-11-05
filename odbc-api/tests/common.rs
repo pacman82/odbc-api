@@ -187,25 +187,6 @@ impl SingleColumnRowSetBuffer<TextColumn<u16>> {
     }
 }
 
-impl SingleColumnRowSetBuffer<TextColumn<u8>> {
-    pub fn with_text_column(batch_size: usize, max_str_len: usize) -> Self {
-        Self {
-            num_rows_fetched: Box::new(0),
-            batch_size,
-            column: TextColumn::try_new(batch_size as usize, max_str_len).unwrap(),
-        }
-    }
-
-    pub fn value_at(&self, index: usize) -> Option<&[u8]> {
-        if index >= *self.num_rows_fetched {
-            panic!("Out of bounds access. In SingleColumnRowSetBuffer")
-        }
-
-        // Safe due to out of bounds check above
-        self.column.value_at(index)
-    }
-}
-
 impl<T> SingleColumnRowSetBuffer<Vec<T>>
 where
     T: Clone + Default,
