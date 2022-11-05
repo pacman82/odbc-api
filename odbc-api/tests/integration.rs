@@ -337,15 +337,11 @@ fn bind_char(profile: &Profile) {
     conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
 
     let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
-    let mut buf = ColumnarAnyBuffer::from_description(1, [BufferDescription {
-        kind: BufferKind::Text { max_str_len: 5 },
-        nullable: true,
-    }]);
+    let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::new(1, 5))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
-    let column = batch.column(0).as_text_view().unwrap();
 
-    assert_eq!(Some(&b"Hello"[..]), column.get(0));
+    assert_eq!(Some(&b"Hello"[..]), batch.column(0).get(0));
 }
 
 /// Bind a CHAR column to a wchar buffer
@@ -410,15 +406,11 @@ fn truncate_fixed_sized(profile: &Profile) {
     conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
     
     let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
-    let mut buf = ColumnarAnyBuffer::from_description(1, [BufferDescription {
-        kind: BufferKind::Text { max_str_len: 3 },
-        nullable: true,
-    }]);
+    let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::new(1, 3))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
-    let column = batch.column(0).as_text_view().unwrap();
 
-    assert_eq!(Some(&b"Hel"[..]), column.get(0));
+    assert_eq!(Some(&b"Hel"[..]), batch.column(0).get(0));
 }
 
 /// Bind a VARCHAR column to a char buffer.
@@ -452,22 +444,19 @@ fn bind_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_varchar_to_wchar(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(100)"])
-        .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
-    conn.execute(&insert_sql, ()).unwrap();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(100)"]).unwrap();
+    let insert_sql = table.sql_insert();
+    conn.execute(&insert_sql, &"Hello, World!".into_parameter()).unwrap();
+    let sql = table.sql_all_ordered_by_id();
 
-    let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let mut buf = SingleColumnRowSetBuffer::with_wide_text_column(1, 100);
+    let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::<u16>::new(1, 100))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
-    row_set_cursor.fetch().unwrap();
-    drop(row_set_cursor);
+    let batch = row_set_cursor.fetch().unwrap().unwrap();
 
     assert_eq!(
-        Some(U16String::from_str("Hello, World!").as_ustr()),
-        buf.ustr_at(0)
+        U16String::from_str("Hello, World!").as_ustr(),
+        U16Str::from_slice(batch.column(0).get(0).unwrap())
     );
 }
 

@@ -2,9 +2,9 @@ use std::iter::repeat;
 
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers::{self, TextColumn},
+    buffers,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, Cursor, Environment, Error, RowSetBuffer, U16Str,
+    Connection, Cursor, Environment, Error, RowSetBuffer,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
@@ -166,25 +166,6 @@ pub struct SingleColumnRowSetBuffer<C> {
     batch_size: usize,
     /// invariant column.len() == batch_size
     column: C,
-}
-
-impl SingleColumnRowSetBuffer<TextColumn<u16>> {
-    pub fn with_wide_text_column(batch_size: usize, max_str_len: usize) -> Self {
-        Self {
-            num_rows_fetched: Box::new(0),
-            batch_size,
-            column: TextColumn::try_new(batch_size as usize, max_str_len).unwrap(),
-        }
-    }
-
-    pub fn ustr_at(&self, index: usize) -> Option<&U16Str> {
-        if index >= *self.num_rows_fetched {
-            panic!("Out of bounds access. In SingleColumnRowSetBuffer")
-        }
-
-        // Safe due to out of bounds check above
-        unsafe { self.column.ustr_at(index) }
-    }
 }
 
 impl<T> SingleColumnRowSetBuffer<Vec<T>>
