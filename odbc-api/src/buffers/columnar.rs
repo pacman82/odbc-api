@@ -9,7 +9,7 @@ use crate::{
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer,
+    Error, ResultSetMetadata, RowSetBuffer, fixed_sized::Pod,
 };
 
 use super::{Indicator, TextColumn};
@@ -396,6 +396,26 @@ impl TextRowSet {
     /// Maximum length in bytes of elements in a column.
     pub fn max_len(&self, buf_index: usize) -> usize {
         self.columns[buf_index].1.max_len()
+    }
+}
+
+unsafe impl<'a, T> ColumnProjections<'a> for Vec<T> where T: Pod {
+    type View = &'a [T];
+}
+
+unsafe impl<T> ColumnBuffer for Vec<T> where T: Pod {
+    fn view(&self, valid_rows: usize) -> &[T] {
+        &self[..valid_rows]
+    }
+
+    fn fill_default(&mut self, from: usize, to: usize) {
+        for item in &mut self[from..to] {
+            *item = Default::default();
+        }
+    }
+
+    fn capacity(&self) -> usize {
+        self.len()
     }
 }
 

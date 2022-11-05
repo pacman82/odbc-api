@@ -1,5 +1,9 @@
 # Changelog
 
+## next
+
+* Implement `ColumnarBuffer` for `Vec<T>`.
+
 ## 0.50.2
 
 * `TextBufferRowSet::for_cursor` now applies the upper bound column size limits also to buffers if the metadata indicates a size of `0`. This allows e.g. fetching values from Microsoft SQL Server columns with type `VARCHAR(max)`.

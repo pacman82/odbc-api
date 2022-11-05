@@ -351,13 +351,11 @@ fn bind_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_char_to_wchar(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["CHAR(5)"])
-        .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello');", table_name);
-    conn.execute(&insert_sql, ()).unwrap();
+    let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = table.sql_insert();
+    conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
+    let sql = table.sql_all_ordered_by_id();
 
-    let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::<u16>::new(1, 5))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
@@ -384,13 +382,13 @@ fn bind_bit(profile: &Profile) {
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let mut buf = SingleColumnRowSetBuffer::<Vec<Bit>>::new(3);
+    let mut buf = ColumnarBuffer::new(vec![(1, vec![Bit(0); 3])]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
-    row_set_cursor.fetch().unwrap();
-    drop(row_set_cursor);
+    let batch = row_set_cursor.fetch().unwrap().unwrap();
 
-    assert!(!buf.get()[0].as_bool());
-    assert!(buf.get()[1].as_bool());
+    
+    assert!(!batch.column(0)[0].as_bool());
+    assert!(batch.column(0)[1].as_bool());
 }
 
 /// Binds a buffer which is too short to a fixed sized character type. This provokes an indicator of
