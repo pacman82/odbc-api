@@ -142,6 +142,7 @@ impl<'s> CursorRow<'s> {
                     // Use an exponential strategy for increasing buffer size. +1 For handling
                     // initial buffer size of 1.
                     buf.resize(old_len * 2, 0);
+                    fetch_size = old_len + 1;
                     target =
                         VarCharSliceMut::from_buffer(&mut buf[(old_len - 1)..], Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
