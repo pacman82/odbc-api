@@ -6,10 +6,11 @@ use std::{
 
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
+    fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer, fixed_sized::Pod,
+    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -399,11 +400,17 @@ impl TextRowSet {
     }
 }
 
-unsafe impl<'a, T> ColumnProjections<'a> for Vec<T> where T: Pod {
+unsafe impl<'a, T> ColumnProjections<'a> for Vec<T>
+where
+    T: Pod,
+{
     type View = &'a [T];
 }
 
-unsafe impl<T> ColumnBuffer for Vec<T> where T: Pod {
+unsafe impl<T> ColumnBuffer for Vec<T>
+where
+    T: Pod,
+{
     fn view(&self, valid_rows: usize) -> &[T] {
         &self[..valid_rows]
     }

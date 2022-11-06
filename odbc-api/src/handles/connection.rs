@@ -174,7 +174,7 @@ impl<'c> Connection<'c> {
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
     /// the connection.
     pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
-        let val = if enabled { 1u32 } else { 0u32 };
+        let val = enabled as u32;
         unsafe {
             sql_set_connect_attr(
                 self.handle,

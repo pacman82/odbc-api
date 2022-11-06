@@ -334,9 +334,13 @@ fn bind_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"Hello".into_parameter())
+        .unwrap();
 
-    let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
     let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::new(1, 5))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
@@ -353,7 +357,8 @@ fn bind_char_to_wchar(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"Hello".into_parameter())
+        .unwrap();
     let sql = table.sql_all_ordered_by_id();
 
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -386,7 +391,6 @@ fn bind_bit(profile: &Profile) {
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
 
-    
     assert!(!batch.column(0)[0].as_bool());
     assert!(batch.column(0)[1].as_bool());
 }
@@ -401,9 +405,13 @@ fn truncate_fixed_sized(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &"Hello".into_parameter()).unwrap();
-    
-    let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    conn.execute(&insert_sql, &"Hello".into_parameter())
+        .unwrap();
+
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
     let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::new(1, 3))]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
@@ -444,7 +452,8 @@ fn bind_varchar_to_wchar(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(100)"]).unwrap();
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &"Hello, World!".into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"Hello, World!".into_parameter())
+        .unwrap();
     let sql = table.sql_all_ordered_by_id();
 
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();

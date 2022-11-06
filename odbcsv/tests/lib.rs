@@ -55,7 +55,7 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Insert csv
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "insert",
             "--connection-string",
@@ -71,7 +71,7 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Query csv
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "query",
             "--connection-string",
@@ -94,7 +94,7 @@ fn append_user_and_password_to_connection_string() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "query",
             "--connection-string",
@@ -134,7 +134,7 @@ fn query_mssql() {
     let query = format!("SELECT a, b from {}", table_name);
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&["-vvvv", "query", "--connection-string", MSSQL, &query])
+        .args(["-vvvv", "query", "--connection-string", MSSQL, &query])
         .assert()
         .success()
         .stdout(csv);
@@ -153,7 +153,7 @@ fn tables() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "list-tables",
             "--connection-string",
@@ -191,7 +191,7 @@ fn columns() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "list-columns",
             "--connection-string",
@@ -214,7 +214,7 @@ fn ignore_truncation() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "query",
             "--max-str-len",
@@ -233,7 +233,7 @@ fn ignore_truncation() {
 fn do_not_ignore_truncation() {
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "query",
             "--max-str-len",
@@ -268,7 +268,7 @@ fn placeholders() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "query",
             "--connection-string",
@@ -334,7 +334,7 @@ fn list_drivers() {
         expectation_file.read_to_string(&mut expectations).unwrap();
 
         let mut command = Command::cargo_bin("odbcsv").unwrap();
-        let odbcsv = command.args(&["-vvvv", "list-drivers"]);
+        let odbcsv = command.args(["-vvvv", "list-drivers"]);
         odbcsv.assert().success();
         let output = String::from_utf8(odbcsv.output().unwrap().stdout).unwrap();
 
@@ -411,7 +411,7 @@ fn fetch_from_mssql() {
     let query = format!("SELECT a, b from {}", table_name);
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "fetch",
             "--connection-string",
@@ -456,7 +456,7 @@ fn fetch_with_query_read_from_file() {
 
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&[
+        .args([
             "-vvvv",
             "fetch",
             "--connection-string",
@@ -475,7 +475,7 @@ fn list_columns_with_maria_db() {
     // allocated.
     Command::cargo_bin("odbcsv")
         .unwrap()
-        .args(&["-vvvv", "list-columns", "--connection-string", MARIADB])
+        .args(["-vvvv", "list-columns", "--connection-string", MARIADB])
         .assert()
         .success();
 }
