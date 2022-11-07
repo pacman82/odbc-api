@@ -118,12 +118,13 @@ impl<'s> CursorRow<'s> {
     /// `true` indicates that the value has not been `NULL` and the value has been placed in `buf`.
     /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
     pub fn get_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<bool, Error> {
-        // Utilize all of the allocated buffer. Make sure buffer can at least hold the terminating
-        // zero.
-        buf.resize(max(1, buf.capacity()), 0);
+        // Utilize all of the allocated buffer. We must make sure buffer can at least hold the
+        // terminating zero. We do a bit more than that though, to avoid to many repeated calls to
+        // get_data.
+        buf.resize(max(256, buf.capacity()), 0);
         // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
         // accumulated value size. This variable keeps track of the number of bytes we added with
-        // the current call to get_data.
+        // the next call to get_data.
         let mut fetch_size = buf.len();
         let mut target = VarCharSliceMut::from_buffer(buf.as_mut_slice(), Indicator::Null);
         // Fetch binary data into buffer.
@@ -139,12 +140,12 @@ impl<'s> CursorRow<'s> {
                 // to get_data.
                 Indicator::NoTotal => {
                     let old_len = buf.len();
-                    // Use an exponential strategy for increasing buffer size. +1 For handling
-                    // initial buffer size of 1.
+                    // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, 0);
-                    fetch_size = old_len + 1;
+                    let buf_extend = &mut buf[(old_len - 1)..];
+                    fetch_size = buf_extend.len();
                     target =
-                        VarCharSliceMut::from_buffer(&mut buf[(old_len - 1)..], Indicator::Null);
+                        VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
                 // We did get the complete value, including the terminating zero. Let's resize the
@@ -160,11 +161,12 @@ impl<'s> CursorRow<'s> {
                 // enough to tell us how much is missing.
                 Indicator::Length(len) => {
                     let still_missing = len - fetch_size + 1;
-                    fetch_size = still_missing + 1;
                     let old_len = buf.len();
                     buf.resize(old_len + still_missing, 0);
+                    let buf_extend = &mut buf[(old_len - 1)..];
+                    fetch_size = buf_extend.len();
                     target =
-                        VarCharSliceMut::from_buffer(&mut buf[(old_len - 1)..], Indicator::Null);
+                        VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
             }
@@ -202,7 +204,9 @@ impl<'s> CursorRow<'s> {
                     let old_len = buf.len();
                     // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, 0);
-                    target = VarBinarySliceMut::from_buffer(&mut buf[old_len..], Indicator::Null);
+                    let buf_extend = &mut buf[old_len..];
+                    fetch_size = buf_extend.len();
+                    target = VarBinarySliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
                 // We did get the complete value, including the terminating zero. Let's resize the
@@ -216,10 +220,11 @@ impl<'s> CursorRow<'s> {
                 // enough to tell us how much is missing.
                 Indicator::Length(len) => {
                     let still_missing = len - fetch_size;
-                    fetch_size = still_missing;
                     let old_len = buf.len();
                     buf.resize(old_len + still_missing, 0);
-                    target = VarBinarySliceMut::from_buffer(&mut buf[old_len..], Indicator::Null);
+                    let buf_extend = &mut buf[old_len..];
+                    fetch_size = buf_extend.len();
+                    target = VarBinarySliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
             }
