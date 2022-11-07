@@ -144,8 +144,7 @@ impl<'s> CursorRow<'s> {
                     buf.resize(old_len * 2, 0);
                     let buf_extend = &mut buf[(old_len - 1)..];
                     fetch_size = buf_extend.len();
-                    target =
-                        VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
+                    target = VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
                 // We did get the complete value, including the terminating zero. Let's resize the
@@ -165,8 +164,7 @@ impl<'s> CursorRow<'s> {
                     buf.resize(old_len + still_missing, 0);
                     let buf_extend = &mut buf[(old_len - 1)..];
                     fetch_size = buf_extend.len();
-                    target =
-                        VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
+                    target = VarCharSliceMut::from_buffer(buf_extend, Indicator::Null);
                     self.get_data(col_or_param_num, &mut target)?;
                 }
             }

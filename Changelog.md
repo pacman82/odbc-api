@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.0 (next)
+
+* Removed `ColumnProjection` trait.
+* `ColumnarBuffer` now has generic associated type `View` instead of inheriting from `ColumnProjection`.
+* Minimum Rust version is 1.65.0
+
 ## 0.50.3
 
 * Fix: There has been an issue with fetching text values using `get_text` from a `db2` System. `db2` is not part of the test suite (yet?), so not entirely sure that it is truly gone yet, but chances are its fixed.

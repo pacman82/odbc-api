@@ -5,7 +5,7 @@ use crate::{
     DataType, Error,
 };
 
-use super::{ColumnBuffer, ColumnProjections, Indicator};
+use super::{ColumnBuffer, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
@@ -294,14 +294,12 @@ impl WCharColumn {
     }
 }
 
-unsafe impl<'a, C: 'static> ColumnProjections<'a> for TextColumn<C> {
-    type View = TextColumnView<'a, C>;
-}
-
 unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
 where
     TextColumn<C>: CDataMut + HasDataType,
 {
+    type View<'a> = TextColumnView<'a, C>;
+
     fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
         TextColumnView {
             num_rows: valid_rows,

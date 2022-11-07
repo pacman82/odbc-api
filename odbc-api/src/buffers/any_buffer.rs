@@ -15,7 +15,7 @@ use super::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
         OptI64Column, OptI8Column, OptTimeColumn, OptTimestampColumn, OptU8Column,
     },
-    columnar::{ColumnBuffer, ColumnProjections},
+    columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
     BinColumn, BinColumnView, BufferDescription, BufferKind, CharColumn, ColumnarBuffer, Item,
     NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
@@ -540,11 +540,9 @@ impl<'a> AnySliceMut<'a> {
     }
 }
 
-unsafe impl<'a> ColumnProjections<'a> for AnyBuffer {
-    type View = AnySlice<'a>;
-}
-
 unsafe impl ColumnBuffer for AnyBuffer {
+    type View<'a> = AnySlice<'a>;
+
     fn capacity(&self) -> usize {
         match self {
             AnyBuffer::Binary(col) => col.capacity(),

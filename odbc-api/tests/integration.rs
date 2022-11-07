@@ -2230,11 +2230,8 @@ fn large_strings(profile: &Profile, column_type: &str) {
     let column_types = [column_type];
     let (conn, table) = profile.given(&table_name, &column_types).unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
-    conn.execute(
-        &table.sql_insert(),
-        &input.as_str().into_parameter(),
-    )
-    .unwrap();
+    conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
+        .unwrap();
 
     let mut cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())
@@ -2265,11 +2262,8 @@ fn large_strings_get_text(profile: &Profile, column_type: &str) {
     let column_types = [column_type];
     let (conn, table) = profile.given(&table_name, &column_types).unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
-    conn.execute(
-        &table.sql_insert(),
-        &input.as_str().into_parameter(),
-    )
-    .unwrap();
+    conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
+        .unwrap();
 
     let mut cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())
@@ -2291,18 +2285,15 @@ fn large_strings_get_text(profile: &Profile, column_type: &str) {
 fn fixed_strings_get_text(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["Char(10)"]).unwrap();
-    conn.execute(
-        &table.sql_insert(),
-        &"1234567890".into_parameter(),
-    )
-    .unwrap();
+    conn.execute(&table.sql_insert(), &"1234567890".into_parameter())
+        .unwrap();
 
     let mut cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
-    let mut actual = vec![0;1]; // Initial buffer too small.
+    let mut actual = vec![0; 1]; // Initial buffer too small.
     row.get_text(1, &mut actual).unwrap();
 
     assert_eq!("1234567890", String::from_utf8(actual).unwrap());

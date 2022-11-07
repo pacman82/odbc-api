@@ -15,21 +15,6 @@ use crate::{
 
 use super::{Indicator, TextColumn};
 
-/// Projections for ColumnBuffers, allowing for reading writing data while bound as a rowset or
-/// parameter buffer without invalidating invariants of the type.
-///
-/// Intended as part for the ColumnBuffer trait. Currently seperated to allow to compile without
-/// GAT.
-///
-/// # Safety
-///
-/// View may not allow access to invalid rows.
-pub unsafe trait ColumnProjections<'a> {
-    /// Immutable view on the column data. Used in safe abstractions. User must not be able to
-    /// access uninitialized or invalid memory of the buffer through this interface.
-    type View;
-}
-
 impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// Create a new instance from columns with unique indicies. Capacity of the buffer will be the
     /// minimum capacity of the columns. The constructed buffer is always empty (i.e. the number of
@@ -91,7 +76,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///   columns may simply be ignored. That being said, if every column of the output is bound in
     ///   the buffer, in the same order in which they are enumerated in the result set, the
     ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
-    pub fn column(&self, buffer_index: usize) -> <C as ColumnProjections<'_>>::View {
+    pub fn column(&self, buffer_index: usize) -> C::View<'_> {
         self.columns[buffer_index].1.view(*self.num_rows)
     }
 }
@@ -145,12 +130,18 @@ pub struct ColumnarBuffer<C> {
 /// # Safety
 ///
 /// Views must not allow access to unintialized / invalid rows.
-pub unsafe trait ColumnBuffer: for<'a> ColumnProjections<'a> + CDataMut {
+pub unsafe trait ColumnBuffer: CDataMut {
+    /// Immutable view on the column data. Used in safe abstractions. User must not be able to
+    /// access uninitialized or invalid memory of the buffer through this interface.
+    type View<'a>
+    where
+        Self: 'a;
+
     /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element.
-    fn view(&self, valid_rows: usize) -> <Self as ColumnProjections<'_>>::View;
+    fn view(&self, valid_rows: usize) -> Self::View<'_>;
 
     /// Fills the column with the default representation of values, between `from` and `to` index.
     fn fill_default(&mut self, from: usize, to: usize);
@@ -159,18 +150,13 @@ pub unsafe trait ColumnBuffer: for<'a> ColumnProjections<'a> + CDataMut {
     fn capacity(&self) -> usize;
 }
 
-unsafe impl<'a, T> ColumnProjections<'a> for WithDataType<T>
-where
-    T: ColumnProjections<'a>,
-{
-    type View = T::View;
-}
-
 unsafe impl<T> ColumnBuffer for WithDataType<T>
 where
     T: ColumnBuffer,
 {
-    fn view(&self, valid_rows: usize) -> <T as ColumnProjections>::View {
+    type View<'a> = T::View<'a> where T: 'a;
+
+    fn view(&self, valid_rows: usize) -> T::View<'_> {
         self.value.view(valid_rows)
     }
 
@@ -400,17 +386,12 @@ impl TextRowSet {
     }
 }
 
-unsafe impl<'a, T> ColumnProjections<'a> for Vec<T>
-where
-    T: Pod,
-{
-    type View = &'a [T];
-}
-
 unsafe impl<T> ColumnBuffer for Vec<T>
 where
     T: Pod,
 {
+    type View<'a> = &'a [T];
+
     fn view(&self, valid_rows: usize) -> &[T] {
         &self[..valid_rows]
     }
