@@ -2221,32 +2221,28 @@ fn get_data_binary(profile: &Profile) {
 
 /// Test insertion and retrieving of large string values using get_data. Try to provoke
 /// `SQL_NO_TOTAL` as a return value in the indicator buffer.
-#[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
-// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
-// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varchar(max) syntax
-fn large_strings(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("LargeStrings", &["Varchar(max)"])
-        .unwrap();
-
+#[test_case(MSSQL, "Varchar(max)"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "Text"; "Maria DB")]
+#[test_case(SQLITE_3, "Text"; "SQLite 3")]
+#[test_case(POSTGRES, "Text"; "PostgreSQL")]
+fn large_strings(profile: &Profile, column_type: &str) {
+    let table_name = table_name!();
+    let column_types = [column_type];
+    let (conn, table) = profile.given(&table_name, &column_types).unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
-
     conn.execute(
-        "INSERT INTO LargeStrings (a) VALUES (?)",
+        &table.sql_insert(),
         &input.as_str().into_parameter(),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute("SELECT a FROM LargeStrings ORDER BY id", ())
+        .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
-
     let mut row = cursor.next_row().unwrap().unwrap();
     let mut buf = VarCharArray::<32>::NULL;
     let mut actual = String::new();
-
     loop {
         row.get_data(1, &mut buf).unwrap();
         actual += std::str::from_utf8(buf.as_bytes().unwrap()).unwrap();
@@ -2260,31 +2256,27 @@ fn large_strings(profile: &Profile) {
 
 /// Test insertion and retrieving of large string values using get_text. Try to provoke
 /// `SQL_NO_TOTAL` as a return value in the indicator buffer.
-#[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB; "Maria DB")] Does not support Varchar(max) syntax
-// #[test_case(SQLITE_3; "SQLite 3")] Does not support Varchar(max) syntax
-// #[test_case(POSTGRES; "PostgreSQL")] Does not support Varchar(max) syntax
-fn large_strings_get_text(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("LargeStringsGetText", &["Varchar(max)"])
-        .unwrap();
-
+#[test_case(MSSQL, "Varchar(max)"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "Text"; "Maria DB")]
+#[test_case(SQLITE_3, "Text"; "SQLite 3")]
+#[test_case(POSTGRES, "Text"; "PostgreSQL")]
+fn large_strings_get_text(profile: &Profile, column_type: &str) {
+    let table_name = table_name!();
+    let column_types = [column_type];
+    let (conn, table) = profile.given(&table_name, &column_types).unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
-
     conn.execute(
-        "INSERT INTO LargeStringsGetText (a) VALUES (?)",
+        &table.sql_insert(),
         &input.as_str().into_parameter(),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute("SELECT a FROM LargeStringsGetText ORDER BY id", ())
+        .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
-
     let mut row = cursor.next_row().unwrap().unwrap();
     let mut actual = Vec::new();
-
     row.get_text(1, &mut actual).unwrap();
 
     assert_eq!(input, String::from_utf8(actual).unwrap());
