@@ -2282,6 +2282,32 @@ fn large_strings_get_text(profile: &Profile, column_type: &str) {
     assert_eq!(input, String::from_utf8(actual).unwrap());
 }
 
+/// Retrieving of fixed size string values using get_text. Try to provoke `SQL_NO_TOTAL` as a return
+/// value in the indicator buffer.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fixed_strings_get_text(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["Char(10)"]).unwrap();
+    conn.execute(
+        &table.sql_insert(),
+        &"1234567890".into_parameter(),
+    )
+    .unwrap();
+
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = vec![0;1]; // Initial buffer too small.
+    row.get_text(1, &mut actual).unwrap();
+
+    assert_eq!("1234567890", String::from_utf8(actual).unwrap());
+}
+
 /// Retrieving of short string values using get_data. This also helps to assert that we correctly
 /// shorten the vectors length if the capacity of the originally passed in vector had been larger
 /// than the retrieved string.
