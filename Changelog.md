@@ -3,7 +3,7 @@
 ## 0.51.0 (next)
 
 * Removed `ColumnProjection` trait.
-* `ColumnarBuffer` now has generic associated type `View` instead of inheriting from `ColumnProjection`.
+* `ColumnBuffer` now has generic associated type `View` instead of inheriting from `ColumnProjection`.
 * Minimum Rust version is 1.65.0
 
 ## 0.50.3
