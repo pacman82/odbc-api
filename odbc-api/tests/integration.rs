@@ -2113,21 +2113,16 @@ fn get_data_int(profile: &Profile) {
 // #[test_case(POSTGRES; "PostgreSQL")] Return generic error HY000 instead
 fn get_data_int_null(profile: &Profile) {
     let table_name = table_name!();
-
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    conn.execute(&table.sql_insert(), &None::<i32>.into_parameter())
         .unwrap();
-
-    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
-        .unwrap();
+    let sql = table.sql_all_ordered_by_id();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {table_name}"), ())
+        .execute(&sql, ())
         .unwrap()
         .unwrap();
-
     let mut actual = 0i32;
-
     // Second row contains a NULL
     let mut row = cursor.next_row().unwrap().unwrap();
     // Failure due to the value being NULL, but i32 not being NULLABLE
