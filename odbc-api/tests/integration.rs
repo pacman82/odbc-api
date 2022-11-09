@@ -2251,6 +2251,29 @@ fn large_strings(profile: &Profile, column_type: &str) {
     assert_eq!(input, actual);
 }
 
+/// Test insertion and retrieving of large binary values using get_text. Try to provoke
+/// `SQL_NO_TOTAL` as a return value in the indicator buffer.
+#[test_case(POSTGRES, "BYTEA"; "PostgreSQL")]
+fn large_binary_get_text(profile: &Profile, column_type: &str) {
+    let table_name = table_name!();
+    let column_types = [column_type];
+    let (conn, table) = profile.given(&table_name, &column_types).unwrap();
+    let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
+    conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
+        .unwrap();
+
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut actual = Vec::new();
+    row.get_text(1, &mut actual).unwrap();
+
+    let expected = "61".repeat(2000);
+    assert_eq!(expected, String::from_utf8(actual).unwrap());
+}
+
 /// Test insertion and retrieving of large string values using get_text. Try to provoke
 /// `SQL_NO_TOTAL` as a return value in the indicator buffer.
 #[test_case(MSSQL, "Varchar(max)"; "Microsoft SQL Server")]
