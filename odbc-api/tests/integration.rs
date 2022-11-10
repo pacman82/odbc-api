@@ -2073,24 +2073,17 @@ fn interior_nul(profile: &Profile, expected: &str) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_data_int(profile: &Profile) {
     let table_name = table_name!();
-
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
-        .unwrap();
-
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"),
         (),
     )
     .unwrap();
+    let sql = table.sql_all_ordered_by_id();
 
-    let mut cursor = conn
-        .execute(&format!("SELECT a FROM {table_name}"), ())
-        .unwrap()
-        .unwrap();
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     let mut actual = Nullable::<i32>::null();
-
     // First value is 42
     let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut actual).unwrap();
@@ -2103,6 +2096,41 @@ fn get_data_int(profile: &Profile) {
 
     // Cursor has reached its end
     assert!(cursor.next_row().unwrap().is_none())
+}
+
+#[test_case(MSSQL, "DATETIME2"; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(POSTGRES; "PostgreSQL")]
+fn get_data_timestamp(profile: &Profile, timestamp_type: &str) {
+    let table_name = table_name!();
+    let types = [timestamp_type];
+    let (conn, table) = profile.given(&table_name, &types).unwrap();
+    conn.execute(&table.sql_insert(), &"2022-11-09 06:17:00".into_parameter())
+        .unwrap();
+    let sql = table.sql_all_ordered_by_id();
+
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
+
+    let mut actual = WithDataType {
+        value: Timestamp::default(),
+        data_type: DataType::Timestamp { precision: 0 },
+    };
+    let mut row = cursor.next_row().unwrap().unwrap();
+    row.get_data(1, &mut actual).unwrap();
+
+    assert_eq!(
+        Timestamp {
+            year: 2022,
+            month: 11,
+            day: 9,
+            hour: 6,
+            minute: 17,
+            second: 0,
+            fraction: 0
+        },
+        actual.value
+    );
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -2118,10 +2146,7 @@ fn get_data_int_null(profile: &Profile) {
         .unwrap();
     let sql = table.sql_all_ordered_by_id();
 
-    let mut cursor = conn
-        .execute(&sql, ())
-        .unwrap()
-        .unwrap();
+    let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut actual = 0i32;
     // Second row contains a NULL
     let mut row = cursor.next_row().unwrap().unwrap();

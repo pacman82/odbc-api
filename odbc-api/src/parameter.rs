@@ -330,7 +330,7 @@ use odbc_sys::CDataType;
 
 use crate::{
     handles::{CData, CDataMut, HasDataType},
-    DataType,
+    DataType, fixed_sized::Pod,
 };
 
 /// Use implementations of this type as arguments to SQL Statements.
@@ -420,6 +420,21 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// }
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
+/// 
+/// Can also be used to wrap [`crate::sys::Timestamp`] so they implement [`OutputParameter`].
+/// 
+/// ```no_run
+/// # use odbc_api::{Cursor, DataType, parameter::WithDataType, sys::Timestamp};
+/// # fn given(cursor: &mut impl Cursor) {
+/// let mut actual = WithDataType {
+///     value: Timestamp::default(),
+///     data_type: DataType::Timestamp { precision: 0 },
+/// };
+/// let mut row = cursor.next_row().unwrap().unwrap();
+/// row.get_data(1, &mut actual).unwrap();
+/// # }
+/// ```
+#[derive(Debug)]
 pub struct WithDataType<T> {
     /// Value to wrap with a Data Type. Should implement [`crate::handles::CData`], to be useful.
     pub value: T,
@@ -463,8 +478,6 @@ where
 }
 
 impl<T> HasDataType for WithDataType<T>
-where
-    T: HasDataType,
 {
     fn data_type(&self) -> DataType {
         self.data_type
@@ -472,6 +485,7 @@ where
 }
 
 unsafe impl<T> InputParameter for WithDataType<T> where T: InputParameter {}
+unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
 
 // Allow for input parameters whose type is only known at runtime.
 unsafe impl CData for Box<dyn InputParameter> {

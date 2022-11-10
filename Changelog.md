@@ -4,6 +4,8 @@
 
 * Removed `ColumnProjection` trait.
 * `ColumnBuffer` now has generic associated type `View` instead of inheriting from `ColumnProjection`.
+* `WithDataType` can now also be used to annotate the Relational type on `Timestamp`.
+* `WithDataType<Timestamp>` now implements `OutputParameter`.
 * Minimum Rust version is 1.65.0
 
 ## 0.50.3
