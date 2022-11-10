@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.51.0 (next)
+## 0.51.0
 
 * Removed `ColumnProjection` trait.
 * `ColumnBuffer` now has generic associated type `View` instead of inheriting from `ColumnProjection`.
