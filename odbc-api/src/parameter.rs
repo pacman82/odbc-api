@@ -329,14 +329,15 @@ use std::ffi::c_void;
 use odbc_sys::CDataType;
 
 use crate::{
+    fixed_sized::Pod,
     handles::{CData, CDataMut, HasDataType},
-    DataType, fixed_sized::Pod,
+    DataType,
 };
 
 /// A CData representing a single value rater than an entire buffer of a range of values.
-/// 
+///
 /// # Safety
-/// 
+///
 /// Callers must be able to rely on all pointers being valid, i.e. the "range" is not empty.
 pub unsafe trait CElement: CData {}
 
@@ -354,6 +355,7 @@ pub unsafe trait CElement: CData {}
 /// is used as an output parameter, and contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
 pub unsafe trait InputParameter: HasDataType + CElement {}
+unsafe impl<T> InputParameter for T where T: CElement + HasDataType {}
 
 /// # Safety
 ///
@@ -427,9 +429,9 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// }
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
-/// 
+///
 /// Can also be used to wrap [`crate::sys::Timestamp`] so they implement [`OutputParameter`].
-/// 
+///
 /// ```no_run
 /// # use odbc_api::{Cursor, DataType, parameter::WithDataType, sys::Timestamp};
 /// # fn given(cursor: &mut impl Cursor) {
@@ -484,15 +486,13 @@ where
     }
 }
 
-impl<T> HasDataType for WithDataType<T>
-{
+impl<T> HasDataType for WithDataType<T> {
     fn data_type(&self) -> DataType {
         self.data_type
     }
 }
 
 unsafe impl<T> CElement for WithDataType<T> where T: CElement {}
-unsafe impl<T> InputParameter for WithDataType<T> where T: CElement {}
 unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
 
 // Allow for input parameters whose type is only known at runtime.
@@ -520,4 +520,3 @@ impl HasDataType for Box<dyn InputParameter> {
     }
 }
 unsafe impl CElement for Box<dyn InputParameter> {}
-unsafe impl InputParameter for Box<dyn InputParameter> {}
