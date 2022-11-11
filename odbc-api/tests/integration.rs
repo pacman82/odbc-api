@@ -2112,10 +2112,7 @@ fn get_data_timestamp(profile: &Profile, timestamp_type: &str) {
 
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
-    let mut actual = WithDataType {
-        value: Timestamp::default(),
-        data_type: DataType::Timestamp { precision: 0 },
-    };
+    let mut actual = Timestamp::default();
     let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut actual).unwrap();
 
@@ -2129,7 +2126,7 @@ fn get_data_timestamp(profile: &Profile, timestamp_type: &str) {
             second: 0,
             fraction: 0
         },
-        actual.value
+        actual
     );
 }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.52.0
+
+* `sys::Timestamp` is now directly supported with `get_data`.
+* `InputParameter` is now implying the new `CElement` trait.
+
 ## 0.51.0
 
 * Removed `ColumnProjection` trait.
