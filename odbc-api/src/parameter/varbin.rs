@@ -12,6 +12,8 @@ use crate::{
     DataType, OutputParameter,
 };
 
+use super::CElement;
+
 /// Binds a byte array as Variadic sized binary data. It can not be used for columnar bulk fetches,
 /// but if the buffer type is stack allocated it can be utilized in row wise bulk fetches.
 ///
@@ -245,14 +247,17 @@ impl<const LENGTH: usize> VarBinaryArray<LENGTH> {
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
-
+unsafe impl CElement for VarBinarySlice<'_> {}
 unsafe impl InputParameter for VarBinarySlice<'_> {}
 
+unsafe impl<const LENGTH: usize> CElement for VarBinaryArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> OutputParameter for VarBinaryArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> InputParameter for VarBinaryArray<LENGTH> {}
 
-unsafe impl<'a> OutputParameter for VarBinarySliceMut<'a> {}
-unsafe impl<'a> InputParameter for VarBinarySliceMut<'a> {}
+unsafe impl CElement for VarBinarySliceMut<'_> {}
+unsafe impl OutputParameter for VarBinarySliceMut<'_> {}
+unsafe impl InputParameter for VarBinarySliceMut<'_> {}
 
+unsafe impl CElement for VarBinaryBox {}
 unsafe impl OutputParameter for VarBinaryBox {}
 unsafe impl InputParameter for VarBinaryBox {}

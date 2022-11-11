@@ -10,6 +10,8 @@ use crate::{
     DataType,
 };
 
+use super::CElement;
+
 unsafe impl CData for CStr {
     fn cdata_type(&self) -> CDataType {
         CDataType::Char
@@ -35,7 +37,7 @@ impl HasDataType for CStr {
         }
     }
 }
-
+unsafe impl CElement for CStr {}
 unsafe impl InputParameter for CStr {}
 
 unsafe impl CData for CString {
@@ -64,4 +66,5 @@ impl HasDataType for CString {
     }
 }
 
+unsafe impl CElement for CString {}
 unsafe impl InputParameter for CString {}
