@@ -38,7 +38,7 @@ impl HasDataType for CStr {
     }
 }
 unsafe impl CElement for CStr {}
-unsafe impl InputParameter for CStr {}
+impl InputParameter for CStr {}
 
 unsafe impl CData for CString {
     fn cdata_type(&self) -> CDataType {

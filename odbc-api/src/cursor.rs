@@ -3,10 +3,10 @@ use odbc_sys::HStmt;
 use crate::{
     buffers::Indicator,
     error::ExtendResult,
-    handles::{AsStatementRef, SqlResult, State, Statement, StatementRef},
-    parameter::{VarBinarySliceMut, VarCharSliceMut},
+    handles::{AsStatementRef, SqlResult, State, Statement, StatementRef, CDataMut},
+    parameter::{VarBinarySliceMut, VarCharSliceMut, CElement},
     sleep::{wait_for, Sleep},
-    Error, OutputParameter, ResultSetMetadata,
+    Error, ResultSetMetadata,
 };
 
 use std::{cmp::max, thread::panicking};
@@ -96,7 +96,7 @@ impl<'s> CursorRow<'s> {
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
-        target: &mut impl OutputParameter,
+        target: &mut (impl CElement + CDataMut),
     ) -> Result<(), Error> {
         self.statement
             .get_data(col_or_param_num, target)

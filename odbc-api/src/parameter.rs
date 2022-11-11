@@ -337,25 +337,21 @@ use crate::{
 /// A CData representing a single value rater than an entire buffer of a range of values.
 ///
 /// # Safety
-///
-/// Callers must be able to rely on all pointers being valid, i.e. the "range" is not empty.
-pub unsafe trait CElement: CData {}
-
-/// Use implementations of this type as arguments to SQL Statements.
-///
-/// # Safety
-///
+/// 
 /// Considerations for implementers
 ///
-/// Extend the [`crate::handles::HasDataType`] trait with the guarantee, that the bound parameter
-/// buffer contains at least one element.
+/// Callers must be able to rely on all pointers being valid, i.e. the "range" is not empty.
 ///
 /// Since the indicator provided by implementation is used to indicate the length of the value in
 /// the buffer, care must be taken to prevent out of bounds access in case the implementation also
 /// is used as an output parameter, and contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
-pub unsafe trait InputParameter: HasDataType + CElement {}
-unsafe impl<T> InputParameter for T where T: CElement + HasDataType {}
+pub unsafe trait CElement: CData {}
+
+/// Can be used to fill in a fielf value indicated by a placeholder (`?`) then executing an SQL
+/// statement.
+pub trait InputParameter: HasDataType + CElement {}
+impl<T> InputParameter for T where T: CElement + HasDataType {}
 
 /// # Safety
 ///
@@ -433,14 +429,18 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// Can also be used to wrap [`crate::sys::Timestamp`] so they implement [`OutputParameter`].
 ///
 /// ```no_run
-/// # use odbc_api::{Cursor, DataType, parameter::WithDataType, sys::Timestamp};
-/// # fn given(cursor: &mut impl Cursor) {
-/// let mut actual = WithDataType {
+/// # use odbc_api::{
+/// #    Connection, Cursor, DataType, parameter::WithDataType, IntoParameter, sys::Timestamp
+/// # };
+/// # fn given(cursor: &mut impl Cursor, connection: Connection<'_>) {
+/// let mut ts = WithDataType {
 ///     value: Timestamp::default(),
 ///     data_type: DataType::Timestamp { precision: 0 },
 /// };
-/// let mut row = cursor.next_row().unwrap().unwrap();
-/// row.get_data(1, &mut actual).unwrap();
+/// connection.execute(
+///     "INSERT INTO Posts (text, timestamps) VALUES (?,?)",
+///     (&"Hello".into_parameter(), &ts.into_parameter())
+/// );
 /// # }
 /// ```
 #[derive(Debug)]
