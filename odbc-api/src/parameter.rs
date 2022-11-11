@@ -333,6 +333,13 @@ use crate::{
     DataType, fixed_sized::Pod,
 };
 
+/// A CData representing a single value rater than an entire buffer of a range of values.
+/// 
+/// # Safety
+/// 
+/// Callers must be able to rely on all pointers being valid, i.e. the "range" is not empty.
+pub unsafe trait CElement: CData {}
+
 /// Use implementations of this type as arguments to SQL Statements.
 ///
 /// # Safety
@@ -346,7 +353,7 @@ use crate::{
 /// the buffer, care must be taken to prevent out of bounds access in case the implementation also
 /// is used as an output parameter, and contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
-pub unsafe trait InputParameter: HasDataType + CData {}
+pub unsafe trait InputParameter: HasDataType + CElement {}
 
 /// # Safety
 ///
@@ -484,7 +491,8 @@ impl<T> HasDataType for WithDataType<T>
     }
 }
 
-unsafe impl<T> InputParameter for WithDataType<T> where T: InputParameter {}
+unsafe impl<T> CElement for WithDataType<T> where T: CElement {}
+unsafe impl<T> InputParameter for WithDataType<T> where T: CElement {}
 unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
 
 // Allow for input parameters whose type is only known at runtime.
@@ -511,5 +519,5 @@ impl HasDataType for Box<dyn InputParameter> {
         self.as_ref().data_type()
     }
 }
-
+unsafe impl CElement for Box<dyn InputParameter> {}
 unsafe impl InputParameter for Box<dyn InputParameter> {}

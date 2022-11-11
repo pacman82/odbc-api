@@ -12,6 +12,8 @@ use crate::{
     DataType, OutputParameter,
 };
 
+use super::CElement;
+
 /// Binds a byte array as Variadic sized character data. It can not be used for columnar bulk
 /// fetches, but if the buffer type is stack allocated it can be utilized in row wise bulk fetches.
 ///
@@ -301,14 +303,17 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
-
+unsafe impl CElement for VarCharSlice<'_> {}
 unsafe impl InputParameter for VarCharSlice<'_> {}
 
+unsafe impl<const LENGTH: usize> CElement for VarCharArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> OutputParameter for VarCharArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> InputParameter for VarCharArray<LENGTH> {}
 
-unsafe impl<'a> OutputParameter for VarCharSliceMut<'a> {}
-unsafe impl<'a> InputParameter for VarCharSliceMut<'a> {}
+unsafe impl CElement for VarCharSliceMut<'_> {}
+unsafe impl OutputParameter for VarCharSliceMut<'_> {}
+unsafe impl InputParameter for VarCharSliceMut<'_> {}
 
+unsafe impl CElement for VarCharBox {}
 unsafe impl OutputParameter for VarCharBox {}
 unsafe impl InputParameter for VarCharBox {}

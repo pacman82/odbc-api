@@ -1,6 +1,6 @@
 use crate::{
     handles::{CData, CDataMut, DataType, HasDataType},
-    parameter::{InputParameter, OutputParameter},
+    parameter::{InputParameter, OutputParameter, CElement},
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{
@@ -50,12 +50,12 @@ impl Bit {
 ///
 /// A type implementing this trait, must be a fixed sized type. The information in the `C_DATA_TYPE`
 /// constant must be enough to determine both the size and the buffer length of an Instance.
-pub unsafe trait Pod: Default + Copy + CData + CDataMut + 'static {
+pub unsafe trait Pod: Default + Copy + CElement + CDataMut + 'static {
     /// ODBC C Data type used to bind instances to a statement.
     const C_DATA_TYPE: CDataType;
 }
 
-macro_rules! impl_fixed_sized {
+macro_rules! impl_pod {
     ($t:ident, $c_data_type:expr) => {
         unsafe impl CData for $t {
             fn cdata_type(&self) -> CDataType {
@@ -88,27 +88,29 @@ macro_rules! impl_fixed_sized {
             }
         }
 
+        unsafe impl CElement for $t {}
+
         unsafe impl Pod for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;
         }
     };
 }
 
-impl_fixed_sized!(f64, CDataType::Double);
-impl_fixed_sized!(f32, CDataType::Float);
-impl_fixed_sized!(Date, CDataType::TypeDate);
-impl_fixed_sized!(Timestamp, CDataType::TypeTimestamp);
-impl_fixed_sized!(Time, CDataType::TypeTime);
-impl_fixed_sized!(Numeric, CDataType::Numeric);
-impl_fixed_sized!(i16, CDataType::SShort);
-impl_fixed_sized!(u16, CDataType::UShort);
-impl_fixed_sized!(i32, CDataType::SLong);
-impl_fixed_sized!(u32, CDataType::ULong);
-impl_fixed_sized!(i8, CDataType::STinyInt);
-impl_fixed_sized!(u8, CDataType::UTinyInt);
-impl_fixed_sized!(Bit, CDataType::Bit);
-impl_fixed_sized!(i64, CDataType::SBigInt);
-impl_fixed_sized!(u64, CDataType::UBigInt);
+impl_pod!(f64, CDataType::Double);
+impl_pod!(f32, CDataType::Float);
+impl_pod!(Date, CDataType::TypeDate);
+impl_pod!(Timestamp, CDataType::TypeTimestamp);
+impl_pod!(Time, CDataType::TypeTime);
+impl_pod!(Numeric, CDataType::Numeric);
+impl_pod!(i16, CDataType::SShort);
+impl_pod!(u16, CDataType::UShort);
+impl_pod!(i32, CDataType::SLong);
+impl_pod!(u32, CDataType::ULong);
+impl_pod!(i8, CDataType::STinyInt);
+impl_pod!(u8, CDataType::UTinyInt);
+impl_pod!(Bit, CDataType::Bit);
+impl_pod!(i64, CDataType::SBigInt);
+impl_pod!(u64, CDataType::UBigInt);
 
 // While the C-Type is independent of the Data (SQL) Type in the source, there are often DataTypes
 // which are a natural match for the C-Type in question. These can be used to spare the user to
