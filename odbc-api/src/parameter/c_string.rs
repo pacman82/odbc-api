@@ -67,4 +67,3 @@ impl HasDataType for CString {
 }
 
 unsafe impl CElement for CString {}
-unsafe impl InputParameter for CString {}

@@ -8,7 +8,6 @@ use odbc_sys::{CDataType, NULL_DATA};
 use crate::{
     buffers::Indicator,
     handles::{CData, CDataMut, HasDataType},
-    parameter::InputParameter,
     DataType, OutputParameter,
 };
 
@@ -248,16 +247,12 @@ impl<const LENGTH: usize> VarBinaryArray<LENGTH> {
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
 unsafe impl CElement for VarBinarySlice<'_> {}
-unsafe impl InputParameter for VarBinarySlice<'_> {}
 
 unsafe impl<const LENGTH: usize> CElement for VarBinaryArray<LENGTH> {}
 unsafe impl<const LENGTH: usize> OutputParameter for VarBinaryArray<LENGTH> {}
-unsafe impl<const LENGTH: usize> InputParameter for VarBinaryArray<LENGTH> {}
 
 unsafe impl CElement for VarBinarySliceMut<'_> {}
 unsafe impl OutputParameter for VarBinarySliceMut<'_> {}
-unsafe impl InputParameter for VarBinarySliceMut<'_> {}
 
 unsafe impl CElement for VarBinaryBox {}
 unsafe impl OutputParameter for VarBinaryBox {}
-unsafe impl InputParameter for VarBinaryBox {}

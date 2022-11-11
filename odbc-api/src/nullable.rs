@@ -5,7 +5,7 @@ use odbc_sys::NULL_DATA;
 use crate::{
     fixed_sized::Pod,
     handles::{CData, CDataMut, HasDataType},
-    parameter::{InputParameter, CElement},
+    parameter::CElement,
     OutputParameter,
 };
 
@@ -83,7 +83,6 @@ where
 }
 
 unsafe impl<T> CElement for Nullable<T> where T: Pod {}
-unsafe impl<T> InputParameter for Nullable<T> where T: Pod + HasDataType {}
 
 unsafe impl<T> CDataMut for Nullable<T>
 where

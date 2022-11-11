@@ -1,6 +1,6 @@
 use crate::{
     handles::{CData, CDataMut, DataType, HasDataType},
-    parameter::{InputParameter, OutputParameter, CElement},
+    parameter::{CElement, OutputParameter},
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{
@@ -124,7 +124,6 @@ macro_rules! impl_input_fixed_sized {
             }
         }
 
-        unsafe impl InputParameter for $t {}
         unsafe impl OutputParameter for $t {}
     };
 }
