@@ -12,11 +12,116 @@ use crate::{Bit, DataType};
 /// the kind of processing which is supposed to be applied to the data may be even more important
 /// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BufferDesc {
+    /// Variable sized binary buffer, holding up to `length` bytes per value.
+    Binary {
+        /// Maximum number of bytes per value.
+        length: usize,
+    },
+    /// Text buffer holding strings with binary length of up to `max_str_len`.
+    ///
+    /// Consider an upper bound choosing this based on the information in a [`DataType::Varchar`]
+    /// column. E.g. PostgreSQL may return a field size of several GiB for individual values if a
+    /// column is specified as `TEXT`, or Microsoft SQL Server may return `0` for a column of type
+    /// `VARCHAR(max)`. In such situations, if values are truly that large, bulk fetching data is
+    /// not recommended, but streaming individual fields one by one. Usually though, the actual
+    /// cells of the table in the database contain much shorter values. The best thing todo is to
+    /// adapt the database schema to better reflect the actual size of the values. Lacking control
+    /// over the database schema, you can always choose a smaller buffer size than initializing the
+    /// buffer in disagreement with the database schema.
+    Text {
+        /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
+        /// implicitly allocated if required.
+        max_str_len: usize,
+    },
+    /// UTF-16 encoded text buffer holding strings with length of up to `max_str_len`. Length is in
+    /// terms of 2-Byte characters.
+    WText {
+        /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
+        /// implicitly allocated if required.
+        max_str_len: usize,
+    },
+    /// 64 bit floating point
+    F64 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// 32 bit floating point
+    F32 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Describes a buffer holding [`crate::sys::Date`] values.
+    Date {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Describes a buffer holding [`crate::sys::Time`] values.
+    Time {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Describes a buffer holding [`crate::sys::Timestamp`] values.
+    Timestamp {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Signed 8 Bit integer
+    I8 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Signed 16 Bit integer
+    I16 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Signed 32 Bit integer
+    I32 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Signed 64 Bit integer
+    I64 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Unsigned 8 Bit integer
+    U8 {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+    /// Can either be zero or one
+    Bit {
+        /// This indicates whether or not the buffer will be able to represent NULL values. This will
+        /// cause an indicator buffer to be bound.
+        nullable: bool,
+    },
+}
+
+/// Describes a column of a [`crate::buffers::ColumnarBuffer`].
+///
+/// While related to to the [`crate::DataType`] of the column this is bound to, the Buffer type is
+/// different as it does not describe the type of the data source but the format the data is going
+/// to be represented in memory. While the data source is often considered to choose the buffer type
+/// the kind of processing which is supposed to be applied to the data may be even more important
+/// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
+/// it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug)]
 pub struct BufferDescription {
     /// This indicates whether or not the buffer will be able to represent NULL values. This will
-    /// cause an indicator buffer to be bound if the selected buffer kind does not already require
-    /// one anyway.
+    /// cause an indicator buffer to be bound.
     pub nullable: bool,
     /// The type of CData the buffer will be holding.
     pub kind: BufferKind,
