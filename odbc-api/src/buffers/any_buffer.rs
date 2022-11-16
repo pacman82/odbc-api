@@ -17,8 +17,8 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDescription, BufferKind, CharColumn, ColumnarBuffer, Item,
-    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
+    BinColumn, BinColumnView, BufferDesc, BufferDescription, BufferKind, CharColumn,
+    ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -138,6 +138,104 @@ impl AnyBuffer {
             (BufferKind::I64, true) => AnyBuffer::NullableI64(OptI64Column::new(max_rows as usize)),
             (BufferKind::U8, true) => AnyBuffer::NullableU8(OptU8Column::new(max_rows as usize)),
             (BufferKind::Bit, true) => AnyBuffer::NullableBit(OptBitColumn::new(max_rows as usize)),
+        };
+        Ok(buffer)
+    }
+
+    /// Map buffer description to actual buffer.
+    fn impl_from_desc(
+        max_rows: usize,
+        desc: BufferDesc,
+        fallible_allocations: bool,
+    ) -> Result<Self, TooLargeBufferSize> {
+        let buffer = match desc {
+            BufferDesc::Binary { length } => {
+                if fallible_allocations {
+                    AnyBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
+                } else {
+                    AnyBuffer::Binary(BinColumn::new(max_rows as usize, length))
+                }
+            }
+            BufferDesc::Text { max_str_len } => {
+                if fallible_allocations {
+                    AnyBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                } else {
+                    AnyBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+                }
+            }
+            BufferDesc::WText { max_str_len } => {
+                if fallible_allocations {
+                    AnyBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                } else {
+                    AnyBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
+                }
+            }
+            BufferDesc::Date { nullable: false } => {
+                AnyBuffer::Date(vec![Date::default(); max_rows as usize])
+            }
+            BufferDesc::Time { nullable: false } => {
+                AnyBuffer::Time(vec![Time::default(); max_rows as usize])
+            }
+            BufferDesc::Timestamp { nullable: false } => {
+                AnyBuffer::Timestamp(vec![Timestamp::default(); max_rows as usize])
+            }
+            BufferDesc::F64 { nullable: false } => {
+                AnyBuffer::F64(vec![f64::default(); max_rows as usize])
+            }
+            BufferDesc::F32 { nullable: false } => {
+                AnyBuffer::F32(vec![f32::default(); max_rows as usize])
+            }
+            BufferDesc::I8 { nullable: false } => {
+                AnyBuffer::I8(vec![i8::default(); max_rows as usize])
+            }
+            BufferDesc::I16 { nullable: false } => {
+                AnyBuffer::I16(vec![i16::default(); max_rows as usize])
+            }
+            BufferDesc::I32 { nullable: false } => {
+                AnyBuffer::I32(vec![i32::default(); max_rows as usize])
+            }
+            BufferDesc::I64 { nullable: false } => {
+                AnyBuffer::I64(vec![i64::default(); max_rows as usize])
+            }
+            BufferDesc::U8 { nullable: false } => {
+                AnyBuffer::U8(vec![u8::default(); max_rows as usize])
+            }
+            BufferDesc::Bit { nullable: false } => {
+                AnyBuffer::Bit(vec![Bit::default(); max_rows as usize])
+            }
+            BufferDesc::Date { nullable: true } => {
+                AnyBuffer::NullableDate(OptDateColumn::new(max_rows as usize))
+            }
+            BufferDesc::Time { nullable: true } => {
+                AnyBuffer::NullableTime(OptTimeColumn::new(max_rows as usize))
+            }
+            BufferDesc::Timestamp { nullable: true } => {
+                AnyBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows as usize))
+            }
+            BufferDesc::F64 { nullable: true } => {
+                AnyBuffer::NullableF64(OptF64Column::new(max_rows as usize))
+            }
+            BufferDesc::F32 { nullable: true } => {
+                AnyBuffer::NullableF32(OptF32Column::new(max_rows as usize))
+            }
+            BufferDesc::I8 { nullable: true } => {
+                AnyBuffer::NullableI8(OptI8Column::new(max_rows as usize))
+            }
+            BufferDesc::I16 { nullable: true } => {
+                AnyBuffer::NullableI16(OptI16Column::new(max_rows as usize))
+            }
+            BufferDesc::I32 { nullable: true } => {
+                AnyBuffer::NullableI32(OptI32Column::new(max_rows as usize))
+            }
+            BufferDesc::I64 { nullable: true } => {
+                AnyBuffer::NullableI64(OptI64Column::new(max_rows as usize))
+            }
+            BufferDesc::U8 { nullable: true } => {
+                AnyBuffer::NullableU8(OptU8Column::new(max_rows as usize))
+            }
+            BufferDesc::Bit { nullable: true } => {
+                AnyBuffer::NullableBit(OptBitColumn::new(max_rows as usize))
+            }
         };
         Ok(buffer)
     }
