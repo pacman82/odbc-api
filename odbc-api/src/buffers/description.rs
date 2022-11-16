@@ -4,7 +4,7 @@ use odbc_sys::{Date, Time, Timestamp};
 
 use crate::{Bit, DataType};
 
-/// Used to describe a column of a [`crate::buffers::ColumnarBuffer`].
+/// Describes a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// While related to to the [`crate::DataType`] of the column this is bound to, the Buffer type is
 /// different as it does not describe the type of the data source but the format the data is going
@@ -58,15 +58,15 @@ pub enum BufferKind {
     },
     /// Text buffer holding strings with binary length of up to `max_str_len`.
     ///
-    /// If choosing this based on the information in a [`DataType::Varchar`] column it is
-    /// recommended to think about an upper bound. E.g. PostgreSQL may return a field size of
-    /// several GiB for individual values if a column is specified as `TEXT`, or Microsoft SQL
-    /// Server may return `0` for a column of type `VARCHAR(max)`. In such situations, if values are
-    /// truly that large, bulk fetching data is not recommended, but streaming individual fields one
-    /// by one. Usually though, the actual cells of the table in the database contain much shorter
-    /// value. The best thing todo is to adapt the database schema to better reflect the actual size
-    /// of the values. Lacking control over the database schema, you can always choose a smaller
-    /// buffer size than initializing the buffer in disagreement with the database schema.
+    /// Consider an upper bound choosing this based on the information in a [`DataType::Varchar`]
+    /// column. E.g. PostgreSQL may return a field size of several GiB for individual values if a
+    /// column is specified as `TEXT`, or Microsoft SQL Server may return `0` for a column of type
+    /// `VARCHAR(max)`. In such situations, if values are truly that large, bulk fetching data is
+    /// not recommended, but streaming individual fields one by one. Usually though, the actual
+    /// cells of the table in the database contain much shorter values. The best thing todo is to
+    /// adapt the database schema to better reflect the actual size of the values. Lacking control
+    /// over the database schema, you can always choose a smaller buffer size than initializing the
+    /// buffer in disagreement with the database schema.
     Text {
         /// Maximum string length. Terminating zero is excluded, i.e. memory for it will be
         /// implicitly allocated if required.
