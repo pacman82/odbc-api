@@ -337,7 +337,7 @@ use crate::{
 /// A CData representing a single value rater than an entire buffer of a range of values.
 ///
 /// # Safety
-/// 
+///
 /// Considerations for implementers
 ///
 /// Callers must be able to rely on all pointers being valid, i.e. the "range" is not empty.

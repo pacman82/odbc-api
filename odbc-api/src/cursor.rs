@@ -3,8 +3,8 @@ use odbc_sys::HStmt;
 use crate::{
     buffers::Indicator,
     error::ExtendResult,
-    handles::{AsStatementRef, SqlResult, State, Statement, StatementRef, CDataMut},
-    parameter::{VarBinarySliceMut, VarCharSliceMut, CElement},
+    handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
+    parameter::{CElement, VarBinarySliceMut, VarCharSliceMut},
     sleep::{wait_for, Sleep},
     Error, ResultSetMetadata,
 };
