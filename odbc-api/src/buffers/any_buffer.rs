@@ -17,7 +17,7 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, BufferDescription, BufferKind, CharColumn,
+    BinColumn, BinColumnView, BufferDesc, BufferDescription, CharColumn,
     ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
@@ -66,80 +66,35 @@ pub enum AnyBuffer {
 
 impl AnyBuffer {
     /// Map buffer description to actual buffer.
+    #[deprecated = "Use try_from_desc instead"]
     pub fn try_from_description(
         max_rows: usize,
         desc: BufferDescription,
     ) -> Result<Self, TooLargeBufferSize> {
         let fallible_allocations = true;
-        Self::impl_from_description(max_rows, desc, fallible_allocations)
+        Self::impl_from_desc(max_rows, desc.into(), fallible_allocations)
     }
 
     /// Map buffer description to actual buffer.
+    pub fn try_from_desc(
+        max_rows: usize,
+        desc: BufferDesc,
+    ) -> Result<Self, TooLargeBufferSize> {
+        let fallible_allocations = true;
+        Self::impl_from_desc(max_rows, desc, fallible_allocations)
+    }
+
+    /// Map buffer description to actual buffer.
+    #[deprecated = "Use form_desc instead"]
     pub fn from_description(max_rows: usize, desc: BufferDescription) -> Self {
         let fallible_allocations = false;
-        Self::impl_from_description(max_rows, desc, fallible_allocations).unwrap()
+        Self::impl_from_desc(max_rows, desc.into(), fallible_allocations).unwrap()
     }
 
     /// Map buffer description to actual buffer.
-    fn impl_from_description(
-        max_rows: usize,
-        desc: BufferDescription,
-        fallible_allocations: bool,
-    ) -> Result<Self, TooLargeBufferSize> {
-        let buffer = match (desc.kind, desc.nullable) {
-            (BufferKind::Binary { length }, _) => {
-                if fallible_allocations {
-                    AnyBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
-                } else {
-                    AnyBuffer::Binary(BinColumn::new(max_rows as usize, length))
-                }
-            }
-            (BufferKind::Text { max_str_len }, _) => {
-                if fallible_allocations {
-                    AnyBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
-                } else {
-                    AnyBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
-                }
-            }
-            (BufferKind::WText { max_str_len }, _) => {
-                if fallible_allocations {
-                    AnyBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
-                } else {
-                    AnyBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
-                }
-            }
-            (BufferKind::Date, false) => AnyBuffer::Date(vec![Date::default(); max_rows as usize]),
-            (BufferKind::Time, false) => AnyBuffer::Time(vec![Time::default(); max_rows as usize]),
-            (BufferKind::Timestamp, false) => {
-                AnyBuffer::Timestamp(vec![Timestamp::default(); max_rows as usize])
-            }
-            (BufferKind::F64, false) => AnyBuffer::F64(vec![f64::default(); max_rows as usize]),
-            (BufferKind::F32, false) => AnyBuffer::F32(vec![f32::default(); max_rows as usize]),
-            (BufferKind::I8, false) => AnyBuffer::I8(vec![i8::default(); max_rows as usize]),
-            (BufferKind::I16, false) => AnyBuffer::I16(vec![i16::default(); max_rows as usize]),
-            (BufferKind::I32, false) => AnyBuffer::I32(vec![i32::default(); max_rows as usize]),
-            (BufferKind::I64, false) => AnyBuffer::I64(vec![i64::default(); max_rows as usize]),
-            (BufferKind::U8, false) => AnyBuffer::U8(vec![u8::default(); max_rows as usize]),
-            (BufferKind::Bit, false) => AnyBuffer::Bit(vec![Bit::default(); max_rows as usize]),
-            (BufferKind::Date, true) => {
-                AnyBuffer::NullableDate(OptDateColumn::new(max_rows as usize))
-            }
-            (BufferKind::Time, true) => {
-                AnyBuffer::NullableTime(OptTimeColumn::new(max_rows as usize))
-            }
-            (BufferKind::Timestamp, true) => {
-                AnyBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows as usize))
-            }
-            (BufferKind::F64, true) => AnyBuffer::NullableF64(OptF64Column::new(max_rows as usize)),
-            (BufferKind::F32, true) => AnyBuffer::NullableF32(OptF32Column::new(max_rows as usize)),
-            (BufferKind::I8, true) => AnyBuffer::NullableI8(OptI8Column::new(max_rows as usize)),
-            (BufferKind::I16, true) => AnyBuffer::NullableI16(OptI16Column::new(max_rows as usize)),
-            (BufferKind::I32, true) => AnyBuffer::NullableI32(OptI32Column::new(max_rows as usize)),
-            (BufferKind::I64, true) => AnyBuffer::NullableI64(OptI64Column::new(max_rows as usize)),
-            (BufferKind::U8, true) => AnyBuffer::NullableU8(OptU8Column::new(max_rows as usize)),
-            (BufferKind::Bit, true) => AnyBuffer::NullableBit(OptBitColumn::new(max_rows as usize)),
-        };
-        Ok(buffer)
+    pub fn from_desc(max_rows: usize, desc: BufferDesc) -> Self {
+        let fallible_allocations = false;
+        Self::impl_from_desc(max_rows, desc, fallible_allocations).unwrap()
     }
 
     /// Map buffer description to actual buffer.
@@ -378,7 +333,7 @@ impl ColumnarAnyBuffer {
         let columns = descs
             .into_iter()
             .map(move |desc| {
-                let buffer = AnyBuffer::from_description(capacity, desc);
+                let buffer = AnyBuffer::from_desc(capacity, desc.into());
                 column_index += 1;
                 (column_index, buffer)
             })
@@ -397,7 +352,7 @@ impl ColumnarAnyBuffer {
         let mut column_index = 0;
         let columns = descs
             .map(move |desc| {
-                let buffer = AnyBuffer::try_from_description(capacity, desc)
+                let buffer = AnyBuffer::try_from_desc(capacity, desc.into())
                     .map_err(|source| source.add_context(column_index))?;
                 column_index += 1;
                 Ok((column_index, buffer))
@@ -418,7 +373,7 @@ impl ColumnarAnyBuffer {
             .map(|(col_index, buffer_desc)| {
                 (
                     col_index,
-                    AnyBuffer::from_description(max_rows, buffer_desc),
+                    AnyBuffer::from_desc(max_rows, buffer_desc.into()),
                 )
             })
             .collect();

@@ -194,7 +194,7 @@ where
     ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
         let parameter_buffers = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_description(capacity, desc))
+            .map(|desc| AnyBuffer::from_desc(capacity, desc.into()))
             .collect();
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
     }
@@ -214,7 +214,7 @@ where
 
         let parameter_buffers = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_description(capacity, desc))
+            .map(|desc| AnyBuffer::from_desc(capacity, desc.into()))
             .collect();
         unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
     }
