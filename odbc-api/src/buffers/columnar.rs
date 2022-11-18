@@ -410,20 +410,12 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::buffers::ColumnarAnyBuffer;
-
-    use super::super::{BufferDescription, BufferKind};
+    use crate::buffers::{ColumnarAnyBuffer, BufferDesc};
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]
     fn assert_unique_column_indices() {
-        let bd = BufferDescription {
-            nullable: false,
-            kind: BufferKind::I32,
-        };
-        ColumnarAnyBuffer::from_description_and_indices(
-            1,
-            [(1, bd), (2, bd), (1, bd)].iter().cloned(),
-        );
+        let bd = BufferDesc::I32 { nullable: false };
+        ColumnarAnyBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 }

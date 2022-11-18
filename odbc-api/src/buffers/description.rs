@@ -110,6 +110,46 @@ pub enum BufferDesc {
     },
 }
 
+impl BufferDesc {
+    pub fn from_data_type(data_type: DataType, nullable: bool) -> Option<Self> {
+        let buffer_desc = match data_type {
+            DataType::Numeric { precision, scale }
+            | DataType::Decimal { precision, scale } if scale == 0 && precision < 3 => BufferDesc::I8 { nullable },
+            DataType::Numeric { precision, scale }
+            | DataType::Decimal { precision, scale } if scale == 0 && precision < 10 => BufferDesc::I32 { nullable },
+            DataType::Numeric { precision, scale }
+            | DataType::Decimal { precision, scale } if scale == 0 && precision < 19 => BufferDesc::I64 { nullable },
+            DataType::Integer => BufferDesc::I32 { nullable },
+            DataType::SmallInt => BufferDesc::I16 { nullable },
+            DataType::Float { precision: 0..=24 } | DataType::Real => BufferDesc::F32 { nullable },
+            DataType::Float { precision: 25..=53 } |DataType::Double => BufferDesc::F64 { nullable },
+            DataType::Date => BufferDesc::Date { nullable },
+            DataType::Time { precision: 0 } => BufferDesc::Time { nullable },
+            DataType::Timestamp { precision: _ } => BufferDesc::Timestamp { nullable },
+            DataType::BigInt => BufferDesc::I64 { nullable },
+            DataType::TinyInt => BufferDesc::I8 { nullable },
+            DataType::Bit => BufferDesc::Bit { nullable },
+            DataType::Varbinary { length }
+            | DataType::Binary { length  }
+            | DataType::LongVarbinary { length } => BufferDesc::Binary { length },
+            DataType::Varchar { length }
+            | DataType::WVarchar { length }
+            // Currently no special buffers for fixed lengths text implemented.
+            | DataType::WChar {length }
+            | DataType::Char { length }
+            | DataType::LongVarchar { length } => BufferDesc::Text { max_str_len : length },
+            // Specialized buffers for Numeric and decimal are not yet supported.
+            | DataType::Numeric { precision: _, scale: _ }
+            | DataType::Decimal { precision: _, scale: _ }
+            | DataType::Time { precision: _ } => BufferDesc::Text { max_str_len: data_type.display_size().unwrap() },
+            DataType::Unknown
+            | DataType::Float { precision: _ }
+            | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => return None,
+        };
+        Some(buffer_desc)
+    }
+}
+
 /// Describes a column of a [`crate::buffers::ColumnarBuffer`].
 ///
 /// While related to to the [`crate::DataType`] of the column this is bound to, the Buffer type is
@@ -312,6 +352,7 @@ impl BufferKind {
     ///     Some(BufferKind::Timestamp)
     /// );
     /// ```
+    #[deprecated = "Use BufferDesc::from_data_type instead"]
     pub fn from_data_type(data_type: DataType) -> Option<Self> {
         let buffer_kind = match data_type {
             DataType::Numeric { precision, scale }

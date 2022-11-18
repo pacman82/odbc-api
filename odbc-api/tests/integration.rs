@@ -566,7 +566,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         nullable: true,
     };
     let row_set_buffer =
-        ColumnarAnyBuffer::try_from_description(10, iter::once(buffer_desc)).unwrap();
+        ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc.into())).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
