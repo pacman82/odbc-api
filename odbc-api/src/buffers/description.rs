@@ -152,6 +152,28 @@ impl BufferDescription {
     }
 }
 
+impl From<BufferDescription> for BufferDesc {
+    fn from(source: BufferDescription) -> Self {
+        let nullable = source.nullable;
+        match source.kind {
+            BufferKind::Binary { length } => BufferDesc::Binary { length },
+            BufferKind::Text { max_str_len } => BufferDesc::Text { max_str_len },
+            BufferKind::WText { max_str_len } => BufferDesc::WText { max_str_len },
+            BufferKind::F64 => BufferDesc::F64 { nullable },
+            BufferKind::F32 => BufferDesc::F32 { nullable },
+            BufferKind::Date => BufferDesc::Date { nullable },
+            BufferKind::Time => BufferDesc::Time { nullable },
+            BufferKind::Timestamp => BufferDesc::Timestamp { nullable },
+            BufferKind::I8 => BufferDesc::I8 { nullable },
+            BufferKind::I16 => BufferDesc::I16 { nullable },
+            BufferKind::I32 => BufferDesc::I32 { nullable },
+            BufferKind::I64 => BufferDesc::I64 { nullable },
+            BufferKind::U8 => BufferDesc::U8 { nullable },
+            BufferKind::Bit => BufferDesc::Bit { nullable },
+        }
+    }
+}
+
 /// This class is used together with [`BufferDescription`] to specify the layout of buffers bound to
 /// ODBC cursors and statements.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
