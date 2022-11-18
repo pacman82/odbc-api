@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+* `BufferKind` and `BufferDescription` are now unified to `BufferDesc`.
+
 ## 0.52.0
 
 * `sys::Timestamp` is now directly supported with `get_data`.

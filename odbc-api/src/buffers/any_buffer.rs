@@ -17,8 +17,8 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, BufferDescription, CharColumn,
-    ColumnarBuffer, Item, NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
+    BinColumn, BinColumnView, BufferDesc, BufferDescription, CharColumn, ColumnarBuffer, Item,
+    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -76,10 +76,7 @@ impl AnyBuffer {
     }
 
     /// Map buffer description to actual buffer.
-    pub fn try_from_desc(
-        max_rows: usize,
-        desc: BufferDesc,
-    ) -> Result<Self, TooLargeBufferSize> {
+    pub fn try_from_desc(max_rows: usize, desc: BufferDesc) -> Result<Self, TooLargeBufferSize> {
         let fallible_allocations = true;
         Self::impl_from_desc(max_rows, desc, fallible_allocations)
     }
@@ -325,15 +322,21 @@ pub type ColumnarAnyBuffer = ColumnarBuffer<AnyBuffer>;
 
 impl ColumnarAnyBuffer {
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
+    #[deprecated = "Use from_descs instead"]
     pub fn from_description(
         capacity: usize,
         descs: impl IntoIterator<Item = BufferDescription>,
     ) -> Self {
+        Self::from_descs(capacity, descs.into_iter().map(Into::into))
+    }
+
+    /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
+    pub fn from_descs(capacity: usize, descs: impl IntoIterator<Item = BufferDesc>) -> Self {
         let mut column_index = 0;
         let columns = descs
             .into_iter()
             .map(move |desc| {
-                let buffer = AnyBuffer::from_desc(capacity, desc.into());
+                let buffer = AnyBuffer::from_desc(capacity, desc);
                 column_index += 1;
                 (column_index, buffer)
             })
@@ -345,14 +348,26 @@ impl ColumnarAnyBuffer {
     /// available to allocate the buffers this function fails with
     /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_description`]
     /// which would just panic if not enough memory is available for allocation.
+    #[deprecated = "Use try from descs"]
     pub fn try_from_description(
         capacity: usize,
         descs: impl Iterator<Item = BufferDescription>,
     ) -> Result<Self, Error> {
+        Self::try_from_descs(capacity, descs.map(Into::into))
+    }
+
+    /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions. If not enough memory is
+    /// available to allocate the buffers this function fails with
+    /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_description`]
+    /// which would just panic if not enough memory is available for allocation.
+    pub fn try_from_descs(
+        capacity: usize,
+        descs: impl Iterator<Item = BufferDesc>,
+    ) -> Result<Self, Error> {
         let mut column_index = 0;
         let columns = descs
             .map(move |desc| {
-                let buffer = AnyBuffer::try_from_desc(capacity, desc.into())
+                let buffer = AnyBuffer::try_from_desc(capacity, desc)
                     .map_err(|source| source.add_context(column_index))?;
                 column_index += 1;
                 Ok((column_index, buffer))
@@ -365,16 +380,28 @@ impl ColumnarAnyBuffer {
     /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
     /// result set, by not binding them at all. There is no restriction on the order of column
     /// indices passed, but the function will panic, if the indices are not unique.
+    #[deprecated = "use from_descs_and_indices"]
     pub fn from_description_and_indices(
         max_rows: usize,
         description: impl Iterator<Item = (u16, BufferDescription)>,
     ) -> ColumnarBuffer<AnyBuffer> {
+        Self::from_descs_and_indices(
+            max_rows,
+            description.map(|(index, desc)| (index, desc.into())),
+        )
+    }
+
+    /// Allows you to pass the buffer descriptions together with a one based column index referring
+    /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
+    /// result set, by not binding them at all. There is no restriction on the order of column
+    /// indices passed, but the function will panic, if the indices are not unique.
+    pub fn from_descs_and_indices(
+        max_rows: usize,
+        description: impl Iterator<Item = (u16, BufferDesc)>,
+    ) -> ColumnarBuffer<AnyBuffer> {
         let columns: Vec<_> = description
             .map(|(col_index, buffer_desc)| {
-                (
-                    col_index,
-                    AnyBuffer::from_desc(max_rows, buffer_desc.into()),
-                )
+                (col_index, AnyBuffer::from_desc(max_rows, buffer_desc))
             })
             .collect();
 
