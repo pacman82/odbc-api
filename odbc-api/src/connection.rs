@@ -757,7 +757,7 @@ pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
         // Surround the string with curly braces ('{','}') and escape every closing curly brace by
         // repeating it.
         let escaped = unescaped.replace('}', "}}");
-        Cow::Owned(format!("{{{}}}", escaped))
+        Cow::Owned(format!("{{{escaped}}}"))
     } else {
         Cow::Borrowed(unescaped)
     }
