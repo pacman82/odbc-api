@@ -10,8 +10,8 @@ use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item,
-        TextColumn, TextRowSet,
+        BufferDesc, BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer, Indicator,
+        Item, TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
@@ -559,14 +559,9 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
     assert_eq!(DataType::Varbinary { length: 10 }, data_type);
-    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
-    assert_eq!(BufferKind::Binary { length: 10 }, buffer_kind);
-    let buffer_desc = BufferDescription {
-        kind: buffer_kind,
-        nullable: true,
-    };
-    let row_set_buffer =
-        ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc.into())).unwrap();
+    let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
+    assert_eq!(BufferDesc::Binary { length: 10 }, buffer_desc);
+    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
@@ -630,14 +625,9 @@ fn columnar_fetch_binary(profile: &Profile) {
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
     assert_eq!(DataType::Binary { length: 5 }, data_type);
-    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
-    assert_eq!(BufferKind::Binary { length: 5 }, buffer_kind);
-    let buffer_desc = BufferDescription {
-        kind: buffer_kind,
-        nullable: true,
-    };
-    let row_set_buffer =
-        ColumnarAnyBuffer::try_from_description(10, iter::once(buffer_desc)).unwrap();
+    let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
+    assert_eq!(BufferDesc::Binary { length: 5 }, buffer_desc);
+    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
@@ -677,14 +667,9 @@ fn columnar_fetch_timestamp(profile: &Profile) {
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
     assert_eq!(DataType::Timestamp { precision: 3 }, data_type);
-    let buffer_kind = BufferKind::from_data_type(data_type).unwrap();
-    assert_eq!(BufferKind::Timestamp, buffer_kind);
-    let buffer_desc = BufferDescription {
-        kind: buffer_kind,
-        nullable: true,
-    };
-    let row_set_buffer =
-        ColumnarAnyBuffer::try_from_description(10, iter::once(buffer_desc)).unwrap();
+    let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
+    assert_eq!(BufferDesc::Timestamp { nullable: true }, buffer_desc);
+    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_nullable_slice().unwrap();
@@ -1423,11 +1408,8 @@ fn wchar(profile: &Profile) {
     let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
-    let desc = BufferDescription {
-        nullable: false,
-        kind: BufferKind::WText { max_str_len: 1 },
-    };
-    let row_set_buffer = ColumnarAnyBuffer::try_from_description(2, iter::once(desc)).unwrap();
+    let desc = BufferDesc::WText { max_str_len: 1 };
+    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(2, iter::once(desc)).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let col = batch.column(0);
@@ -1890,17 +1872,10 @@ fn read_into_columnar_buffer(profile: &Profile) {
         .unwrap();
 
     let buffer_description = [
-        BufferDescription {
-            kind: BufferKind::I32,
-            nullable: true,
-        },
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::Text { max_str_len: 20 },
-        },
+        BufferDesc::I32 { nullable: true },
+        BufferDesc::Text { max_str_len: 20 },
     ];
-    let buffer =
-        ColumnarAnyBuffer::try_from_description(20, buffer_description.iter().copied()).unwrap();
+    let buffer = ColumnarAnyBuffer::try_from_descs(20, buffer_description.iter().copied()).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     // Assert existence of first batch
     let batch = cursor.fetch().unwrap().unwrap();
@@ -1930,12 +1905,11 @@ fn ignore_output_column(profile: &Profile) {
         .unwrap()
         .unwrap();
 
-    let bd = BufferDescription {
-        kind: BufferKind::I32,
+    let bd = BufferDesc::I32 {
         nullable: true,
     };
     let buffer =
-        ColumnarAnyBuffer::from_description_and_indices(20, [(1, bd), (3, bd)].iter().copied());
+        ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
 
     // Assert that there is no batch.
