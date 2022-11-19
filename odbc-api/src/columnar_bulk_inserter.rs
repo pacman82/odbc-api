@@ -44,13 +44,16 @@ where
         let mut parameter_number = 1;
         // Bind buffers to statement.
         for column in &parameters {
-            stmt.bind_input_parameter(parameter_number, column)
+            if let Err(error) = stmt.bind_input_parameter(parameter_number, column).into_result(&stmt) {
                 // This early return using `?` is risky. We actually did bind some parameters
-                // already. They would be invalid and we can not guarantee their correctness.
-                // However we get away with this, because we take ownership of the statement, and it
-                // is destroyed should the constructor not succeed. However this logic would need to
-                // be adapted if we ever borrow the statement instead.
-                .into_result(&stmt)?;
+                // already. We cannot guarantee that the bound pointers stay valid in case of an
+                // error since `Self` is never constructed. We would away with this, if we took
+                // ownership of the statement and it is destroyed should the constructor not
+                // succeed. However columnar bulk inserter can also be instantiated with borrowed
+                // statements. This is why we reset the parameters on error.
+                stmt.reset_parameters();
+                return Err(error);
+            }
             parameter_number += 1;
         }
         let capacity = parameters
