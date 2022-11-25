@@ -410,7 +410,7 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::buffers::{ColumnarAnyBuffer, BufferDesc};
+    use crate::buffers::{BufferDesc, ColumnarAnyBuffer};
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]

@@ -44,7 +44,10 @@ where
         let mut parameter_number = 1;
         // Bind buffers to statement.
         for column in &parameters {
-            if let Err(error) = stmt.bind_input_parameter(parameter_number, column).into_result(&stmt) {
+            if let Err(error) = stmt
+                .bind_input_parameter(parameter_number, column)
+                .into_result(&stmt)
+            {
                 // This early return using `?` is risky. We actually did bind some parameters
                 // already. We cannot guarantee that the bound pointers stay valid in case of an
                 // error since `Self` is never constructed. We would away with this, if we took

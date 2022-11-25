@@ -1,19 +1,15 @@
 use std::iter;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use odbc_api::buffers::{ColumnarAnyBuffer, BufferDesc};
+use odbc_api::buffers::{BufferDesc, ColumnarAnyBuffer};
 
 fn falliable_buffer_allocation(capacity: usize, max_str_len: usize) {
-    let description = BufferDesc::Text{
-        max_str_len
-    };
+    let description = BufferDesc::Text { max_str_len };
     ColumnarAnyBuffer::try_from_descs(capacity, iter::once(description)).unwrap();
 }
 
 fn infalliable_buffer_allocation(capacity: usize, max_str_len: usize) {
-    let description = BufferDesc::Text{
-        max_str_len
-    };
+    let description = BufferDesc::Text { max_str_len };
     ColumnarAnyBuffer::from_descs(capacity, [description]);
 }
 

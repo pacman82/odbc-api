@@ -365,7 +365,8 @@ impl ColumnarAnyBuffer {
         descs: impl IntoIterator<Item = BufferDesc>,
     ) -> Result<Self, Error> {
         let mut column_index = 0;
-        let columns = descs.into_iter()
+        let columns = descs
+            .into_iter()
             .map(move |desc| {
                 let buffer = AnyBuffer::try_from_desc(capacity, desc)
                     .map_err(|source| source.add_context(column_index))?;
