@@ -1905,11 +1905,8 @@ fn ignore_output_column(profile: &Profile) {
         .unwrap()
         .unwrap();
 
-    let bd = BufferDesc::I32 {
-        nullable: true,
-    };
-    let buffer =
-        ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
+    let bd = BufferDesc::I32 { nullable: true };
+    let buffer = ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
 
     // Assert that there is no batch.
@@ -2952,13 +2949,9 @@ fn columns_query(profile: &Profile, schema: &str) {
         .setup_empty_table(&table_name, &["VARCHAR(10)"])
         .unwrap();
 
-    let row_set_buffer = ColumnarAnyBuffer::try_from_description(
-        2,
-        conn.columns_buffer_description(255, 255, 255)
-            .unwrap()
-            .into_iter(),
-    )
-    .unwrap();
+    let row_set_buffer =
+        ColumnarAnyBuffer::try_from_descs(2, conn.columns_buffer_descs(255, 255, 255).unwrap())
+            .unwrap();
     // Mariadb does not support schemas
     let columns = conn
         .columns(&conn.current_catalog().unwrap(), schema, &table_name, "a")
@@ -3000,17 +2993,11 @@ fn fill_vec_of_rows(profile: &Profile) {
     let query_sql = format!("SELECT a,b FROM {}", table_name);
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let buf_desc = [
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::Text { max_str_len: 50 },
-        },
-        BufferDescription {
-            nullable: false,
-            kind: BufferKind::I32,
-        },
+        BufferDesc::Text { max_str_len: 50 },
+        BufferDesc::I32 { nullable: false },
     ];
 
-    let buffer = ColumnarAnyBuffer::try_from_description(1, buf_desc.iter().copied()).unwrap();
+    let buffer = ColumnarAnyBuffer::try_from_descs(1, buf_desc).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
 
     let mut actual = Vec::new();
@@ -3152,10 +3139,11 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
         cursor
             .describe_col(index as u16 + 1, &mut column_description)
             .unwrap();
-        let buffer_description = BufferDescription {
-            kind: BufferKind::from_data_type(column_description.data_type).unwrap(),
-            nullable: column_description.could_be_nullable(),
-        };
+        let buffer_description = BufferDesc::from_data_type(
+            column_description.data_type,
+            column_description.could_be_nullable(),
+        )
+        .unwrap();
         size_of_row += buffer_description.bytes_per_row();
     }
     assert_eq!(expected_row_size_in_bytes, size_of_row)
@@ -3172,12 +3160,9 @@ fn row_array_size_66536(profile: &Profile) {
     let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
     let sql = format!("SELECT a FROM {}", table_name);
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
-    let row_set_buffer = ColumnarAnyBuffer::try_from_description(
+    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(
         u16::MAX as usize + 1,
-        iter::once(BufferDescription {
-            kind: BufferKind::Bit,
-            nullable: false,
-        }),
+        [BufferDesc::Bit { nullable: false }],
     )
     .unwrap();
     assert!(cursor.bind_buffer(row_set_buffer).is_ok())
@@ -3241,14 +3226,8 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
         .execute(&format!("SELECT a FROM {table_name}"), ())
         .unwrap() // Unwrap Result
         .unwrap(); // Unwrap Option, we know a select statement to produce a cursor.
-    let buffer = ColumnarAnyBuffer::try_from_description(
-        3,
-        iter::once(BufferDescription {
-            kind: BufferKind::I32,
-            nullable: true,
-        }),
-    )
-    .unwrap();
+    let buffer =
+        ColumnarAnyBuffer::try_from_descs(3, [BufferDesc::I32 { nullable: true }]).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let nullable_slice = batch.column(0).as_nullable_slice::<i32>().unwrap();
@@ -3299,14 +3278,8 @@ fn text_column_view_should_allow_for_filling_arrow_arrays(profile: &Profile) {
         .unwrap()
         .unwrap();
 
-    let columnar_buffer = ColumnarAnyBuffer::try_from_description(
-        10,
-        iter::once(BufferDescription {
-            kind: BufferKind::Text { max_str_len: 50 },
-            nullable: true,
-        }),
-    )
-    .unwrap();
+    let columnar_buffer =
+        ColumnarAnyBuffer::try_from_descs(10, [BufferDesc::Text { max_str_len: 50 }]).unwrap();
 
     let mut cursor = cursor.bind_buffer(columnar_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
@@ -3359,12 +3332,8 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     .unwrap();
 
     // When fetching that field as part of a bulk, but with a buffer of only length 5.
-    let buffer_description = BufferDescription {
-        nullable: true,
-        kind: BufferKind::Text { max_str_len: 5 },
-    };
-    let buffer =
-        ColumnarAnyBuffer::try_from_description(1, iter::once(buffer_description)).unwrap();
+    let buffer_description = BufferDesc::Text { max_str_len: 5 };
+    let buffer = ColumnarAnyBuffer::try_from_descs(1, [buffer_description]).unwrap();
     let query = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();

@@ -148,6 +148,28 @@ impl BufferDesc {
         };
         Some(buffer_desc)
     }
+
+    /// Returns the element size of such a buffer if bound as a columnar row. Can be used to
+    /// estimate memory for columnar bindings.
+    pub fn bytes_per_row(&self) -> usize {
+        let size_indicator = |nullable: bool| if nullable { size_of::<isize>() } else { 0 };
+        match *self {
+            BufferDesc::Binary { length } => length + size_indicator(true),
+            BufferDesc::Text { max_str_len } => max_str_len + 1 + size_indicator(true),
+            BufferDesc::WText { max_str_len } => (max_str_len + 1) * 2 + size_indicator(true),
+            BufferDesc::F64 { nullable } => size_of::<f64>() + size_indicator(nullable),
+            BufferDesc::F32 { nullable } => size_of::<f32>() + size_indicator(nullable),
+            BufferDesc::Date { nullable } => size_of::<Date>() + size_indicator(nullable),
+            BufferDesc::Time { nullable } => size_of::<Time>() + size_indicator(nullable),
+            BufferDesc::Timestamp { nullable } => size_of::<Timestamp>() + size_indicator(nullable),
+            BufferDesc::I8 { nullable } => size_of::<i8>() + size_indicator(nullable),
+            BufferDesc::I16 { nullable } => size_of::<i16>() + size_indicator(nullable),
+            BufferDesc::I32 { nullable } => size_of::<i32>() + size_indicator(nullable),
+            BufferDesc::I64 { nullable } => size_of::<i64>() + size_indicator(nullable),
+            BufferDesc::U8 { nullable } => size_of::<u8>() + size_indicator(nullable),
+            BufferDesc::Bit { nullable } => size_of::<Bit>() + size_indicator(nullable),
+        }
+    }
 }
 
 /// Describes a column of a [`crate::buffers::ColumnarBuffer`].
@@ -171,24 +193,8 @@ impl BufferDescription {
     /// Returns the element size of such a buffer if bound as a columnar row. Can be used to
     /// estimate memory for columnar bindings.
     pub fn bytes_per_row(&self) -> usize {
-        let indicator = size_of::<isize>();
-        let opt_indicator = if self.nullable { indicator } else { 0 };
-        match self.kind {
-            BufferKind::Binary { length } => length + indicator,
-            BufferKind::Text { max_str_len } => max_str_len + 1 + indicator,
-            BufferKind::WText { max_str_len } => (max_str_len + 1) * 2 + indicator,
-            BufferKind::F64 => size_of::<f64>() + opt_indicator,
-            BufferKind::F32 => size_of::<f32>() + opt_indicator,
-            BufferKind::Date => size_of::<Date>() + opt_indicator,
-            BufferKind::Time => size_of::<Time>() + opt_indicator,
-            BufferKind::Timestamp => size_of::<Timestamp>() + opt_indicator,
-            BufferKind::I8 => size_of::<i8>() + opt_indicator,
-            BufferKind::I16 => size_of::<i16>() + opt_indicator,
-            BufferKind::I32 => size_of::<i32>() + opt_indicator,
-            BufferKind::I64 => size_of::<i64>() + opt_indicator,
-            BufferKind::U8 => size_of::<u8>() + opt_indicator,
-            BufferKind::Bit => size_of::<Bit>() + opt_indicator,
-        }
+        let conv: BufferDesc = (*self).into();
+        conv.bytes_per_row()
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    buffers::{BufferDescription, BufferKind},
+    buffers::{BufferDesc, BufferDescription, BufferKind},
     execute::{
         execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
     },
@@ -580,6 +580,99 @@ impl<'c> Connection<'c> {
     /// * `type_name_max_len` - The maximum expected length of type names.
     /// * `remarks_max_len` - The maximum expected length of remarks.
     /// * `column_default_max_len` - The maximum expected length of column defaults.
+    pub fn columns_buffer_descs(
+        &self,
+        type_name_max_len: usize,
+        remarks_max_len: usize,
+        column_default_max_len: usize,
+    ) -> Result<Vec<BufferDesc>, Error> {
+        let null_i16 = BufferDesc::I16 { nullable: true };
+
+        let not_null_i16 = BufferDesc::I16 { nullable: false };
+
+        let null_i32 = BufferDesc::I32 { nullable: true };
+
+        // The definitions for these descriptions are taken from the documentation of `SQLColumns`
+        // located at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
+        let catalog_name_desc = BufferDesc::Text {
+            max_str_len: self.max_catalog_name_len()? as usize,
+        };
+
+        let schema_name_desc = BufferDesc::Text {
+            max_str_len: self.max_schema_name_len()? as usize,
+        };
+
+        let table_name_desc = BufferDesc::Text {
+            max_str_len: self.max_table_name_len()? as usize,
+        };
+
+        let column_name_desc = BufferDesc::Text {
+            max_str_len: self.max_column_name_len()? as usize,
+        };
+
+        let data_type_desc = not_null_i16;
+
+        let type_name_desc = BufferDesc::Text {
+            max_str_len: type_name_max_len,
+        };
+
+        let column_size_desc = null_i32;
+        let buffer_len_desc = null_i32;
+        let decimal_digits_desc = null_i16;
+        let precision_radix_desc = null_i16;
+        let nullable_desc = not_null_i16;
+
+        let remarks_desc = BufferDesc::Text {
+            max_str_len: remarks_max_len,
+        };
+
+        let column_default_desc = BufferDesc::Text {
+            max_str_len: column_default_max_len,
+        };
+
+        let sql_data_type_desc = not_null_i16;
+        let sql_datetime_sub_desc = null_i16;
+        let char_octet_len_desc = null_i32;
+        let ordinal_pos_desc = BufferDesc::I32 { nullable: false };
+
+        // We expect strings to be `YES`, `NO`, or a zero-length string, so `3` should be
+        // sufficient.
+        const IS_NULLABLE_LEN_MAX_LEN: usize = 3;
+        let is_nullable_desc = BufferDesc::Text {
+            max_str_len: IS_NULLABLE_LEN_MAX_LEN,
+        };
+
+        Ok(vec![
+            catalog_name_desc,
+            schema_name_desc,
+            table_name_desc,
+            column_name_desc,
+            data_type_desc,
+            type_name_desc,
+            column_size_desc,
+            buffer_len_desc,
+            decimal_digits_desc,
+            precision_radix_desc,
+            nullable_desc,
+            remarks_desc,
+            column_default_desc,
+            sql_data_type_desc,
+            sql_datetime_sub_desc,
+            char_octet_len_desc,
+            ordinal_pos_desc,
+            is_nullable_desc,
+        ])
+    }
+
+    /// The buffer descriptions for all standard buffers (not including extensions) returned in the
+    /// columns query (e.g. [`Connection::columns`]).
+    ///
+    /// # Arguments
+    ///
+    /// * `type_name_max_len` - The maximum expected length of type names.
+    /// * `remarks_max_len` - The maximum expected length of remarks.
+    /// * `column_default_max_len` - The maximum expected length of column defaults.
+    #[deprecated = "Use columns_buffer_descs instead"]
     pub fn columns_buffer_description(
         &self,
         type_name_max_len: usize,
