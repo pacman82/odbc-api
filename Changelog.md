@@ -1,8 +1,10 @@
 # Changelog
 
-## Next
+## 0.52.1
 
 * `BufferKind` and `BufferDescription` are now unified to `BufferDesc`.
+* Renamed `RowSetCursor` into `BlockCursor`.
+* Fix: `ColumnarBulkInserter::new` now resets all parameters on the statement handle in case it fails. This prevents accessing the bound parameters on a borrowed statement handle after the constructor failed, at which point their valididty is no longer guaranteed.
 
 ## 0.52.0
 
