@@ -73,7 +73,7 @@ winit = "0.27.5"
 
 [dev-dependencies]
 lazy_static = "1.4.0"
-env_logger = "0.9.3"
+env_logger = "0.10.0"
 anyhow = "1.0.66"
 csv = "1.1.6"
 test-case = "2.2.1"

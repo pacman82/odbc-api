@@ -149,8 +149,8 @@ impl BufferDesc {
         Some(buffer_desc)
     }
 
-    /// Returns the element size of such a buffer if bound as a columnar row. Can be used to
-    /// estimate memory for columnar bindings.
+    /// Element size of buffer if bound as a columnar row. Can be used to estimate memory for
+    /// columnar bindings.
     pub fn bytes_per_row(&self) -> usize {
         let size_indicator = |nullable: bool| if nullable { size_of::<isize>() } else { 0 };
         match *self {
