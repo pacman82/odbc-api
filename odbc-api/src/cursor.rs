@@ -68,7 +68,7 @@ pub trait Cursor: ResultSetMetadata {
     }
 
     /// Binds this cursor to a buffer holding a row set.
-    fn bind_buffer<B>(self, row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
+    fn bind_buffer<B>(self, row_set_buffer: B) -> Result<BlockCursor<Self, B>, Error>
     where
         Self: Sized,
         B: RowSetBuffer;
@@ -270,7 +270,7 @@ impl<S> Cursor for CursorImpl<S>
 where
     S: AsStatementRef,
 {
-    fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<RowSetCursor<Self, B>, Error>
+    fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<BlockCursor<Self, B>, Error>
     where
         B: RowSetBuffer,
     {
@@ -278,7 +278,7 @@ where
         unsafe {
             bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
         }
-        Ok(RowSetCursor::new(row_set_buffer, self))
+        Ok(BlockCursor::new(row_set_buffer, self))
     }
 }
 
@@ -357,14 +357,17 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 }
 
+#[deprecated = "Use new name BlockCursor instead"]
+pub type RowSetCursor<C, B> = BlockCursor<C, B>;
+
 /// Iterates in blocks (called row sets) over a result set, filling a buffers with a lot of rows at
 /// once, instead of iterating the result set row by row. This is usually much faster.
-pub struct RowSetCursor<C: AsStatementRef, B> {
+pub struct BlockCursor<C: AsStatementRef, B> {
     buffer: B,
     cursor: C,
 }
 
-impl<C, B> RowSetCursor<C, B>
+impl<C, B> BlockCursor<C, B>
 where
     C: Cursor,
 {
@@ -435,7 +438,7 @@ where
     }
 }
 
-impl<C, B> Drop for RowSetCursor<C, B>
+impl<C, B> Drop for BlockCursor<C, B>
 where
     C: AsStatementRef,
 {
