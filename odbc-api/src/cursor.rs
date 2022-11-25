@@ -360,8 +360,25 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
 #[deprecated = "Use new name BlockCursor instead"]
 pub type RowSetCursor<C, B> = BlockCursor<C, B>;
 
-/// Iterates in blocks (called row sets) over a result set, filling a buffers with a lot of rows at
-/// once, instead of iterating the result set row by row. This is usually much faster.
+/// In order to safe on network overhead, it is recommended to use block cursors instead of fetching
+/// values individually. This can greatly reduce the time applications need to fetch data. You can
+/// create a block cursor by binding preallocated memory to a cursor using [`Cursor::bind_buffer`].
+/// A block cursor safes on a lot of IO overhead by fetching an entire set of rows (called *rowset*)
+/// at once into the buffer bound to it. Reusing the same buffer for each rowset also safes on
+/// allocations. A challange with using block cursors might be database schemas with columns there
+/// individual fields can be very large. In these cases developers can choose to:
+/// 
+/// 1. Reserve less memory for each individual field than the schema indicates and deciding on a
+///    sensible upper bound themselfes. This risks truncation of values though, if they are larger
+///    than the upper bound. Using [`BlockCursor::fetch_with_truncation_check`] instead of
+///    [`Cursor::next_row`] your appliacation can detect these truncations. This is usually the best
+///    choice, since individual fields in a table rarerly actuallly take up several GiB of memory.
+/// 2. Calculate the number of rows dynamically based on the maximum expected row size.
+///    [`crate::buffers::BufferDesc::bytes_per_row`], can be helpful with this task.
+/// 3. Not use block cursors and fetch rows slowly with high IO overhead. Calling
+///    [`CursorRow::get_data`] and [`CursorRow::get_text`] to fetch large individual values.
+/// 
+/// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/block-cursors>
 pub struct BlockCursor<C: AsStatementRef, B> {
     buffer: B,
     cursor: C,
@@ -491,7 +508,7 @@ where
     pub fn bind_buffer<B>(
         mut self,
         mut row_set_buffer: B,
-    ) -> Result<RowSetCursorPolling<Self, B>, Error>
+    ) -> Result<BlockCursorPolling<Self, B>, Error>
     where
         B: RowSetBuffer,
     {
@@ -499,7 +516,7 @@ where
         unsafe {
             bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
         }
-        Ok(RowSetCursorPolling::new(row_set_buffer, self))
+        Ok(BlockCursorPolling::new(row_set_buffer, self))
     }
 }
 
@@ -528,10 +545,13 @@ where
     }
 }
 
+#[deprecated = "Use new name BlockCursorPolling instead"]
+pub type RowSetCursorPolling<C,B> = BlockCursorPolling<C,B>;
+
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
-/// faster. Asynchronous sibiling of [`self::RowSetCursor`].
-pub struct RowSetCursorPolling<C, B>
+/// faster. Asynchronous sibiling of [`self::BlockCursor`].
+pub struct BlockCursorPolling<C, B>
 where
     C: AsStatementRef,
 {
@@ -539,7 +559,7 @@ where
     cursor: C,
 }
 
-impl<C, B> RowSetCursorPolling<C, B>
+impl<C, B> BlockCursorPolling<C, B>
 where
     C: AsStatementRef,
 {
@@ -631,7 +651,7 @@ fn error_handling_for_fetch(
     Ok(has_row)
 }
 
-impl<C, B> Drop for RowSetCursorPolling<C, B>
+impl<C, B> Drop for BlockCursorPolling<C, B>
 where
     C: AsStatementRef,
 {

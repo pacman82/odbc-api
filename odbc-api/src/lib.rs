@@ -31,7 +31,7 @@ pub use self::{
     connection::{escape_attribute_value, Connection},
     cursor::{
         Cursor, CursorImpl, CursorPolling, CursorRow, RowSetBuffer, BlockCursor,
-        RowSetCursorPolling, RowSetCursor
+        BlockCursorPolling, RowSetCursor, RowSetCursorPolling
     },
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
