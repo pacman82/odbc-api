@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.52.2
+
+* Introduced associated method `Item::buffer_desc` to replace `Item::BUFFER_KIND`.
+
 ## 0.52.1
 
 * `BufferKind` and `BufferDescription` are now unified to `BufferDesc`.

@@ -1,6 +1,6 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnySlice, AnySliceMut, BufferKind, NullableSlice, NullableSliceMut};
+use super::{AnySlice, AnySliceMut, BufferDesc, BufferKind, NullableSlice, NullableSliceMut};
 use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
@@ -9,7 +9,11 @@ use crate::Bit;
 pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
     /// instantiate a [`super::ColumnarBuffer`].
+    #[deprecated = "Use associated method buffer_desc instead."]
     const BUFFER_KIND: BufferKind;
+
+    /// Can be used to instantiate a [`super::ColumnarBuffer`].
+    fn buffer_desc(nullable: bool) -> BufferDesc;
 
     /// Extract the array type from an [`AnySlice`].
     fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]>;
@@ -27,6 +31,10 @@ macro_rules! impl_item {
     ($t:ident, $plain:ident, $null:ident) => {
         impl Item for $t {
             const BUFFER_KIND: BufferKind = BufferKind::$plain;
+
+            fn buffer_desc(nullable: bool) -> BufferDesc {
+                BufferDesc::$plain { nullable }
+            }
 
             fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]> {
                 match variant {
