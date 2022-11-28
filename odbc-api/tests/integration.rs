@@ -925,13 +925,12 @@ fn columnar_insert_varchar(profile: &Profile) {
     let prepared = conn
         .prepare(&format!("INSERT INTO {} (a) VALUES (?)", table_name))
         .unwrap();
-    let desc = BufferDescription {
+    let desc = BufferDesc::Text {
         // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
         // not work.
-        kind: BufferKind::Text { max_str_len: 5 },
-        nullable: true,
+        max_str_len: 5
     };
-    let mut prebound = prepared.into_any_column_inserter(4, [desc]).unwrap();
+    let mut prebound = prepared.into_column_inserter(4, [desc]).unwrap();
     // Fill buffer with values
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.

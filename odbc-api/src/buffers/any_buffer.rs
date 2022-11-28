@@ -17,9 +17,12 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, BufferDescription, CharColumn, ColumnarBuffer, Item,
+    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Item,
     NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
+
+#[allow(deprecated)]
+use super::BufferDescription;
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
 /// not know the precise SQL type. In order to still be able to bind time / timestamp buffer as
@@ -67,6 +70,7 @@ pub enum AnyBuffer {
 impl AnyBuffer {
     /// Map buffer description to actual buffer.
     #[deprecated = "Use try_from_desc instead"]
+    #[allow(deprecated)]
     pub fn try_from_description(
         max_rows: usize,
         desc: BufferDescription,
@@ -83,6 +87,7 @@ impl AnyBuffer {
 
     /// Map buffer description to actual buffer.
     #[deprecated = "Use form_desc instead"]
+    #[allow(deprecated)]
     pub fn from_description(max_rows: usize, desc: BufferDescription) -> Self {
         let fallible_allocations = false;
         Self::impl_from_desc(max_rows, desc.into(), fallible_allocations).unwrap()
@@ -323,6 +328,7 @@ pub type ColumnarAnyBuffer = ColumnarBuffer<AnyBuffer>;
 impl ColumnarAnyBuffer {
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
     #[deprecated = "Use from_descs instead"]
+    #[allow(deprecated)]
     pub fn from_description(
         capacity: usize,
         descs: impl IntoIterator<Item = BufferDescription>,
@@ -349,6 +355,7 @@ impl ColumnarAnyBuffer {
     /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_description`]
     /// which would just panic if not enough memory is available for allocation.
     #[deprecated = "Use try from descs"]
+    #[allow(deprecated)]
     pub fn try_from_description(
         capacity: usize,
         descs: impl Iterator<Item = BufferDescription>,
@@ -382,6 +389,7 @@ impl ColumnarAnyBuffer {
     /// result set, by not binding them at all. There is no restriction on the order of column
     /// indices passed, but the function will panic, if the indices are not unique.
     #[deprecated = "use from_descs_and_indices"]
+    #[allow(deprecated)]
     pub fn from_description_and_indices(
         max_rows: usize,
         description: impl Iterator<Item = (u16, BufferDescription)>,

@@ -1,7 +1,10 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnySlice, AnySliceMut, BufferDesc, BufferKind, NullableSlice, NullableSliceMut};
+use super::{AnySlice, AnySliceMut, BufferDesc, NullableSlice, NullableSliceMut};
 use crate::Bit;
+
+#[allow(deprecated)]
+use super::BufferKind;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
 /// the user to avoid matching on all possibile variants of an [`AnySlice`] in case the
@@ -10,6 +13,7 @@ pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
     /// instantiate a [`super::ColumnarBuffer`].
     #[deprecated = "Use associated method buffer_desc instead."]
+    #[allow(deprecated)]
     const BUFFER_KIND: BufferKind;
 
     /// Can be used to instantiate a [`super::ColumnarBuffer`].
@@ -30,6 +34,7 @@ pub trait Item: Sized + Copy {
 macro_rules! impl_item {
     ($t:ident, $plain:ident, $null:ident) => {
         impl Item for $t {
+            #[allow(deprecated)]
             const BUFFER_KIND: BufferKind = BufferKind::$plain;
 
             fn buffer_desc(nullable: bool) -> BufferDesc {

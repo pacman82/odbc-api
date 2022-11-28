@@ -181,6 +181,7 @@ impl BufferDesc {
 /// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
 #[deprecated = "Use BufferDesc instead."]
+#[allow(deprecated)]
 #[derive(Clone, Copy, Debug)]
 pub struct BufferDescription {
     /// This indicates whether or not the buffer will be able to represent NULL values. This will
@@ -190,6 +191,7 @@ pub struct BufferDescription {
     pub kind: BufferKind,
 }
 
+#[allow(deprecated)]
 impl BufferDescription {
     /// Returns the element size of such a buffer if bound as a columnar row. Can be used to
     /// estimate memory for columnar bindings.
@@ -199,6 +201,7 @@ impl BufferDescription {
     }
 }
 
+#[allow(deprecated)]
 impl From<BufferDescription> for BufferDesc {
     fn from(source: BufferDescription) -> Self {
         let nullable = source.nullable;
@@ -278,6 +281,7 @@ pub enum BufferKind {
     Bit,
 }
 
+#[allow(deprecated)]
 impl BufferKind {
     /// Describe a buffer which fits best the SQL Data Type.
     ///
@@ -361,6 +365,7 @@ impl BufferKind {
     /// );
     /// ```
     #[deprecated = "Use BufferDesc::from_data_type instead"]
+    #[allow(deprecated)]
     pub fn from_data_type(data_type: DataType) -> Option<Self> {
         let buffer_kind = match data_type {
             DataType::Numeric { precision, scale }
@@ -408,22 +413,29 @@ mod tests {
     #[test]
     #[cfg(target_pointer_width = "64")] // Indicator size is platform dependent.
     fn bytes_per_row() {
-        let bpr = |kind, nullable| BufferDescription { nullable, kind }.bytes_per_row();
-
-        assert_eq!(5 + 8, bpr(BufferKind::Binary { length: 5 }, false));
-        assert_eq!(5 + 1 + 8, bpr(BufferKind::Text { max_str_len: 5 }, false));
-        assert_eq!(10 + 2 + 8, bpr(BufferKind::WText { max_str_len: 5 }, false));
-        assert_eq!(6, bpr(BufferKind::Date, false));
-        assert_eq!(6, bpr(BufferKind::Time, false));
-        assert_eq!(16, bpr(BufferKind::Timestamp, false));
-        assert_eq!(1, bpr(BufferKind::Bit, false));
-        assert_eq!(1 + 8, bpr(BufferKind::Bit, true));
-        assert_eq!(4, bpr(BufferKind::F32, false));
-        assert_eq!(8, bpr(BufferKind::F64, false));
-        assert_eq!(1, bpr(BufferKind::I8, false));
-        assert_eq!(2, bpr(BufferKind::I16, false));
-        assert_eq!(4, bpr(BufferKind::I32, false));
-        assert_eq!(8, bpr(BufferKind::I64, false));
-        assert_eq!(1, bpr(BufferKind::U8, false));
+        assert_eq!(5 + 8, BufferDesc::Binary { length: 5 }.bytes_per_row());
+        assert_eq!(
+            5 + 1 + 8,
+            BufferDesc::Text { max_str_len: 5 }.bytes_per_row()
+        );
+        assert_eq!(
+            10 + 2 + 8,
+            BufferDesc::WText { max_str_len: 5 }.bytes_per_row()
+        );
+        assert_eq!(6, BufferDesc::Date { nullable: false }.bytes_per_row());
+        assert_eq!(6, BufferDesc::Time { nullable: false }.bytes_per_row());
+        assert_eq!(
+            16,
+            BufferDesc::Timestamp { nullable: false }.bytes_per_row()
+        );
+        assert_eq!(1, BufferDesc::Bit { nullable: false }.bytes_per_row());
+        assert_eq!(1 + 8, BufferDesc::Bit { nullable: true }.bytes_per_row());
+        assert_eq!(4, BufferDesc::F32 { nullable: false }.bytes_per_row());
+        assert_eq!(8, BufferDesc::F64 { nullable: false }.bytes_per_row());
+        assert_eq!(1, BufferDesc::I8 { nullable: false }.bytes_per_row());
+        assert_eq!(2, BufferDesc::I16 { nullable: false }.bytes_per_row());
+        assert_eq!(4, BufferDesc::I32 { nullable: false }.bytes_per_row());
+        assert_eq!(8, BufferDesc::I64 { nullable: false }.bytes_per_row());
+        assert_eq!(1, BufferDesc::U8 { nullable: false }.bytes_per_row());
     }
 }

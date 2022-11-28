@@ -31,7 +31,7 @@ pub use self::{
     connection::{escape_attribute_value, Connection},
     cursor::{
         BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow,
-        RowSetBuffer, RowSetCursor, RowSetCursorPolling,
+        RowSetBuffer
     },
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
@@ -54,3 +54,6 @@ pub use force_send_sync;
 /// crate.
 pub use odbc_sys as sys;
 pub use widestring::{U16Str, U16String};
+
+#[allow(deprecated)]
+pub use crate::cursor::{RowSetCursor, RowSetCursorPolling};

@@ -1,5 +1,5 @@
 use crate::{
-    buffers::{BufferDesc, BufferDescription, BufferKind},
+    buffers::BufferDesc,
     execute::{
         execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
     },
@@ -9,6 +9,9 @@ use crate::{
 };
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
+
+#[allow(deprecated)]
+use crate::buffers::{BufferDescription, BufferKind};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -673,6 +676,7 @@ impl<'c> Connection<'c> {
     /// * `remarks_max_len` - The maximum expected length of remarks.
     /// * `column_default_max_len` - The maximum expected length of column defaults.
     #[deprecated = "Use columns_buffer_descs instead"]
+    #[allow(deprecated)]
     pub fn columns_buffer_description(
         &self,
         type_name_max_len: usize,

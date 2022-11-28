@@ -1,9 +1,12 @@
 use crate::{
-    buffers::{AnyBuffer, BufferDesc, BufferDescription, ColumnBuffer, TextColumn},
+    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
     handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
 };
+
+#[allow(deprecated)]
+use crate::buffers::BufferDescription;
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
 /// once. See [`crate::Connection::prepare`].
@@ -188,6 +191,7 @@ where
     /// }
     /// ```
     #[deprecated = "Use into_column_inserter instead"]
+    #[allow(deprecated)]
     pub fn into_any_column_inserter(
         self,
         capacity: usize,
@@ -271,6 +275,7 @@ where
     /// chunks. In such usecases you may only want to borrow the prepared statemnt, so it can be
     /// reused with a different set of parameter buffers.
     #[deprecated = "Use column_inserter instead."]
+    #[allow(deprecated)]
     pub fn any_column_inserter(
         &mut self,
         capacity: usize,
