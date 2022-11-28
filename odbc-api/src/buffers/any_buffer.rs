@@ -17,8 +17,8 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Item,
-    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
+    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Item, NullableSlice,
+    NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
 #[allow(deprecated)]

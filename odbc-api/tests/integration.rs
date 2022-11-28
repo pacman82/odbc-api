@@ -10,8 +10,7 @@ use common::{cursor_to_string, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDesc, BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer, Indicator,
-        Item, TextColumn, TextRowSet,
+        BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, Statement},
     parameter::InputParameter,
@@ -723,9 +722,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["DATETIME2"]).unwrap();
 
     // Fill buffer with values
-    let desc = BufferDesc::Timestamp {
-        nullable: true,
-    };
+    let desc = BufferDesc::Timestamp { nullable: true };
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
@@ -778,9 +775,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     // Fill buffer with values
-    let desc = BufferDesc::I32 {
-        nullable: true,
-    };
+    let desc = BufferDesc::I32 { nullable: true };
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
@@ -821,9 +816,7 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
     // Fill buffer with values
-    let desc = BufferDesc::Timestamp {
-        nullable: true,
-    };
+    let desc = BufferDesc::Timestamp { nullable: true };
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
@@ -928,7 +921,7 @@ fn columnar_insert_varchar(profile: &Profile) {
     let desc = BufferDesc::Text {
         // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
         // not work.
-        max_str_len: 5
+        max_str_len: 5,
     };
     let mut prebound = prepared.into_column_inserter(4, [desc]).unwrap();
     // Fill buffer with values
@@ -1032,9 +1025,7 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
         None,
         Some(&b"Hello, World!"[..]),
     ];
-    let mut prebound = prepared
-        .into_column_inserter(input.len(), [desc])
-        .unwrap();
+    let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
     let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
     for (index, &text) in input.iter().enumerate() {
@@ -1069,7 +1060,7 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
     let desc = BufferDesc::Binary {
         // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
         // encounter larger inputs.
-        length: 1
+        length: 1,
     };
     // Input values to insert.
     let input = [
@@ -1084,9 +1075,7 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let mut prebound = prepared
-        .into_column_inserter(input.len(), [desc])
-        .unwrap();
+    let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
     let mut writer = prebound.column_mut(0).as_bin_view().unwrap();
     for (row_index, &bytes) in input.iter().enumerate() {
@@ -1130,13 +1119,8 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
         Some(U16String::from_str("Hello, World!")),
     ];
     // Fill buffer with values
-    let desc = BufferDescription {
-        kind: BufferKind::WText { max_str_len: 20 },
-        nullable: true,
-    };
-    let mut prebound = prepared
-        .into_any_column_inserter(input.len(), [desc])
-        .unwrap();
+    let desc = BufferDesc::WText { max_str_len: 20 };
+    let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
     let mut writer = prebound.column_mut(0).as_w_text_view().unwrap();
     for (row_index, value) in input
@@ -3334,9 +3318,7 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     let mut prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let desc = BufferDesc::I32 {
-        nullable: false,
-    };
+    let desc = BufferDesc::I32 { nullable: false };
     // The first batch is inserted with capacity 1
     let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
     prebound.set_num_rows(1);
@@ -3377,9 +3359,7 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     let mut prepared = conn
         .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let desc = BufferDesc::I32 {
-        nullable: false,
-    };
+    let desc = BufferDesc::I32 { nullable: false };
     // Insert a batch
     let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
     prebound.set_num_rows(1);
