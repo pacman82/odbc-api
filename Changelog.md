@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.52.3
+
+* Introduced method `Prepared::column_inserter` to replace `Prepared::any_column_inserter`.
+* Introduced method `Prepared::into_column_inserter` to replace `Prepared::into_any_column_inserter`.
+
 ## 0.52.2
 
 * Introduced associated method `Item::buffer_desc` to replace `Item::BUFFER_KIND`.

@@ -723,12 +723,11 @@ fn columnar_insert_timestamp(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["DATETIME2"]).unwrap();
 
     // Fill buffer with values
-    let desc = BufferDescription {
-        kind: BufferKind::Timestamp,
+    let desc = BufferDesc::Timestamp {
         nullable: true,
     };
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
+    let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -779,12 +778,11 @@ fn columnar_insert_int_raw(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     // Fill buffer with values
-    let desc = BufferDescription {
-        kind: BufferKind::I32,
+    let desc = BufferDesc::I32 {
         nullable: true,
     };
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let mut prebound = prepared.into_any_column_inserter(10, [desc]).unwrap();
+    let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert.
     let input_values = [1, 0, 3];
@@ -1599,17 +1597,11 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
         .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a,b) Values (?,?)")
         .unwrap();
     let description = [
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::Text { max_str_len: 50 },
-        },
-        BufferDescription {
-            nullable: true,
-            kind: BufferKind::I32,
-        },
+        BufferDesc::Text { max_str_len: 50 },
+        BufferDesc::I32 { nullable: true },
     ];
 
-    let mut prebound = prepared.into_any_column_inserter(5, description).unwrap();
+    let mut prebound = prepared.into_column_inserter(5, description).unwrap();
 
     prebound.set_num_rows(3);
     // Fill first column with text

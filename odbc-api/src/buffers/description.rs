@@ -180,6 +180,7 @@ impl BufferDesc {
 /// the kind of processing which is supposed to be applied to the data may be even more important
 /// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
+#[deprecated = "Use BufferDesc instead."]
 #[derive(Clone, Copy, Debug)]
 pub struct BufferDescription {
     /// This indicates whether or not the buffer will be able to represent NULL values. This will
@@ -222,6 +223,7 @@ impl From<BufferDescription> for BufferDesc {
 
 /// This class is used together with [`BufferDescription`] to specify the layout of buffers bound to
 /// ODBC cursors and statements.
+#[deprecated = "Use BufferDesc instead"]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferKind {
     /// Variable sized binary buffer, holding up to `length` bytes per value.
