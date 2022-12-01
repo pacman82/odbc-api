@@ -1524,6 +1524,20 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn params_number_of_prepared(profile: &Profile) {
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+        .unwrap();
+    let sql = format!("SELECT * FROM {} WHERE a > ? AND a < ?;", table_name);
+    let mut prepared = conn.prepare(&sql).unwrap();
+    assert_eq!(2, prepared.num_params().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_text_buffer(profile: &Profile) {
     // Given
     let conn = profile
