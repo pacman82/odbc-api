@@ -12,8 +12,8 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLCompleteAsync, SQLDescribeParam, SQLExecute, SQLFetch,
-    SQLFreeStmt, SQLGetData, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount, SqlDataType,
-    SqlReturn, StatementAttribute, IS_POINTER,
+    SQLFreeStmt, SQLGetData, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount,
+    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
@@ -365,6 +365,14 @@ pub trait Statement: AsHandle {
         let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.as_sys(), &mut out) }
             .into_sql_result("SQLNumResultCols")
+            .on_success(|| out)
+    }
+
+    /// Number of placeholders of a prepared query.
+    fn num_params(&self) -> SqlResult<i16> {
+        let mut out: i16 = 0;
+        unsafe { SQLNumParams(self.as_sys(), &mut out) }
+            .into_sql_result("SQLNumParams")
             .on_success(|| out)
     }
 

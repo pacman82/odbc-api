@@ -63,6 +63,33 @@ where
         stmt.describe_param(parameter_number).into_result(&stmt)
     }
 
+    /// Number of placeholders which must be provided with [Self::execute] in order to execute
+    /// this statement. This is equivalent to the number of Placeholders used in the SQL string
+    /// used to create the statement.
+    ///
+    /// ```
+    /// use odbc_api::{Connection, Error, ParameterDescription};
+    ///
+    /// fn param_descriptions<'e>(connection: Connection<'e>) -> Result<Vec<ParameterDescription>, Error>{
+    ///     // Note the two `?` used as placeholders for the parameters.
+    ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
+    ///
+    ///     let num_params = prepared.num_params()?;
+    ///     assert_eq!(num_params, 2);
+    ///
+    ///     let mut params: Vec<ParameterDescription> = Vec::new();
+    ///     for i in 1..= num_params.try_into().unwrap(){
+    ///         params.push(prepared.describe_param(i)?)
+    ///     }
+    ///
+    ///     Ok(params)
+    /// }
+    /// ```
+    pub fn num_params(&mut self) -> Result<i16, Error> {
+        let stmt = self.as_stmt_ref();
+        stmt.num_params().into_result(&stmt)
+    }
+
     /// Unless you want to roll your own column buffer implementation users are encouraged to use
     /// [`Self::into_text_inserter`] instead.
     ///
