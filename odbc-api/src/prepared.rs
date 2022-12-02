@@ -68,11 +68,11 @@ where
     /// used to create the statement.
     ///
     /// ```
-    /// use odbc_api::{Connection, Error, ParameterDescription};
+    /// use odbc_api::{Connection, Error, handles::ParameterDescription};
     ///
     /// fn param_descriptions<'e>(connection: Connection<'e>) -> Result<Vec<ParameterDescription>, Error>{
     ///     // Note the two `?` used as placeholders for the parameters.
-    ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
+    ///     let mut prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
     ///
     ///     let num_params = prepared.num_params()?;
     ///     assert_eq!(num_params, 2);
