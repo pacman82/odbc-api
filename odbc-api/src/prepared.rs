@@ -78,7 +78,7 @@ where
     /// ```
     /// use odbc_api::{Connection, Error, handles::ParameterDescription};
     ///
-    /// fn param_descriptions(
+    /// fn collect_parameter_descriptions(
     ///     connection: Connection<'_>
     /// ) -> Result<Vec<ParameterDescription>, Error>{
     ///     // Note the two `?` used as placeholders for the parameters.
