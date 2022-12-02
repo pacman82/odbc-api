@@ -369,11 +369,11 @@ pub trait Statement: AsHandle {
     }
 
     /// Number of placeholders of a prepared query.
-    fn num_params(&self) -> SqlResult<i16> {
+    fn num_params(&self) -> SqlResult<u16> {
         let mut out: i16 = 0;
         unsafe { SQLNumParams(self.as_sys(), &mut out) }
             .into_sql_result("SQLNumParams")
-            .on_success(|| out)
+            .on_success(|| out.try_into().unwrap())
     }
 
     /// Sets the batch size for bulk cursors, if retrieving many rows at once.
@@ -860,7 +860,7 @@ impl<'o> Statement for StatementImpl<'o> {
 
 /// Description of a parameter associated with a parameter marker in a prepared statement. Returned
 /// by [`crate::Prepared::describe_param`].
-#[derive(Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ParameterDescription {
     // Todo: rename to nullability.
     /// Indicates whether the parameter may be NULL not.

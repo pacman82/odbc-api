@@ -12,7 +12,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, Statement},
+    handles::{OutputStringBuffer, ParameterDescription, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -1520,17 +1520,64 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
     assert_eq!(0, prepared.num_result_cols().unwrap());
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn params_number_of_prepared(profile: &Profile) {
+#[test_case(MSSQL, &[
+    ParameterDescription {data_type: DataType::Integer, nullable: Nullability::Nullable},
+    ParameterDescription {
+        data_type: DataType::Varchar { length: 13 },
+        nullable: Nullability::Nullable
+    }
+]; "Microsoft SQL Server")]
+#[test_case(MARIADB, &[
+    ParameterDescription {
+        data_type: DataType::Varchar { length: 25165824 },
+        nullable: Nullability::Unknown
+    },
+    ParameterDescription {
+        data_type: DataType::Varchar { length: 25165824 },
+        nullable: Nullability::Unknown
+    }
+]; "Maria DB")]
+#[test_case(SQLITE_3, &[
+    ParameterDescription {
+        data_type: DataType::Other {
+            data_type: SqlDataType(-10), column_size: 65536, decimal_digits: 0 },
+            nullable: Nullability::Nullable
+    },
+    ParameterDescription {
+        data_type: DataType::Other {
+            data_type: SqlDataType(-10), column_size: 65536, decimal_digits: 0 },
+            nullable: Nullability::Nullable
+    },
+]; "SQLite 3")]
+#[test_case(POSTGRES, &[
+    ParameterDescription {
+        data_type: DataType::Integer,
+        nullable: Nullability::Nullable
+    },
+    ParameterDescription {
+        data_type: DataType::Other {
+            data_type: SqlDataType(-10), column_size: 8190, decimal_digits: -1 },
+            nullable: Nullability::Nullable
+    },
+]; "PostgreSQL")]
+fn describe_parameters_of_prepared_statement(
+    profile: &Profile,
+    expected: &[ParameterDescription; 2],
+) {
     let table_name = table_name!();
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = format!("SELECT * FROM {} WHERE a > ? AND a < ?;", table_name);
+    let sql = format!("SELECT a, b FROM {} WHERE a=? AND b=?;", table_name);
     let mut prepared = conn.prepare(&sql).unwrap();
+
+    let parameter_descriptions = prepared
+        .parameter_descriptions()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    assert_eq!(expected.as_slice(), parameter_descriptions);
     assert_eq!(2, prepared.num_params().unwrap());
 }
 
