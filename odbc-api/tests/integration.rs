@@ -1537,18 +1537,6 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
         nullable: Nullability::Unknown
     }
 ]; "Maria DB")]
-#[test_case(SQLITE_3, &[
-    ParameterDescription {
-        data_type: DataType::Other {
-            data_type: SqlDataType(-10), column_size: 65536, decimal_digits: 0 },
-            nullable: Nullability::Nullable
-    },
-    ParameterDescription {
-        data_type: DataType::Other {
-            data_type: SqlDataType(-10), column_size: 65536, decimal_digits: 0 },
-            nullable: Nullability::Nullable
-    },
-]; "SQLite 3")]
 #[test_case(POSTGRES, &[
     ParameterDescription {
         data_type: DataType::Integer,
@@ -1560,6 +1548,8 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
             nullable: Nullability::Nullable
     },
 ]; "PostgreSQL")]
+// SqlLite has different behaviour in windows and linux.
+// #[test_case(SQLITE_3, &[...]; "SQLite 3")]
 fn describe_parameters_of_prepared_statement(
     profile: &Profile,
     expected: &[ParameterDescription; 2],
