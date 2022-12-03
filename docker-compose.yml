@@ -21,7 +21,7 @@ services:
       - 3306:3306
 
   postgres:
-    image: postgres:13
+    image: postgres:15
     ports:
       - "5432:5432"
     environment:
