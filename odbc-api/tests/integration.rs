@@ -17,8 +17,8 @@ use odbc_api::{
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, Bit, ColumnDescription, Cursor, DataType, Error, InOut, IntoParameter, Nullability,
-    Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    sys, Bit, ColumnDescription, Connection, Cursor, DataType, Error, InOut, IntoParameter,
+    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -995,6 +995,42 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let actual = cursor_to_string(cursor);
     let expected = "1\n2\nNULL\n4";
     assert_eq!(expected, actual);
+}
+
+/// Inserts a Vector of integers using a generic implementation
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn insert_vec_column_using_generic_code(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INTEGER", "INTEGER"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    fn insert_tuple2_vec<A: Item, B: Item>(
+        conn: &Connection<'_>,
+        insert_sql: &str,
+        source: &[(A, B)],
+    ) {
+        let mut prepared = conn.prepare(insert_sql).unwrap();
+        // Number of rows submitted in one round trip
+        let capacity = source.len();
+        // We do not need a nullable buffer since elements of source are not optional
+        let descriptions = [A::buffer_desc(false), B::buffer_desc(false)];
+        let mut inserter = prepared.column_inserter(capacity, descriptions).unwrap();
+        // We send everything in one go.
+        inserter.set_num_rows(source.len());
+        // Now let's copy the row based tuple into the columnar structure
+        for (index, (a, b)) in source.iter().enumerate() {
+            inserter.column_mut(0).as_slice::<A>().unwrap()[index] = *a;
+            inserter.column_mut(1).as_slice::<B>().unwrap()[index] = *b;
+        }
+        inserter.execute().unwrap();
+    }
+    insert_tuple2_vec(&conn, &insert_sql, &[(1,2), (3,4), (5,6)]);
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("1,2\n3,4\n5,6", actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

@@ -9,6 +9,33 @@ use super::BufferKind;
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
 /// the user to avoid matching on all possibile variants of an [`AnySlice`] in case the
 /// buffered type is known at compile time.
+/// 
+/// Usually used in generic code. E.g.:
+/// 
+/// ```
+/// use odbc_api::{Connection, buffers::Item};
+/// 
+/// fn insert_tuple2_vec<A: Item, B: Item>(
+///     conn: &Connection<'_>,
+///     insert_sql: &str,
+///     source: &[(A, B)],
+/// ) {
+///     let mut prepared = conn.prepare(insert_sql).unwrap();
+///     // Number of rows submitted in one round trip
+///     let capacity = source.len();
+///     // We do not need a nullable buffer since elements of source are not optional
+///     let descriptions = [A::buffer_desc(false), B::buffer_desc(false)];
+///     let mut inserter = prepared.column_inserter(capacity, descriptions).unwrap();
+///     // We send everything in one go.
+///     inserter.set_num_rows(source.len());
+///     // Now let's copy the row based tuple into the columnar structure
+///     for (index, (a, b)) in source.iter().enumerate() {
+///         inserter.column_mut(0).as_slice::<A>().unwrap()[index] = *a;
+///         inserter.column_mut(1).as_slice::<B>().unwrap()[index] = *b;
+///     }
+///     inserter.execute().unwrap();
+/// }
+/// ```
 pub trait Item: Sized + Copy {
     /// E.g. [`BufferKind::I64`] for `i64`. The kind can be used in a buffer description to
     /// instantiate a [`super::ColumnarBuffer`].
