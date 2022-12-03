@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.4
+
+* Improved support for fetching parameter descriptions of prepared statements:
+  * Introduced method `Prepared::num_params`
+  * Introduced method `Prepared::parameter_descriptions`
+
 ## 0.52.3
 
 * Introduced method `Prepared::column_inserter` to replace `Prepared::any_column_inserter`.

@@ -16,3 +16,4 @@
 
 # Artefact created during test run
 /odbc-api/sqlite-test.db
+/odbcsv/sqlite-test.db
