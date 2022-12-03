@@ -25,3 +25,61 @@ pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
         rec_number += 1;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell};
+
+    use log::Level;
+
+    use crate::handles::{diagnostics::DiagnosticResult, SqlChar, State};
+
+    use super::{log_diagnostics, Diagnostics};
+
+    struct InfiniteDiagnostics {
+        times_called: RefCell<usize>
+    }
+
+    impl InfiniteDiagnostics {
+        fn new() -> InfiniteDiagnostics {
+            Self {
+                times_called: RefCell::new(0)
+            }
+        }
+
+        fn num_calls(&self) -> usize {
+            *self.times_called.borrow()
+        }
+    }
+
+    impl Diagnostics for InfiniteDiagnostics {
+        fn diagnostic_record(
+            &self,
+            _rec_number: i16,
+            _message_text: &mut [SqlChar],
+        ) -> Option<DiagnosticResult> {
+            *self.times_called.borrow_mut() += 1;
+            Some(DiagnosticResult {
+                state: State([0, 0, 0, 0, 0]),
+                native_error: 0,
+                text_length: 0,
+            })
+        }
+    }
+
+    /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
+    /// messages.
+    #[test]
+    fn more_than_i16_max_diagnostic_records() {
+        // Ensure log level is at least warn for test to work
+        if log::max_level() < Level::Warn {
+            log::set_max_level(log::LevelFilter::Warn)
+        }
+
+        let spy = InfiniteDiagnostics::new();
+        // We are quite happy if this terminates and does not overflow
+        log_diagnostics(&spy);
+
+        assert_eq!(spy.num_calls(), i16::MAX as usize)
+    }
+}
