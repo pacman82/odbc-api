@@ -16,7 +16,19 @@ pub trait Item: Sized + Copy {
     #[allow(deprecated)]
     const BUFFER_KIND: BufferKind;
 
-    /// Can be used to instantiate a [`super::ColumnarBuffer`].
+    /// Can be used to instantiate a [`super::ColumnarBuffer`]. This is useful to allocate the
+    /// correct buffers in generic code.
+    /// 
+    /// # Example:
+    /// 
+    /// Specification:
+    /// 
+    /// ```
+    /// use odbc_api::buffers::{Item, BufferDesc};
+    /// 
+    /// assert_eq!(BufferDesc::I64{ nullable: true }, i64::buffer_desc(true));
+    /// assert_eq!(BufferDesc::I64{ nullable: false }, i64::buffer_desc(false));
+    /// ```
     fn buffer_desc(nullable: bool) -> BufferDesc;
 
     /// Extract the array type from an [`AnySlice`].
