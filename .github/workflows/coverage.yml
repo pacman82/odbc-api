@@ -49,6 +49,8 @@ jobs:
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Update package repostiory
+        run: apt-get update
       - name: Install PostgreSQL Driver
         run: |
           sudo apt-get install -y unixodbc-dev odbc-postgresql devscripts
@@ -60,7 +62,6 @@ jobs:
         run: |
           curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
           curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-          apt-get update
           ACCEPT_EULA=Y apt-get install -y msodbcsql17
           ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
           apt-get install -y sqlite3 libsqliteodbc
