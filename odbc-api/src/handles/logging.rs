@@ -28,9 +28,7 @@ pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell};
-
-    use log::Level;
+    use std::{cell::RefCell, cmp::max};
 
     use crate::handles::{diagnostics::DiagnosticResult, SqlChar, State};
 
@@ -72,9 +70,7 @@ mod tests {
     #[test]
     fn more_than_i16_max_diagnostic_records() {
         // Ensure log level is at least warn for test to work
-        if log::max_level() < Level::Warn {
-            log::set_max_level(log::LevelFilter::Warn)
-        }
+        log::set_max_level(max(log::LevelFilter::Warn, log::max_level()));
 
         let spy = InfiniteDiagnostics::new();
         // We are quite happy if this terminates and does not overflow
