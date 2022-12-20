@@ -1,6 +1,6 @@
 [package]
 name = "odbcsv"
-version = "0.4.16"
+version = "0.4.17"
 authors = ["Markus Klein"]
 edition = "2021"
 license = "MIT"
