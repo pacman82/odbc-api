@@ -1,5 +1,5 @@
 # This workflows will build and release odbcsv
-name: Deplay odbcsv
+name: Deploy odbcsv
 
 on:
   push:
