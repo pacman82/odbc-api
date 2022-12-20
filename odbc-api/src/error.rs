@@ -118,12 +118,13 @@ pub enum Error {
     },
     #[error(
         "The number of diagnostic records returned by ODBC seems to exceed `32,767` This means not
-        all (diagnostic) records could be inspected. This in turn may be problematic if invariants
-        rely on checking that certain errors did not occurr. Usually this many warnings are only
+        all (diagnostic) records could be inspected. Sadly this prevents checking for truncated
+        values and puts you at risk of silently loosing data. Usually this many warnings are only
         generated, if one or more warnings per row is generated, and then there are many rows. Maybe
-        try fewer rows, or fix the cause of some of these warnings/errors?"
+        try fewer rows, or fix the cause of some of these warnings/errors? One of these diagnostic
+        records contains:\n{record}."
     )]
-    TooManyDiagnostics,
+    TooManyDiagnostics { record: DiagnosticRecord },
     #[error(
         "A value (at least one) is too large to be written into the allocated buffer without
         truncation."
@@ -260,12 +261,14 @@ fn check_for_truncation(handle: &impl Diagnostics) -> Result<(), Error> {
     while let Some(result) = handle.diagnostic_record(1, &mut empty) {
         if result.state == State::STRING_DATA_RIGHT_TRUNCATION {
             return Err(Error::TooLargeValueForBuffer);
-        }
-
-        // Many diagnostic records may be produced with a single call. Especially in case of
-        // bulk fetching, or inserting.
-        if rec_number == i16::MAX {
-            return Err(Error::TooManyDiagnostics);
+        } else if rec_number == i16::MAX {
+            // Many diagnostic records may be produced with a single call. Especially in case of
+            // bulk fetching, or inserting. Sadly this could mask truncation errors.
+            let mut record = DiagnosticRecord::with_capacity(512);
+            record.fill_from(handle, i16::MAX);
+            return Err(Error::TooManyDiagnostics {
+                record
+            });
         }
         rec_number += 1;
     }
