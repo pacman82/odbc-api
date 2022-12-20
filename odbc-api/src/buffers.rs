@@ -9,16 +9,12 @@ mod indicator;
 mod item;
 mod text_column;
 
-#[allow(deprecated)]
 pub use self::{
-    any_buffer::{
-        AnyBuffer, AnyColumnBuffer, AnyColumnSliceMut, AnyColumnView, AnySlice, AnySliceMut,
-        ColumnarAnyBuffer,
-    },
+    any_buffer::{AnyBuffer, AnySlice, AnySliceMut, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnarBuffer, TextRowSet},
-    description::{BufferDesc, BufferDescription, BufferKind},
+    description::BufferDesc,
     indicator::Indicator,
     item::Item,
     text_column::{

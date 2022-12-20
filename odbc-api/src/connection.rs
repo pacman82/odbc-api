@@ -10,9 +10,6 @@ use crate::{
 use odbc_sys::HDbc;
 use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
 
-#[allow(deprecated)]
-use crate::buffers::{BufferDescription, BufferKind};
-
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
         match self.connection.disconnect().into_result(&self.connection) {
@@ -262,7 +259,7 @@ impl<'c> Connection<'c> {
     /// use lazy_static::lazy_static;
     /// use odbc_api::{
     ///     Environment, Error, ColumnarBulkInserter, StatementConnection,
-    ///     buffers::{BufferKind, BufferDescription, AnyColumnBuffer},
+    ///     buffers::{BufferDesc, AnyBuffer},
     /// };
     ///
     /// lazy_static! {
@@ -276,24 +273,18 @@ impl<'c> Connection<'c> {
     ///
     /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
     /// /// takes ownership of a connection created using an environment with static lifetime.
-    /// type Inserter = ColumnarBulkInserter<StatementConnection<'static>, AnyColumnBuffer>;
+    /// type Inserter = ColumnarBulkInserter<StatementConnection<'static>, AnyBuffer>;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
     ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
     ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
     ///     let buffers = [
-    ///         BufferDescription {
-    ///             kind: BufferKind::Text { max_str_len: 255},
-    ///             nullable: false
-    ///         },
-    ///         BufferDescription {
-    ///             kind: BufferKind::I16,
-    ///             nullable: false
-    ///         }
+    ///         BufferDesc::Text { max_str_len: 255},
+    ///         BufferDesc::I16 { nullable: false },
     ///     ];
     ///     let capacity = 400;
-    ///     prepared.into_any_column_inserter(capacity, buffers)
+    ///     prepared.into_column_inserter(capacity, buffers)
     /// }
     /// ```
     pub fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<'c>>, Error> {
@@ -643,136 +634,6 @@ impl<'c> Connection<'c> {
         const IS_NULLABLE_LEN_MAX_LEN: usize = 3;
         let is_nullable_desc = BufferDesc::Text {
             max_str_len: IS_NULLABLE_LEN_MAX_LEN,
-        };
-
-        Ok(vec![
-            catalog_name_desc,
-            schema_name_desc,
-            table_name_desc,
-            column_name_desc,
-            data_type_desc,
-            type_name_desc,
-            column_size_desc,
-            buffer_len_desc,
-            decimal_digits_desc,
-            precision_radix_desc,
-            nullable_desc,
-            remarks_desc,
-            column_default_desc,
-            sql_data_type_desc,
-            sql_datetime_sub_desc,
-            char_octet_len_desc,
-            ordinal_pos_desc,
-            is_nullable_desc,
-        ])
-    }
-
-    /// The buffer descriptions for all standard buffers (not including extensions) returned in the
-    /// columns query (e.g. [`Connection::columns`]).
-    ///
-    /// # Arguments
-    ///
-    /// * `type_name_max_len` - The maximum expected length of type names.
-    /// * `remarks_max_len` - The maximum expected length of remarks.
-    /// * `column_default_max_len` - The maximum expected length of column defaults.
-    #[deprecated = "Use columns_buffer_descs instead"]
-    #[allow(deprecated)]
-    pub fn columns_buffer_description(
-        &self,
-        type_name_max_len: usize,
-        remarks_max_len: usize,
-        column_default_max_len: usize,
-    ) -> Result<Vec<BufferDescription>, Error> {
-        let null_i16 = BufferDescription {
-            kind: BufferKind::I16,
-            nullable: true,
-        };
-
-        let not_null_i16 = BufferDescription {
-            kind: BufferKind::I16,
-            nullable: false,
-        };
-
-        let null_i32 = BufferDescription {
-            kind: BufferKind::I32,
-            nullable: true,
-        };
-
-        // The definitions for these descriptions are taken from the documentation of `SQLColumns`
-        // located at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
-        let catalog_name_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: self.max_catalog_name_len()? as usize,
-            },
-            nullable: true,
-        };
-
-        let schema_name_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: self.max_schema_name_len()? as usize,
-            },
-            nullable: true,
-        };
-
-        let table_name_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: self.max_table_name_len()? as usize,
-            },
-            nullable: false,
-        };
-
-        let column_name_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: self.max_column_name_len()? as usize,
-            },
-            nullable: false,
-        };
-
-        let data_type_desc = not_null_i16;
-
-        let type_name_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: type_name_max_len,
-            },
-            nullable: false,
-        };
-
-        let column_size_desc = null_i32;
-        let buffer_len_desc = null_i32;
-        let decimal_digits_desc = null_i16;
-        let precision_radix_desc = null_i16;
-        let nullable_desc = not_null_i16;
-
-        let remarks_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: remarks_max_len,
-            },
-            nullable: true,
-        };
-
-        let column_default_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: column_default_max_len,
-            },
-            nullable: true,
-        };
-
-        let sql_data_type_desc = not_null_i16;
-        let sql_datetime_sub_desc = null_i16;
-        let char_octet_len_desc = null_i32;
-        let ordinal_pos_desc = BufferDescription {
-            kind: BufferKind::I32,
-            nullable: false,
-        };
-
-        // We expect strings to be `YES`, `NO`, or a zero-length string, so `3` should be
-        // sufficient.
-        const IS_NULLABLE_LEN_MAX_LEN: usize = 3;
-        let is_nullable_desc = BufferDescription {
-            kind: BufferKind::Text {
-                max_str_len: IS_NULLABLE_LEN_MAX_LEN,
-            },
-            nullable: true,
         };
 
         Ok(vec![

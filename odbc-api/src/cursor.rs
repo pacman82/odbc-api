@@ -16,7 +16,7 @@ use std::{cmp::max, thread::panicking};
 /// # Example: Fetching result in batches
 ///
 /// ```rust
-/// use odbc_api::{Cursor, buffers::{BufferDescription, BufferKind, ColumnarAnyBuffer}, Error};
+/// use odbc_api::{Cursor, buffers::{BufferDesc, ColumnarAnyBuffer}, Error};
 ///
 /// /// Fetches all values from the first column of the cursor as i32 in batches of 100 and stores
 /// /// them in a vector.
@@ -27,12 +27,9 @@ use std::{cmp::max, thread::panicking};
 ///     // We expect the first column to hold INTEGERs (or a type convertible to INTEGER). Use
 ///     // the metadata on the result set, if you want to investige the types of the columns at
 ///     // runtime.
-///     let description = BufferDescription {
-///         kind: BufferKind::I32,
-///         nullable: false,
-///     };
+///     let description = BufferDesc::I32 { nullable: false };
 ///     // This is the buffer we bind to the driver, and repeatedly use to fetch each batch
-///     let buffer = ColumnarAnyBuffer::from_description(batch_size, [description]);
+///     let buffer = ColumnarAnyBuffer::from_descs(batch_size, [description]);
 ///     // Bind buffer to cursor
 ///     let mut row_set_buffer = cursor.bind_buffer(buffer)?;
 ///     // Fetch data batch by batch
@@ -357,9 +354,6 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 }
 
-#[deprecated = "Use new name BlockCursor instead"]
-pub type RowSetCursor<C, B> = BlockCursor<C, B>;
-
 /// In order to safe on network overhead, it is recommended to use block cursors instead of fetching
 /// values individually. This can greatly reduce the time applications need to fetch data. You can
 /// create a block cursor by binding preallocated memory to a cursor using [`Cursor::bind_buffer`].
@@ -544,9 +538,6 @@ where
         }
     }
 }
-
-#[deprecated = "Use new name BlockCursorPolling instead"]
-pub type RowSetCursorPolling<C, B> = BlockCursorPolling<C, B>;
 
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much

@@ -266,9 +266,7 @@ fn check_for_truncation(handle: &impl Diagnostics) -> Result<(), Error> {
             // bulk fetching, or inserting. Sadly this could mask truncation errors.
             let mut record = DiagnosticRecord::with_capacity(512);
             record.fill_from(handle, i16::MAX);
-            return Err(Error::TooManyDiagnostics {
-                record
-            });
+            return Err(Error::TooManyDiagnostics { record });
         }
         rec_number += 1;
     }

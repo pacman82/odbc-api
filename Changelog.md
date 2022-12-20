@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.53.0
+
+* Better error messages if checking for truncation fails due to too many diagnostics
+* Removed deprecated
+  * `BufferDescription`
+  * `BufferKind`
+* Removed deprecated names
+  * `AnyColumnBuffer`
+  * `AnyColumnSliceMut`
+  * `AnyColumnView`
+  * `RowSetCursor`
+  * `RowSetCursorPolling`
+
 ## 0.52.4
 
 * Improved support for fetching parameter descriptions of prepared statements:

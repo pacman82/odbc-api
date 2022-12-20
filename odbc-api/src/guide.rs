@@ -361,7 +361,7 @@ Consider querying a table with two columns `year` and `name`.
 ```no_run
 use odbc_api::{
     Environment, Cursor,
-    buffers::{AnyColumnView, BufferDescription, BufferKind, Item, ColumnarAnyBuffer},
+    buffers::{AnySlice, BufferDesc, Item, ColumnarAnyBuffer},
 };
 
 let env = Environment::new()?;
@@ -369,19 +369,13 @@ let env = Environment::new()?;
 let batch_size = 1000; // Maximum number of rows in each row set
 let buffer_description = [
     // We know year to be a Nullable SMALLINT
-    BufferDescription {
-        kind: BufferKind::I16,
-        nullable: true,
-    },
+    BufferDesc::I16 { nullable: true },
     // and name to be a required VARCHAR
-    BufferDescription {
-        kind: BufferKind::Text { max_str_len: 255 },
-        nullable: false,
-    }
+    BufferDesc::Text { max_str_len: 255 },
 ];
 
 /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-let mut buffer = ColumnarAnyBuffer::from_description(batch_size, buffer_description);
+let mut buffer = ColumnarAnyBuffer::from_descs(batch_size, buffer_description);
 
 let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
@@ -419,29 +413,30 @@ have an easier time with the borrow checker.
 
 ```no_run
 use odbc_api::{
-    Connection, RowSetCursor, Error, Cursor, Nullability, ResultSetMetadata,
-    buffers::{
-        AnyColumnBuffer, BufferDescription, BufferKind, ColumnarAnyBuffer, ColumnarBuffer
-    }
+    Connection, BlockCursor, Error, Cursor, Nullability, ResultSetMetadata,
+    buffers::{ AnyBuffer, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer }
 };
 
 fn get_birthdays<'a>(conn: &'a mut Connection)
-    -> Result<RowSetCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
+    -> Result<BlockCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
 {
     let mut cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
     let mut column_description = Default::default();
     let buffer_description : Vec<_> = (0..cursor.num_result_cols()?).map(|index| {
         cursor.describe_col(index as u16 + 1, &mut column_description)?;
-        Ok(BufferDescription {
-            nullable: matches!(column_description.nullability, Nullability::Unknown | Nullability::Nullable),
-            // Use reasonable sized text, in case we do not know the buffer type.
-            kind: BufferKind::from_data_type(column_description.data_type)
-                .unwrap_or(BufferKind::Text { max_str_len: 255 })
-        })
+        let nullable = matches!(
+            column_description.nullability,
+            Nullability::Unknown | Nullability::Nullable
+        );
+        let desc = BufferDesc::from_data_type(
+            column_description.data_type,
+            nullable
+        ).unwrap_or(BufferDesc::Text{ max_str_len: 255 });
+        Ok(desc)
     }).collect::<Result<_, Error>>()?;
 
     // Row set size of 5000 rows.
-    let buffer = ColumnarAnyBuffer::from_description(5000, buffer_description);
+    let buffer = ColumnarAnyBuffer::from_descs(5000, buffer_description);
     // Bind buffer and take ownership over it.
     cursor.bind_buffer(buffer)
 }
@@ -473,7 +468,7 @@ row or column wise bulk inserts. Especially in pipelines for data science you ma
 buffers in a columnar layout at hand. [`crate::ColumnarBulkInserter`] can be used for bulk inserts.
 
 ```no_run
-use odbc_api::{Connection, Error, IntoParameter, buffers::{BufferDescription, BufferKind}};
+use odbc_api::{Connection, Error, IntoParameter, buffers::BufferDesc};
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
 
@@ -484,20 +479,14 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
 
     // Create a columnar buffer which fits the input parameters.
     let buffer_description = [
-        BufferDescription {
-            kind: BufferKind::Text { max_str_len: 255 },
-            nullable: false,
-        },
-        BufferDescription {
-            kind: BufferKind::I16,
-            nullable: false,
-        },
+        BufferDesc::Text { max_str_len: 255 },
+        BufferDesc::I16 { nullable: false },
     ];
     // The capacity must be able to hold at least the largest batch. We do everything in one go, so
     // we set it to the length of the input parameters.
     let capacity = names.len();
     // Allocate memory for the array column parameters and bind it to the statement.
-    let mut prebound = prepared.into_any_column_inserter(capacity, buffer_description)?;
+    let mut prebound = prepared.into_column_inserter(capacity, buffer_description)?;
     // Length of this batch
     prebound.set_num_rows(capacity);
 
