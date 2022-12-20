@@ -108,7 +108,7 @@ where
     /// the number of valid rows before or after filling values into the buffer, but you must do so
     /// before executing the query.
     pub fn set_num_rows(&mut self, num_rows: usize) {
-        if num_rows > self.capacity as usize {
+        if num_rows > self.capacity {
             panic!(
                 "Columnar buffer may not be resized to a value higher than the maximum number of \
                 rows initially specified in the constructor."

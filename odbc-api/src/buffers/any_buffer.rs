@@ -108,90 +108,70 @@ impl AnyBuffer {
         let buffer = match desc {
             BufferDesc::Binary { length } => {
                 if fallible_allocations {
-                    AnyBuffer::Binary(BinColumn::try_new(max_rows as usize, length)?)
+                    AnyBuffer::Binary(BinColumn::try_new(max_rows, length)?)
                 } else {
-                    AnyBuffer::Binary(BinColumn::new(max_rows as usize, length))
+                    AnyBuffer::Binary(BinColumn::new(max_rows, length))
                 }
             }
             BufferDesc::Text { max_str_len } => {
                 if fallible_allocations {
-                    AnyBuffer::Text(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                    AnyBuffer::Text(TextColumn::try_new(max_rows, max_str_len)?)
                 } else {
-                    AnyBuffer::Text(TextColumn::new(max_rows as usize, max_str_len))
+                    AnyBuffer::Text(TextColumn::new(max_rows, max_str_len))
                 }
             }
             BufferDesc::WText { max_str_len } => {
                 if fallible_allocations {
-                    AnyBuffer::WText(TextColumn::try_new(max_rows as usize, max_str_len)?)
+                    AnyBuffer::WText(TextColumn::try_new(max_rows, max_str_len)?)
                 } else {
-                    AnyBuffer::WText(TextColumn::new(max_rows as usize, max_str_len))
+                    AnyBuffer::WText(TextColumn::new(max_rows, max_str_len))
                 }
             }
             BufferDesc::Date { nullable: false } => {
-                AnyBuffer::Date(vec![Date::default(); max_rows as usize])
+                AnyBuffer::Date(vec![Date::default(); max_rows])
             }
             BufferDesc::Time { nullable: false } => {
-                AnyBuffer::Time(vec![Time::default(); max_rows as usize])
+                AnyBuffer::Time(vec![Time::default(); max_rows])
             }
             BufferDesc::Timestamp { nullable: false } => {
-                AnyBuffer::Timestamp(vec![Timestamp::default(); max_rows as usize])
+                AnyBuffer::Timestamp(vec![Timestamp::default(); max_rows])
             }
-            BufferDesc::F64 { nullable: false } => {
-                AnyBuffer::F64(vec![f64::default(); max_rows as usize])
-            }
-            BufferDesc::F32 { nullable: false } => {
-                AnyBuffer::F32(vec![f32::default(); max_rows as usize])
-            }
-            BufferDesc::I8 { nullable: false } => {
-                AnyBuffer::I8(vec![i8::default(); max_rows as usize])
-            }
-            BufferDesc::I16 { nullable: false } => {
-                AnyBuffer::I16(vec![i16::default(); max_rows as usize])
-            }
-            BufferDesc::I32 { nullable: false } => {
-                AnyBuffer::I32(vec![i32::default(); max_rows as usize])
-            }
-            BufferDesc::I64 { nullable: false } => {
-                AnyBuffer::I64(vec![i64::default(); max_rows as usize])
-            }
-            BufferDesc::U8 { nullable: false } => {
-                AnyBuffer::U8(vec![u8::default(); max_rows as usize])
-            }
-            BufferDesc::Bit { nullable: false } => {
-                AnyBuffer::Bit(vec![Bit::default(); max_rows as usize])
-            }
+            BufferDesc::F64 { nullable: false } => AnyBuffer::F64(vec![f64::default(); max_rows]),
+            BufferDesc::F32 { nullable: false } => AnyBuffer::F32(vec![f32::default(); max_rows]),
+            BufferDesc::I8 { nullable: false } => AnyBuffer::I8(vec![i8::default(); max_rows]),
+            BufferDesc::I16 { nullable: false } => AnyBuffer::I16(vec![i16::default(); max_rows]),
+            BufferDesc::I32 { nullable: false } => AnyBuffer::I32(vec![i32::default(); max_rows]),
+            BufferDesc::I64 { nullable: false } => AnyBuffer::I64(vec![i64::default(); max_rows]),
+            BufferDesc::U8 { nullable: false } => AnyBuffer::U8(vec![u8::default(); max_rows]),
+            BufferDesc::Bit { nullable: false } => AnyBuffer::Bit(vec![Bit::default(); max_rows]),
             BufferDesc::Date { nullable: true } => {
-                AnyBuffer::NullableDate(OptDateColumn::new(max_rows as usize))
+                AnyBuffer::NullableDate(OptDateColumn::new(max_rows))
             }
             BufferDesc::Time { nullable: true } => {
-                AnyBuffer::NullableTime(OptTimeColumn::new(max_rows as usize))
+                AnyBuffer::NullableTime(OptTimeColumn::new(max_rows))
             }
             BufferDesc::Timestamp { nullable: true } => {
-                AnyBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows as usize))
+                AnyBuffer::NullableTimestamp(OptTimestampColumn::new(max_rows))
             }
             BufferDesc::F64 { nullable: true } => {
-                AnyBuffer::NullableF64(OptF64Column::new(max_rows as usize))
+                AnyBuffer::NullableF64(OptF64Column::new(max_rows))
             }
             BufferDesc::F32 { nullable: true } => {
-                AnyBuffer::NullableF32(OptF32Column::new(max_rows as usize))
+                AnyBuffer::NullableF32(OptF32Column::new(max_rows))
             }
-            BufferDesc::I8 { nullable: true } => {
-                AnyBuffer::NullableI8(OptI8Column::new(max_rows as usize))
-            }
+            BufferDesc::I8 { nullable: true } => AnyBuffer::NullableI8(OptI8Column::new(max_rows)),
             BufferDesc::I16 { nullable: true } => {
-                AnyBuffer::NullableI16(OptI16Column::new(max_rows as usize))
+                AnyBuffer::NullableI16(OptI16Column::new(max_rows))
             }
             BufferDesc::I32 { nullable: true } => {
-                AnyBuffer::NullableI32(OptI32Column::new(max_rows as usize))
+                AnyBuffer::NullableI32(OptI32Column::new(max_rows))
             }
             BufferDesc::I64 { nullable: true } => {
-                AnyBuffer::NullableI64(OptI64Column::new(max_rows as usize))
+                AnyBuffer::NullableI64(OptI64Column::new(max_rows))
             }
-            BufferDesc::U8 { nullable: true } => {
-                AnyBuffer::NullableU8(OptU8Column::new(max_rows as usize))
-            }
+            BufferDesc::U8 { nullable: true } => AnyBuffer::NullableU8(OptU8Column::new(max_rows)),
             BufferDesc::Bit { nullable: true } => {
-                AnyBuffer::NullableBit(OptBitColumn::new(max_rows as usize))
+                AnyBuffer::NullableBit(OptBitColumn::new(max_rows))
             }
         };
         Ok(buffer)

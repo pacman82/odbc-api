@@ -35,13 +35,13 @@ mod tests {
     use super::{log_diagnostics, Diagnostics};
 
     struct InfiniteDiagnostics {
-        times_called: RefCell<usize>
+        times_called: RefCell<usize>,
     }
 
     impl InfiniteDiagnostics {
         fn new() -> InfiniteDiagnostics {
             Self {
-                times_called: RefCell::new(0)
+                times_called: RefCell::new(0),
             }
         }
 

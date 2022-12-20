@@ -9,12 +9,12 @@ use super::BufferKind;
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
 /// the user to avoid matching on all possibile variants of an [`AnySlice`] in case the
 /// buffered type is known at compile time.
-/// 
+///
 /// Usually used in generic code. E.g.:
-/// 
+///
 /// ```
 /// use odbc_api::{Connection, buffers::Item};
-/// 
+///
 /// fn insert_tuple2_vec<A: Item, B: Item>(
 ///     conn: &Connection<'_>,
 ///     insert_sql: &str,
@@ -45,14 +45,14 @@ pub trait Item: Sized + Copy {
 
     /// Can be used to instantiate a [`super::ColumnarBuffer`]. This is useful to allocate the
     /// correct buffers in generic code.
-    /// 
+    ///
     /// # Example:
-    /// 
+    ///
     /// Specification:
-    /// 
+    ///
     /// ```
     /// use odbc_api::buffers::{Item, BufferDesc};
-    /// 
+    ///
     /// assert_eq!(BufferDesc::I64{ nullable: true }, i64::buffer_desc(true));
     /// assert_eq!(BufferDesc::I64{ nullable: false }, i64::buffer_desc(false));
     /// ```

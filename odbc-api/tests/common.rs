@@ -176,7 +176,7 @@ where
         SingleColumnRowSetBuffer {
             num_rows_fetched: Box::new(0),
             batch_size,
-            column: vec![T::default(); batch_size as usize],
+            column: vec![T::default(); batch_size],
         }
     }
 

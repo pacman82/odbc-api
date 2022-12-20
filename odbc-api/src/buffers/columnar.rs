@@ -345,7 +345,7 @@ impl TextRowSet {
 
     /// Access the element at the specified position in the row set.
     pub fn at(&self, buffer_index: usize, row_index: usize) -> Option<&[u8]> {
-        assert!(row_index < *self.num_rows as usize);
+        assert!(row_index < *self.num_rows);
         self.columns[buffer_index].1.value_at(row_index)
     }
 
@@ -376,7 +376,7 @@ impl TextRowSet {
     /// }
     /// ```
     pub fn indicator_at(&self, buf_index: usize, row_index: usize) -> Indicator {
-        assert!(row_index < *self.num_rows as usize);
+        assert!(row_index < *self.num_rows);
         self.columns[buf_index].1.indicator_at(row_index)
     }
 

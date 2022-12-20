@@ -22,10 +22,10 @@ impl Default for Nullability {
 
 impl Nullability {
     /// Construct a new instance from a `Nullability` new type constant.
-    /// 
+    ///
     /// ```
     /// use odbc_api::Nullability;
-    /// 
+    ///
     /// assert_eq!(Nullability::Unknown, Nullability::new(odbc_sys::Nullability::UNKNOWN));
     /// assert_eq!(Nullability::NoNulls, Nullability::new(odbc_sys::Nullability::NO_NULLS));
     /// assert_eq!(Nullability::Nullable, Nullability::new(odbc_sys::Nullability::NULLABLE));

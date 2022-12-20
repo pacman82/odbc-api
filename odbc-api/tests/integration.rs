@@ -1027,7 +1027,7 @@ fn insert_vec_column_using_generic_code(profile: &Profile) {
         }
         inserter.execute().unwrap();
     }
-    insert_tuple2_vec(&conn, &insert_sql, &[(1,2), (3,4), (5,6)]);
+    insert_tuple2_vec(&conn, &insert_sql, &[(1, 2), (3, 4), (5, 6)]);
 
     let actual = table.content_as_string(&conn);
     assert_eq!("1,2\n3,4\n5,6", actual);

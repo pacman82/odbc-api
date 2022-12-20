@@ -462,7 +462,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
     let mut num_batch = 0;
 
     for try_record in reader.into_byte_records() {
-        if statement.num_rows() == *batch_size as usize {
+        if statement.num_rows() == *batch_size {
             num_batch += 1;
             // Batch is full. We need to send it to the data base and clear it, before we insert
             // more rows into it.
