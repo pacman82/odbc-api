@@ -101,6 +101,22 @@ impl BinColumn {
         }
     }
 
+    /// `true` if any value is truncated in the range [0, num_rows).
+    ///
+    /// After fetching data we may want to know if any value has been truncated due to the buffer
+    /// not being able to hold elements of that size. This method checks the indicator buffer
+    /// element wise.
+    pub fn has_truncated_values(&self, num_rows: usize) -> bool {
+        self.indicators
+            .iter()
+            .copied()
+            .take(num_rows)
+            .any(|indicator| match Indicator::from_isize(indicator) {
+                Indicator::Null | Indicator::NoTotal => true,
+                Indicator::Length(length) => self.max_len < length,
+            })
+    }
+
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find
     /// an unexpected large input during insertion. All values in the buffer will be set to NULL.
     ///
@@ -335,6 +351,15 @@ impl<'c> BinColumnView<'c> {
             num_rows: self.num_rows,
             col: self.col,
         }
+    }
+
+    /// `true` if any value is truncated in the range [0, num_rows).
+    ///
+    /// After fetching data we may want to know if any value has been truncated due to the buffer
+    /// not being able to hold elements of that size. This method checks the indicator buffer
+    /// element wise.
+    pub fn has_truncated_values(&self) -> bool {
+        self.col.has_truncated_values(self.num_rows)
     }
 }
 

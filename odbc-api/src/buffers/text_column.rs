@@ -135,6 +135,23 @@ impl<C> TextColumn<C> {
         }
     }
 
+    /// `true` if any value is truncated in the range [0, num_rows).
+    ///
+    /// After fetching data we may want to know if any value has been truncated due to the buffer
+    /// not being able to hold elements of that size. This method checks the indicator buffer
+    /// element wise.
+    pub fn has_truncated_values(&self, num_rows: usize) -> bool {
+        let max_bin_length = self.max_str_len * size_of::<C>();
+        self.indicators
+            .iter()
+            .copied()
+            .take(num_rows)
+            .any(|indicator| match Indicator::from_isize(indicator) {
+                Indicator::Null | Indicator::NoTotal => true,
+                Indicator::Length(length_in_bytes) => max_bin_length < length_in_bytes,
+            })
+    }
+
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find
     /// an unexpected large input string during insertion.
     ///
@@ -380,6 +397,15 @@ impl<'c, C> TextColumnView<'c, C> {
 
     pub fn max_len(&self) -> usize {
         self.col.max_len()
+    }
+
+    /// `true` if any value is truncated.
+    ///
+    /// After fetching data we may want to know if any value has been truncated due to the buffer
+    /// not being able to hold elements of that size. This method checks the indicator buffer
+    /// element wise.
+    pub fn has_truncated_values(&self) -> bool {
+        self.col.has_truncated_values(self.num_rows)
     }
 }
 
