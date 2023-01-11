@@ -332,6 +332,18 @@ where
     fn capacity(&self) -> usize {
         self.indicators.len()
     }
+
+    fn has_truncated_values(&self, num_rows: usize) -> bool {
+        let max_bin_length = self.max_str_len * size_of::<C>();
+        self.indicators
+            .iter()
+            .copied()
+            .take(num_rows)
+            .any(|indicator| match Indicator::from_isize(indicator) {
+                Indicator::Null | Indicator::NoTotal => true,
+                Indicator::Length(length_in_bytes) => max_bin_length < length_in_bytes,
+            })
+    }
 }
 
 /// Allows read only access to the valid part of a text column.

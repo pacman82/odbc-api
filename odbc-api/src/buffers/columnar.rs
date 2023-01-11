@@ -103,6 +103,10 @@ where
         }
         Ok(())
     }
+
+    fn has_truncated_values(&mut self) -> bool {
+        self.columns.iter().any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
+    }
 }
 
 /// A columnar buffer intended to be bound with [crate::Cursor::bind_buffer] in order to obtain
@@ -148,6 +152,13 @@ pub unsafe trait ColumnBuffer: CDataMut {
 
     /// Current capacity of the column
     fn capacity(&self) -> usize;
+
+    /// `true` if any value is truncated in the range [0, num_rows).
+    ///
+    /// After fetching data we may want to know if any value has been truncated due to the buffer
+    /// not being able to hold elements of that size. This method checks the indicator buffer
+    /// element wise.
+    fn has_truncated_values(&self, num_rows: usize) -> bool;
 }
 
 unsafe impl<T> ColumnBuffer for WithDataType<T>
@@ -166,6 +177,10 @@ where
 
     fn capacity(&self) -> usize {
         self.value.capacity()
+    }
+
+    fn has_truncated_values(&self, num_rows: usize) -> bool {
+        self.value.has_truncated_values(num_rows)
     }
 }
 
@@ -404,6 +419,10 @@ where
 
     fn capacity(&self) -> usize {
         self.len()
+    }
+
+    fn has_truncated_values(&self, _num_rows: usize) -> bool {
+        false
     }
 }
 

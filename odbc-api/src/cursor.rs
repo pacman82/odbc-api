@@ -334,6 +334,9 @@ pub unsafe trait RowSetBuffer {
     /// It's the implementations responsibility to ensure that all bound buffers are valid until
     /// unbound or the statement handle is deleted.
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
+
+    /// Check if the buffer contains any truncated values for variadic sized columns.
+    fn has_truncated_values(&mut self) -> bool;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -351,6 +354,10 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
 
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
         (*self).bind_colmuns_to_cursor(cursor)
+    }
+
+    fn has_truncated_values(&mut self) -> bool {
+        (*self).has_truncated_values()
     }
 }
 

@@ -208,4 +208,8 @@ where
         cursor.bind_col(1, &mut self.column).into_result(&cursor)?;
         Ok(())
     }
+
+    fn has_truncated_values(&mut self) -> bool {
+        unimplemented!()
+    }
 }

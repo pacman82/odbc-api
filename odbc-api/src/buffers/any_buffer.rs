@@ -632,6 +632,15 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::NullableBit(col) => col.fill_null(from, to),
         }
     }
+
+    fn has_truncated_values(&self, num_rows: usize) -> bool {
+        match self {
+            AnyBuffer::Binary(col) => col.has_truncated_values(num_rows),
+            AnyBuffer::Text(col) => col.has_truncated_values(num_rows),
+            AnyBuffer::WText(col) => col.has_truncated_values(num_rows),
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]
