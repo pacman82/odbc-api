@@ -336,7 +336,7 @@ pub unsafe trait RowSetBuffer {
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 
     /// Check if the buffer contains any truncated values for variadic sized columns.
-    fn has_truncated_values(&mut self) -> bool;
+    fn has_truncated_values(&self) -> bool;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -356,8 +356,8 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).bind_colmuns_to_cursor(cursor)
     }
 
-    fn has_truncated_values(&mut self) -> bool {
-        (*self).has_truncated_values()
+    fn has_truncated_values(&self) -> bool {
+        (**self).has_truncated_values()
     }
 }
 
@@ -414,7 +414,10 @@ where
     ///     }
     /// }
     /// ```
-    pub fn fetch(&mut self) -> Result<Option<&B>, Error> {
+    pub fn fetch(&mut self) -> Result<Option<&B>, Error>
+    where
+        B: RowSetBuffer,
+    {
         self.fetch_with_truncation_check(false)
     }
 
@@ -446,11 +449,15 @@ where
     pub fn fetch_with_truncation_check(
         &mut self,
         error_for_truncation: bool,
-    ) -> Result<Option<&B>, Error> {
+    ) -> Result<Option<&B>, Error>
+    where
+        B: RowSetBuffer,
+    {
         let mut stmt = self.cursor.as_stmt_ref();
         unsafe {
             let result = stmt.fetch();
-            let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
+            let has_row =
+                error_handling_for_fetch(result, stmt, &self.buffer, error_for_truncation)?;
             Ok(has_row.then_some(&self.buffer))
         }
     }
@@ -571,7 +578,10 @@ where
     ///
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
-    pub async fn fetch(&mut self, sleep: impl Sleep) -> Result<Option<&B>, Error> {
+    pub async fn fetch(&mut self, sleep: impl Sleep) -> Result<Option<&B>, Error>
+    where
+        B: RowSetBuffer,
+    {
         self.fetch_with_truncation_check(false, sleep).await
     }
 
@@ -589,13 +599,14 @@ where
         &mut self,
         error_for_truncation: bool,
         mut sleep: impl Sleep,
-    ) -> Result<Option<&B>, Error> {
+    ) -> Result<Option<&B>, Error>
+    where
+        B: RowSetBuffer,
+    {
         let mut stmt = self.cursor.as_stmt_ref();
-        unsafe {
-            let result = wait_for(|| stmt.fetch(), &mut sleep).await;
-            let has_row = error_handling_for_fetch(result, stmt, error_for_truncation)?;
-            Ok(has_row.then_some(&self.buffer))
-        }
+        let result = unsafe { wait_for(|| stmt.fetch(), &mut sleep).await };
+        let has_row = error_handling_for_fetch(result, stmt, &self.buffer, error_for_truncation)?;
+        Ok(has_row.then_some(&self.buffer))
     }
 }
 
@@ -630,23 +641,31 @@ unsafe fn bind_row_set_buffer_to_statement(
 fn error_handling_for_fetch(
     result: SqlResult<()>,
     mut stmt: StatementRef,
+    buffer: &impl RowSetBuffer,
     error_for_truncation: bool,
 ) -> Result<bool, Error> {
-    let has_row = result
-        .on_success(|| true)
-        .into_result_with(&stmt.as_stmt_ref(), error_for_truncation, Some(false), None)
-        // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
-        // tell the it to the user than binding parameters, but rather now then we fetch
-        // results. The error code retruned is `HY004` rather then `HY003` which should
-        // be used to indicate invalid buffer types.
-        .provide_context_for_diagnostic(|record, function| {
-            if record.state == State::INVALID_SQL_DATA_TYPE {
-                Error::OracleOdbcDriverDoesNotSupport64Bit(record)
-            } else {
-                Error::Diagnostics { record, function }
-            }
-        })?;
-    Ok(has_row)
+    if error_for_truncation
+        && result == SqlResult::SuccessWithInfo(())
+        && buffer.has_truncated_values()
+    {
+        Err(Error::TooLargeValueForBuffer)
+    } else {
+        let has_row = result
+            .on_success(|| true)
+            .into_result_with(&stmt.as_stmt_ref(), Some(false), None)
+            // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
+            // tell the it to the user than binding parameters, but rather now then we fetch
+            // results. The error code retruned is `HY004` rather then `HY003` which should
+            // be used to indicate invalid buffer types.
+            .provide_context_for_diagnostic(|record, function| {
+                if record.state == State::INVALID_SQL_DATA_TYPE {
+                    Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+                } else {
+                    Error::Diagnostics { record, function }
+                }
+            })?;
+        Ok(has_row)
+    }
 }
 
 impl<C, B> Drop for BlockCursorPolling<C, B>

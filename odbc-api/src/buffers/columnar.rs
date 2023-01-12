@@ -104,8 +104,10 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&mut self) -> bool {
-        self.columns.iter().any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
+    fn has_truncated_values(&self) -> bool {
+        self.columns
+            .iter()
+            .any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
     }
 }
 

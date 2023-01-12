@@ -209,7 +209,7 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&mut self) -> bool {
+    fn has_truncated_values(&self) -> bool {
         unimplemented!()
     }
 }

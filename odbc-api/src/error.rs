@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult, State};
+use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult};
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]
@@ -117,15 +117,6 @@ pub enum Error {
         element_size: usize,
     },
     #[error(
-        "The number of diagnostic records returned by ODBC seems to exceed `32,767` This means not
-        all (diagnostic) records could be inspected. Sadly this prevents checking for truncated
-        values and puts you at risk of silently loosing data. Usually this many warnings are only
-        generated, if one or more warnings per row is generated, and then there are many rows. Maybe
-        try fewer rows, or fix the cause of some of these warnings/errors? One of these diagnostic
-        records contains:\n{record}."
-    )]
-    TooManyDiagnostics { record: DiagnosticRecord },
-    #[error(
         "A value (at least one) is too large to be written into the allocated buffer without
         truncation."
     )]
@@ -169,7 +160,7 @@ impl SqlResult<()> {
     /// `Ok(true)`.
     pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
         self.on_success(|| true)
-            .into_result_with(handle, false, Some(false), None)
+            .into_result_with(handle, Some(false), None)
     }
 }
 
@@ -179,16 +170,13 @@ impl<T> SqlResult<T> {
     /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. In case of
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
-        let error_for_truncation = false;
-        self.into_result_with(handle, error_for_truncation, None, None)
+        self.into_result_with(handle, None, None)
     }
 
     /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
     /// is mapped to `Some`.
     pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
-        let error_for_truncation = false;
-        self.map(Some)
-            .into_result_with(handle, error_for_truncation, Some(None), None)
+        self.map(Some).into_result_with(handle, Some(None), None)
     }
 
     /// Most flexible way of converting an `SqlResult` to an idiomatic `Result`.
@@ -209,7 +197,6 @@ impl<T> SqlResult<T> {
     pub fn into_result_with(
         self,
         handle: &impl Diagnostics,
-        error_for_truncation: bool,
         no_data: Option<T>,
         need_data: Option<T>,
     ) -> Result<T, Error> {
@@ -219,14 +206,6 @@ impl<T> SqlResult<T> {
             // The function has been executed successfully. There have been warnings. Holds result.
             SqlResult::SuccessWithInfo(value) => {
                 log_diagnostics(handle);
-
-                // This is only relevant then bulk fetching values into a buffer. As such this check
-                // would perform unnecessary work in most cases. When bulk fetching it should be up
-                // for the application to decide wether this is considered an error or not.
-                if error_for_truncation {
-                    check_for_truncation(handle)?;
-                }
-
                 Ok(value)
             }
             SqlResult::Error { function } => {
@@ -253,22 +232,4 @@ impl<T> SqlResult<T> {
             ),
         }
     }
-}
-
-fn check_for_truncation(handle: &impl Diagnostics) -> Result<(), Error> {
-    let mut empty = [];
-    let mut rec_number = 1;
-    while let Some(result) = handle.diagnostic_record(1, &mut empty) {
-        if result.state == State::STRING_DATA_RIGHT_TRUNCATION {
-            return Err(Error::TooLargeValueForBuffer);
-        } else if rec_number == i16::MAX {
-            // Many diagnostic records may be produced with a single call. Especially in case of
-            // bulk fetching, or inserting. Sadly this could mask truncation errors.
-            let mut record = DiagnosticRecord::with_capacity(512);
-            record.fill_from(handle, i16::MAX);
-            return Err(Error::TooManyDiagnostics { record });
-        }
-        rec_number += 1;
-    }
-    Ok(())
 }
