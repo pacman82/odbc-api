@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.18
+
+* Updated dependencies
+* Checking for truncations, is now guaranteed to work, even if the query generates 32767 diagnostic records.
+
 ## 0.4.17
 
 * Updated dependencies
