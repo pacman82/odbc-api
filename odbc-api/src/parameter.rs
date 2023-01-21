@@ -321,7 +321,7 @@ mod varchar;
 pub use self::{
     blob::{Blob, BlobParam, BlobRead, BlobSlice},
     varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
-    varchar::{VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
+    varchar::{VariadicCell, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
 };
 
 use std::ffi::c_void;

@@ -35,4 +35,15 @@ impl Indicator {
             Indicator::Length(len) => len.try_into().unwrap(),
         }
     }
+
+    /// Does this indicator imply truncation for a value of the given length?
+    ///
+    /// `length_in_buffer` is specified in bytes without terminating zeroes.
+    pub fn is_truncated(self, length_in_buffer: usize) -> bool {
+        match self {
+            Indicator::Null => false,
+            Indicator::NoTotal => true,
+            Indicator::Length(complete_length) => complete_length > length_in_buffer,
+        }
+    }
 }
