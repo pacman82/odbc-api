@@ -14,15 +14,14 @@ use crate::{
 
 use super::CElement;
 
-
 /// A tag used to differentiate between different types of variadic buffers.
 ///
 /// # Safety
-/// 
+///
 /// * `TERMINATING_ZEROES` is used to calculate buffer offsets.
 /// * `C_DATA_TYPE` is used to bind parameters. Providing wrong values like e.g. a fixed length
 ///   types, would cause even a correctly implemented odbc driver to access invalid memory.
-pub unsafe trait VariadicKind {
+pub unsafe trait VarKind {
     /// Number of terminating zeroes required for this kind of variadic buffer.
     const TERMINATING_ZEROES: usize;
     const C_DATA_TYPE: CDataType;
@@ -33,7 +32,7 @@ pub unsafe trait VariadicKind {
 /// used to hold narrow (as opposed to wide UTF-16) text.
 pub struct Text;
 
-unsafe impl VariadicKind for Text {
+unsafe impl VarKind for Text {
     const TERMINATING_ZEROES: usize = 1;
     const C_DATA_TYPE: CDataType = CDataType::Char;
 
@@ -42,20 +41,19 @@ unsafe impl VariadicKind for Text {
         // do not deduct 1 for the terminating zero.
         DataType::Varchar { length }
     }
-    
 }
 
 /// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
 /// used to hold raw binary input.
 pub struct Binary;
 
-unsafe impl VariadicKind for Binary {
+unsafe impl VarKind for Binary {
     const TERMINATING_ZEROES: usize = 0;
     const C_DATA_TYPE: CDataType = CDataType::Binary;
 
     fn relational_type(length: usize) -> DataType {
         DataType::Varbinary { length }
-    }   
+    }
 }
 
 /// Binds a byte array as Variadic sized character data. It can not be used for columnar bulk
@@ -68,7 +66,7 @@ unsafe impl VariadicKind for Binary {
 /// * [`self::VarCharArray`] - stack allocated owned input / output parameter
 /// * [`self::VarCharBox`] - heap allocated owned input /output parameter
 #[derive(Debug, Clone, Copy)]
-pub struct VariadicCell<B, K> {
+pub struct VarCell<B, K> {
     /// Contains the value. Characters must be valid up to the index indicated by `indicator`. If
     /// `indicator` is longer than buffer, the last element in buffer must be a terminating zero,
     /// which is not regarded as being part of the payload itself.
@@ -88,7 +86,7 @@ pub struct VariadicCell<B, K> {
 ///
 /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
 /// has the role of telling us how many bytes in the buffer are part of the payload.
-pub type VarCharBox = VariadicCell<Box<[u8]>, Text>;
+pub type VarCharBox = VarCell<Box<[u8]>, Text>;
 
 // /// Parameter type for owned, variable sized binary data.
 // ///
@@ -96,9 +94,9 @@ pub type VarCharBox = VariadicCell<Box<[u8]>, Text>;
 // /// has the role of telling us how many bytes in the buffer are part of the payload.
 // pub type VarBinaryBox = VariadicCell<Box<u8>, Binary>;
 
-impl<K> VariadicCell<Box<[u8]>, K>
+impl<K> VarCell<Box<[u8]>, K>
 where
-    K: VariadicKind,
+    K: VarKind,
 {
     /// Constructs a 'missing' value.
     pub fn null() -> Self {
@@ -121,10 +119,10 @@ where
     }
 }
 
-impl<B, K> VariadicCell<B, K>
+impl<B, K> VarCell<B, K>
 where
     B: Borrow<[u8]>,
-    K: VariadicKind,
+    K: VarKind,
 {
     /// Creates a new instance from an existing buffer. For text should the indicator be `NoTotal`
     /// or indicate a length longer than buffer, the last element in the buffer must be nul (`\0`).
@@ -228,10 +226,10 @@ where
     }
 }
 
-impl<B, K> VariadicCell<B, K>
+impl<B, K> VarCell<B, K>
 where
     B: Borrow<[u8]>,
-    K: VariadicKind,
+    K: VarKind,
 {
     /// Call this method to reset the indicator to a value which matches the length returned by the
     /// [`Self::as_bytes`] method. This is useful if you want to insert values into the database
@@ -247,10 +245,10 @@ where
     }
 }
 
-unsafe impl<B, K> CData for VariadicCell<B, K>
+unsafe impl<B, K> CData for VarCell<B, K>
 where
     B: Borrow<[u8]>,
-    K: VariadicKind
+    K: VarKind,
 {
     fn cdata_type(&self) -> CDataType {
         K::C_DATA_TYPE
@@ -272,20 +270,20 @@ where
     }
 }
 
-impl<B, K> HasDataType for VariadicCell<B, K>
+impl<B, K> HasDataType for VarCell<B, K>
 where
     B: Borrow<[u8]>,
-    K: VariadicKind
+    K: VarKind,
 {
     fn data_type(&self) -> DataType {
         K::relational_type(self.buffer.borrow().len())
     }
 }
 
-unsafe impl<B,K> CDataMut for VariadicCell<B, K>
+unsafe impl<B, K> CDataMut for VarCell<B, K>
 where
     B: BorrowMut<[u8]>,
-    K: VariadicKind
+    K: VarKind,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         &mut self.indicator as *mut isize
@@ -320,9 +318,12 @@ where
 /// };
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
-pub type VarCharSlice<'a> = VariadicCell<&'a [u8], Text>;
+pub type VarCharSlice<'a> = VarCell<&'a [u8], Text>;
 
-impl<'a, K> VariadicCell<&'a [u8], K> where K: VariadicKind {
+impl<'a, K> VarCell<&'a [u8], K>
+where
+    K: VarKind,
+{
     /// Indicates missing data
     pub const NULL: Self = Self {
         // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
@@ -345,13 +346,13 @@ impl<'a, K> VariadicCell<&'a [u8], K> where K: VariadicKind {
 }
 
 /// Wraps a slice so it can be used as an output parameter for character data.
-pub type VarCharSliceMut<'a> = VariadicCell<&'a mut [u8], Text>;
+pub type VarCharSliceMut<'a> = VarCell<&'a mut [u8], Text>;
 
 /// A stack allocated VARCHAR type.
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
-pub type VarCharArray<const LENGTH: usize> = VariadicCell<[u8; LENGTH], Text>;
+pub type VarCharArray<const LENGTH: usize> = VarCell<[u8; LENGTH], Text>;
 
 impl<const LENGTH: usize> VarCharArray<LENGTH> {
     /// Indicates a missing value.
@@ -395,16 +396,16 @@ fn ends_in_zeroes(buffer: &[u8], number_of_zeroes: usize) -> bool {
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
-unsafe impl CElement for VarCharSlice<'_> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ [u8], K> {}
 
-unsafe impl<const LENGTH: usize> CElement for VarCharArray<LENGTH> {}
-unsafe impl<const LENGTH: usize> OutputParameter for VarCharArray<LENGTH> {}
+unsafe impl<const LENGTH: usize, K: VarKind> CElement for VarCell<[u8; LENGTH], K> {}
+unsafe impl<const LENGTH: usize, K: VarKind> OutputParameter for VarCell<[u8; LENGTH], K> {}
 
-unsafe impl CElement for VarCharSliceMut<'_> {}
-unsafe impl OutputParameter for VarCharSliceMut<'_> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [u8], K> {}
+unsafe impl<K: VarKind> OutputParameter for VarCell<&'_ mut [u8], K> {}
 
-unsafe impl CElement for VarCharBox {}
-unsafe impl OutputParameter for VarCharBox {}
+unsafe impl<K: VarKind> CElement for VarCell<Box<[u8]>, K> {}
+unsafe impl<K: VarKind> OutputParameter for VarCell<Box<[u8]>, K> {}
 
 #[cfg(test)]
 mod tests {
