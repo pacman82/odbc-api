@@ -14,16 +14,24 @@ use crate::{
 
 use super::CElement;
 
-/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
-/// used to hold narrow (as opposed to wide UTF-16) text.
-pub struct Text;
 
+/// A tag used to differentiate between different types of variadic buffers.
+///
+/// # Safety
+/// 
+/// * `TERMINATING_ZEROES` is used to calculate buffer offsets.
+/// * `C_DATA_TYPE` is used to bind parameters. Providing wrong values like e.g. a fixed length
+///   types, would cause even a correctly implemented odbc driver to access invalid memory.
 pub unsafe trait VariadicKind {
     /// Number of terminating zeroes required for this kind of variadic buffer.
     const TERMINATING_ZEROES: usize;
     const C_DATA_TYPE: CDataType;
     fn relational_type(length: usize) -> DataType;
 }
+
+/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
+/// used to hold narrow (as opposed to wide UTF-16) text.
+pub struct Text;
 
 unsafe impl VariadicKind for Text {
     const TERMINATING_ZEROES: usize = 1;
@@ -35,6 +43,19 @@ unsafe impl VariadicKind for Text {
         DataType::Varchar { length }
     }
     
+}
+
+/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
+/// used to hold raw binary input.
+pub struct Binary;
+
+unsafe impl VariadicKind for Binary {
+    const TERMINATING_ZEROES: usize = 0;
+    const C_DATA_TYPE: CDataType = CDataType::Binary;
+
+    fn relational_type(length: usize) -> DataType {
+        DataType::Varbinary { length }
+    }   
 }
 
 /// Binds a byte array as Variadic sized character data. It can not be used for columnar bulk
@@ -68,6 +89,12 @@ pub struct VariadicCell<B, K> {
 /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
 /// has the role of telling us how many bytes in the buffer are part of the payload.
 pub type VarCharBox = VariadicCell<Box<[u8]>, Text>;
+
+// /// Parameter type for owned, variable sized binary data.
+// ///
+// /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
+// /// has the role of telling us how many bytes in the buffer are part of the payload.
+// pub type VarBinaryBox = VariadicCell<Box<u8>, Binary>;
 
 impl<K> VariadicCell<Box<[u8]>, K>
 where
@@ -182,7 +209,7 @@ where
     /// ```
     pub fn is_complete(&self) -> bool {
         let slice = self.buffer.borrow();
-        let max_value_length = if ends_in_zeroes(&slice, K::TERMINATING_ZEROES) {
+        let max_value_length = if ends_in_zeroes(slice, K::TERMINATING_ZEROES) {
             slice.len() - K::TERMINATING_ZEROES
         } else {
             slice.len()
