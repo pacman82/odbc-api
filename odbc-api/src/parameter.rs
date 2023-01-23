@@ -321,7 +321,7 @@ pub use self::{
     blob::{Blob, BlobParam, BlobRead, BlobSlice},
     varcell::{
         VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut, VarCell,
-        VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut,
+        VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut, VarKind, Binary, Text
     },
 };
 
