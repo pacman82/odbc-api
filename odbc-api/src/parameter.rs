@@ -315,11 +315,11 @@
 //! types.
 mod blob;
 mod c_string;
-mod varchar;
+mod varcell;
 
 pub use self::{
     blob::{Blob, BlobParam, BlobRead, BlobSlice},
-    varchar::{
+    varcell::{
         VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut, VarCell,
         VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut,
     },
