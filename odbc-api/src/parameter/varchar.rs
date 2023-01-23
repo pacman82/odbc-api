@@ -65,6 +65,10 @@ unsafe impl VarKind for Binary {
 /// * [`self::VarCharSliceMut`] - mutable borrowed input / output parameter
 /// * [`self::VarCharArray`] - stack allocated owned input / output parameter
 /// * [`self::VarCharBox`] - heap allocated owned input /output parameter
+/// * [`self::VarBinarySlice`] - immutable borrowed parameter.
+/// * [`self::VarBinarySliceMut`] - mutable borrowed input / output parameter
+/// * [`self::VarBinaryArray`] - stack allocated owned input / output parameter
+/// * [`self::VarBinaryBox`] - heap allocated owned input /output parameter
 #[derive(Debug, Clone, Copy)]
 pub struct VarCell<B, K> {
     /// Contains the value. Characters must be valid up to the index indicated by `indicator`. If
@@ -82,17 +86,20 @@ pub struct VarCell<B, K> {
     kind: PhantomData<K>,
 }
 
+pub type VarBinary<B> = VarCell<B, Binary>;
+pub type VarChar<B> = VarCell<B, Text>;
+
 /// Parameter type for owned, variable sized character data.
 ///
 /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
 /// has the role of telling us how many bytes in the buffer are part of the payload.
-pub type VarCharBox = VarCell<Box<[u8]>, Text>;
+pub type VarCharBox = VarChar<Box<[u8]>>;
 
-// /// Parameter type for owned, variable sized binary data.
-// ///
-// /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
-// /// has the role of telling us how many bytes in the buffer are part of the payload.
-// pub type VarBinaryBox = VariadicCell<Box<u8>, Binary>;
+/// Parameter type for owned, variable sized binary data.
+///
+/// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
+/// has the role of telling us how many bytes in the buffer are part of the payload.
+pub type VarBinaryBox = VarBinary<Box<[u8]>>;
 
 impl<K> VarCell<Box<[u8]>, K>
 where
@@ -318,7 +325,16 @@ where
 /// };
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
-pub type VarCharSlice<'a> = VarCell<&'a [u8], Text>;
+pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
+
+/// Binds a byte array as a variadic binary input parameter.
+///
+/// While a byte array can provide us with a pointer to the start of the array and the length of the
+/// array itself, it can not provide us with a pointer to the length of the buffer. So to bind
+/// byte slices (`&[u8]`) we need to store the length in a separate value.
+///
+/// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&[u8]`.
+pub type VarBinarySlice<'a> = VarBinary<&'a [u8]>;
 
 impl<'a, K> VarCell<&'a [u8], K>
 where
@@ -346,17 +362,26 @@ where
 }
 
 /// Wraps a slice so it can be used as an output parameter for character data.
-pub type VarCharSliceMut<'a> = VarCell<&'a mut [u8], Text>;
+pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
+
+/// Wraps a slice so it can be used as an output parameter for binary data.
+pub type VarBinarySliceMut<'a> = VarBinary<&'a mut [u8]>;
 
 /// A stack allocated VARCHAR type.
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
-pub type VarCharArray<const LENGTH: usize> = VarCell<[u8; LENGTH], Text>;
+pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
 
-impl<const LENGTH: usize> VarCharArray<LENGTH> {
+/// A stack allocated VARBINARY type.
+///
+/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
+/// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
+pub type VarBinaryArray<const LENGTH: usize> = VarBinary<[u8; LENGTH]>;
+
+impl<const LENGTH: usize, K: VarKind> VarCell<[u8; LENGTH], K> {
     /// Indicates a missing value.
-    pub const NULL: Self = VarCharArray {
+    pub const NULL: Self = Self {
         buffer: [0; LENGTH],
         indicator: NULL_DATA,
         kind: PhantomData,
@@ -364,14 +389,14 @@ impl<const LENGTH: usize> VarCharArray<LENGTH> {
 
     /// Construct from a slice. If value is longer than `LENGTH` it will be truncated. In that case
     /// the last byte will be set to `0`.
-    pub fn new(text: &[u8]) -> Self {
-        let indicator = text.len().try_into().unwrap();
+    pub fn new(bytes: &[u8]) -> Self {
+        let indicator = bytes.len().try_into().unwrap();
         let mut buffer = [0u8; LENGTH];
-        if text.len() > LENGTH {
-            buffer.copy_from_slice(&text[..LENGTH]);
+        if bytes.len() > LENGTH {
+            buffer.copy_from_slice(&bytes[..LENGTH]);
             *buffer.last_mut().unwrap() = 0;
         } else {
-            buffer[..text.len()].copy_from_slice(text);
+            buffer[..bytes.len()].copy_from_slice(bytes);
         };
         Self {
             buffer,

@@ -315,13 +315,14 @@
 //! types.
 mod blob;
 mod c_string;
-mod varbin;
 mod varchar;
 
 pub use self::{
     blob::{Blob, BlobParam, BlobRead, BlobSlice},
-    varbin::{VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut},
-    varchar::{VarCell, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut},
+    varchar::{
+        VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut, VarCell,
+        VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut,
+    },
 };
 
 use std::ffi::c_void;
