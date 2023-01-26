@@ -2207,6 +2207,31 @@ fn get_data_string(profile: &Profile) {
     assert!(cursor.next_row().unwrap().is_none())
 }
 
+/// Use get_text to retrieve a string. Use a buffer which is one terminating zero short to get the
+/// entire value.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn get_text(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["Varchar(50)"]).unwrap();
+    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter()).unwrap();
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .unwrap()
+        .unwrap();
+
+    let mut row = cursor.next_row().unwrap().unwrap();
+    // We want to hit an edge case there there has been a sign error then calculating buffer size
+    // with terminating zero.
+    let mut actual = Vec::with_capacity("Hello, World!".len() - 1);
+    let is_not_null = row.get_text(1, &mut actual).unwrap();
+
+    assert!(is_not_null);
+    assert_eq!(&b"Hello, World!"[..], &actual);
+}
+
 /// Use get_data to retrieve a binary data
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]

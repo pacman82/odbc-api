@@ -9,7 +9,7 @@ use crate::{
     Error, ResultSetMetadata,
 };
 
-use std::{cmp::max, thread::panicking};
+use std::thread::panicking;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
@@ -134,10 +134,18 @@ impl<'s> CursorRow<'s> {
         col_or_param_num: u16,
         buf: &mut Vec<u8>,
     ) -> Result<bool, Error> {
-        // Utilize all of the allocated buffer. We must make sure buffer can at least hold the
-        // terminating zero. We do a bit more than that though, to avoid to many repeated calls to
-        // get_data.
-        buf.resize(max(256, buf.capacity()), 0);
+        if buf.capacity() == 0 {
+            // User did just provide an empty buffer. So it is fair to assume not much domain
+            // knowledge has been used to decide its size. We just default to 256 to increase the
+            // chance that we get it done with one alloctaion. The buffer size being 0 we need at
+            // least 1 anyway. If the capacity is not `0` we'll leave the buffer size untouched as
+            // we do not want to prevent users from providing better guessen based on domain
+            // knowledege.
+            // This also implicitly makes sure that we can at least hold one terminting zero.
+            buf.reserve(256);
+        }
+        // Utilize all of the allocated buffer.
+        buf.resize(buf.capacity(), 0);
         // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
         // accumulated value size. This variable keeps track of the number of bytes we added with
         // the next call to get_data.
@@ -165,7 +173,7 @@ impl<'s> CursorRow<'s> {
                 }
                 // We did get the complete value, including the terminating zero. Let's resize the
                 // buffer to match the retrieved value exactly (excluding terminating zero).
-                Indicator::Length(len) if len <= fetch_size + K::TERMINATING_ZEROES => {
+                Indicator::Length(len) if len + K::TERMINATING_ZEROES <= fetch_size => {
                     // Since the indicator refers to value length without terminating zero, this
                     // also implicitly drops the terminating zero at the end of the buffer.
                     let shrink_by = fetch_size - len;
