@@ -41,13 +41,10 @@ lazy_static! {
 fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Setup table for test. We use the table name only in this test.
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
         .unwrap();
     conn.execute(
-        &format!(
-            "CREATE TABLE {} (country VARCHAR(255), population BIGINT);",
-            table_name
-        ),
+        &format!("CREATE TABLE {table_name} (country VARCHAR(255), population BIGINT);"),
         (),
     )
     .unwrap();
@@ -76,10 +73,7 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
             "query",
             "--connection-string",
             MSSQL,
-            &format!(
-                "SELECT country, population FROM {} ORDER BY population;",
-                table_name
-            ),
+            &format!("SELECT country, population FROM {table_name} ORDER BY population;"),
         ])
         .assert()
         .stdout(csv)
@@ -115,13 +109,12 @@ fn query_mssql() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a, b)
         Values
         ('Jurassic Park', 1993),
         ('2001: A Space Odyssey', 1968),
-        ('Interstellar', NULL);",
-        table_name
+        ('Interstellar', NULL);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -131,7 +124,7 @@ fn query_mssql() {
         Interstellar,\n\
     ";
 
-    let query = format!("SELECT a, b from {}", table_name);
+    let query = format!("SELECT a, b from {table_name}");
     Command::cargo_bin("odbcsv")
         .unwrap()
         .args(["-vvvv", "query", "--connection-string", MSSQL, &query])
@@ -181,13 +174,10 @@ fn columns() {
     // Setup table for test. We use the table name only in this test.
     // Setup empty table handle would implicitly create an ID column
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {}", table_name), ())
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
         .unwrap();
-    conn.execute(
-        &format!("CREATE TABLE {} (a VARCHAR(255));", table_name),
-        (),
-    )
-    .unwrap();
+    conn.execute(&format!("CREATE TABLE {table_name} (a VARCHAR(255));"), ())
+        .unwrap();
 
     Command::cargo_bin("odbcsv")
         .unwrap()
@@ -252,13 +242,12 @@ fn placeholders() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a, b)
         Values
         ('one', 10),
         ('two', 20),
-        ('thre', NULL);",
-        table_name
+        ('thre', NULL);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -273,7 +262,7 @@ fn placeholders() {
             "query",
             "--connection-string",
             MSSQL,
-            &format!("SELECT a from {} where b > ? and b < ?;", table_name),
+            &format!("SELECT a from {table_name} where b > ? and b < ?;"),
             "12",
             "23",
         ])
@@ -367,20 +356,17 @@ pub fn setup_empty_table(
     table_name: &str,
     column_types: &[&str],
 ) -> Result<(), odbc_api::Error> {
-    let drop_table = &format!("DROP TABLE IF EXISTS {}", table_name);
+    let drop_table = &format!("DROP TABLE IF EXISTS {table_name}");
 
     let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
     let cols = column_types
         .iter()
         .zip(column_names)
-        .map(|(ty, name)| format!("{} {}", name, ty))
+        .map(|(ty, name)| format!("{name} {ty}"))
         .collect::<Vec<_>>()
         .join(", ");
 
-    let create_table = format!(
-        "CREATE TABLE {} (id int IDENTITY(1,1),{});",
-        table_name, cols
-    );
+    let create_table = format!("CREATE TABLE {table_name} (id int IDENTITY(1,1),{cols});");
     conn.execute(drop_table, ())?;
     conn.execute(&create_table, ())?;
     Ok(())
@@ -392,13 +378,12 @@ fn fetch_from_mssql() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a, b)
         Values
         ('Jurassic Park', 1993),
         ('2001: A Space Odyssey', 1968),
-        ('Interstellar', NULL);",
-        table_name
+        ('Interstellar', NULL);"
     );
     conn.execute(&insert, ()).unwrap();
 
@@ -408,7 +393,7 @@ fn fetch_from_mssql() {
         Interstellar,\n\
     ";
 
-    let query = format!("SELECT a, b from {}", table_name);
+    let query = format!("SELECT a, b from {table_name}");
     Command::cargo_bin("odbcsv")
         .unwrap()
         .args([
@@ -431,20 +416,19 @@ fn fetch_with_query_read_from_file() {
     let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
-        "INSERT INTO {}
+        "INSERT INTO {table_name}
         (a, b)
         Values
         ('Jurassic Park', 1993),
         ('2001: A Space Odyssey', 1968),
-        ('Interstellar', NULL);",
-        table_name
+        ('Interstellar', NULL);"
     );
     conn.execute(&insert, ()).unwrap();
 
     // Write query into temporary file
     let named = NamedTempFile::new().unwrap();
     let path = named.into_temp_path();
-    let query = format!("SELECT a, b from {}", table_name);
+    let query = format!("SELECT a, b from {table_name}");
     fs::write(&path, query).unwrap();
 
     // Use query safed in file to fetch dummy data and assert the result

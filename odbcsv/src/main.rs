@@ -246,7 +246,7 @@ fn main() -> Result<(), Error> {
                 }
                 println!("{}", driver_info.description);
                 for (key, value) in &driver_info.attributes {
-                    println!("\t{}={}", key, value);
+                    println!("\t{key}={value}");
                 }
             }
         }
@@ -433,7 +433,7 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         .map(|_| "?")
         .collect::<Vec<_>>()
         .join(", ");
-    let statement_text = format!("INSERT INTO {} ({}) VALUES ({});", table, columns, values);
+    let statement_text = format!("INSERT INTO {table} ({columns}) VALUES ({values});");
     info!("Insert statement Text: {}", statement_text);
 
     let mut statement = connection.prepare(&statement_text)?;

@@ -3093,7 +3093,7 @@ fn no_data(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER"])
         .unwrap();
-    let sql = format!("DELETE FROM {} WHERE id=5", table_name);
+    let sql = format!("DELETE FROM {table_name} WHERE id=5");
     // Assert no panic on direct execution
     conn.execute(&sql, ()).unwrap();
     // Assert no panic on prepared execution
@@ -3215,7 +3215,7 @@ fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
 fn row_array_size_66536(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
-    let sql = format!("SELECT a FROM {}", table_name);
+    let sql = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(
         u16::MAX as usize + 1,
