@@ -151,14 +151,13 @@ impl<'s> CursorRow<'s> {
         // the next call to get_data.
         let mut fetch_size = buf.len();
         let mut target = VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::Null);
-        // Fetch binary data into buffer.
-        self.get_data(col_or_param_num, &mut target)?;
-        let not_null = loop {
+        loop {
+            // Fetch binary data into buffer.
+            self.get_data(col_or_param_num, &mut target)?;
             match target.indicator() {
                 // Value is `NULL`. We are done here.
                 Indicator::Null => {
-                    buf.clear();
-                    break false;
+                    break;
                 }
                 // We do not know how large the value is. Let's fetch the data with repeated calls
                 // to get_data.
@@ -169,16 +168,11 @@ impl<'s> CursorRow<'s> {
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
                     fetch_size = buf_extend.len();
                     target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::Null);
-                    self.get_data(col_or_param_num, &mut target)?;
                 }
                 // We did get the complete value, including the terminating zero. Let's resize the
                 // buffer to match the retrieved value exactly (excluding terminating zero).
                 Indicator::Length(len) if len + K::TERMINATING_ZEROES <= fetch_size => {
-                    // Since the indicator refers to value length without terminating zero, this
-                    // also implicitly drops the terminating zero at the end of the buffer.
-                    let shrink_by = fetch_size - len;
-                    buf.resize(buf.len() - shrink_by, 0);
-                    break true;
+                    break;
                 }
                 // We did not get all of the value in one go, but the data source has been friendly
                 // enough to tell us how much is missing.
@@ -189,11 +183,20 @@ impl<'s> CursorRow<'s> {
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
                     fetch_size = buf_extend.len();
                     target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::Null);
-                    self.get_data(col_or_param_num, &mut target)?;
                 }
             }
-        };
-        Ok(not_null)
+        }
+        if let Some(len) = target.indicator().value_len() {
+            // Since the indicator refers to value length without terminating zero, this also
+            // implicitly drops the terminating zero at the end of the buffer.
+            let shrink_by = fetch_size - len;
+            buf.resize(buf.len() - shrink_by, 0);
+            Ok(true)
+        } else {
+            // value is NULL
+            buf.clear();
+            Ok(false)
+        }
     }
 }
 

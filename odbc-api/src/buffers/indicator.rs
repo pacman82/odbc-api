@@ -46,4 +46,22 @@ impl Indicator {
             Indicator::Length(complete_length) => complete_length > length_in_buffer,
         }
     }
+
+    /// Only `true` if the indicator is the equivalent to [`odbc_sys::NULL_DATA`], indicating a
+    /// non-existing value.
+    pub fn is_null(self) -> bool {
+        match self {
+            Indicator::Null => true,
+            Indicator::NoTotal | Indicator::Length(_) => false,
+        }
+    }
+
+    /// If the indicator is [`Indicator::Length`] this is [`Some`].
+    pub fn value_len(self) -> Option<usize> {
+        if let Indicator::Length(len) = self {
+            Some(len)
+        } else {
+            None
+        }
+    }
 }
