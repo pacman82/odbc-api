@@ -25,8 +25,7 @@ impl<'conn> Drop for Connection<'conn> {
                     if !panicking() {
                         panic!(
                             "Unexpected error rolling back transaction (In order to recover \
-                                from invalid transaction state during disconnect): {:?}",
-                            e
+                                from invalid transaction state during disconnect): {e:?}"
                         )
                     }
                 }
@@ -35,7 +34,7 @@ impl<'conn> Drop for Connection<'conn> {
                     // Avoid panicking, if we already have a panic. We don't want to mask the original
                     // error.
                     if !panicking() {
-                        panic!("Unexpected error disconnecting): {:?}", e)
+                        panic!("Unexpected error disconnecting): {e:?}")
                     }
                 }
             }
@@ -43,7 +42,7 @@ impl<'conn> Drop for Connection<'conn> {
                 // Avoid panicking, if we already have a panic. We don't want to mask the original
                 // error.
                 if !panicking() {
-                    panic!("Unexpected error disconnecting: {:?}", e)
+                    panic!("Unexpected error disconnecting: {e:?}")
                 }
             }
         }

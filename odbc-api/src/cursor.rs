@@ -218,7 +218,7 @@ where
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
-                panic!("Unexpected error closing cursor: {:?}", e)
+                panic!("Unexpected error closing cursor: {e:?}")
             }
         }
     }
@@ -450,7 +450,7 @@ where
                 // Avoid panicking, if we already have a panic. We don't want to mask the original
                 // error.
                 if !panicking() {
-                    panic!("Unexpected error unbinding columns: {:?}", e)
+                    panic!("Unexpected error unbinding columns: {e:?}")
                 }
             }
         }
@@ -519,7 +519,7 @@ where
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
-                panic!("Unexpected error closing cursor: {:?}", e)
+                panic!("Unexpected error closing cursor: {e:?}")
             }
         }
     }
@@ -655,7 +655,7 @@ where
                 // Avoid panicking, if we already have a panic. We don't want to mask the original
                 // error.
                 if !panicking() {
-                    panic!("Unexpected error unbinding columns: {:?}", e)
+                    panic!("Unexpected error unbinding columns: {e:?}")
                 }
             }
         }

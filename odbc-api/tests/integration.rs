@@ -234,7 +234,7 @@ fn bulk_fetch_text(profile: &Profile) {
         .unwrap();
 
     // Insert data
-    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?), (?,?),(?,?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (?,?), (?,?),(?,?)");
     conn.execute(
         &insert,
         (
@@ -268,7 +268,7 @@ fn into_cursor(profile: &Profile) {
         .unwrap();
 
     // Insert data
-    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?), (?,?),(?,?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (?,?), (?,?),(?,?)");
     conn.execute(
         &insert,
         (
@@ -305,7 +305,7 @@ fn column_name(profile: &Profile) {
         .setup_empty_table(&table_name, &["VARCHAR(255)", "INT"])
         .unwrap();
 
-    let sql = format!("SELECT a, b FROM {};", table_name);
+    let sql = format!("SELECT a, b FROM {table_name};");
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     let name = cursor.col_name(1).unwrap();
@@ -384,7 +384,7 @@ fn bind_bit(profile: &Profile) {
     conn.execute(&insert_sql, (&Bit::from_bool(false), &Bit::from_bool(true)))
         .unwrap();
 
-    let sql = format!("SELECT a FROM {};", table_name);
+    let sql = format!("SELECT a FROM {table_name};");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut buf = ColumnarBuffer::new(vec![(1, vec![Bit(0); 3])]);
     let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
@@ -428,10 +428,10 @@ fn bind_varchar(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["VARCHAR(100)"])
         .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name);
+    let insert_sql = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!');");
     conn.execute(&insert_sql, ()).unwrap();
 
-    let sql = format!("SELECT a FROM {};", table_name);
+    let sql = format!("SELECT a FROM {table_name};");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let mut buf = TextRowSet::from_max_str_lens(1, [100]).unwrap();
     // let mut buf = SingleColumnRowSetBuffer::with_text_column(1, 100);
@@ -498,10 +498,10 @@ fn bind_numeric_to_float(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["NUMERIC(3,2)"])
         .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?);");
     conn.execute(&insert_sql, &1.23).unwrap();
 
-    let sql = format!("SELECT a FROM {}", table_name);
+    let sql = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let buf: SingleColumnRowSetBuffer<Vec<f64>> = SingleColumnRowSetBuffer::new(1);
     let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
@@ -521,10 +521,10 @@ fn bind_numeric_to_i64(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["NUMERIC(10,0)"])
         .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?);");
     conn.execute(&insert_sql, &1234567890i64).unwrap();
 
-    let sql = format!("SELECT a FROM {}", table_name);
+    let sql = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let buf: SingleColumnRowSetBuffer<Vec<i64>> = SingleColumnRowSetBuffer::new(1);
     let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
@@ -543,11 +543,10 @@ fn columnar_fetch_varbinary(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARBINARY(10)"]).unwrap();
     let insert_sql = format!(
-        "INSERT INTO {} (a) Values \
+        "INSERT INTO {table_name} (a) Values \
         (CONVERT(Varbinary(10), 'Hello')),\
         (CONVERT(Varbinary(10), 'World')),\
-        (NULL)",
-        table_name
+        (NULL)"
     );
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -648,12 +647,11 @@ fn columnar_fetch_timestamp(profile: &Profile) {
         .unwrap();
     conn.execute(
         &format!(
-            "INSERT INTO {} (a) Values \
+            "INSERT INTO {table_name} (a) Values \
         ({{ ts '2021-03-20 15:24:12.12' }}),\
         ({{ ts '2020-03-20 15:24:12' }}),\
         ({{ ts '1970-01-01 00:00:00' }}),\
-        (NULL)",
-            table_name
+        (NULL)"
         ),
         (),
     )
@@ -661,7 +659,7 @@ fn columnar_fetch_timestamp(profile: &Profile) {
 
     // Retrieve values
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
@@ -851,7 +849,7 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -916,7 +914,7 @@ fn columnar_insert_varchar(profile: &Profile) {
         .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
     let prepared = conn
-        .prepare(&format!("INSERT INTO {} (a) VALUES (?)", table_name))
+        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
     let desc = BufferDesc::Text {
         // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
@@ -948,7 +946,7 @@ fn columnar_insert_varchar(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -989,7 +987,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -1076,7 +1074,7 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -1170,7 +1168,7 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY Id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -1187,10 +1185,10 @@ fn bind_integer_parameter(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
-    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
 
-    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let sql = format!("SELECT a FROM {table_name} where b=?;");
     let cursor = conn.execute(&sql, &1).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     assert_eq!("1", actual);
@@ -1228,13 +1226,12 @@ fn prepared_statement(profile: &Profile) {
         .setup_empty_table(&table_name, &["VARCHAR(13)", "INTEGER"])
         .unwrap();
     let insert = format!(
-        "INSERT INTO {} (a,b) VALUES ('First', 1), ('Second', 2);",
-        table_name
+        "INSERT INTO {table_name} (a,b) VALUES ('First', 1), ('Second', 2);"
     );
     conn.execute(&insert, ()).unwrap();
 
     // Prepare the statement once
-    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let sql = format!("SELECT a FROM {table_name} where b=?;");
     let mut prepared = conn.prepare(&sql).unwrap();
 
     // Execute it two times with different parameters
@@ -1337,10 +1334,10 @@ fn integer_parameter_as_string(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
-    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
 
-    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let sql = format!("SELECT a FROM {table_name} where b=?;");
     let cursor = conn.execute(&sql, &"2".into_parameter()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
 
@@ -1356,10 +1353,10 @@ fn bind_optional_integer_parameter(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
         .unwrap();
-    let insert = format!("INSERT INTO {} (a,b) VALUES (1,1), (2,2);", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
 
-    let sql = format!("SELECT a FROM {} where b=?;", table_name);
+    let sql = format!("SELECT a FROM {table_name} where b=?;");
 
     let cursor = conn
         .execute(&sql, &Some(2).into_parameter())
@@ -1411,12 +1408,12 @@ fn wchar(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?), (?);", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?), (?);"),
         (&"A".into_parameter(), &"Ü".into_parameter()),
     )
     .unwrap();
 
-    let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
+    let sql = format!("SELECT a FROM {table_name} ORDER BY id;");
     let cursor = conn.execute(&sql, ()).unwrap().unwrap();
 
     let desc = BufferDesc::WText { max_str_len: 1 };
@@ -1465,12 +1462,11 @@ fn two_parameters_in_tuple(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER"])
         .unwrap();
-    let insert = format!("INSERT INTO {} (a) VALUES (1), (2), (3), (4);", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2), (3), (4);");
     conn.execute(&insert, ()).unwrap();
 
     let sql = format!(
-        "SELECT a FROM {} where ? < a AND a < ? ORDER BY id;",
-        table_name
+        "SELECT a FROM {table_name} where ? < a AND a < ? ORDER BY id;"
     );
 
     let cursor = conn.execute(&sql, (&1, &4)).unwrap().unwrap();
@@ -1488,13 +1484,12 @@ fn heterogenous_parameters_in_array(profile: &Profile) {
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
     let insert_sql = format!(
-        "INSERT INTO {} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')",
-        table_name
+        "INSERT INTO {table_name} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')"
     );
     conn.execute(&insert_sql, ()).unwrap();
 
     // Execute test
-    let query = format!("SELECT a,b FROM {} where  a > ? AND b = ?;", table_name);
+    let query = format!("SELECT a,b FROM {table_name} where  a > ? AND b = ?;");
     let params: [Box<dyn InputParameter>; 2] = [Box::new(2), Box::new("Hello".into_parameter())];
     let cursor = conn.execute(&query, &params[..]).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
@@ -1511,7 +1506,7 @@ fn column_names_iterator(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = format!("SELECT a, b FROM {};", table_name);
+    let sql = format!("SELECT a, b FROM {table_name};");
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
     let names: Vec<_> = cursor
         .column_names()
@@ -1531,7 +1526,7 @@ fn column_names_from_prepared_query(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = format!("SELECT a, b FROM {};", table_name);
+    let sql = format!("SELECT a, b FROM {table_name};");
     let mut prepared = conn.prepare(&sql).unwrap();
     let names: Vec<_> = prepared
         .column_names()
@@ -1551,7 +1546,7 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = format!("INSERT INTO {} (a, b) VALUES (42, 'Hello');", table_name);
+    let sql = format!("INSERT INTO {table_name} (a, b) VALUES (42, 'Hello');");
     let mut prepared = conn.prepare(&sql).unwrap();
     assert_eq!(0, prepared.num_result_cols().unwrap());
 }
@@ -1582,7 +1577,7 @@ fn describe_parameters_of_prepared_statement(
     let conn = profile
         .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
         .unwrap();
-    let sql = format!("SELECT a, b FROM {} WHERE a=? AND b=?;", table_name);
+    let sql = format!("SELECT a, b FROM {table_name} WHERE a=? AND b=?;");
     let mut prepared = conn.prepare(&sql).unwrap();
 
     let parameter_descriptions = prepared
@@ -1760,7 +1755,7 @@ fn send_connection(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     // Insert in one thread, query in another, using the same connection.
-    let insert_sql = format!("INSERT INTO {} (a) VALUES (1),(2),(3)", table_name);
+    let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (1),(2),(3)");
     conn.execute(&insert_sql, ()).unwrap();
 
     let conn = unsafe { conn.promote_to_send() };
@@ -1808,7 +1803,7 @@ fn parameter_option_bytes(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["VARBINARY(50)"])
         .unwrap();
-    let sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
+    let sql = format!("INSERT INTO {table_name} (a) VALUES (?);");
     let mut prepared = conn.prepare(&sql).unwrap();
     prepared.execute(&None::<&[u8]>.into_parameter()).unwrap();
     prepared
@@ -1820,7 +1815,7 @@ fn parameter_option_bytes(profile: &Profile) {
         .unwrap();
 
     let cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
@@ -2180,15 +2175,14 @@ fn get_data_string(profile: &Profile) {
 
     conn.execute(
         &format!(
-            "INSERT INTO {} (a) VALUES ('Hello, World!'), (NULL)",
-            table_name
+            "INSERT INTO {table_name} (a) VALUES ('Hello, World!'), (NULL)"
         ),
         (),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2218,7 +2212,7 @@ fn get_text(profile: &Profile) {
     let (conn, table) = profile.given(&table_name, &["Varchar(50)"]).unwrap();
     conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter()).unwrap();
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2245,13 +2239,13 @@ fn get_data_binary(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?), (NULL)", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?), (NULL)"),
         &[1u8, 2, 3].into_parameter(),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2420,13 +2414,13 @@ fn short_get_binary(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?)"),
         &[1u8, 2, 3].into_parameter(),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2455,13 +2449,13 @@ fn large_get_binary(profile: &Profile) {
     let input = vec![42; 2000];
 
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES (?)", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES (?)"),
         &input.as_slice().into_parameter(),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2486,13 +2480,13 @@ fn capped_text_buffer(profile: &Profile) {
         .setup_empty_table(&table_name, &["VARCHAR(13)"])
         .unwrap();
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!');"),
         (),
     )
     .unwrap();
 
     let mut cursor = conn
-        .execute(&format!("SELECT a FROM {} ORDER BY id", table_name), ())
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
         .unwrap();
 
@@ -2519,7 +2513,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     // Prepare table content
     let (conn, table) = profile.given(&table_name, &["VARCHAR(13)"]).unwrap();
     conn.execute(
-        &format!("INSERT INTO {} (a) VALUES ('Hello, World!');", table_name),
+        &format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!');"),
         (),
     )
     .unwrap();
@@ -2527,7 +2521,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     // Query 'Hello, World!' From the DB in a buffer with size 5. This should give us a Hello minus
     // the letter 'o' since we also need space for a terminating zero. => 'Hell'.
     let mut buf = VarCharArray::<5>::NULL;
-    let query = format!("SELECT a FROM {}", table_name);
+    let query = format!("SELECT a FROM {table_name}");
     let mut cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut buf).unwrap();
@@ -2562,7 +2556,7 @@ fn insert_truncated_value(profile: &Profile) {
     match result {
         Err(e) => {
             // Failing is fine, especially with an error indicating truncation.
-            eprintln!("{}", e)
+            eprintln!("{e}")
         }
         Ok(None) => {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
@@ -2592,14 +2586,14 @@ fn insert_truncated_var_char_array(profile: &Profile) {
     match result {
         Err(e) => {
             // Failing is fine, especially with an error indicating truncation.
-            eprintln!("{}", e)
+            eprintln!("{e}")
         }
         Ok(None) => {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
             // wrong, but we are only interessted in unsafe behaviour.
             let actual = table.content_as_string(&conn);
-            eprintln!("{}", actual);
+            eprintln!("{actual}");
             // SQLite just emmits 'Hell' instead of 'Hello'. It's not beautiful, but it is not
             // invalid memory access either.
             assert!(matches!(actual.as_str(), "Hello" | "Hell"))
@@ -2618,7 +2612,7 @@ fn arbitrary_input_parameters(profile: &Profile) {
         .given(&table_name, &["VARCHAR(20)", "INTEGER"])
         .unwrap();
 
-    let insert_statement = format!("INSERT INTO {} (a, b) VALUES (?, ?);", table_name);
+    let insert_statement = format!("INSERT INTO {table_name} (a, b) VALUES (?, ?);");
     let param_a: Box<dyn InputParameter> = Box::new("Hello, World!".to_string().into_parameter());
     let param_b: Box<dyn InputParameter> = Box::new(42.into_parameter());
     let parameters = vec![param_a, param_b];
@@ -2669,7 +2663,7 @@ fn insert_large_texts(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["Text"]).unwrap();
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
 
     // Large data with 8000 characters.
     let data = String::from_utf8(vec![b'a'; 8000]).unwrap();
@@ -2697,11 +2691,11 @@ fn send_long_data_binary_vec(profile: &Profile) {
 
     let mut blob = BlobSlice::from_byte_slice(&input);
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
     conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
 
     // Query value just streamed into the DB and compare it with the input.
-    let select = format!("SELECT a FROM {}", table_name);
+    let select = format!("SELECT a FROM {table_name}");
     let mut result = conn.execute(&select, ()).unwrap().unwrap();
     let mut row = result.next_row().unwrap().unwrap();
     let mut output = Vec::new();
@@ -2725,13 +2719,13 @@ fn send_blob_as_part_of_tuplebinary_vec(profile: &Profile) {
 
     // When
     let mut blob = BlobSlice::from_byte_slice(&input);
-    let insert = format!("INSERT INTO {} (a,b) VALUES (?,?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (?,?)");
     conn.execute(&insert, (&42i32, &mut blob.as_blob_param()))
         .unwrap();
 
     // Then
     // Query value just streamed into the DB and compare it with the input.
-    let select = format!("SELECT a,b FROM {}", table_name);
+    let select = format!("SELECT a,b FROM {table_name}");
     let mut result = conn.execute(&select, ()).unwrap().unwrap();
     let mut row = result.next_row().unwrap().unwrap();
     let mut output_a: i32 = 0;
@@ -2756,11 +2750,11 @@ fn send_long_data_string(profile: &Profile) {
 
     let mut blob = BlobSlice::from_text(&input);
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
     conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
 
     // Query value just streamed into the DB and compare it with the input.
-    let select = format!("SELECT a FROM {}", table_name);
+    let select = format!("SELECT a FROM {table_name}");
     let mut result = conn.execute(&select, ()).unwrap().unwrap();
     let mut row = result.next_row().unwrap().unwrap();
     let mut output = Vec::new();
@@ -2787,11 +2781,11 @@ fn send_long_data_binary_read(profile: &Profile) {
 
     let mut blob = BlobRead::with_upper_bound(read, 14000);
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
     conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
 
     // Query value just streamed into the DB and compare it with the input.
-    let select = format!("SELECT a FROM {}", table_name);
+    let select = format!("SELECT a FROM {table_name}");
     let mut result = conn.execute(&select, ()).unwrap().unwrap();
     let mut row = result.next_row().unwrap().unwrap();
     let mut output = Vec::new();
@@ -2820,11 +2814,11 @@ fn send_long_data_binary_file(profile: &Profile) {
 
     let mut blob = BlobRead::from_path(&path).unwrap();
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
     conn.execute(&insert, &mut blob.as_blob_param()).unwrap();
 
     // Query value just streamed into the DB and compare it with the input.
-    let select = format!("SELECT a FROM {}", table_name);
+    let select = format!("SELECT a FROM {table_name}");
     let mut result = conn.execute(&select, ()).unwrap().unwrap();
     let mut row = result.next_row().unwrap().unwrap();
     let mut output = Vec::new();
@@ -2875,7 +2869,7 @@ fn varchar_null(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
 
-    let insert = format!("INSERT INTO {} (a) VALUES (?)", table_name);
+    let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
 
     conn.execute(&insert, &VarCharSlice::NULL).unwrap();
 
@@ -3047,13 +3041,13 @@ fn fill_vec_of_rows(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["VARCHAR(50)", "INTEGER"])
         .unwrap();
-    let insert_sql = format!("INSERT INTO {} (a,b) VALUES ('A', 1), ('B',2)", table_name);
+    let insert_sql = format!("INSERT INTO {table_name} (a,b) VALUES ('A', 1), ('B',2)");
     conn.execute(&insert_sql, ()).unwrap();
 
     // Now that the table is created and filled with some values lets query it and put its contents
     // into a `Vec`
 
-    let query_sql = format!("SELECT a,b FROM {}", table_name);
+    let query_sql = format!("SELECT a,b FROM {table_name}");
     let cursor = conn.execute(&query_sql, ()).unwrap().unwrap();
     let buf_desc = [
         BufferDesc::Text { max_str_len: 50 },

@@ -98,7 +98,7 @@ impl Environment {
             SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPooling),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
             other => {
-                panic!("Unexpected return value `{:?}`.", other)
+                panic!("Unexpected return value `{other:?}`.")
             }
         }
     }
@@ -145,7 +145,7 @@ impl Environment {
                 env
             }
             SqlResult::Error { .. } => return Err(Error::FailedAllocatingEnvironment),
-            other => panic!("Unexpected return value '{:?}'", other),
+            other => panic!("Unexpected return value '{other:?}'"),
         };
 
         debug!("ODBC Environment created.");

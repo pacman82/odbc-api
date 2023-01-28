@@ -88,7 +88,7 @@ impl<'a> Table<'a> {
             .column_types
             .iter()
             .zip(self.column_names)
-            .map(|(ty, name)| format!("{} {}", name, ty))
+            .map(|(ty, name)| format!("{name} {ty}"))
             .collect::<Vec<_>>()
             .join(", ");
         format!("CREATE TABLE {} (id {index_type},{cols});", self.name)

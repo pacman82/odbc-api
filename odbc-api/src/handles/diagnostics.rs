@@ -205,7 +205,7 @@ impl<T: AsHandle + ?Sized> Diagnostics for T {
             SqlReturn::SUCCESS | SqlReturn::SUCCESS_WITH_INFO => Some(result),
             SqlReturn::NO_DATA => None,
             SqlReturn::ERROR => panic!("rec_number argument of diagnostics must be > 0."),
-            unexpected => panic!("SQLGetDiagRec returned: {:?}", unexpected),
+            unexpected => panic!("SQLGetDiagRec returned: {unexpected:?}"),
         }
     }
 }
@@ -302,7 +302,7 @@ mod tests {
 
         // test formatting
         assert_eq!(
-            format!("{}", rec),
+            format!("{rec}"),
             "State: HY010, Native error: 0, Message: [Microsoft][ODBC Driver Manager] \
              Function sequence error"
         );
