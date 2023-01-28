@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.1
+
+* Introduced common implementation `VarCell` for `VarBinary` and `VarChar`.
+
 ## 0.54.0
 
 * Changed checking of truncated values after fetch. The new method checks the indicator buffer, rather than relying on diagnostics. This means `Error::TooManyDiagnostics` can no longer occurr.
