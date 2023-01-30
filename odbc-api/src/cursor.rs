@@ -146,19 +146,24 @@ impl<'s> CursorRow<'s> {
         }
         // Utilize all of the allocated buffer.
         buf.resize(buf.capacity(), 0);
+
+        // Did we learn how much capacity we need in the last iteration? We use this only to panic
+        // on erroneous implementations of get_data and avoid endless looping until we run out of
+        // memory.
+        let mut remaining_length_known = false;
         // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
-        // accumulated value size. This variable keeps track of the number of bytes we added with
-        // the next call to get_data.
-        let mut fetch_size = buf.len();
-        let mut target = VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::Null);
-        loop {
-            // Fetch binary data into buffer.
-            self.get_data(col_or_param_num, &mut target)?;
+        // accumulated value size. The target always points to the last window in buf which is going
+        // to contain the **next** part of the data, thereas buf contains the entire accumulated
+        // value so far.
+        let mut target = VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
+        self.get_data(col_or_param_num, &mut target)?;
+        while !target.is_complete() {
+            // Amount of payload bytes (excluding terminating zeros) fetched with the last call to
+            // get_data.
+            let fetched = target.as_bytes().unwrap().len();
             match target.indicator() {
-                // Value is `NULL`. We are done here.
-                Indicator::Null => {
-                    break;
-                }
+                // If Null the value would be complete
+                Indicator::Null => unreachable!(),
                 // We do not know how large the value is. Let's fetch the data with repeated calls
                 // to get_data.
                 Indicator::NoTotal => {
@@ -166,30 +171,38 @@ impl<'s> CursorRow<'s> {
                     // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, 0);
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
-                    fetch_size = buf_extend.len();
-                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::Null);
-                }
-                // We did get the complete value, including the terminating zero. Let's resize the
-                // buffer to match the retrieved value exactly (excluding terminating zero).
-                Indicator::Length(len) if len + K::TERMINATING_ZEROES <= fetch_size => {
-                    break;
+                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::NoTotal);
                 }
                 // We did not get all of the value in one go, but the data source has been friendly
                 // enough to tell us how much is missing.
                 Indicator::Length(len) => {
-                    let still_missing = len - fetch_size + K::TERMINATING_ZEROES;
+                    if remaining_length_known {
+                        panic!(
+                            "SQLGetData has been unable to fetch all data, even though the \
+                            capacity of the target buffer has been adapted to hold the entire \
+                            payload based on the indicator of the last part. You may consider \
+                            filing a bug with the ODBC driver you are using.")
+                    }
+                    remaining_length_known = true;
+                    // Amount of bytes missing from the value using get_data, excluding terminating
+                    // zero.
+                    let still_missing = len - fetched;
                     let old_len = buf.len();
                     buf.resize(old_len + still_missing, 0);
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
-                    fetch_size = buf_extend.len();
-                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::Null);
+                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::NoTotal);
                 }
             }
+            // Fetch binary data into buffer.
+            self.get_data(col_or_param_num, &mut target)?;
         }
+        // We did get the complete value, including the terminating zero. Let's resize the buffer to
+        // match the retrieved value exactly (excluding terminating zero).
         if let Some(len) = target.indicator().value_len() {
-            // Since the indicator refers to value length without terminating zero, this also
-            // implicitly drops the terminating zero at the end of the buffer.
-            let shrink_by = fetch_size - len;
+            // Since the indicator refers to value length without terminating zero, and capacity is
+            // including the terminating zero this also implicitly drops the terminating zero at the
+            // end of the buffer.
+            let shrink_by = target.capacity() - len;
             buf.resize(buf.len() - shrink_by, 0);
             Ok(true)
         } else {

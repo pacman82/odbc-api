@@ -231,6 +231,11 @@ where
     pub fn indicator(&self) -> Indicator {
         Indicator::from_isize(self.indicator)
     }
+
+    /// The payload in bytes the buffer can hold including terminating zeroes
+    pub fn capacity(&self) -> usize {
+        self.buffer.borrow().len()
+    }
 }
 
 impl<B, K> VarCell<B, K>
