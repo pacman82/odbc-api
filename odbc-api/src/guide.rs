@@ -180,7 +180,7 @@ manager in question.
 ### Connection pooling
 
 ODBC specifies an interface to enable the driver manager to enable connection pooling for your
-application. It is of by default, but if you use ODBC to connect to your data source instead of
+application. It is off by default, but if you use ODBC to connect to your data source instead of
 implementing it in your application, or importing a library you may simply enable it in ODBC
 instead.
 Connection Pooling is governed by two attributes. The most important one is the connection
