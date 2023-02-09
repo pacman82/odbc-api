@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.2
+
+* `CursorRow::get_text` or `Cursor::get_binary` now panics if the `SQLGetData` implementation of the ODBC driver reports inconsistent indicator for the same cell. Previously it could have looped forever.
+
 ## 0.54.1
 
 * Introduced common implementation `VarCell` for `VarBinary` and `VarChar`.
