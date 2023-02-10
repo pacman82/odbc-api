@@ -3167,17 +3167,10 @@ fn list_columns_preallocated(profile: &Profile, expected: &str) {
     assert_eq!(expected.to_lowercase(), actual);
 }
 
-// This smells a bit, but seems consistent across two machines.
-#[cfg(all(target_os = "windows", feature = "narrow"))]
-const MARIADB_EXPECTED_ROW_SIZE_IN_BYTES: usize = 716025845;
-
-#[cfg(not(all(target_os = "windows", feature = "narrow")))]
-const MARIADB_EXPECTED_ROW_SIZE_IN_BYTES: usize = 537068874;
-
 /// This test documents the amount of memory needed to hold the maximum row of the columns table
 /// as described by the result sets metadata.
 #[test_case(MSSQL, 10039; "Microsoft SQL Server")]
-#[test_case(MARIADB, MARIADB_EXPECTED_ROW_SIZE_IN_BYTES; "Maria DB")]
+#[test_case(MARIADB, 16975179; "Maria DB")]
 #[test_case(SQLITE_3, 986; "SQLite 3")]
 // #[test_case(POSTGRES, 1676; "PostgreSQL")] Fails in Linux
 fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
