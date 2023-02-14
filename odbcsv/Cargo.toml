@@ -30,7 +30,7 @@ readme = "Readme.md"
 
 [dependencies]
 odbc-api = { version = "0.54.2", path = "../odbc-api" }
-csv = "1.1.6"
+csv = "1.2.0"
 anyhow = "1.0.69"
 stderrlog = "0.5.4"
 log = "0.4.17"
