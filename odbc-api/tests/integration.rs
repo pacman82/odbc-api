@@ -3116,6 +3116,47 @@ fn list_tables(profile: &Profile, expected: &str) {
     assert_eq!(expected.to_lowercase(), actual);
 }
 
+/// List foreign keys
+#[test_case(MSSQL, "listforeignkeyschild,child_id,listforeignkeysparent,child_id"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "listforeignkeyschild,child_id,listforeignkeysparent,child_id"; "Maria DB")]
+#[test_case(SQLITE_3, "listforeignkeyschild,child_id,listforeignkeysparent,child_id"; "SQLite 3")]
+// #[test_case(POSTGRES, ""; "PostgreSQL")] Doesn't work
+fn list_foreign_keys(profile: &Profile, expected: &str) {
+    let test_columns = ["PKTABLE_NAME", "PKCOLUMN_NAME", "FKTABLE_NAME", "FKCOLUMN_NAME"];
+
+    let parent_table_name = "ListForeignKeysParent";
+    let child_table_name = "ListForeignKeysChild";
+
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {parent_table_name};"), ())
+        .unwrap();
+
+    conn.execute(&format!("DROP TABLE IF EXISTS {child_table_name};"), ())
+        .unwrap();
+
+    let mut prepared = conn
+        .prepare(&format!("CREATE TABLE {child_table_name} (child_id INTEGER, PRIMARY KEY (child_id));"))
+        .unwrap();
+    prepared.execute(()).unwrap();
+
+    let mut prepared = conn
+        .prepare(&format!("CREATE TABLE {parent_table_name} (parent_id INTEGER, child_id INTEGER, PRIMARY KEY (parent_id), FOREIGN KEY (child_id) REFERENCES {child_table_name}(child_id));"))
+        .unwrap();
+    prepared.execute(()).unwrap();
+
+    let mut cursor = conn.foreign_keys("", "", child_table_name, "", "", parent_table_name).unwrap();
+
+    let columns = cursor.column_names().unwrap().map(|c| c.unwrap()).collect::<Vec<_>>();
+    let column_indices = test_columns.iter().filter_map(|tc| columns.iter().position(|c| c == tc)).collect::<Vec<usize>>();
+    
+    let buf = TextRowSet::for_cursor(1, &mut cursor, Some(128)).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
+    let column_buf = row_set_cursor.fetch().unwrap().unwrap();
+    let actual = column_indices.iter().map(|i| column_buf.at_as_str(*i, 0).unwrap().unwrap().to_string()).collect::<Vec<String>>().join(",").to_lowercase();
+
+    assert_eq!(expected, actual);
+}
+
 /// List tables for various data sources, using a preallocated statement
 /// Table name comparison is insensitive on Windows
 #[test_case(MSSQL, "master,dbo,ListTablesPreallocated,TABLE,NULL"; "Microsoft SQL Server")]

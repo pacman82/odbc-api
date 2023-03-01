@@ -1,7 +1,7 @@
 use crate::{
     buffers::BufferDesc,
     execute::{
-        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
+        execute_columns, execute_tables, execute_foreign_keys, execute_with_parameters, execute_with_parameters_polling,
     },
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     statement_connection::StatementConnection,
@@ -562,6 +562,28 @@ impl<'c> Connection<'c> {
             &SqlText::new(schema_name),
             &SqlText::new(table_name),
             &SqlText::new(table_type),
+        )
+    }
+
+    pub fn foreign_keys(
+        &self,
+        pk_catalog_name: &str,
+        pk_schema_name: &str,
+        pk_table_name: &str,
+        fk_catalog_name: &str,
+        fk_schema_name: &str,
+        fk_table_name: &str,
+    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+        let statement = self.allocate_statement()?;
+
+        execute_foreign_keys(
+            statement,
+            &SqlText::new(pk_catalog_name),
+            &SqlText::new(pk_schema_name),
+            &SqlText::new(pk_table_name),
+            &SqlText::new(fk_catalog_name),
+            &SqlText::new(fk_schema_name),
+            &SqlText::new(fk_table_name),
         )
     }
 
