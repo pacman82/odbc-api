@@ -21,7 +21,7 @@ use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc, SQLPrepare as sql_prepare,
-    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
+    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables, SQLForeignKeys as sql_foreign_keys
 };
 
 #[cfg(not(feature = "narrow"))]
@@ -29,6 +29,7 @@ use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
     SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
+    SQLForeignKeysW as sql_foreign_keys
 };
 
 /// An owned valid (i.e. successfully allocated) ODBC statement handle.
@@ -766,8 +767,8 @@ pub trait Statement: AsHandle {
     /// data source. The driver returns the information as a result set.
     ///
     /// The catalog, schema and table parameters are search patterns by default unless
-    /// [`Self::set_metadata_id`] is called with `true`. In that case they must also not be `None` since
-    /// otherwise a NulPointer error is emitted.
+    /// [`Self::set_metadata_id`] is called with `true`. In that case they must also not be `None`
+    /// since otherwise a NulPointer error is emitted.
     fn tables(
         &mut self,
         catalog_name: &SqlText,
@@ -788,6 +789,39 @@ pub trait Statement: AsHandle {
                 table_type.len_char().try_into().unwrap(),
             )
             .into_sql_result("SQLTables")
+        }
+    }
+
+    /// This can be used to retrieve either a list of foreign keys in the specified table or a list
+    /// of foreign keys in other table that refer to the primary key of the specified table.
+    /// 
+    /// Like [`Self::tables`] this changes the statement to a cursor over the result set.
+    fn foreign_keys(
+        &mut self,
+        pk_catalog_name: &SqlText,
+        pk_schema_name: &SqlText,
+        pk_table_name: &SqlText,
+        fk_catalog_name: &SqlText,
+        fk_schema_name: &SqlText,
+        fk_table_name: &SqlText,
+    ) -> SqlResult<()> {
+        unsafe {
+            sql_foreign_keys(
+                self.as_sys(),
+                pk_catalog_name.ptr(),
+                pk_catalog_name.len_char().try_into().unwrap(),
+                pk_schema_name.ptr(),
+                pk_schema_name.len_char().try_into().unwrap(),
+                pk_table_name.ptr(),
+                pk_table_name.len_char().try_into().unwrap(),
+                fk_catalog_name.ptr(),
+                fk_catalog_name.len_char().try_into().unwrap(),
+                fk_schema_name.ptr(),
+                fk_schema_name.len_char().try_into().unwrap(),
+                fk_table_name.ptr(),
+                fk_table_name.len_char().try_into().unwrap(),
+            )
+            .into_sql_result("SQLForeignKeys")
         }
     }
 

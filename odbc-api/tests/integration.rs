@@ -1225,9 +1225,7 @@ fn prepared_statement(profile: &Profile) {
     let conn = profile
         .setup_empty_table(&table_name, &["VARCHAR(13)", "INTEGER"])
         .unwrap();
-    let insert = format!(
-        "INSERT INTO {table_name} (a,b) VALUES ('First', 1), ('Second', 2);"
-    );
+    let insert = format!("INSERT INTO {table_name} (a,b) VALUES ('First', 1), ('Second', 2);");
     conn.execute(&insert, ()).unwrap();
 
     // Prepare the statement once
@@ -1465,9 +1463,7 @@ fn two_parameters_in_tuple(profile: &Profile) {
     let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2), (3), (4);");
     conn.execute(&insert, ()).unwrap();
 
-    let sql = format!(
-        "SELECT a FROM {table_name} where ? < a AND a < ? ORDER BY id;"
-    );
+    let sql = format!("SELECT a FROM {table_name} where ? < a AND a < ? ORDER BY id;");
 
     let cursor = conn.execute(&sql, (&1, &4)).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
@@ -2174,9 +2170,7 @@ fn get_data_string(profile: &Profile) {
         .unwrap();
 
     conn.execute(
-        &format!(
-            "INSERT INTO {table_name} (a) VALUES ('Hello, World!'), (NULL)"
-        ),
+        &format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!'), (NULL)"),
         (),
     )
     .unwrap();
@@ -2210,7 +2204,8 @@ fn get_data_string(profile: &Profile) {
 fn get_text(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["Varchar(50)"]).unwrap();
-    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter()).unwrap();
+    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
+        .unwrap();
     let mut cursor = conn
         .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), ())
         .unwrap()
@@ -3547,6 +3542,48 @@ fn row_count_create_table_prepared(profile: &Profile, expectation: Option<usize>
 
     // Then
     assert_eq!(expectation, row_count);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn list_foreign_keys(profile: &Profile) {
+    // Other table references table
+    let pk_table_name = table_name!();
+    let fk_table_name = format!("other_{pk_table_name}");
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {fk_table_name};"), ())
+        .unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {pk_table_name};"), ())
+        .unwrap();
+    conn.execute(
+        &format!("CREATE TABLE {pk_table_name} (id INTEGER, PRIMARY KEY(id));"),
+        (),
+    )
+    .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {fk_table_name} (ext_id INTEGER, FOREIGN KEY (ext_id) REFERENCES \
+            {pk_table_name}(id));"
+        ),
+        (),
+    )
+    .unwrap();
+
+    let mut stmt = conn.preallocate().unwrap();
+    let mut cursor = stmt
+        .foreign_keys("", "", "", "", "", &fk_table_name)
+        .unwrap();
+    let buffer = TextRowSet::for_cursor(10, &mut cursor, Some(256)).unwrap();
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let retrieved_pk_table_name = batch.at_as_str(2, 0).unwrap().unwrap();
+    let retrieved_fk_table_name = batch.at_as_str(6, 0).unwrap().unwrap();
+
+    assert_eq!(retrieved_pk_table_name, pk_table_name);
+    assert_eq!(retrieved_fk_table_name, fk_table_name);
+    assert_eq!(batch.num_rows(), 1);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

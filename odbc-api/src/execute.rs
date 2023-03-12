@@ -228,7 +228,41 @@ where
     stmt.tables(catalog_name, schema_name, table_name, column_name)
         .into_result(&stmt)?;
 
-    // We assume columns always creates a result set, since it works like a SELECT statement.
+    // We assume tables always creates a result set, since it works like a SELECT statement.
+    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+
+    // Safe: `statement` is in Cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+
+    Ok(cursor)
+}
+
+/// Shared implementation for executing a foreign keys query between [`crate::Connection`] and
+/// [`crate::Preallocated`].
+pub fn execute_foreign_keys<S>(
+    mut statement: S,
+    pk_catalog_name: &SqlText,
+    pk_schema_name: &SqlText,
+    pk_table_name: &SqlText,
+    fk_catalog_name: &SqlText,
+    fk_schema_name: &SqlText,
+    fk_table_name: &SqlText,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+
+    stmt.foreign_keys(
+        pk_catalog_name,
+        pk_schema_name,
+        pk_table_name,
+        fk_catalog_name,
+        fk_schema_name,
+        fk_table_name
+    ).into_result(&stmt)?;
+
+    // We assume foreign keys always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
 
     // Safe: `statement` is in Cursor state.

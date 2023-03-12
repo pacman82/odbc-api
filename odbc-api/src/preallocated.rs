@@ -1,6 +1,6 @@
 use crate::{
     execute::{
-        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling,
+        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling, execute_foreign_keys,
     },
     handles::{AsStatementRef, SqlText, Statement, StatementImpl, StatementRef},
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
@@ -154,6 +154,30 @@ impl<'o> Preallocated<'o> {
             &SqlText::new(schema_name),
             &SqlText::new(table_name),
             &SqlText::new(column_name),
+        )
+    }
+
+    /// This can be used to retrieve either a list of foreign keys in the specified table or a list
+    /// of foreign keys in other table that refer to the primary key of the specified table.
+    /// 
+    /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
+    pub fn foreign_keys(
+        &mut self,
+        pk_catalog_name: &str,
+        pk_schema_name: &str,
+        pk_table_name: &str,
+        fk_catalog_name: &str,
+        fk_schema_name: &str,
+        fk_table_name: &str,
+    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
+        execute_foreign_keys(
+            &mut self.statement,
+            &SqlText::new(pk_catalog_name),
+            &SqlText::new(pk_schema_name),
+            &SqlText::new(pk_table_name),
+            &SqlText::new(fk_catalog_name),
+            &SqlText::new(fk_schema_name),
+            &SqlText::new(fk_table_name),
         )
     }
 
