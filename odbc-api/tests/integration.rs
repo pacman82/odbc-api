@@ -3571,6 +3571,47 @@ fn list_foreign_keys(profile: &Profile) {
     )
     .unwrap();
 
+    let mut cursor = conn
+        .foreign_keys("", "", "", "", "", &fk_table_name)
+        .unwrap();
+    let buffer = TextRowSet::for_cursor(10, &mut cursor, Some(256)).unwrap();
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let retrieved_pk_table_name = batch.at_as_str(2, 0).unwrap().unwrap();
+    let retrieved_fk_table_name = batch.at_as_str(6, 0).unwrap().unwrap();
+
+    assert_eq!(retrieved_pk_table_name, pk_table_name);
+    assert_eq!(retrieved_fk_table_name, fk_table_name);
+    assert_eq!(batch.num_rows(), 1);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn list_foreign_keys_prealloc(profile: &Profile) {
+    // Other table references table
+    let pk_table_name = table_name!();
+    let fk_table_name = format!("other_{pk_table_name}");
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {fk_table_name};"), ())
+        .unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {pk_table_name};"), ())
+        .unwrap();
+    conn.execute(
+        &format!("CREATE TABLE {pk_table_name} (id INTEGER, PRIMARY KEY(id));"),
+        (),
+    )
+    .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {fk_table_name} (ext_id INTEGER, FOREIGN KEY (ext_id) REFERENCES \
+            {pk_table_name}(id));"
+        ),
+        (),
+    )
+    .unwrap();
+
     let mut stmt = conn.preallocate().unwrap();
     let mut cursor = stmt
         .foreign_keys("", "", "", "", "", &fk_table_name)
