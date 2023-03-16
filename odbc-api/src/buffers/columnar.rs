@@ -211,7 +211,7 @@ where
 /// //! `anyhow` and `csv` crate.
 ///
 /// use anyhow::Error;
-/// use odbc_api::{buffers::TextRowSet, Cursor, Environment, ResultSetMetadata};
+/// use odbc_api::{buffers::TextRowSet, Cursor, Environment, ConnectionOptions, ResultSetMetadata};
 /// use std::{
 ///     ffi::CStr,
 ///     io::{stdout, Write},
@@ -236,6 +236,7 @@ where
 ///         "DataSourceName",
 ///         "Username",
 ///         "Password",
+///         ConnectionOptions::default(),
 ///     )?;
 ///
 ///     // Execute a one of query without any parameters.

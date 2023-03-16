@@ -190,11 +190,14 @@ impl Environment {
     /// # Example
     ///
     /// ```no_run
-    /// use odbc_api::Environment;
+    /// use odbc_api::{Environment, ConnectionOptions};
     ///
     /// let env = Environment::new()?;
     ///
-    /// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+    /// let mut conn = env.connect(
+    ///     "YourDatabase", "SA", "My@Test@Password1",
+    ///     ConnectionOptions::default()
+    /// )?;
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
     ///
@@ -205,6 +208,7 @@ impl Environment {
         data_source_name: &str,
         user: &str,
         pwd: &str,
+        options: ConnectionOptions,
     ) -> Result<Connection<'_>, Error> {
         let data_source_name = SqlText::new(data_source_name);
         let user = SqlText::new(user);
@@ -212,7 +216,6 @@ impl Environment {
 
         let mut connection = self.allocate_connection()?;
 
-        let options = ConnectionOptions::default();
         options.apply(&connection)?;
 
         connection

@@ -78,11 +78,14 @@ where
 /// This trait is implemented by single parameters.
 ///
 /// ```no_run
-/// use odbc_api::Environment;
+/// use odbc_api::{Environment, ConnectionOptions};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 /// let year = 1980;
 /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 ///     // Use cursor to process query results.
@@ -93,11 +96,14 @@ where
 /// Tuples of `Parameter`s implement this trait, too.
 ///
 /// ```no_run
-/// use odbc_api::Environment;
+/// use odbc_api::{Environment, ConnectionOptions};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 /// let too_old = 1980;
 /// let too_young = 2000;
 /// if let Some(cursor) = conn.execute(
@@ -112,11 +118,16 @@ where
 /// And so do array slices of `Parameter`s.
 ///
 /// ```no_run
-/// use odbc_api::Environment;
+/// use odbc_api::{Environment, ConnectionOptions};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase",
+///     "SA",
+///     "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 /// let params = [1980, 2000];
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",

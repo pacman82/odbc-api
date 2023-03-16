@@ -3,7 +3,7 @@ use clap::{ArgAction, Args, Parser};
 use log::info;
 use odbc_api::{
     buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection, Cursor,
-    DriverCompleteOption, Environment, IntoParameter,
+    DriverCompleteOption, Environment, IntoParameter, ConnectionOptions,
 };
 use std::{
     fs::{read_to_string, File},
@@ -279,6 +279,7 @@ fn open_connection<'e>(
                 dsn,
                 opt.user.as_deref().unwrap_or(""),
                 opt.password.as_deref().unwrap_or(""),
+                ConnectionOptions::default(),
             )
             .map_err(|e| e.into());
     }

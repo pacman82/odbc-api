@@ -317,11 +317,14 @@ where
 /// # Example
 ///
 /// ```no_run
-/// use odbc_api::{Environment, IntoParameter};
+/// use odbc_api::{Environment, ConnectionOptions, IntoParameter};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year FROM Birthdays WHERE name=?;",
 ///     &"Bernd".into_parameter())?

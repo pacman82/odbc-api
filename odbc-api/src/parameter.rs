@@ -19,11 +19,14 @@
 //! this:
 //!
 //! ```no_run
-//! use odbc_api::Environment;
+//! use odbc_api::{Environment, ConnectionOptions};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! let year = 1980;
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 //!     // Use cursor to process query results.
@@ -42,11 +45,14 @@
 //! we are binding, by wrapping it in `WithDataType`.
 //!
 //! ```no_run
-//! use odbc_api::{Environment, parameter::WithDataType, DataType};
+//! use odbc_api::{Environment, ConnectionOptions, DataType, parameter::WithDataType};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! let year = WithDataType{
 //!    value: 1980,
 //!    data_type: DataType::Varchar {length: 4}
@@ -69,11 +75,14 @@
 //! To pass multiple but a fixed number of parameters to a query you can use tuples.
 //!
 //! ```no_run
-//! use odbc_api::Environment;
+//! use odbc_api::{Environment, ConnectionOptions};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! let too_old = 1980;
 //! let too_young = 2000;
 //! if let Some(cursor) = conn.execute(
@@ -91,11 +100,14 @@
 //! if the query itself is generated from user input. Luckily slices of parameters are supported, too.
 //!
 //! ```no_run
-//! use odbc_api::Environment;
+//! use odbc_api::{Environment, ConnectionOptions};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! let params = [1980, 2000];
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
@@ -153,11 +165,14 @@
 //! bound as a mutable reference.
 //!
 //! ```no_run
-//! use odbc_api::{Environment, Out, InOut, Nullable};
+//! use odbc_api::{Environment, ConnectionOptions, Out, InOut, Nullable};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //!
 //! let mut ret = Nullable::<i32>::null();
 //! let mut param = Nullable::<i32>::new(7);
@@ -281,11 +296,14 @@
 //! among those is a Rust string slice (`&str`).
 //!
 //! ```no_run
-//! use odbc_api::Environment;
+//! use odbc_api::{Environment, ConnectionOptions};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! // conn.execute("SELECT year FROM Birthdays WHERE name=?;", "Bernd")?; // <- compiler error.
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
@@ -294,11 +312,14 @@
 //! into something that works.
 //!
 //! ```no_run
-//! use odbc_api::{Environment, IntoParameter};
+//! use odbc_api::{Environment, IntoParameter, ConnectionOptions};
 //!
 //! let env = Environment::new()?;
 //!
-//! let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+//! let mut conn = env.connect(
+//!     "YourDatabase", "SA", "My@Test@Password1",
+//!     ConnectionOptions::default()
+//! )?;
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year FROM Birthdays WHERE name=?;",
 //!     &"Bernd".into_parameter())?
@@ -365,11 +386,14 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// # Example
 ///
 /// ```no_run
-/// use odbc_api::{Environment, Out, InOut, Nullable};
+/// use odbc_api::{Environment, Out, InOut, Nullable, ConnectionOptions};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 ///
 /// let mut ret = Nullable::<i32>::null();
 /// let mut param = Nullable::new(7);
@@ -388,11 +412,14 @@ pub struct InOut<'a, T>(pub &'a mut T);
 /// # Example
 ///
 /// ```no_run
-/// use odbc_api::{Environment, Out, InOut, Nullable};
+/// use odbc_api::{Environment, Out, InOut, Nullable, ConnectionOptions};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default(),
+/// )?;
 ///
 /// let mut ret = Nullable::<i32>::null();
 /// let mut param = Nullable::new(7);
@@ -411,11 +438,14 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// # Example
 ///
 /// ```no_run
-/// use odbc_api::{Environment, parameter::WithDataType, DataType};
+/// use odbc_api::{Environment, ConnectionOptions, DataType, parameter::WithDataType};
 ///
 /// let env = Environment::new()?;
 ///
-/// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+/// let mut conn = env.connect(
+///     "YourDatabase", "SA", "My@Test@Password1",
+///     ConnectionOptions::default()
+/// )?;
 /// // Bind year as VARCHAR(4) rather than integer.
 /// let year = WithDataType{
 ///    value: 1980,

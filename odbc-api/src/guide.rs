@@ -26,7 +26,7 @@ the Rust bindings for applications which want to utilize ODBC data sources.
 //! `anyhow` and `csv` crate.
 
 use anyhow::Error;
-use odbc_api::{buffers::TextRowSet, Cursor, Environment, ResultSetMetadata};
+use odbc_api::{buffers::TextRowSet, Cursor, Environment, ConnectionOptions, ResultSetMetadata};
 use std::{
     ffi::CStr,
     io::{stdout, Write},
@@ -51,6 +51,7 @@ fn main() -> Result<(), Error> {
         "DataSourceName",
         "Username",
         "Password",
+        ConnectionOptions::default(),
     )?;
 
     // Execute a one of query without any parameters.
@@ -164,11 +165,14 @@ configuration of the ODBC driver manager. Think of it as shifting work from user
 administrators.
 
 ```no_run
-use odbc_api::Environment;
+use odbc_api::{Environment, ConnectionOptions};
 
 let env = Environment::new()?;
 
-let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+let mut conn = env.connect(
+    "YourDatabase", "SA", "My@Test@Password1",
+    ConnectionOptions::default()
+)?;
 # Ok::<(), odbc_api::Error>(())
 ```
 
@@ -224,11 +228,14 @@ lazy_static! {
 With our ODBC connection all set up and ready to go, we can execute an SQL query:
 
 ```no_run
-use odbc_api::Environment;
+use odbc_api::{Environment, ConnectionOptions};
 
 let env = Environment::new()?;
 
-let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+let mut conn = env.connect(
+    "YourDatabase", "SA", "My@Test@Password1",
+    ConnectionOptions::default()
+)?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
     // Use cursor to process query results.
 }
@@ -360,7 +367,7 @@ Consider querying a table with two columns `year` and `name`.
 
 ```no_run
 use odbc_api::{
-    Environment, Cursor,
+    Environment, Cursor, ConnectionOptions,
     buffers::{AnySlice, BufferDesc, Item, ColumnarAnyBuffer},
 };
 
@@ -377,7 +384,10 @@ let buffer_description = [
 /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
 let mut buffer = ColumnarAnyBuffer::from_descs(batch_size, buffer_description);
 
-let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+let mut conn = env.connect(
+    "YourDatabase", "SA", "My@Test@Password1",
+    ConnectionOptions::default(),
+)?;
 if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
     // Bind buffer to cursor. We bind the buffer as a mutable reference here, which makes it
     // easier to reuse for other queries, but we could have taken ownership.

@@ -100,11 +100,14 @@ impl<'c> Connection<'c> {
     /// # Example
     ///
     /// ```no_run
-    /// use odbc_api::Environment;
+    /// use odbc_api::{Environment, ConnectionOptions};
     ///
     /// let env = Environment::new()?;
     ///
-    /// let mut conn = env.connect("YourDatabase", "SA", "My@Test@Password1")?;
+    /// let mut conn = env.connect(
+    ///     "YourDatabase", "SA", "My@Test@Password1",
+    ///     ConnectionOptions::default()
+    /// )?;
     /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
     ///     // Use cursor to process query results.  
     /// }
