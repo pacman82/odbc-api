@@ -159,7 +159,7 @@ impl<'c> Connection<'c> {
     ///
     /// ```no_run
     /// use lazy_static::lazy_static;
-    /// use odbc_api::{Environment, Error, Cursor};
+    /// use odbc_api::{Environment, Error, Cursor, ConnectionOptions};
     ///
     /// lazy_static! {
     ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
@@ -171,7 +171,10 @@ impl<'c> Connection<'c> {
     ///     PWD=My@Test@Password1;";
     ///
     /// fn execute_query(query: &str) -> Result<Option<impl Cursor>, Error> {
-    ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
+    ///     let conn = ENV.connect_with_connection_string(
+    ///         CONNECTION_STRING,
+    ///         ConnectionOptions::default()
+    ///     )?;
     ///
     ///     // connect.execute(&query, ()) // Compiler error: Would return local ref to `conn`.
     ///
@@ -258,7 +261,7 @@ impl<'c> Connection<'c> {
     /// use lazy_static::lazy_static;
     /// use odbc_api::{
     ///     Environment, Error, ColumnarBulkInserter, StatementConnection,
-    ///     buffers::{BufferDesc, AnyBuffer},
+    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions
     /// };
     ///
     /// lazy_static! {
@@ -276,7 +279,10 @@ impl<'c> Connection<'c> {
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
-    ///     let conn = ENV.connect_with_connection_string(CONNECTION_STRING)?;
+    ///     let conn = ENV.connect_with_connection_string(
+    ///         CONNECTION_STRING,
+    ///         ConnectionOptions::default()
+    ///     )?;
     ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
     ///     let buffers = [
     ///         BufferDesc::Text { max_str_len: 255},
@@ -370,7 +376,7 @@ impl<'c> Connection<'c> {
     /// ```no_run
     /// use std::thread;
     /// use lazy_static::lazy_static;
-    /// use odbc_api::Environment;
+    /// use odbc_api::{Environment, ConnectionOptions};
     /// lazy_static! {
     ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
     /// }
@@ -381,7 +387,10 @@ impl<'c> Connection<'c> {
     ///     PWD=My@Test@Password1;\
     /// ";
     ///
-    /// let conn = ENV.connect_with_connection_string("MSSQL").unwrap();
+    /// let conn = ENV.connect_with_connection_string(
+    ///     "MSSQL",
+    ///     ConnectionOptions::default()
+    /// ).unwrap();
     /// let conn = unsafe { conn.promote_to_send() };
     /// let handle = thread::spawn(move || {
     ///     if let Some(cursor) = conn.execute("SELECT title FROM Movies ORDER BY year",())? {

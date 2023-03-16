@@ -134,7 +134,7 @@ Connection strings do not require that the data source is preconfigured by the d
 this makes them very flexible.
 
 ```no_run
-use odbc_api::Environment;
+use odbc_api::{ConnectionOptions, Environment};
 
 let env = Environment::new()?;
 
@@ -145,7 +145,7 @@ let connection_string = "
     PWD=My@Test@Password1;\
 ";
 
-let mut conn = env.connect_with_connection_string(connection_string)?;
+let mut conn = env.connect_with_connection_string(connection_string, ConnectionOptions::default())?;
 # Ok::<(), odbc_api::Error>(())
 ```
 

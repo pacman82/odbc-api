@@ -28,7 +28,7 @@ pub mod parameter;
 
 pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
-    connection::{escape_attribute_value, Connection},
+    connection::{escape_attribute_value, Connection, ConnectionOptions},
     cursor::{
         BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow, RowSetBuffer,
     },

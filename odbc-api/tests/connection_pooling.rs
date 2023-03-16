@@ -2,7 +2,7 @@
 //! process.
 
 use lazy_static::lazy_static;
-use odbc_api::Environment;
+use odbc_api::{ConnectionOptions, Environment};
 use odbc_sys::{AttrConnectionPooling, AttrCpMatch};
 
 const MSSQL_CONNECTION: &str =
@@ -25,14 +25,20 @@ fn connect() {
     // First connection should be created on demand
     {
         let conn = ENV
-            .connect_with_connection_string(MSSQL_CONNECTION)
+            .connect_with_connection_string(
+                MSSQL_CONNECTION,
+                // Fail faster if we forgot to boot up docker containers
+                ConnectionOptions {
+                    login_timeout_sec: Some(2),
+                },
+            )
             .unwrap();
         assert!(!conn.is_dead().unwrap());
     }
 
     // Second connection should be from the pool
     let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION)
+        .connect_with_connection_string(MSSQL_CONNECTION, ConnectionOptions::default())
         .unwrap();
     assert!(!conn.is_dead().unwrap());
 }

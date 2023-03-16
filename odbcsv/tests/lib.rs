@@ -5,7 +5,7 @@ use std::{
 
 use assert_cmd::{assert::Assert, Command};
 use lazy_static::lazy_static;
-use odbc_api::{Connection, Environment};
+use odbc_api::{Connection, ConnectionOptions, Environment};
 use tempfile::NamedTempFile;
 
 const MSSQL: &str =
@@ -40,7 +40,9 @@ lazy_static! {
 /// * `batch_size`: Batch size for insert
 fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Setup table for test. We use the table name only in this test.
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
         .unwrap();
     conn.execute(
@@ -106,7 +108,9 @@ fn append_user_and_password_to_connection_string() {
 #[test]
 fn query_mssql() {
     let table_name = "OdbcsvQueryMssql";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {table_name}
@@ -141,7 +145,9 @@ fn tables() {
 
     let table_name = "OdbcsvTestTables";
     // Setup table for test. We use the table name only in this test.
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
 
     Command::cargo_bin("odbcsv")
@@ -173,7 +179,9 @@ fn columns() {
     let table_name = "OdbcsvTestColumns";
     // Setup table for test. We use the table name only in this test.
     // Setup empty table handle would implicitly create an ID column
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
         .unwrap();
     conn.execute(&format!("CREATE TABLE {table_name} (a VARCHAR(255));"), ())
@@ -239,7 +247,9 @@ fn do_not_ignore_truncation() {
 #[test]
 fn placeholders() {
     let table_name = "OdbcsvPlaceholders";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {table_name}
@@ -375,7 +385,9 @@ pub fn setup_empty_table(
 #[test]
 fn fetch_from_mssql() {
     let table_name = "OdbcsvFetchMssql";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {table_name}
@@ -413,7 +425,9 @@ fn fetch_from_mssql() {
 fn fetch_with_query_read_from_file() {
     // Fill Table with dummy data
     let table_name = "OdbcsvFetchWithQueryReadFromFile";
-    let conn = ENV.connect_with_connection_string(MSSQL).unwrap();
+    let conn = ENV
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
+        .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
     let insert = format!(
         "INSERT INTO {table_name}

@@ -18,7 +18,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Connection, Cursor, DataType, Error, InOut, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String, ConnectionOptions,
 };
 use std::{
     ffi::CString,
@@ -92,7 +92,7 @@ macro_rules! table_name {
 #[test]
 fn bogus_connection_string() {
     // When
-    let result = ENV.connect_with_connection_string("foobar");
+    let result = ENV.connect_with_connection_string("foobar", ConnectionOptions::default());
 
     // Then
 

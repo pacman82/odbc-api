@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, Cursor, Environment, Error, RowSetBuffer,
+    Connection, Cursor, Environment, Error, RowSetBuffer, ConnectionOptions,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
@@ -28,7 +28,7 @@ pub struct Profile {
 impl Profile {
     /// Open a new connection using the connection string of the profile
     pub fn connection(&self) -> Result<Connection<'static>, Error> {
-        ENV.connect_with_connection_string(self.connection_string)
+        ENV.connect_with_connection_string(self.connection_string, ConnectionOptions::default())
     }
 
     /// Convinience function, setting up an empty table, and returning the connection used to create

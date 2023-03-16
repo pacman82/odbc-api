@@ -228,7 +228,7 @@ impl Environment {
     /// # Example
     ///
     /// ```no_run
-    /// use odbc_api::Environment;
+    /// use odbc_api::{ConnectionOptions, Environment};
     ///
     /// let env = Environment::new()?;
     ///
@@ -239,17 +239,21 @@ impl Environment {
     ///     PWD=My@Test@Password1;\
     /// ";
     ///
-    /// let mut conn = env.connect_with_connection_string(connection_string)?;
+    /// let mut conn = env.connect_with_connection_string(
+    ///     connection_string,
+    ///     ConnectionOptions::default()
+    /// )?;
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
     pub fn connect_with_connection_string(
         &self,
         connection_string: &str,
+        options: ConnectionOptions,
     ) -> Result<Connection<'_>, Error> {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        let ConnectionOptions { login_timeout_sec } = ConnectionOptions::default();
+        let ConnectionOptions { login_timeout_sec } = options;
 
         if let Some(timeout) = login_timeout_sec {
             connection
