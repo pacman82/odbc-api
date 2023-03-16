@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.55.0
+
+* Added support for login timeout, i.e. the user can now explicitly specify a time in seconds after which a login attempt to a datasource should fail. This triggered two breaking changes:
+
+* `Environment::connect_with_connection_string` now takes an additional argument `ConnectionOptions`.
+* `Environment::connect` now takes an additional argument `ConnectionOptions`.
+
+Migration is trivial, by supplying `ConnectionsOptions::default()` as the last argument.
+
 ## 0.54.3
 
 * Added catalog function `foreign_keys` to `Connection` and `Preallocated`.

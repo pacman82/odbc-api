@@ -1044,7 +1044,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "0.54.3"
+version = "0.55.0"
 dependencies = [
  "anyhow",
  "criterion",
