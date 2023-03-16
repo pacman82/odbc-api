@@ -1,6 +1,7 @@
 use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 
 use crate::{
+    connection::ConnectionOptions,
     error::ExtendResult,
     handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer},
     Connection, DriverCompleteOption, Error,
@@ -247,6 +248,15 @@ impl Environment {
     ) -> Result<Connection<'_>, Error> {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
+
+        let ConnectionOptions { login_timeout_sec } = ConnectionOptions::default();
+
+        if let Some(timeout) = login_timeout_sec {
+            connection
+                .set_login_timeout_sec(timeout)
+                .into_result(&connection)?;
+        }
+
         connection
             .connect_with_connection_string(&connection_string)
             .into_result(&connection)?;

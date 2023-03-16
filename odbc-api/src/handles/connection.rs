@@ -32,6 +32,10 @@ use odbc_sys::{
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
+/// 
+/// Connection is not `Sync`, this implies that many methods which one would suspect should take
+/// `&mut self` are actually `&self`. This is important if several statement exists which borrow
+/// the same connection.
 pub struct Connection<'c> {
     parent: PhantomData<&'c HEnv>,
     handle: HDbc,
@@ -181,6 +185,29 @@ impl<'c> Connection<'c> {
                 ConnectionAttribute::AutoCommit,
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
+            )
+            .into_sql_result("SQLSetConnectAttr")
+        }
+    }
+
+    /// Number of seconds to wait for a login request to complete before returning to the
+    /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
+    /// connection attempt will wait indefinitely.
+    ///
+    /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
+    /// substitutes that value and uses the maximum login timeout instead.
+    ///
+    /// This corresponds to the `SQL_ATTR_LOGIN_TIMEOUT` attribute in the ODBC specification.
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    pub fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
+        unsafe {
+            sql_set_connect_attr(
+                self.handle,
+                ConnectionAttribute::LoginTimeout,
+                timeout as Pointer,
+                0,
             )
             .into_sql_result("SQLSetConnectAttr")
         }

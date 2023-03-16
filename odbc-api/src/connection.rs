@@ -24,8 +24,8 @@ impl<'conn> Drop for Connection<'conn> {
                     // error.
                     if !panicking() {
                         panic!(
-                            "Unexpected error rolling back transaction (In order to recover \
-                                from invalid transaction state during disconnect): {e:?}"
+                            "Unexpected error rolling back transaction (In order to recover from \
+                                invalid transaction state during disconnect): {e:?}"
                         )
                     }
                 }
@@ -688,6 +688,23 @@ impl<'c> Connection<'c> {
             .allocate_statement()
             .into_result(&self.connection)
     }
+}
+
+/// Options to be passed then opening a connection to a datasource.
+#[derive(Default, Clone, Copy)]
+pub struct ConnectionOptions {
+    /// Number of seconds to wait for a login request to complete before returning to the
+    /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
+    /// connection attempt will wait indefinitely.
+    /// 
+    /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
+    /// substitutes that value and uses the maximum login timeout instead.
+    /// 
+    /// This corresponds to the `SQL_ATTR_LOGIN_TIMEOUT` attribute in the ODBC specification.
+    /// 
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    pub login_timeout_sec: Option<u32>
 }
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
