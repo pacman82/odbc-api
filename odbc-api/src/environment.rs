@@ -211,6 +211,10 @@ impl Environment {
         let pwd = SqlText::new(pwd);
 
         let mut connection = self.allocate_connection()?;
+
+        let options = ConnectionOptions::default();
+        options.apply(&connection)?;
+
         connection
             .connect(&data_source_name, &user, &pwd)
             .into_result(&connection)?;
@@ -253,13 +257,7 @@ impl Environment {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        let ConnectionOptions { login_timeout_sec } = options;
-
-        if let Some(timeout) = login_timeout_sec {
-            connection
-                .set_login_timeout_sec(timeout)
-                .into_result(&connection)?;
-        }
+        options.apply(&connection)?;
 
         connection
             .connect_with_connection_string(&connection_string)

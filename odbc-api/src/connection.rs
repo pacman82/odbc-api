@@ -1,7 +1,8 @@
 use crate::{
     buffers::BufferDesc,
     execute::{
-        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling, execute_foreign_keys,
+        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
+        execute_with_parameters_polling,
     },
     handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
     statement_connection::StatementConnection,
@@ -576,7 +577,7 @@ impl<'c> Connection<'c> {
 
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
     /// of foreign keys in other table that refer to the primary key of the specified table.
-    /// 
+    ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
     pub fn foreign_keys(
         &self,
@@ -705,15 +706,28 @@ pub struct ConnectionOptions {
     /// Number of seconds to wait for a login request to complete before returning to the
     /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
     /// connection attempt will wait indefinitely.
-    /// 
+    ///
     /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
     /// substitutes that value and uses the maximum login timeout instead.
-    /// 
+    ///
     /// This corresponds to the `SQL_ATTR_LOGIN_TIMEOUT` attribute in the ODBC specification.
-    /// 
+    ///
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
-    pub login_timeout_sec: Option<u32>
+    pub login_timeout_sec: Option<u32>,
+}
+
+impl ConnectionOptions {
+    /// Set the attributes corresponding to the connection options to an allocated connection
+    /// handle. Usually you would rather provide the options then creating the connection with e.g.
+    /// [`crate::Environment::connect_with_connection_string`] rather than calling this method
+    /// yourself.
+    pub fn apply(&self, handle: &handles::Connection) -> Result<(), Error> {
+        if let Some(timeout) = self.login_timeout_sec {
+            handle.set_login_timeout_sec(timeout).into_result(handle)?;
+        }
+        Ok(())
+    }
 }
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
