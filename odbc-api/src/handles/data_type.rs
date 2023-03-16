@@ -8,10 +8,11 @@ use odbc_sys::SqlDataType;
 /// SQL Server both have one. In such cases it is up to the specific ODBC driver what happens.
 /// Microsoft SQL Server return a custom type, with its meaning specific to that driver. PostgreSQL
 /// identifies that column as an ordinary ODBC timestamp.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 /// Enumeration over valid SQL Data Types supported by ODBC
 pub enum DataType {
     /// The type is not known.
+    #[default]
     Unknown,
     /// `Char(n)`. Character string of fixed length.
     Char {
@@ -396,11 +397,5 @@ impl DataType {
             | DataType::Char { length } => Some(length * 2),
             other => other.display_size(),
         }
-    }
-}
-
-impl Default for DataType {
-    fn default() -> Self {
-        DataType::Unknown
     }
 }
