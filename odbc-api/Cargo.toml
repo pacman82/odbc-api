@@ -63,7 +63,7 @@ default=["odbc_version_3_80"]
 
 [dependencies]
 odbc-sys = { version = "0.21.4", default-features = false }
-thiserror = "1.0.39"
+thiserror = "1.0.40"
 log = "0.4.17"
 widestring = "1.0.2"
 force-send-sync = "1.0.0"
