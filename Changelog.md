@@ -1,5 +1,9 @@
 # Changelog
 
+## next
+
+* `CursorRow::get_variadic` is now private as it was always intended to be a private implemenatation detail.
+
 ## 0.55.0
 
 * Added support for login timeout, i.e. the user can now explicitly specify a time in seconds after which a login attempt to a datasource should fail. This triggered two breaking changes:
