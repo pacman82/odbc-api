@@ -17,8 +17,8 @@ use odbc_api::{
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
-    sys, Bit, ColumnDescription, Connection, Cursor, DataType, Error, InOut, IntoParameter,
-    Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String, ConnectionOptions,
+    sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
+    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -3625,6 +3625,25 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     assert_eq!(retrieved_pk_table_name, pk_table_name);
     assert_eq!(retrieved_fk_table_name, fk_table_name);
     assert_eq!(batch.num_rows(), 1);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Only allows one SQL Statement
+// #[test_case(SQLITE_3; "SQLite 3")] Only allows one SQL Statement
+#[test_case(POSTGRES; "PostgreSQL")]
+fn execute_two_select_statements(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+
+    let mut cursor = conn
+        .execute("SELECT 1 AS A; SELECT 2 AS B;", ())
+        .unwrap()
+        .unwrap();
+    let mut first = 0;
+    cursor.next_row().unwrap().unwrap().get_data(1, &mut first).unwrap();
+    let first_result_set_only_has_one_row = cursor.next_row().unwrap().is_none();
+
+    assert_eq!(1, first);
+    assert!(first_result_set_only_has_one_row);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
