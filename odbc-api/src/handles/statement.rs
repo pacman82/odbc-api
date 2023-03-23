@@ -13,7 +13,7 @@ use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLCompleteAsync, SQLDescribeParam, SQLExecute, SQLFetch,
     SQLFreeStmt, SQLGetData, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount,
-    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
+    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER, SQLMoreResults,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
@@ -882,6 +882,17 @@ pub trait Statement: AsHandle {
                 .into_sql_result("SQLCompleteAsync")
         }
         .on_success(|| ret.into_sql_result(function_name))
+    }
+
+    /// Determines whether more results are available on a statement containing SELECT, UPDATE,
+    /// INSERT, or DELETE statements and, if so, initializes processing for those results.
+    /// [`SqlResult::NoData`] is returned to indicate that there are no more result sets.
+    ///
+    /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlmoreresults-function>
+    fn more_results(&mut self) -> SqlResult<()> {
+        unsafe {
+            SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults")
+        }
     }
 }
 
