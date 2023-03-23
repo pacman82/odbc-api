@@ -2,7 +2,7 @@ mod common;
 
 use odbc_sys::{SqlDataType, Timestamp};
 use stdext::function_name;
-use sys::NULL_DATA;
+use sys::{NULL_DATA, SQLMoreResults};
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
@@ -12,7 +12,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, ParameterDescription, Statement},
+    handles::{OutputStringBuffer, ParameterDescription, Statement, AsStatementRef},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -3641,9 +3641,12 @@ fn execute_two_select_statements(profile: &Profile) {
     let mut first = 0;
     cursor.next_row().unwrap().unwrap().get_data(1, &mut first).unwrap();
     let first_result_set_only_has_one_row = cursor.next_row().unwrap().is_none();
+    let stmt = cursor.as_stmt_ref().as_sys();
+    let ret = unsafe { SQLMoreResults(stmt) };
 
     assert_eq!(1, first);
     assert!(first_result_set_only_has_one_row);
+    assert_eq!(odbc_sys::SqlReturn::SUCCESS, ret);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
