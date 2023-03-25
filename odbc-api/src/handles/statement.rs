@@ -889,7 +889,12 @@ pub trait Statement: AsHandle {
     /// [`SqlResult::NoData`] is returned to indicate that there are no more result sets.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlmoreresults-function>
-    fn more_results(&mut self) -> SqlResult<()> {
+    /// 
+    /// # Safety
+    /// 
+    /// Since a different result set might have a different schema, care needs to be taken that
+    /// bound buffers are used correctly.
+    unsafe fn more_results(&mut self) -> SqlResult<()> {
         unsafe {
             SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults")
         }
