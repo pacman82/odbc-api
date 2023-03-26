@@ -9,7 +9,7 @@ use crate::{
     Error, ResultSetMetadata,
 };
 
-use std::thread::panicking;
+use std::{thread::panicking, mem::MaybeUninit, ptr};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
@@ -280,6 +280,19 @@ where
     /// `statement` must be in Cursor state, for the invariants of this type to hold.
     pub unsafe fn new(statement: S) -> Self {
         Self { statement }
+    }
+
+    /// Deconstructs the `CursorImpl` without calling drop. This is a way to get to the underlying
+    /// statement, while preventing a call to close cursor.
+    pub fn into_stmt(self) -> S {
+        // We want to move `statement` out of self, which would make self partially uninitialized.
+        let dont_drop_me = MaybeUninit::new(self);
+        let self_ptr = dont_drop_me.as_ptr();
+
+        // Safety: We know `dont_drop_me` is valid at this point so reading the ptr is okay
+        unsafe {
+            ptr::read(&(*self_ptr).statement)
+        }
     }
 
     pub(crate) fn as_sys(&mut self) -> HStmt {

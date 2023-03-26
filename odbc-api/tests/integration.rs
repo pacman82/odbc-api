@@ -12,7 +12,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{AsStatementRef, OutputStringBuffer, ParameterDescription, SqlResult, Statement},
+    handles::{OutputStringBuffer, ParameterDescription, SqlResult, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -3646,12 +3646,14 @@ fn execute_two_select_statements(profile: &Profile) {
         .get_data(1, &mut first)
         .unwrap();
     let first_result_set_only_has_one_row = cursor.next_row().unwrap().is_none();
-    let mut stmt = cursor.as_stmt_ref();
-    let first_call_to_more_results = unsafe { stmt.more_results() };
+    let mut stmt = cursor.into_stmt();
+    let first_call_to_more_results = unsafe { stmt.more_results() } ;
+    let second_call_to_more_results = unsafe { stmt.more_results() } ;
 
     assert_eq!(1, first);
     assert!(first_result_set_only_has_one_row);
     assert_eq!(SqlResult::Success(()), first_call_to_more_results);
+    assert_eq!(SqlResult::NoData, second_call_to_more_results);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
