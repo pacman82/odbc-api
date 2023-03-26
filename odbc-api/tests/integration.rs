@@ -12,7 +12,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, ParameterDescription, SqlResult, Statement},
+    handles::{OutputStringBuffer, ParameterDescription, Statement},
     parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
@@ -3634,26 +3634,16 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
 fn execute_two_select_statements(profile: &Profile) {
     let conn = profile.connection().unwrap();
 
-    let mut cursor = conn
+    let cursor = conn
         .execute("SELECT 1 AS A; SELECT 2 AS B;", ())
         .unwrap()
         .unwrap();
-    let mut first = 0;
-    cursor
-        .next_row()
-        .unwrap()
-        .unwrap()
-        .get_data(1, &mut first)
-        .unwrap();
-    let first_result_set_only_has_one_row = cursor.next_row().unwrap().is_none();
-    let mut stmt = cursor.into_stmt();
-    let first_call_to_more_results = unsafe { stmt.more_results() } ;
-    let second_call_to_more_results = unsafe { stmt.more_results() } ;
 
-    assert_eq!(1, first);
-    assert!(first_result_set_only_has_one_row);
-    assert_eq!(SqlResult::Success(()), first_call_to_more_results);
-    assert_eq!(SqlResult::NoData, second_call_to_more_results);
+    let maybe_cursor = cursor.more_results().unwrap();
+    assert!(maybe_cursor.is_some());
+    let cursor = maybe_cursor.unwrap();
+    let maybe_cursor = cursor.more_results().unwrap();
+    assert!(maybe_cursor.is_none());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

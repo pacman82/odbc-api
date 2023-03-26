@@ -69,6 +69,12 @@ pub trait Cursor: ResultSetMetadata {
     where
         Self: Sized,
         B: RowSetBuffer;
+
+    /// For some datasources it is possible to create more than one result set at once via a call to
+    /// execute. E.g. by calling a stored procedure or executing multiple SQL statements at once.
+    /// This method consumes the current cursor and creates a new one representing the next result
+    /// set should it exist.
+    fn more_results(self) -> Result<Option<Self>, Error> where Self: Sized;
 }
 
 /// An individual row of an result set. See [`crate::Cursor::next_row`].
@@ -261,6 +267,20 @@ where
             bind_row_set_buffer_to_statement(stmt, &mut row_set_buffer)?;
         }
         Ok(BlockCursor::new(row_set_buffer, self))
+    }
+
+    fn more_results(self) -> Result<Option<Self>, Error> where Self: Sized {
+        // Consume self without calling drop to avoid calling close_cursor.
+        let mut statement = self.into_stmt();
+        let mut stmt = statement.as_stmt_ref();
+
+        let has_another_result = unsafe { stmt.more_results() } .into_result_bool(&stmt)?;
+        let next = if has_another_result {
+            Some(CursorImpl { statement })
+        } else {
+            None
+        };
+        Ok(next)
     }
 }
 
