@@ -77,9 +77,7 @@ impl ExtSqlReturn for SqlReturn {
             SqlReturn::NO_DATA => SqlResult::NoData,
             SqlReturn::NEED_DATA => SqlResult::NeedData,
             SqlReturn::STILL_EXECUTING => SqlResult::StillExecuting,
-            r => panic!(
-                "Unexpected return value '{r:?}' for ODBC function '{function}'"
-            ),
+            r => panic!("Unexpected return value '{r:?}' for ODBC function '{function}'"),
         }
     }
 }

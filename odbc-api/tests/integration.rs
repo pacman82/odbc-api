@@ -3647,6 +3647,34 @@ fn execute_two_select_statements(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] Only allows one SQL Statement
+// #[test_case(SQLITE_3; "SQLite 3")] Only allows one SQL Statement
+#[test_case(POSTGRES; "PostgreSQL")]
+fn execute_select_insert_select(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+
+    let first_cursor = conn
+        .execute(
+            &format!("SELECT 1 AS A; INSERT INTO {table_name} (a) VALUES (2); SELECT 3 AS B;"),
+            (),
+        )
+        .unwrap()
+        .unwrap();
+
+    let second_cursor = first_cursor.more_results().unwrap();
+    assert!(second_cursor.is_some());
+    let second_cursor = second_cursor.unwrap();
+
+    let third_cursor = second_cursor.more_results().unwrap();
+    assert!(third_cursor.is_some());
+    let third_cursor = third_cursor.unwrap();
+
+    let fourth_cursor = third_cursor.more_results().unwrap();
+    assert!(fourth_cursor.is_none());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]

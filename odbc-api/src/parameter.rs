@@ -341,8 +341,8 @@ mod varcell;
 pub use self::{
     blob::{Blob, BlobParam, BlobRead, BlobSlice},
     varcell::{
-        VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut, VarCell,
-        VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut, VarKind, Binary, Text
+        Binary, Text, VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut,
+        VarCell, VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut, VarKind,
     },
 };
 

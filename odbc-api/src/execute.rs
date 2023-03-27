@@ -259,8 +259,9 @@ where
         pk_table_name,
         fk_catalog_name,
         fk_schema_name,
-        fk_table_name
-    ).into_result(&stmt)?;
+        fk_table_name,
+    )
+    .into_result(&stmt)?;
 
     // We assume foreign keys always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);

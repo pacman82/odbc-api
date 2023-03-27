@@ -12,24 +12,25 @@ use super::{
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLCompleteAsync, SQLDescribeParam, SQLExecute, SQLFetch,
-    SQLFreeStmt, SQLGetData, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData, SQLRowCount,
-    SqlDataType, SqlReturn, StatementAttribute, IS_POINTER, SQLMoreResults,
+    SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
+    SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
 #[cfg(feature = "narrow")]
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
-    SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc, SQLPrepare as sql_prepare,
-    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables, SQLForeignKeys as sql_foreign_keys
+    SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
+    SQLForeignKeys as sql_foreign_keys, SQLPrepare as sql_prepare,
+    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
 };
 
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
-    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
-    SQLForeignKeysW as sql_foreign_keys
+    SQLForeignKeysW as sql_foreign_keys, SQLPrepareW as sql_prepare,
+    SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
 /// An owned valid (i.e. successfully allocated) ODBC statement handle.
@@ -794,7 +795,7 @@ pub trait Statement: AsHandle {
 
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
     /// of foreign keys in other table that refer to the primary key of the specified table.
-    /// 
+    ///
     /// Like [`Self::tables`] this changes the statement to a cursor over the result set.
     fn foreign_keys(
         &mut self,
@@ -889,15 +890,13 @@ pub trait Statement: AsHandle {
     /// [`SqlResult::NoData`] is returned to indicate that there are no more result sets.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlmoreresults-function>
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// Since a different result set might have a different schema, care needs to be taken that
     /// bound buffers are used correctly.
     unsafe fn more_results(&mut self) -> SqlResult<()> {
-        unsafe {
-            SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults")
-        }
+        unsafe { SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults") }
     }
 }
 

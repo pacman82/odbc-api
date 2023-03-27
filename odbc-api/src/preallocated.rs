@@ -1,6 +1,7 @@
 use crate::{
     execute::{
-        execute_columns, execute_tables, execute_with_parameters, execute_with_parameters_polling, execute_foreign_keys,
+        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
+        execute_with_parameters_polling,
     },
     handles::{AsStatementRef, SqlText, Statement, StatementImpl, StatementRef},
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
@@ -159,7 +160,7 @@ impl<'o> Preallocated<'o> {
 
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
     /// of foreign keys in other table that refer to the primary key of the specified table.
-    /// 
+    ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
     pub fn foreign_keys(
         &mut self,

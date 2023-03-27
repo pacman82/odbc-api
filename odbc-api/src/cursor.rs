@@ -9,7 +9,7 @@ use crate::{
     Error, ResultSetMetadata,
 };
 
-use std::{thread::panicking, mem::MaybeUninit, ptr};
+use std::{mem::MaybeUninit, ptr, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
@@ -74,7 +74,9 @@ pub trait Cursor: ResultSetMetadata {
     /// execute. E.g. by calling a stored procedure or executing multiple SQL statements at once.
     /// This method consumes the current cursor and creates a new one representing the next result
     /// set should it exist.
-    fn more_results(self) -> Result<Option<Self>, Error> where Self: Sized;
+    fn more_results(self) -> Result<Option<Self>, Error>
+    where
+        Self: Sized;
 }
 
 /// An individual row of an result set. See [`crate::Cursor::next_row`].
@@ -161,7 +163,8 @@ impl<'s> CursorRow<'s> {
         // accumulated value size. The target always points to the last window in buf which is going
         // to contain the **next** part of the data, thereas buf contains the entire accumulated
         // value so far.
-        let mut target = VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
+        let mut target =
+            VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
         self.get_data(col_or_param_num, &mut target)?;
         while !target.is_complete() {
             // Amount of payload bytes (excluding terminating zeros) fetched with the last call to
@@ -187,7 +190,8 @@ impl<'s> CursorRow<'s> {
                             "SQLGetData has been unable to fetch all data, even though the \
                             capacity of the target buffer has been adapted to hold the entire \
                             payload based on the indicator of the last part. You may consider \
-                            filing a bug with the ODBC driver you are using.")
+                            filing a bug with the ODBC driver you are using."
+                        )
                     }
                     remaining_length_known = true;
                     // Amount of bytes missing from the value using get_data, excluding terminating
@@ -269,12 +273,15 @@ where
         Ok(BlockCursor::new(row_set_buffer, self))
     }
 
-    fn more_results(self) -> Result<Option<Self>, Error> where Self: Sized {
+    fn more_results(self) -> Result<Option<Self>, Error>
+    where
+        Self: Sized,
+    {
         // Consume self without calling drop to avoid calling close_cursor.
         let mut statement = self.into_stmt();
         let mut stmt = statement.as_stmt_ref();
 
-        let has_another_result = unsafe { stmt.more_results() } .into_result_bool(&stmt)?;
+        let has_another_result = unsafe { stmt.more_results() }.into_result_bool(&stmt)?;
         let next = if has_another_result {
             Some(CursorImpl { statement })
         } else {
@@ -310,9 +317,7 @@ where
         let self_ptr = dont_drop_me.as_ptr();
 
         // Safety: We know `dont_drop_me` is valid at this point so reading the ptr is okay
-        unsafe {
-            ptr::read(&(*self_ptr).statement)
-        }
+        unsafe { ptr::read(&(*self_ptr).statement) }
     }
 
     pub(crate) fn as_sys(&mut self) -> HStmt {

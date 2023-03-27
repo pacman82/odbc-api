@@ -32,7 +32,7 @@ use odbc_sys::{
 
 /// The connection handle references storage of all information about the connection to the data
 /// source, including status, transaction state, and error information.
-/// 
+///
 /// Connection is not `Sync`, this implies that many methods which one would suspect should take
 /// `&mut self` are actually `&self`. This is important if several statement exists which borrow
 /// the same connection.
