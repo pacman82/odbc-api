@@ -484,6 +484,30 @@ where
             Ok(has_row.then_some(&self.buffer))
         }
     }
+
+    /// Unbinds the buffer from the underlying statement handle. Potential usecases for this
+    /// function include.
+    /// 
+    /// 1. Binding a different buffer to the "same" cursor after letting it point to the next result
+    ///   set obtained with [self::more_results`].
+    /// 2. Reusing the same buffer with a different statement.
+    pub fn unbind(self) -> Result<(C, B), Error> {
+        // In this method we want to deconstruct self and move cursor out of it. We need to
+        // negotiate with the compiler a little bit though, since BlockCursor does implement `Drop`.
+
+        // We want to move `cursor` out of self, which would make self partially uninitialized.
+        let dont_drop_me = MaybeUninit::new(self);
+        let self_ptr = dont_drop_me.as_ptr();
+
+        // Safety: We know `dont_drop_me` is valid at this point so reading the ptr is okay
+        let mut cursor = unsafe { ptr::read(&(*self_ptr).cursor) };
+        let buffer = unsafe { ptr::read(&(*self_ptr).buffer) };
+
+        // Now that we have cursor out of block cursor, we need to unbind the buffer.
+        unbind_buffer_from_cursor(&mut cursor)?;
+
+        Ok((cursor, buffer))
+    }
 }
 
 impl<C, B> Drop for BlockCursor<C, B>
@@ -491,18 +515,12 @@ where
     C: AsStatementRef,
 {
     fn drop(&mut self) {
-        unsafe {
-            let mut stmt = self.cursor.as_stmt_ref();
-            if let Err(e) = stmt
-                .unbind_cols()
-                .into_result(&stmt)
-                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(&stmt))
-            {
-                // Avoid panicking, if we already have a panic. We don't want to mask the original
-                // error.
-                if !panicking() {
-                    panic!("Unexpected error unbinding columns: {e:?}")
-                }
+        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor)
+        {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexpected error unbinding columns: {e:?}")
             }
         }
     }
@@ -654,7 +672,7 @@ unsafe fn bind_row_set_buffer_to_statement(
                 Error::Diagnostics { record, function }
             }
         })?;
-    stmt.set_num_rows_fetched(Some(row_set_buffer.mut_num_fetch_rows()))
+    stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())
         .into_result(&stmt)?;
     row_set_buffer.bind_colmuns_to_cursor(stmt)?;
     Ok(())
@@ -696,19 +714,23 @@ where
     C: AsStatementRef,
 {
     fn drop(&mut self) {
-        unsafe {
-            let mut stmt = self.cursor.as_stmt_ref();
-            if let Err(e) = stmt
-                .unbind_cols()
-                .into_result(&stmt)
-                .and_then(|()| stmt.set_num_rows_fetched(None).into_result(&stmt))
-            {
-                // Avoid panicking, if we already have a panic. We don't want to mask the original
-                // error.
-                if !panicking() {
-                    panic!("Unexpected error unbinding columns: {e:?}")
-                }
+        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor)
+        {
+            // Avoid panicking, if we already have a panic. We don't want to mask the original
+            // error.
+            if !panicking() {
+                panic!("Unexpected error unbinding columns: {e:?}")
             }
         }
     }
+}
+
+/// Unbinds buffer and num_rows_fetched from the cursor. This implementation is shared between
+/// unbind and the drop handler, and the synchronous and asynchronous variant.
+fn unbind_buffer_from_cursor(cursor: &mut impl AsStatementRef) -> Result<(), Error> {
+    // Now that we have cursor out of block cursor, we need to unbind the buffer.
+    let mut stmt = cursor.as_stmt_ref();
+    stmt.unbind_cols().into_result(&stmt)?;
+    stmt.unset_num_rows_fetched().into_result(&stmt)?;
+    Ok(())
 }

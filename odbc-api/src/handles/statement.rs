@@ -223,15 +223,13 @@ pub trait Statement: AsHandle {
     }
 
     /// Bind an integer to hold the number of rows retrieved with fetch in the current row set.
-    /// Passing `None` for `num_rows` is going to unbind the value from the statement.
+    /// Calling [`Self::unset_num_rows_fetched`] is going to unbind the value from the statement.
     ///
     /// # Safety
     ///
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
-    unsafe fn set_num_rows_fetched(&mut self, num_rows: Option<&mut usize>) -> SqlResult<()> {
-        let value = num_rows
-            .map(|r| r as *mut usize as Pointer)
-            .unwrap_or_else(null_mut);
+    unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> SqlResult<()> {
+        let value = num_rows as *mut usize as Pointer;
         sql_set_stmt_attr(
             self.as_sys(),
             StatementAttribute::RowsFetchedPtr,
@@ -239,6 +237,22 @@ pub trait Statement: AsHandle {
             IS_POINTER,
         )
         .into_sql_result("SQLSetStmtAttr")
+    }
+
+    /// Unsets the integer set by [`Self::set_num_rows_fetched`].
+    /// 
+    /// This being a seperate method from [`Self::set_num_rows_fetched` allows us to write us
+    /// cleanup code with less `unsafe` statements since this operation is always safe.
+    fn unset_num_rows_fetched(&mut self) -> SqlResult<()> {
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::RowsFetchedPtr,
+                null_mut(),
+                IS_POINTER,
+            )
+            .into_sql_result("SQLSetStmtAttr")
+        }
     }
 
     /// Fetch a column description using the column index.
