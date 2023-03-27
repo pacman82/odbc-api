@@ -3662,6 +3662,9 @@ fn execute_select_insert_select(profile: &Profile) {
         .unwrap()
         .unwrap();
 
+    // The statement is not actually in a cursor state here, because the second statement is an
+    // Insert statement. Everything works fine though, if we do not try to fetch any values. If we
+    // fetch it would trigger a sequence error.
     let second_cursor = first_cursor.more_results().unwrap();
     assert!(second_cursor.is_some());
     let second_cursor = second_cursor.unwrap();
