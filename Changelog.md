@@ -1,9 +1,10 @@
 # Changelog
 
-## next
+## 0.56.0
 
 * `CursorRow::get_variadic` is now private as it was always intended to be a private implemenatation detail.
 * `Statement::set_num_rows_fetched` has been split into `Statement::set_num_rows_fetched` and `Statement::unset_num_rows_fetched` in order to reduce the amount of unsafe code a bit.
+* Adds `Cursor::more_results` to support statements which return multiple result sets.
 
 ## 0.55.0
 

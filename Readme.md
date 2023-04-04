@@ -80,3 +80,4 @@ You can also install unixODBC from source:
 * [x] Fetching arbitrary large text / binary data in stream
 * [x] Connection pooling
 * [x] List tables of data sources
+* [x] Retrieve multiple result sets
