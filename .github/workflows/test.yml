@@ -110,3 +110,18 @@ jobs:
 
       - name: Test
         run: docker-compose --file docker-compose-ci.yml run test_linux
+
+  odbc_3_5:
+    name: Check build with ODBC 3.5
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          cd ..
+          cargo new test-compilation
+          cd test-compilation
+          cargo add odbc-api --path ../odbc-api/odbc-api --no-default-features --features odbc_version_3_5
+          cargo build 
