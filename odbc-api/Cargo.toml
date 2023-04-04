@@ -69,6 +69,9 @@ widestring = "1.0.2"
 force-send-sync = "1.0.0"
 
 [target.'cfg(windows)'.dependencies]
+# We use winit to display dialogs prompting for connection strings. We can deactivate default
+# features since it can work only on windows and therfore we do not need any dependencies
+# associated with various window managers.
 winit = { version = "0.28.3", default-features = false }
 
 [dev-dependencies]
