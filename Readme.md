@@ -126,7 +126,7 @@ Nix flakes depend on `git` and are not aware of files not staged or committed, t
 
 The `flake.nix` above will require some modifications to work with other ODBC drivers. For example, replacing `ODBC Driver 17 for SQL Server` with one of `PostgreSQL`, `MariaDB`, or `SQLite`. And `unixODBCDrivers.msodbcsql17` with one of the [other drivers](https://search.nixos.org/options?channel=unstable&show=environment.unixODBCDrivers&from=0&size=50&sort=relevance&type=packages&query=unixODBCDrivers) such as `mariadb`, `psql` or `sqlite`.
 
-The hard coded driver path will need to be changed as well for other drivers. One can figure out this path by a combination of looking at the [nixpkgs source](https://github.com/NixOS/nixpkgs/blob/456d8190ad756a30d69064381b5149bceabc14a6/pkgs/development/libraries/unixODBCDrivers/default.nix#L62) and / or evaluating the package:
+The hard coded driver path will need to be changed as well for other drivers. One can figure this out path by a combination of looking at the [nixpkgs source](https://github.com/NixOS/nixpkgs/blob/456d8190ad756a30d69064381b5149bceabc14a6/pkgs/development/libraries/unixODBCDrivers/default.nix#L62) and / or evaluating the package:
 
 ```shell
 $ nix-build '<nixpkgs>' -A unixODBCDrivers.mariadb
