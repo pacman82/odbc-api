@@ -132,7 +132,7 @@ $ cd ./result
 $ ls
 ```
 
-The `openssl` version may need to change as well or may not be needed at all for other drivers. I have not tested the above `flake.nix` with other drivers or on OS-X. At a minimum, the `LD_LIBRARY_PATH` will need to change to `DYLD_FALLBACK_LIBRARY_PATH`.
+The `openssl` version may need to change as well or may not be needed at all for other drivers. I have not tested the above `flake.nix` with other drivers or on OS-X. At a minimum in OS-X, the `LD_LIBRARY_PATH` will need to change to `DYLD_FALLBACK_LIBRARY_PATH`.
 
 ## Features
 
