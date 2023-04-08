@@ -93,7 +93,7 @@ Here is an example of a `flake.nix` that sets up a dev environment for `odbc-api
             export LD_LIBRARY_PATH="${unixODBC}/lib:${openssl_1_1.out}/lib";
 
             # Make rust build directory if it doesn't already exist
-            mkdir ./target
+            mkdir -p ./target
 
             # see https://www.systutorials.com/docs/linux/man/7-unixODBC/
             # Overloads path to unixODBC configuration files. By default equals to '/etc'.
