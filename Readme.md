@@ -57,6 +57,10 @@ You can also install unixODBC from source:
 5. `make`
 6. `make install`
 
+### Linux / OS-X via Nix Flakes
+
+Alternatively, if you're familiar with the Nix ecosystem or want to try it out, [our wiki](https://github.com/pacman82/odbc-api/wiki) has a user contributed example setting up a dev environment with Nix flakes.
+
 ## Features
 
 * [x] Connect using Data Source names (DSN)
