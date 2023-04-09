@@ -59,7 +59,7 @@ You can also install unixODBC from source:
 
 ### Linux / OS-X via Nix Flakes
 
-Alternatively, if you're familiar with the Nix ecosystem or want to try it out, [our wiki](https://github.com/pacman82/odbc-api/wiki) has a user contributed example setting up a dev environment with Nix flakes.
+Alternatively, if you're familiar with the Nix ecosystem or want to try it out, [our wiki](https://github.com/pacman82/odbc-api/wiki) has a user contributed example on setting up a dev environment with Nix flakes.
 
 ## Features
 
