@@ -346,6 +346,9 @@ pub use self::{
     },
 };
 
+/// Currenty not made public due to unsure if it might not be better to implement this via u16
+pub(crate) use self::varcell::VarWCharSlice;
+
 use std::ffi::c_void;
 
 use odbc_sys::CDataType;

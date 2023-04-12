@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.56.2
+
+* Support `U16Str` and `Option<U16Str>` as input parameter via `IntoParameter` trait.
+
 ## 0.56.1
 
 * Fix: `Statement::complete_async` is now annotated to be only available in ODBC version 3.8. This missing annotation prevented compilation then specifying ODBC version 3.5.

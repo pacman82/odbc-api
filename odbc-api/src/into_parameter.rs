@@ -1,7 +1,9 @@
+use widestring::U16Str;
+
 use crate::{
     fixed_sized::Pod,
-    parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice},
-    Nullable,
+    parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice},
+    Nullable, buffers::Indicator,
 };
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
@@ -101,6 +103,27 @@ impl IntoParameter for Option<Vec<u8>> {
         match self {
             Some(str) => str.into_parameter(),
             None => VarBinaryBox::null(),
+        }
+    }
+}
+
+impl<'a> IntoParameter for &'a U16Str {
+    type Parameter = VarWCharSlice<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        let slice = self.as_slice();
+        let (_, bytes, _) = unsafe { slice.align_to::<u8>() };
+        VarWCharSlice::from_buffer(bytes, Indicator::Length(bytes.len()))
+    }
+}
+
+impl<'a> IntoParameter for Option<&'a U16Str> {
+    type Parameter = VarWCharSlice<'a>;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarWCharSlice::NULL,
         }
     }
 }

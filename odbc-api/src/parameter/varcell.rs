@@ -44,6 +44,24 @@ unsafe impl VarKind for Text {
 }
 
 /// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
+/// used to hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate binary
+/// buffers (`[u8]`), rather than `[u16]` buffers.
+pub struct WideTextBytes;
+
+unsafe impl VarKind for WideTextBytes {
+    const TERMINATING_ZEROES: usize = 2;
+    const C_DATA_TYPE: CDataType = CDataType::WChar;
+
+    fn relational_type(length: usize) -> DataType {
+        // Since we might use as an input buffer, we report the full buffer length in the type and
+        // do not deduct 2 for the terminating zero.
+        //
+        // Also the length is in bytes and needs to be converted to characters.
+        DataType::WVarchar { length: length / 2 }
+    }
+}
+
+/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
 /// used to hold raw binary input.
 pub struct Binary;
 
@@ -88,6 +106,7 @@ pub struct VarCell<B, K> {
 
 pub type VarBinary<B> = VarCell<B, Binary>;
 pub type VarChar<B> = VarCell<B, Text>;
+pub type VarWChar<B> = VarCell<B, WideTextBytes>;
 
 /// Parameter type for owned, variable sized character data.
 ///
@@ -334,6 +353,8 @@ where
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
 pub type VarCharSlice<'a> = VarChar<&'a [u8]>;
+
+pub type VarWCharSlice<'a> = VarWChar<&'a [u8]>;
 
 /// Binds a byte array as a variadic binary input parameter.
 ///
