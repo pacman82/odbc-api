@@ -328,28 +328,6 @@ fn column_name(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn bind_narrow_column_to_char(profile: &Profile) {
-    let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
-    let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &"Hello".into_parameter())
-        .unwrap();
-
-    let cursor = conn
-        .execute(&table.sql_all_ordered_by_id(), ())
-        .unwrap()
-        .unwrap();
-    let mut buf = ColumnarBuffer::new(vec![(1, TextColumn::new(1, 5))]);
-    let mut row_set_cursor = cursor.bind_buffer(&mut buf).unwrap();
-    let batch = row_set_cursor.fetch().unwrap().unwrap();
-
-    assert_eq!(Some(&b"Hello"[..]), batch.column(0).get(0));
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_wide_column_to_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
@@ -1449,7 +1427,22 @@ fn wchar_as_char(profile: &Profile) {
     assert_eq!("A\nÜ", table.content_as_string(&conn));
 }
 
-/// Bind a CHAR column to a character buffer.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bind_str_parameter_to_char(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    conn.execute(&insert_sql, &"Hello".into_parameter())
+        .unwrap();
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello", actual);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
