@@ -137,7 +137,7 @@ impl<'s> CursorRow<'s> {
         self.get_variadic::<Binary>(col_or_param_num, buf)
     }
 
-    fn get_variadic<K: VarKind>(
+    fn get_variadic<K: VarKind<Element = u8>>(
         &mut self,
         col_or_param_num: u16,
         buf: &mut Vec<u8>,

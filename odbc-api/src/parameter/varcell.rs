@@ -2,6 +2,7 @@ use std::{
     borrow::{Borrow, BorrowMut},
     ffi::c_void,
     marker::PhantomData,
+    mem::size_of,
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
@@ -26,7 +27,9 @@ pub unsafe trait VarKind {
     /// Either `u8` for binary and narrow text or `u16` for wide text. Wide text could also be
     /// represented as `u8`, after all everything is bytes. This makes it difficult though to create
     /// owned VarCell types from `u16` buffers.
-    type BufferElement;
+    type Element: Copy + Eq;
+    /// Zero for buffer element.
+    const ZERO: Self::Element;
     /// Number of terminating zeroes required for this kind of variadic buffer.
     const TERMINATING_ZEROES: usize;
     const C_DATA_TYPE: CDataType;
@@ -38,7 +41,8 @@ pub unsafe trait VarKind {
 pub struct Text;
 
 unsafe impl VarKind for Text {
-    type BufferElement = u8;
+    type Element = u8;
+    const ZERO: u8 = 0;
     const TERMINATING_ZEROES: usize = 1;
     const C_DATA_TYPE: CDataType = CDataType::Char;
 
@@ -55,7 +59,8 @@ unsafe impl VarKind for Text {
 pub struct WideTextBytes;
 
 unsafe impl VarKind for WideTextBytes {
-    type BufferElement = u8;
+    type Element = u8;
+    const ZERO: u8 = 0;
     const TERMINATING_ZEROES: usize = 2;
     const C_DATA_TYPE: CDataType = CDataType::WChar;
 
@@ -68,12 +73,28 @@ unsafe impl VarKind for WideTextBytes {
     }
 }
 
+struct WideText;
+
+unsafe impl VarKind for WideText {
+    type Element = u16;
+    const ZERO: u16 = 0;
+    const TERMINATING_ZEROES: usize = 1;
+    const C_DATA_TYPE: CDataType = CDataType::WChar;
+
+    fn relational_type(length: usize) -> DataType {
+        // Since we might use as an input buffer, we report the full buffer length in the type and
+        // do not deduct 1 for the terminating zero.
+        DataType::WVarchar { length }
+    }
+}
+
 /// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
 /// hold raw binary input.
 pub struct Binary;
 
 unsafe impl VarKind for Binary {
-    type BufferElement = u8;
+    type Element = u8;
+    const ZERO: u8 = 0;
     const TERMINATING_ZEROES: usize = 0;
     const C_DATA_TYPE: CDataType = CDataType::Binary;
 
@@ -128,7 +149,7 @@ pub type VarCharBox = VarChar<Box<[u8]>>;
 /// has the role of telling us how many bytes in the buffer are part of the payload.
 pub type VarBinaryBox = VarBinary<Box<[u8]>>;
 
-impl<K> VarCell<Box<[u8]>, K>
+impl<K> VarCell<Box<[K::Element]>, K>
 where
     K: VarKind,
 {
@@ -137,35 +158,40 @@ where
         // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
         // which caused errors with Microsoft Access and older versions of the Microsoft SQL Server
         // ODBC driver.
-        Self::from_buffer(Box::new([0]), Indicator::Null)
-    }
-
-    /// Create an owned parameter containing the character data from the passed string.
-    pub fn from_string(val: String) -> Self {
-        Self::from_vec(val.into_bytes())
+        Self::from_buffer(Box::new([K::ZERO]), Indicator::Null)
     }
 
     /// Create a VarChar box from a `Vec`.
-    pub fn from_vec(val: Vec<u8>) -> Self {
-        let indicator = Indicator::Length(val.len());
+    pub fn from_vec(val: Vec<K::Element>) -> Self {
+        let indicator = Indicator::Length(val.len() * size_of::<K::Element>());
         let buffer = val.into_boxed_slice();
         Self::from_buffer(buffer, indicator)
     }
 }
 
+impl<K> VarCell<Box<[u8]>, K>
+where
+    K: VarKind<Element = u8>,
+{
+    /// Create an owned parameter containing the character data from the passed string.
+    pub fn from_string(val: String) -> Self {
+        Self::from_vec(val.into_bytes())
+    }
+}
+
 impl<B, K> VarCell<B, K>
 where
-    B: Borrow<[u8]>,
     K: VarKind,
+    B: Borrow<[K::Element]>,
 {
     /// Creates a new instance from an existing buffer. For text should the indicator be `NoTotal`
     /// or indicate a length longer than buffer, the last element in the buffer must be nul (`\0`).
     pub fn from_buffer(buffer: B, indicator: Indicator) -> Self {
         let buf = buffer.borrow();
-        if indicator.is_truncated(buf.len()) {
+        if indicator.is_truncated(buf.len() * size_of::<K::Element>()) {
             // Value is truncated. Let's check that all required terminating zeroes are at the end
             // of the buffer.
-            if !ends_in_zeroes(buf, K::TERMINATING_ZEROES) {
+            if !ends_in_zeroes(buf, K::TERMINATING_ZEROES, K::ZERO) {
                 panic!("Truncated value must be terminated with zero.")
             }
         }
@@ -176,7 +202,13 @@ where
             kind: PhantomData,
         }
     }
+}
 
+impl<B, K> VarCell<B, K>
+where
+    B: Borrow<[u8]>,
+    K: VarKind,
+{
     /// Valid payload of the buffer (excluding terminating zeroes) returned as slice or `None` in
     /// case the indicator is `NULL_DATA`.
     pub fn as_bytes(&self) -> Option<&[u8]> {
@@ -241,7 +273,7 @@ where
     /// ```
     pub fn is_complete(&self) -> bool {
         let slice = self.buffer.borrow();
-        let max_value_length = if ends_in_zeroes(slice, K::TERMINATING_ZEROES) {
+        let max_value_length = if ends_in_zeroes(slice, K::TERMINATING_ZEROES, 0) {
             slice.len() - K::TERMINATING_ZEROES
         } else {
             slice.len()
@@ -373,10 +405,7 @@ pub type VarWCharSlice<'a> = VarWChar<&'a [u8]>;
 /// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&[u8]`.
 pub type VarBinarySlice<'a> = VarBinary<&'a [u8]>;
 
-impl<'a, K> VarCell<&'a [u8], K>
-where
-    K: VarKind,
-{
+impl<'a, K> VarCell<&'a [u8], K> {
     /// Indicates missing data
     pub const NULL: Self = Self {
         // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
@@ -386,15 +415,35 @@ where
         indicator: NULL_DATA,
         kind: PhantomData,
     };
+}
 
+impl<'a, K> VarCell<&'a [u16], K> {
+    /// Indicates missing data
+    pub const NULL: Self = Self {
+        // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
+        // which caused errors with Microsoft Access and older versions of the Microsoft SQL Server
+        // ODBC driver.
+        buffer: &[0],
+        indicator: NULL_DATA,
+        kind: PhantomData,
+    };
+}
+
+impl<'a, K> VarCell<&'a [K::Element], K>
+where
+    K: VarKind,
+{
     /// Constructs a new VarChar containing the text in the specified buffer.
     ///
     /// Caveat: This constructor is going to create a truncated value in case the input slice ends
     /// with `nul`. Should you want to insert an actual string those payload ends with `nul` into
     /// the database you need a buffer one byte longer than the string. You can instantiate such a
     /// value using [`Self::from_buffer`].
-    pub fn new(value: &'a [u8]) -> Self {
-        Self::from_buffer(value, Indicator::Length(value.len()))
+    pub fn new(value: &'a [K::Element]) -> Self {
+        Self::from_buffer(
+            value,
+            Indicator::Length(value.len() * size_of::<K::Element>()),
+        )
     }
 }
 
@@ -416,22 +465,22 @@ pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarBinaryArray<const LENGTH: usize> = VarBinary<[u8; LENGTH]>;
 
-impl<const LENGTH: usize, K: VarKind> VarCell<[u8; LENGTH], K> {
+impl<const LENGTH: usize, K: VarKind> VarCell<[K::Element; LENGTH], K> {
     /// Indicates a missing value.
     pub const NULL: Self = Self {
-        buffer: [0; LENGTH],
+        buffer: [K::ZERO; LENGTH],
         indicator: NULL_DATA,
         kind: PhantomData,
     };
 
     /// Construct from a slice. If value is longer than `LENGTH` it will be truncated. In that case
     /// the last byte will be set to `0`.
-    pub fn new(bytes: &[u8]) -> Self {
-        let indicator = bytes.len().try_into().unwrap();
-        let mut buffer = [0u8; LENGTH];
+    pub fn new(bytes: &[K::Element]) -> Self {
+        let indicator = (bytes.len() * size_of::<K::Element>()).try_into().unwrap();
+        let mut buffer = [K::ZERO; LENGTH];
         if bytes.len() > LENGTH {
             buffer.copy_from_slice(&bytes[..LENGTH]);
-            *buffer.last_mut().unwrap() = 0;
+            *buffer.last_mut().unwrap() = K::ZERO;
         } else {
             buffer[..bytes.len()].copy_from_slice(bytes);
         };
@@ -444,14 +493,17 @@ impl<const LENGTH: usize, K: VarKind> VarCell<[u8; LENGTH], K> {
 }
 
 /// Figures out, wether or not the buffer ends with a fixed number of zeroes.
-fn ends_in_zeroes(buffer: &[u8], number_of_zeroes: usize) -> bool {
+fn ends_in_zeroes<T>(buffer: &[T], number_of_zeroes: usize, zero: T) -> bool
+where
+    T: Copy + Eq,
+{
     buffer.len() >= number_of_zeroes
         && buffer
             .iter()
             .rev()
             .copied()
             .take(number_of_zeroes)
-            .all(|byte| byte == 0)
+            .all(|byte| byte == zero)
 }
 
 // We can't go all out and implement these traits for anything implementing Borrow and BorrowMut,
