@@ -115,8 +115,8 @@ impl<'a> IntoParameter for &'a U16Str {
 
     fn into_parameter(self) -> Self::Parameter {
         let slice = self.as_slice();
-        let (_, bytes, _) = unsafe { slice.align_to::<u8>() };
-        VarWCharSlice::from_buffer(bytes, Indicator::Length(bytes.len()))
+        let length_in_bytes = slice.len() * 2;
+        VarWCharSlice::from_buffer(slice, Indicator::Length(length_in_bytes))
     }
 }
 
