@@ -18,21 +18,27 @@ use super::CElement;
 ///
 /// # Safety
 ///
-/// * `TERMINATING_ZEROES` is used to calculate buffer offsets.
-/// * `C_DATA_TYPE` is used to bind parameters. Providing wrong values like e.g. a fixed length
+/// * [`Self::TERMINATING_ZEROES`] is used to calculate buffer offsets. The number of terminating
+///   zeroes is expressed in `BufferElement`s.
+/// * [`Self::C_DATA_TYPE`] is used to bind parameters. Providing wrong values like e.g. a fixed length
 ///   types, would cause even a correctly implemented odbc driver to access invalid memory.
 pub unsafe trait VarKind {
+    /// Either `u8` for binary and narrow text or `u16` for wide text. Wide text could also be
+    /// represented as `u8`, after all everything is bytes. This makes it difficult though to create
+    /// owned VarCell types from `u16` buffers.
+    type BufferElement;
     /// Number of terminating zeroes required for this kind of variadic buffer.
     const TERMINATING_ZEROES: usize;
     const C_DATA_TYPE: CDataType;
     fn relational_type(length: usize) -> DataType;
 }
 
-/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
-/// used to hold narrow (as opposed to wide UTF-16) text.
+/// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
+/// hold narrow (as opposed to wide UTF-16) text.
 pub struct Text;
 
 unsafe impl VarKind for Text {
+    type BufferElement = u8;
     const TERMINATING_ZEROES: usize = 1;
     const C_DATA_TYPE: CDataType = CDataType::Char;
 
@@ -49,6 +55,7 @@ unsafe impl VarKind for Text {
 pub struct WideTextBytes;
 
 unsafe impl VarKind for WideTextBytes {
+    type BufferElement = u8;
     const TERMINATING_ZEROES: usize = 2;
     const C_DATA_TYPE: CDataType = CDataType::WChar;
 
@@ -61,11 +68,12 @@ unsafe impl VarKind for WideTextBytes {
     }
 }
 
-/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
-/// used to hold raw binary input.
+/// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
+/// hold raw binary input.
 pub struct Binary;
 
 unsafe impl VarKind for Binary {
+    type BufferElement = u8;
     const TERMINATING_ZEROES: usize = 0;
     const C_DATA_TYPE: CDataType = CDataType::Binary;
 
