@@ -1,10 +1,10 @@
-use widestring::U16Str;
+use widestring::{U16Str, U16String};
 
 use crate::{
     buffers::Indicator,
     fixed_sized::Pod,
     parameter::{
-        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice,
+        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice, VarWCharBox,
     },
     Nullable,
 };
@@ -128,6 +128,14 @@ impl<'a> IntoParameter for Option<&'a U16Str> {
             Some(str) => str.into_parameter(),
             None => VarWCharSlice::NULL,
         }
+    }
+}
+
+impl IntoParameter for U16String {
+    type Parameter = VarWCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarWCharBox::from_vec(self.into_vec())
     }
 }
 

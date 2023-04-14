@@ -120,11 +120,17 @@ pub type VarBinary<B> = VarCell<B, Binary>;
 pub type VarChar<B> = VarCell<B, Text>;
 pub type VarWChar<B> = VarCell<B, WideText>;
 
-/// Parameter type for owned, variable sized character data.
+/// Parameter type for owned, variable sized narrow character data.
 ///
 /// We use `Box<[u8]>` rather than `Vec<u8>` as a buffer type since the indicator pointer already
 /// has the role of telling us how many bytes in the buffer are part of the payload.
 pub type VarCharBox = VarChar<Box<[u8]>>;
+
+/// Parameter type for owned, variable sized wide character data.
+///
+/// We use `Box<[u16]>` rather than `Vec<u16>` as a buffer type since the indicator pointer already
+/// has the role of telling us how many characters in the buffer are part of the payload.
+pub type VarWCharBox = VarWChar<Box<[u16]>>;
 
 /// Parameter type for owned, variable sized binary data.
 ///

@@ -1447,13 +1447,31 @@ fn bind_str_parameter_to_char(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn bind_u16str_parameter_to_char(profile: &Profile) {
+fn bind_u16_str_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
     let insert_sql = table.sql_insert();
 
     let hello = U16String::from_str("Hello");
+    let hello = hello.as_ustr();
     conn.execute(&insert_sql, &hello.into_parameter()).unwrap();
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello", &actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bind_u16_string_parameter_to_char(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["CHAR(5)"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    // Usecase: Create an owned parameter from a UTF-16 string
+    let hello = U16String::from_str("Hello").into_parameter();
+    conn.execute(&insert_sql, &hello).unwrap();
 
     let actual = table.content_as_string(&conn);
     assert_eq!("Hello", &actual);
