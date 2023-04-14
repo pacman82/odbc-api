@@ -343,11 +343,9 @@ pub use self::{
     varcell::{
         Binary, Text, VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut,
         VarCell, VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut, VarKind,
+        VarWCharSlice,
     },
 };
-
-/// Currenty not made public due to unsure if it might not be better to implement this via u16
-pub(crate) use self::varcell::VarWCharSlice;
 
 use std::ffi::c_void;
 
