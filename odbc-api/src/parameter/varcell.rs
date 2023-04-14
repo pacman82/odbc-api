@@ -318,7 +318,7 @@ where
 
 unsafe impl<B, K> CData for VarCell<B, K>
 where
-    B: Borrow<[u8]>,
+    B: Borrow<[K::Element]>,
     K: VarKind,
 {
     fn cdata_type(&self) -> CDataType {
@@ -337,13 +337,15 @@ where
         // This is the maximum buffer length, but it is NOT the length of an instance of Self due to
         // the missing size of the indicator value. As such the buffer length can not be used to
         // correctly index a columnar buffer of Self.
-        self.buffer.borrow().len().try_into().unwrap()
+        (self.buffer.borrow().len() * size_of::<K::Element>())
+            .try_into()
+            .unwrap()
     }
 }
 
 impl<B, K> HasDataType for VarCell<B, K>
 where
-    B: Borrow<[u8]>,
+    B: Borrow<[K::Element]>,
     K: VarKind,
 {
     fn data_type(&self) -> DataType {
@@ -353,7 +355,7 @@ where
 
 unsafe impl<B, K> CDataMut for VarCell<B, K>
 where
-    B: BorrowMut<[u8]>,
+    B: BorrowMut<[K::Element]>,
     K: VarKind,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
@@ -510,16 +512,16 @@ where
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
-unsafe impl<K: VarKind> CElement for VarCell<&'_ [u8], K> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ [K::Element], K> {}
 
-unsafe impl<const LENGTH: usize, K: VarKind> CElement for VarCell<[u8; LENGTH], K> {}
-unsafe impl<const LENGTH: usize, K: VarKind> OutputParameter for VarCell<[u8; LENGTH], K> {}
+unsafe impl<const LENGTH: usize, K: VarKind> CElement for VarCell<[K::Element; LENGTH], K> {}
+unsafe impl<const LENGTH: usize, K: VarKind> OutputParameter for VarCell<[K::Element; LENGTH], K> {}
 
-unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [u8], K> {}
-unsafe impl<K: VarKind> OutputParameter for VarCell<&'_ mut [u8], K> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [K::Element], K> {}
+unsafe impl<K: VarKind> OutputParameter for VarCell<&'_ mut [K::Element], K> {}
 
-unsafe impl<K: VarKind> CElement for VarCell<Box<[u8]>, K> {}
-unsafe impl<K: VarKind> OutputParameter for VarCell<Box<[u8]>, K> {}
+unsafe impl<K: VarKind> CElement for VarCell<Box<[K::Element]>, K> {}
+unsafe impl<K: VarKind> OutputParameter for VarCell<Box<[K::Element]>, K> {}
 
 #[cfg(test)]
 mod tests {

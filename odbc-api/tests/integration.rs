@@ -1453,8 +1453,7 @@ fn bind_u16str_parameter_to_char(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     let hello = U16String::from_str("Hello");
-    conn.execute(&insert_sql, &hello.into_parameter())
-        .unwrap();
+    conn.execute(&insert_sql, &hello.into_parameter()).unwrap();
 
     let actual = table.content_as_string(&conn);
     assert_eq!("Hello", &actual);

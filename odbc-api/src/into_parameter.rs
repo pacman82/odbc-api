@@ -1,9 +1,12 @@
 use widestring::U16Str;
 
 use crate::{
+    buffers::Indicator,
     fixed_sized::Pod,
-    parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice},
-    Nullable, buffers::Indicator,
+    parameter::{
+        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice,
+    },
+    Nullable,
 };
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during

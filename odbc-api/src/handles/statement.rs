@@ -11,13 +11,13 @@ use super::{
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
-    SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
-    SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
+    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
+    SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData,
+    SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
 
-#[cfg(feature="odbc_version_3_80")]
+#[cfg(feature = "odbc_version_3_80")]
 use odbc_sys::SQLCompleteAsync;
 
 #[cfg(feature = "narrow")]
@@ -243,7 +243,7 @@ pub trait Statement: AsHandle {
     }
 
     /// Unsets the integer set by [`Self::set_num_rows_fetched`].
-    /// 
+    ///
     /// This being a seperate method from [`Self::set_num_rows_fetched` allows us to write us
     /// cleanup code with less `unsafe` statements since this operation is always safe.
     fn unset_num_rows_fetched(&mut self) -> SqlResult<()> {
@@ -885,7 +885,7 @@ pub trait Statement: AsHandle {
     /// to notification mode) the driver manager has not notified the application.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcompleteasync-function>
-    #[cfg(feature="odbc_version_3_80")]
+    #[cfg(feature = "odbc_version_3_80")]
     fn complete_async(&mut self, function_name: &'static str) -> SqlResult<SqlResult<()>> {
         let mut ret = SqlReturn::ERROR;
         unsafe {
