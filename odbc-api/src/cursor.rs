@@ -487,7 +487,7 @@ where
 
     /// Unbinds the buffer from the underlying statement handle. Potential usecases for this
     /// function include.
-    /// 
+    ///
     /// 1. Binding a different buffer to the "same" cursor after letting it point to the next result
     ///   set obtained with [self::more_results`].
     /// 2. Reusing the same buffer with a different statement.
@@ -515,8 +515,7 @@ where
     C: AsStatementRef,
 {
     fn drop(&mut self) {
-        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor)
-        {
+        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor) {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
@@ -714,8 +713,7 @@ where
     C: AsStatementRef,
 {
     fn drop(&mut self) {
-        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor)
-        {
+        if let Err(e) = unbind_buffer_from_cursor(&mut self.cursor) {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
