@@ -343,7 +343,7 @@ pub use self::{
     varcell::{
         Binary, Text, VarBinary, VarBinaryArray, VarBinaryBox, VarBinarySlice, VarBinarySliceMut,
         VarCell, VarChar, VarCharArray, VarCharBox, VarCharSlice, VarCharSliceMut, VarKind,
-        VarWCharSlice, VarWCharBox
+        VarWCharSlice, VarWCharBox, VarWCharSliceMut, VarWCharArray
     },
 };
 

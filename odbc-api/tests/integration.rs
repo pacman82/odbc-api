@@ -1455,9 +1455,11 @@ fn bind_u16_str_parameter_to_char(profile: &Profile) {
     let hello = U16String::from_str("Hello");
     let hello = hello.as_ustr();
     conn.execute(&insert_sql, &hello.into_parameter()).unwrap();
+    conn.execute(&insert_sql, &Some(hello).into_parameter()).unwrap();
+    conn.execute(&insert_sql, &None::<&U16Str>.into_parameter()).unwrap();
 
     let actual = table.content_as_string(&conn);
-    assert_eq!("Hello", &actual);
+    assert_eq!("Hello\nHello\nNULL", &actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -1470,11 +1472,13 @@ fn bind_u16_string_parameter_to_char(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // Usecase: Create an owned parameter from a UTF-16 string
-    let hello = U16String::from_str("Hello").into_parameter();
-    conn.execute(&insert_sql, &hello).unwrap();
+    let hello = U16String::from_str("Hello");
+    conn.execute(&insert_sql, &hello.clone().into_parameter()).unwrap();
+    conn.execute(&insert_sql, &Some(hello).into_parameter()).unwrap();
+    conn.execute(&insert_sql, &None::<U16String>.into_parameter()).unwrap();
 
     let actual = table.content_as_string(&conn);
-    assert_eq!("Hello", &actual);
+    assert_eq!("Hello\nHello\nNULL", &actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

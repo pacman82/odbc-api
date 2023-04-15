@@ -6,6 +6,7 @@ use std::{
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
+use widestring::U16String;
 
 use crate::{
     buffers::Indicator,
@@ -33,7 +34,9 @@ pub unsafe trait VarKind {
     /// Number of terminating zeroes required for this kind of variadic buffer.
     const TERMINATING_ZEROES: usize;
     const C_DATA_TYPE: CDataType;
-    fn relational_type(length: usize) -> DataType;
+    /// Relational type used to bind the parameter. `buffer_length` is specified in elements rather
+    /// than bytes, if the two differ.
+    fn relational_type(buffer_length: usize) -> DataType;
 }
 
 /// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
@@ -91,10 +94,14 @@ unsafe impl VarKind for Binary {
 ///
 /// Meaningful instantiations of this type are:
 ///
-/// * [`self::VarCharSlice`] - immutable borrowed parameter.
-/// * [`self::VarCharSliceMut`] - mutable borrowed input / output parameter
-/// * [`self::VarCharArray`] - stack allocated owned input / output parameter
-/// * [`self::VarCharBox`] - heap allocated owned input /output parameter
+/// * [`self::VarCharSlice`] - immutable borrowed narrow character strings
+/// * [`self::VarCharSliceMut`] - mutable borrowed input / output narrow character strings
+/// * [`self::VarCharArray`] - stack allocated owned input / output narrow character strings
+/// * [`self::VarCharBox`] - heap allocated owned input /output narrow character strings
+/// * [`self::VarWCharSlice`] - immutable borrowed wide character string
+/// * [`self::VarWCharSliceMut`] - mutable borrowed input / output wide character string
+/// * [`self::VarWCharArray`] - stack allocated owned input / output wide character string
+/// * [`self::VarWCharBox`] - heap allocated owned input /output wide character string
 /// * [`self::VarBinarySlice`] - immutable borrowed parameter.
 /// * [`self::VarBinarySliceMut`] - mutable borrowed input / output parameter
 /// * [`self::VarBinaryArray`] - stack allocated owned input / output parameter
@@ -168,6 +175,16 @@ where
     }
 }
 
+impl<K> VarCell<Box<[u16]>, K>
+where
+    K: VarKind<Element = u16>,
+{
+    /// Create an owned parameter containing the character data from the passed string.
+    pub fn from_u16_string(val: U16String) -> Self {
+        Self::from_vec(val.into_vec())
+    }
+}
+
 impl<B, K> VarCell<B, K>
 where
     K: VarKind,
@@ -189,29 +206,6 @@ where
             buffer,
             indicator: indicator.to_isize(),
             kind: PhantomData,
-        }
-    }
-}
-
-impl<B, K> VarCell<B, K>
-where
-    B: Borrow<[u8]>,
-    K: VarKind,
-{
-    /// Valid payload of the buffer (excluding terminating zeroes) returned as slice or `None` in
-    /// case the indicator is `NULL_DATA`.
-    pub fn as_bytes(&self) -> Option<&[u8]> {
-        let slice = self.buffer.borrow();
-        match self.indicator() {
-            Indicator::Null => None,
-            Indicator::NoTotal => Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)]),
-            Indicator::Length(len) => {
-                if self.is_complete() {
-                    Some(&slice[..len])
-                } else {
-                    Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)])
-                }
-            }
         }
     }
 
@@ -262,12 +256,12 @@ where
     /// ```
     pub fn is_complete(&self) -> bool {
         let slice = self.buffer.borrow();
-        let max_value_length = if ends_in_zeroes(slice, K::TERMINATING_ZEROES, 0) {
+        let max_value_length = if ends_in_zeroes(slice, K::TERMINATING_ZEROES, K::ZERO) {
             slice.len() - K::TERMINATING_ZEROES
         } else {
             slice.len()
         };
-        !self.indicator().is_truncated(max_value_length)
+        !self.indicator().is_truncated(max_value_length * size_of::<K::Element>())
     }
 
     /// Read access to the underlying ODBC indicator. After data has been fetched the indicator
@@ -280,17 +274,6 @@ where
         Indicator::from_isize(self.indicator)
     }
 
-    /// The payload in bytes the buffer can hold including terminating zeroes
-    pub fn capacity(&self) -> usize {
-        self.buffer.borrow().len()
-    }
-}
-
-impl<B, K> VarCell<B, K>
-where
-    B: Borrow<[u8]>,
-    K: VarKind,
-{
     /// Call this method to reset the indicator to a value which matches the length returned by the
     /// [`Self::as_bytes`] method. This is useful if you want to insert values into the database
     /// despite the fact, that they might have been truncated. Otherwise the behaviour of databases
@@ -298,10 +281,39 @@ where
     /// detect the truncation and throw an error.
     pub fn hide_truncation(&mut self) {
         if !self.is_complete() {
-            self.indicator = (self.buffer.borrow().len() - K::TERMINATING_ZEROES)
+            let binary_length = self.buffer.borrow().len() * size_of::<K::Element>();
+            self.indicator = (binary_length - K::TERMINATING_ZEROES)
                 .try_into()
                 .unwrap();
         }
+    }
+}
+
+impl<B, K> VarCell<B, K>
+where
+    B: Borrow<[u8]>,
+    K: VarKind<Element = u8>,
+{
+    /// Valid payload of the buffer (excluding terminating zeroes) returned as slice or `None` in
+    /// case the indicator is `NULL_DATA`.
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        let slice = self.buffer.borrow();
+        match self.indicator() {
+            Indicator::Null => None,
+            Indicator::NoTotal => Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)]),
+            Indicator::Length(len) => {
+                if self.is_complete() {
+                    Some(&slice[..len])
+                } else {
+                    Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)])
+                }
+            }
+        }
+    }
+
+    /// The payload in bytes the buffer can hold including terminating zeroes
+    pub fn capacity(&self) -> usize {
+        self.buffer.borrow().len()
     }
 }
 
@@ -438,8 +450,11 @@ where
     }
 }
 
-/// Wraps a slice so it can be used as an output parameter for character data.
+/// Wraps a slice so it can be used as an output parameter for narrow character data.
 pub type VarCharSliceMut<'a> = VarChar<&'a mut [u8]>;
+
+/// Wraps a slice so it can be used as an output parameter for wide character data.
+pub type VarWCharSliceMut<'a> = VarWChar<&'a mut [u8]>;
 
 /// Wraps a slice so it can be used as an output parameter for binary data.
 pub type VarBinarySliceMut<'a> = VarBinary<&'a mut [u8]>;
@@ -449,6 +464,12 @@ pub type VarBinarySliceMut<'a> = VarBinary<&'a mut [u8]>;
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
+
+/// A stack allocated NVARCHAR type.
+///
+/// Due to its memory layout this type can be bound either as a single parameter, or as a column of
+/// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
+pub type VarWCharArray<const LENGTH: usize> = VarWChar<[u16; LENGTH]>;
 
 /// A stack allocated VARBINARY type.
 ///

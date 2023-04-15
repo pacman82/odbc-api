@@ -135,7 +135,18 @@ impl IntoParameter for U16String {
     type Parameter = VarWCharBox;
 
     fn into_parameter(self) -> Self::Parameter {
-        VarWCharBox::from_vec(self.into_vec())
+        VarWCharBox::from_u16_string(self)
+    }
+}
+
+impl IntoParameter for Option<U16String> {
+    type Parameter = VarWCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        match self {
+            Some(str) => str.into_parameter(),
+            None => VarWCharBox::null()
+        }
     }
 }
 
