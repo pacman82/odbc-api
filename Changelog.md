@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.57.0
+
+* Support for `U16String` and `Option<U16Str>` as input parameter via `IntoParameter` trait.
+* Added `VarWCharSlice`, `VarWCharBox`, `VarWCharSliceMut`, `VarWCharArray`.
+
 ## 0.56.2
 
 * Support `U16Str` and `Option<U16Str>` as input parameter via `IntoParameter` trait.
