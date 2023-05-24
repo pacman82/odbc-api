@@ -81,7 +81,7 @@ anyhow = "1.0.71"
 csv = "1.2.1"
 test-case = "3.1.0"
 tempfile = "3.5.0"
-criterion = { version = "0.4.0", features = ["html_reports"] }
+criterion = { version = "0.5.0", features = ["html_reports"] }
 tokio = { version = "1.28.1", features = ["rt", "macros", "time"] }
 stdext = "0.3.1" # Used for function_name macro to generate unique table names for tests
 
