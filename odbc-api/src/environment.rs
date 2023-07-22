@@ -30,6 +30,7 @@ const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3;
 ///
 /// Creating the environment is the first applications do, then interacting with an ODBC driver
 /// manager. There must only be one environment in the entire process.
+#[derive(Debug)]
 pub struct Environment {
     environment: handles::Environment,
     /// ODBC environments use interior mutability to maintain iterator state then iterating over
