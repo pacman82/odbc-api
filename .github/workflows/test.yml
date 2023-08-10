@@ -105,6 +105,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Download IBM Db2 ODBC Driver
+        uses: wei/curl@v1.1.1
+        with:
+          args: -o linuxx64_odbc_cli.tar.gz https://public.dhe.ibm.com/ibmdl/export/pub/software/data/db2/drivers/odbc_cli/v11.5.8/linuxx64_odbc_cli.tar.gz
+      - name: Extract IBM Db2 ODBC Driver
+        uses: a7ul/tar-action@v1.1.3
+        id: extract
+        with:
+          command: x
+          files: linuxx64_odbc_cli.tar.gz
+
       - name: Build test container
         run: docker-compose --file docker-compose-ci.yml build test_linux
 
