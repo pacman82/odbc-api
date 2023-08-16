@@ -31,7 +31,7 @@ readme = "Readme.md"
 [dependencies]
 odbc-api = { version = "0.57.0", path = "../odbc-api" }
 csv = "1.2.2"
-anyhow = "1.0.73"
+anyhow = "1.0.74"
 stderrlog = "0.5.4"
 log = "0.4.20"
 clap = { version = "4.3.21", features = ["derive", "env"] }
