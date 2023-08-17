@@ -77,7 +77,7 @@ winit = { version = "0.28.6", default-features = false }
 [dev-dependencies]
 lazy_static = "1.4.0"
 env_logger = "0.10.0"
-anyhow = "1.0.74"
+anyhow = "1.0.75"
 csv = "1.2.2"
 test-case = "3.1.0"
 tempfile = "3.7.1"
