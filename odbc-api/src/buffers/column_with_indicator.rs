@@ -152,7 +152,7 @@ where
     }
 
     fn indicator_ptr(&self) -> *const isize {
-        self.indicators.as_ptr() as *const isize
+        self.indicators.as_ptr()
     }
 
     fn value_ptr(&self) -> *const c_void {
@@ -169,7 +169,7 @@ where
     T: Pod,
 {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
-        self.indicators.as_mut_ptr() as *mut isize
+        self.indicators.as_mut_ptr()
     }
 
     fn mut_value_ptr(&mut self) -> *mut c_void {

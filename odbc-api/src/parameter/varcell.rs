@@ -2,7 +2,7 @@ use std::{
     borrow::{Borrow, BorrowMut},
     ffi::c_void,
     marker::PhantomData,
-    mem::size_of,
+    mem::{size_of, size_of_val},
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
@@ -57,7 +57,7 @@ unsafe impl VarKind for Text {
 }
 
 /// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
-/// used to hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate 
+/// used to hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate
 /// `[u16]` buffers.
 pub struct WideText;
 
@@ -194,7 +194,7 @@ where
     /// or indicate a length longer than buffer, the last element in the buffer must be nul (`\0`).
     pub fn from_buffer(buffer: B, indicator: Indicator) -> Self {
         let buf = buffer.borrow();
-        if indicator.is_truncated(buf.len() * size_of::<K::Element>()) {
+        if indicator.is_truncated(size_of_val(buf)) {
             // Value is truncated. Let's check that all required terminating zeroes are at the end
             // of the buffer.
             if !ends_in_zeroes(buf, K::TERMINATING_ZEROES, K::ZERO) {
@@ -261,7 +261,9 @@ where
         } else {
             slice.len()
         };
-        !self.indicator().is_truncated(max_value_length * size_of::<K::Element>())
+        !self
+            .indicator()
+            .is_truncated(max_value_length * size_of::<K::Element>())
     }
 
     /// Read access to the underlying ODBC indicator. After data has been fetched the indicator
@@ -281,10 +283,8 @@ where
     /// detect the truncation and throw an error.
     pub fn hide_truncation(&mut self) {
         if !self.is_complete() {
-            let binary_length = self.buffer.borrow().len() * size_of::<K::Element>();
-            self.indicator = (binary_length - K::TERMINATING_ZEROES)
-                .try_into()
-                .unwrap();
+            let binary_length = size_of_val(self.buffer.borrow());
+            self.indicator = (binary_length - K::TERMINATING_ZEROES).try_into().unwrap();
         }
     }
 }
@@ -338,9 +338,7 @@ where
         // This is the maximum buffer length, but it is NOT the length of an instance of Self due to
         // the missing size of the indicator value. As such the buffer length can not be used to
         // correctly index a columnar buffer of Self.
-        (self.buffer.borrow().len() * size_of::<K::Element>())
-            .try_into()
-            .unwrap()
+        size_of_val(self.buffer.borrow()).try_into().unwrap()
     }
 }
 
@@ -443,10 +441,7 @@ where
     /// the database you need a buffer one byte longer than the string. You can instantiate such a
     /// value using [`Self::from_buffer`].
     pub fn new(value: &'a [K::Element]) -> Self {
-        Self::from_buffer(
-            value,
-            Indicator::Length(value.len() * size_of::<K::Element>()),
-        )
+        Self::from_buffer(value, Indicator::Length(size_of_val(value)))
     }
 }
 
@@ -487,14 +482,14 @@ impl<const LENGTH: usize, K: VarKind> VarCell<[K::Element; LENGTH], K> {
 
     /// Construct from a slice. If value is longer than `LENGTH` it will be truncated. In that case
     /// the last byte will be set to `0`.
-    pub fn new(bytes: &[K::Element]) -> Self {
-        let indicator = (bytes.len() * size_of::<K::Element>()).try_into().unwrap();
+    pub fn new(elements: &[K::Element]) -> Self {
+        let indicator = (size_of_val(elements)).try_into().unwrap();
         let mut buffer = [K::ZERO; LENGTH];
-        if bytes.len() > LENGTH {
-            buffer.copy_from_slice(&bytes[..LENGTH]);
+        if elements.len() > LENGTH {
+            buffer.copy_from_slice(&elements[..LENGTH]);
             *buffer.last_mut().unwrap() = K::ZERO;
         } else {
-            buffer[..bytes.len()].copy_from_slice(bytes);
+            buffer[..elements.len()].copy_from_slice(elements);
         };
         Self {
             buffer,

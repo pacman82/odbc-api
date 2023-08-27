@@ -82,16 +82,16 @@ macro_rules! impl_item {
                 }
             }
 
-            fn as_slice_mut<'a>(variant: AnySliceMut<'a>) -> Option<&'a mut [Self]> {
+            fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]> {
                 match variant {
                     AnySliceMut::$plain(vals) => Some(vals),
                     _ => None,
                 }
             }
 
-            fn as_nullable_slice_mut<'a>(
-                variant: AnySliceMut<'a>,
-            ) -> Option<NullableSliceMut<'a, Self>> {
+            fn as_nullable_slice_mut(
+                variant: AnySliceMut<'_>,
+            ) -> Option<NullableSliceMut<'_, Self>> {
                 match variant {
                     AnySliceMut::$null(vals) => Some(vals),
                     _ => None,

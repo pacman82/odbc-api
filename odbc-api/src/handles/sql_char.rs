@@ -2,7 +2,10 @@
 //! in this module, so the rest of the crate doesn't have to.
 
 use super::buffer::{buf_ptr, mut_buf_ptr};
-use std::{borrow::Cow, mem::size_of};
+use std::{
+    borrow::Cow,
+    mem::{size_of, size_of_val},
+};
 
 #[cfg(feature = "narrow")]
 use std::{ffi::CStr, string::FromUtf8Error};
@@ -65,7 +68,7 @@ fn sz_to_utf8(buffer: &[u8]) -> String {
 
 /// Buffer length in bytes, not characters
 pub fn binary_length(buffer: &[SqlChar]) -> usize {
-    buffer.len() * size_of::<SqlChar>()
+    size_of_val(buffer)
 }
 
 /// `true` if the buffer has not been large enough to hold the entire string.
@@ -74,7 +77,7 @@ pub fn binary_length(buffer: &[SqlChar]) -> usize {
 ///
 /// - `actuel_length_bin`: Actual length in bytes, but excluding the terminating zero.
 pub fn is_truncated_bin(buffer: &[SqlChar], actual_length_bin: usize) -> bool {
-    buffer.len() * size_of::<SqlChar>() <= actual_length_bin
+    size_of_val(buffer) <= actual_length_bin
 }
 
 /// Resizes the underlying buffer to fit the size required to hold the entire string including

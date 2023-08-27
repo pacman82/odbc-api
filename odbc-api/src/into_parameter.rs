@@ -4,7 +4,8 @@ use crate::{
     buffers::Indicator,
     fixed_sized::Pod,
     parameter::{
-        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharSlice, VarWCharBox,
+        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharBox,
+        VarWCharSlice,
     },
     Nullable,
 };
@@ -145,7 +146,7 @@ impl IntoParameter for Option<U16String> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            None => VarWCharBox::null()
+            None => VarWCharBox::null(),
         }
     }
 }
