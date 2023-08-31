@@ -57,7 +57,7 @@ pub enum DataType {
     Double,
     /// `Varchar(n)`. Variable length character string.
     Varchar {
-        /// Maximum length of the character string (excluding terminating zero). Wether this length
+        /// Maximum length of the character string (excluding terminating zero). Whether this length
         /// is to be interpreted as bytes or Codepoints is ambigious and depends on the datasource.
         ///
         /// E.g. For Microsoft SQL Server this is the binary length, theras for a MariaDB this

@@ -141,7 +141,7 @@ where
 /// # Safety
 ///
 /// Instances of this type are passed by value, so this type can be implemented by both constant and
-/// mutabale references. Implementers should take care that the values bound by `bind_parameters_to`
+/// mutable references. Implementers should take care that the values bound by `bind_parameters_to`
 /// to the statement live at least for the Duration of `self`. The most straight forward way of
 /// achieving this is of course, to bind members.
 pub unsafe trait ParameterCollectionRef {

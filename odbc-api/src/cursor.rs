@@ -44,7 +44,7 @@ pub trait Cursor: ResultSetMetadata {
     /// instead, for good performance.
     ///
     /// While this method is very convenient due to the fact that the application does not have to
-    /// declare and bind specific buffers it is also in many situations extremely slow. Concrete
+    /// declare and bind specific buffers, it is also in many situations extremely slow. Concrete
     /// performance depends on the ODBC driver in question, but it is likely it performs a roundtrip
     /// to the datasource for each individual row. It is also likely an extra conversion is
     /// performed then requesting individual fields, since the C buffer type is not known to the
@@ -148,8 +148,8 @@ impl<'s> CursorRow<'s> {
             // chance that we get it done with one alloctaion. The buffer size being 0 we need at
             // least 1 anyway. If the capacity is not `0` we'll leave the buffer size untouched as
             // we do not want to prevent users from providing better guessen based on domain
-            // knowledege.
-            // This also implicitly makes sure that we can at least hold one terminting zero.
+            // knowledge.
+            // This also implicitly makes sure that we can at least hold one terminating zero.
             buf.reserve(256);
         }
         // Utilize all of the allocated buffer.
@@ -161,7 +161,7 @@ impl<'s> CursorRow<'s> {
         let mut remaining_length_known = false;
         // We repeatedly fetch data and add it to the buffer. The buffer length is therefore the
         // accumulated value size. The target always points to the last window in buf which is going
-        // to contain the **next** part of the data, thereas buf contains the entire accumulated
+        // to contain the **next** part of the data, whereas buf contains the entire accumulated
         // value so far.
         let mut target =
             VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
@@ -297,7 +297,7 @@ where
 {
     /// Users of this library are encouraged not to call this constructor directly but rather invoke
     /// [`crate::Connection::execute`] or [`crate::Prepared::execute`] to get a cursor and utilize
-    /// it using the [`crate::Cursor`] trait. This method is pubilc so users with an understanding
+    /// it using the [`crate::Cursor`] trait. This method is public so users with an understanding
     /// of the raw ODBC C-API have a way to create a cursor, after they left the safety rails of the
     /// Rust type System, in order to implement a use case not covered yet, by the safe abstractions
     /// within this crate.
@@ -354,7 +354,7 @@ pub unsafe trait RowSetBuffer {
     ///
     /// # Safety
     ///
-    /// It's the implementations responsibility to ensure that all bound buffers are valid until
+    /// It's the implementation's responsibility to ensure that all bound buffers are valid until
     /// unbound or the statement handle is deleted.
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 
@@ -384,19 +384,19 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 }
 
-/// In order to safe on network overhead, it is recommended to use block cursors instead of fetching
+/// In order to save on network overhead, it is recommended to use block cursors instead of fetching
 /// values individually. This can greatly reduce the time applications need to fetch data. You can
 /// create a block cursor by binding preallocated memory to a cursor using [`Cursor::bind_buffer`].
-/// A block cursor safes on a lot of IO overhead by fetching an entire set of rows (called *rowset*)
-/// at once into the buffer bound to it. Reusing the same buffer for each rowset also safes on
+/// A block cursor saves on a lot of IO overhead by fetching an entire set of rows (called *rowset*)
+/// at once into the buffer bound to it. Reusing the same buffer for each rowset also saves on
 /// allocations. A challange with using block cursors might be database schemas with columns there
 /// individual fields can be very large. In these cases developers can choose to:
 ///
 /// 1. Reserve less memory for each individual field than the schema indicates and deciding on a
-///    sensible upper bound themselfes. This risks truncation of values though, if they are larger
+///    sensible upper bound themselves. This risks truncation of values though, if they are larger
 ///    than the upper bound. Using [`BlockCursor::fetch_with_truncation_check`] instead of
-///    [`Cursor::next_row`] your appliacation can detect these truncations. This is usually the best
-///    choice, since individual fields in a table rarerly actuallly take up several GiB of memory.
+///    [`Cursor::next_row`] your application can detect these truncations. This is usually the best
+///    choice, since individual fields in a table rarely actually take up several GiB of memory.
 /// 2. Calculate the number of rows dynamically based on the maximum expected row size.
 ///    [`crate::buffers::BufferDesc::bytes_per_row`], can be helpful with this task.
 /// 3. Not use block cursors and fetch rows slowly with high IO overhead. Calling
@@ -633,7 +633,7 @@ where
     /// `None` if the result set is empty and all row sets have been extracted. `Some` with a
     /// reference to the internal buffer otherwise.
     ///
-    /// Call this method to find out wether there are any truncated values in the batch, without
+    /// Call this method to find out whether there are any truncated values in the batch, without
     /// inspecting all its rows and columns.
     pub async fn fetch_with_truncation_check(
         &mut self,
@@ -693,9 +693,9 @@ fn error_handling_for_fetch(
         let has_row = result
             .on_success(|| true)
             .into_result_with(&stmt.as_stmt_ref(), Some(false), None)
-            // Oracles ODBC driver does not support 64Bit integers. Furthermore, it does not
-            // tell the it to the user than binding parameters, but rather now then we fetch
-            // results. The error code retruned is `HY004` rather then `HY003` which should
+            // Oracle's ODBC driver does not support 64Bit integers. Furthermore, it does not
+            // tell it to the user when binding parameters, but rather now then we fetch
+            // results. The error code returned is `HY004` rather than `HY003` which should
             // be used to indicate invalid buffer types.
             .provide_context_for_diagnostic(|record, function| {
                 if record.state == State::INVALID_SQL_DATA_TYPE {

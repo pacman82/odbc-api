@@ -43,7 +43,7 @@ impl<C> TextColumn<C> {
     /// This will allocate a value and indicator buffer for `batch_size` elements. Each value may
     /// have a maximum length of `max_str_len`. This implies that `max_str_len` is increased by
     /// one in order to make space for the null terminating zero at the end of strings. Uses a
-    /// fallibale allocation for creating the buffer. In applications often the `max_str_len` size
+    /// fallible allocation for creating the buffer. In applications often the `max_str_len` size
     /// of the buffer, might be directly inspired by the maximum size of the type, as reported, by
     /// ODBC. Which might get exceedingly large for types like VARCHAR(MAX)
     pub fn try_new(batch_size: usize, max_str_len: usize) -> Result<Self, TooLargeBufferSize>
@@ -461,7 +461,7 @@ where
     /// Ensures that the buffer is large enough to hold elements of `element_length`. Does nothing
     /// if the buffer is already large enough. Otherwise it will reallocate and rebind the buffer.
     /// The first `num_rows_to_copy_elements` will be copied from the old value buffer to the new
-    /// one. This makes this an extremly expensive operation.
+    /// one. This makes this an extremely expensive operation.
     pub fn ensure_max_element_length(
         &mut self,
         element_length: usize,

@@ -124,7 +124,7 @@ where
     ///
     /// fn insert_text<'e>(connection: Connection<'e>) -> Result<(), Error>{
     ///     // Insert six rows of text with two columns each into the database in batches of 3. In a
-    ///     // real usecase you are likely to achieve a better results with a higher batch size.
+    ///     // real use case you are likely to achieve a better results with a higher batch size.
     ///
     ///     // Note the two `?` used as placeholders for the parameters.
     ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
@@ -234,8 +234,8 @@ where
     /// A [`crate::ColumnarBulkInserter`] which has ownership of the bound array parameter buffers
     /// and borrows the statement. For most usecases [`Self::into_any_column_inserter`] is what you
     /// want to use, yet on some instances you may want to bind new paramater buffers to the same
-    /// prepared statement. E.g. to grow the capacity dynamicaly during insertions with several
-    /// chunks. In such usecases you may only want to borrow the prepared statemnt, so it can be
+    /// prepared statement. E.g. to grow the capacity dynamically during insertions with several
+    /// chunks. In such use cases you may only want to borrow the prepared statemnt, so it can be
     /// reused with a different set of parameter buffers.
     pub fn column_inserter(
         &mut self,
@@ -251,7 +251,7 @@ where
         unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
     }
 
-    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return
+    /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statement. May return
     /// `None` if row count is not available. Some drivers may also allow to use this to determine
     /// how many rows have been fetched using `SELECT`. Most drivers however only know how many rows
     /// have been fetched after they have been fetched.

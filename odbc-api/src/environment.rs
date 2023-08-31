@@ -440,7 +440,7 @@ impl Environment {
     }
 
     /// Get information about available drivers. Only 32 or 64 Bit drivers will be listed, depending
-    /// on wether you are building a 32 Bit or 64 Bit application.
+    /// on whether you are building a 32 Bit or 64 Bit application.
     ///
     /// # Example
     ///

@@ -7,7 +7,7 @@ use crate::{
 
 /// Can be used to execute a statement with bulk array paramters. Contrary to its name any statement
 /// with parameters can be executed, not only `INSERT` however inserting large amounts of data in
-/// batches is the primary intended usecase.
+/// batches is the primary intended use case.
 ///
 /// Binding new buffers is quite expensive in ODBC, so the parameter buffers are reused for each
 /// batch (so the pointers bound to the statment stay valid). So we copy each batch of data into the
@@ -104,7 +104,7 @@ where
     /// will just hold the value previously assigned to them. Therfore if extending the number of
     /// valid rows users should take care to assign values to these rows. However, even if not
     /// assigend it is always guaranteed that every cell is valid for insertion and will not cause
-    /// out of bounds access down in the ODBC driver. Therfore this method is safe. You can set
+    /// out of bounds access down in the ODBC driver. Therefore this method is safe. You can set
     /// the number of valid rows before or after filling values into the buffer, but you must do so
     /// before executing the query.
     pub fn set_num_rows(&mut self, num_rows: usize) {
@@ -122,7 +122,7 @@ where
     /// # Parameters
     ///
     /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
-    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   index. For one it is zero based. It also indexes the buffer bound, and not the columns of
     ///   the output result set. This is important, because not every column needs to be bound. Some
     ///   columns may simply be ignored. That being said, if every column of the output is bound in
     ///   the buffer, in the same order in which they are enumerated in the result set, the
@@ -130,7 +130,7 @@ where
     ///
     /// # Example
     ///
-    /// This method is intend to be called if using [`ColumnarBulkInserter`] for column wise bulk
+    /// This method is intended to be called if using [`ColumnarBulkInserter`] for column wise bulk
     /// inserts.
     ///
     /// ```no_run

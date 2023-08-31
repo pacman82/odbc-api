@@ -71,7 +71,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     /// # Parameters
     ///
     /// * `buffer_index`: Please note that the buffer index is not identical to the ODBC column
-    ///   index. For once it is zero based. It also indexes the buffer bound, and not the columns of
+    ///   index. For one it is zero based. It also indexes the buffer bound, and not the columns of
     ///   the output result set. This is important, because not every column needs to be bound. Some
     ///   columns may simply be ignored. That being said, if every column of the output is bound in
     ///   the buffer, in the same order in which they are enumerated in the result set, the
@@ -143,7 +143,7 @@ pub unsafe trait ColumnBuffer: CDataMut {
     where
         Self: 'a;
 
-    /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
+    /// Num rows may not exceed the actual amount of valid num_rows filled by the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element.
@@ -283,7 +283,7 @@ impl TextRowSet {
     /// The resulting text buffer is not in any way tied to the cursor, other than that its buffer
     /// sizes a tailor fitted to result set the cursor is iterating over.
     ///
-    /// This method performs faliable buffer allocations, if no upper bound is set, so you may see
+    /// This method performs fallible buffer allocations, if no upper bound is set, so you may see
     /// a speedup, by setting an upper bound using `max_str_limit`.
     ///
     ///
@@ -298,7 +298,7 @@ impl TextRowSet {
     ///   sometimes drivers are just not that good at it. This argument allows you to specify an
     ///   upper bound for the length of character data. Any size reported by the driver is capped to
     ///   this value. In case the database returns a size of 0 (which some systems used to indicate)
-    ///   arbitrariely large values, the element size is set to upper bound.
+    ///   arbitrarily large values, the element size is set to upper bound.
     pub fn for_cursor(
         batch_size: usize,
         cursor: &mut impl ResultSetMetadata,

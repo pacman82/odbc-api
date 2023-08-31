@@ -9,8 +9,8 @@
 //! * `(a,b,c)` -> Fixed number of parameters
 //! * `&[a]` -> Arbitrary number of parameters
 //! * `&mut BlobParam` -> Stream long input parameters.
-//! * `Box<dyn InputParameter>` -> Aribtrary input parameter
-//! * `&[Box<dyn InputParameter>]` -> Aribtrary number of arbitrary input parameters
+//! * `Box<dyn InputParameter>` -> Arbitrary input parameter
+//! * `&[Box<dyn InputParameter>]` -> Arbitrary number of arbitrary input parameters
 //! * `a.into_parameter()` -> Convert idiomatic Rust type into something bindable by ODBC.
 //!
 //! ## Passing a single parameter
@@ -200,7 +200,7 @@
 //!
 //! [`BlobRead::from_path`] is the most convinient way to turn a file path into a [`Blob`]
 //! parameter. The following example also demonstrates that the streamed blob parameter can be
-//! combined with reqular input parmeters like `id`.
+//! combined with regular input parmeters like `id`.
 //!
 //! ```
 //! use std::{error::Error, path::Path};
@@ -357,7 +357,7 @@ use crate::{
     DataType,
 };
 
-/// A CData representing a single value rater than an entire buffer of a range of values.
+/// A CData representing a single value rather than an entire buffer of a range of values.
 ///
 /// # Safety
 ///
@@ -371,7 +371,7 @@ use crate::{
 /// the buffer and the value within).
 pub unsafe trait CElement: CData {}
 
-/// Can be used to fill in a fielf value indicated by a placeholder (`?`) then executing an SQL
+/// Can be used to fill in a field value indicated by a placeholder (`?`) then executing an SQL
 /// statement.
 pub trait InputParameter: HasDataType + CElement {}
 impl<T> InputParameter for T where T: CElement + HasDataType {}
