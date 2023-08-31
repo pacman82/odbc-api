@@ -140,7 +140,7 @@ impl BinColumn {
 
     /// View of the first `num_rows` values of a binary column.
     ///
-    /// Num rows may not exceed the actually amount of valid num_rows filled be the ODBC API. The
+    /// Num rows may not exceed the actual amount of valid num_rows filled by the ODBC API. The
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
@@ -234,7 +234,7 @@ impl BinColumn {
     }
 
     /// Appends a new element to the column buffer. Rebinds the buffer to increase maximum element
-    /// length should the input be to large.
+    /// length should the input be too large.
     ///
     /// # Parameters
     ///

@@ -74,9 +74,9 @@ impl<'c> Connection<'c> {
     /// wrapper allows you to call ODBC functions on the handle, but doesn't care if the connection
     /// is in the right state.
     ///
-    /// You should not have a need to call this method if your usecase is covered by this library,
+    /// You should not have a need to call this method if your use case is covered by this library,
     /// but, in case it is not, this may help you to break out of the type structure which might be
-    /// to rigid for you, while simultaniously abondoning its safeguards.
+    /// to rigid for you, while simultaneously abondoning its safeguards.
     pub fn into_handle(self) -> handles::Connection<'c> {
         unsafe { handles::Connection::new(ManuallyDrop::new(self).connection.as_sys()) }
     }
@@ -159,7 +159,7 @@ impl<'c> Connection<'c> {
 
     /// In some use cases there you only execute a single statement, or the time to open a
     /// connection does not matter users may wish to choose to not keep a connection alive seperatly
-    /// from the cursor, in order to have an easier time withe the borrow checker.
+    /// from the cursor, in order to have an easier time with the borrow checker.
     ///
     /// ```no_run
     /// use lazy_static::lazy_static;
@@ -209,7 +209,7 @@ impl<'c> Connection<'c> {
     /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
     ///
     /// Should your use case require you to execute the same query several times with different
-    /// parameters, prepared queries are the way to go. These gives the database a chance to cache
+    /// parameters, prepared queries are the way to go. These give the database a chance to cache
     /// the access plan associated with your SQL statement. It is not unlike compiling your program
     /// once and executing it several times.
     ///
@@ -777,7 +777,7 @@ pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
     // Search the string for semicolon (';') if we do not find any, nothing is to do and we can work
     // without an extra allocation.
     //
-    // * We escape ';' because it severs as a separator between key=value pairs
+    // * We escape ';' because it serves as a separator between key=value pairs
     // * We escape '+' because passwords with `+` must be escaped on PostgreSQL for some reason.
     if unescaped.contains(&[';', '+'][..]) {
         // Surround the string with curly braces ('{','}') and escape every closing curly brace by

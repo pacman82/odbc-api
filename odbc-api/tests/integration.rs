@@ -2591,7 +2591,7 @@ fn insert_truncated_value(profile: &Profile) {
         Ok(None) => {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
-            // wrong, but we are only interessted in unsafe behaviour.
+            // wrong, but we are only interested in unsafe behaviour.
             assert_eq!("Hello", table.content_as_string(&conn))
         }
         _ => panic!("Unexpected cursor"),
@@ -2621,7 +2621,7 @@ fn insert_truncated_var_char_array(profile: &Profile) {
         Ok(None) => {
             // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
             // the database. The better database drivers do not do this, and this could be seen as
-            // wrong, but we are only interessted in unsafe behaviour.
+            // wrong, but we are only interested in unsafe behaviour.
             let actual = table.content_as_string(&conn);
             eprintln!("{actual}");
             // SQLite just emmits 'Hell' instead of 'Hello'. It's not beautiful, but it is not
@@ -3445,7 +3445,7 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     prebound.execute().unwrap();
     // Second batch is larger than the first and does not fit into the capacity. Only way to resize
     // is currently to destroy everything the ColumnarInserter, but luckily we only borrowed the
-    // statment.
+    // statement.
     let mut prebound = prepared.column_inserter(2, [desc]).unwrap();
     prebound.set_num_rows(2);
     let col = prebound.column_mut(0).as_slice::<i32>().unwrap();

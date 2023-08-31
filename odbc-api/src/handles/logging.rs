@@ -6,7 +6,7 @@ use log::{warn, Level};
 pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
     if log::max_level() < Level::Warn {
         // Early return to safe work creating all these log records in case we would not log
-        // anyhing.
+        // anything.
         return;
     }
 

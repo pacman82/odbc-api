@@ -31,7 +31,7 @@ impl Profile {
         ENV.connect_with_connection_string(self.connection_string, ConnectionOptions::default())
     }
 
-    /// Convinience function, setting up an empty table, and returning the connection used to create
+    /// Convenience function, setting up an empty table, and returning the connection used to create
     /// it.
     pub fn setup_empty_table(
         &self,
@@ -45,7 +45,7 @@ impl Profile {
         Ok(conn)
     }
 
-    /// Convinience function, setting up an empty table, and returning the connection used to create
+    /// Convenience function, setting up an empty table, and returning the connection used to create
     /// it.
     pub fn given<'a>(
         &self,
@@ -60,7 +60,7 @@ impl Profile {
     }
 }
 
-/// Declarative description for a table to conviniently build queries for it
+/// Declarative description for a table to conveniently build queries for it
 pub struct Table<'a> {
     pub name: &'a str,
     pub column_types: &'a [&'a str],

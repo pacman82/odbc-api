@@ -8,7 +8,7 @@ use super::{
 use odbc_sys::{SqlReturn, SQLSTATE_SIZE};
 use std::fmt;
 
-// Starting with odbc 5 we may be able to specify utf8 encoding. until then, we may need to fall
+// Starting with odbc 5 we may be able to specify utf8 encoding. Until then, we may need to fall
 // back on the 'W' wide function calls.
 #[cfg(not(feature = "narrow"))]
 use odbc_sys::SQLGetDiagRecW as sql_get_diag_rec;

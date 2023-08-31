@@ -19,7 +19,7 @@ pub enum SqlResult<T> {
     /// The function returned an error state. Check diagnostics.
     Error {
         /// Name of the ODBC Api call which caused the error. This might help interpreting
-        /// associatedif the error ODBC diagnostics if the error is bubbeld all the way up to the
+        /// associated ODBC diagnostics if the error is bubbled all the way up to the
         /// end users output, but the context is lost.
         function: &'static str,
     },

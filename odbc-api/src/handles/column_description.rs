@@ -50,7 +50,7 @@ impl ColumnDescription {
     /// In production, an 'empty' [`ColumnDescription`] is expected to be constructed via the
     /// [`Default`] trait. It is then filled using [`crate::ResultSetMetadata::describe_col`]. When
     /// writing test cases however it might be desirable to directly instantiate a
-    /// [`ColumnDescription`]. This constructor enabels you to do that, without caring which type
+    /// [`ColumnDescription`]. This constructor enables you to do that, without caring which type
     /// `SqlChar` resolves to.
     pub fn new(name: &str, data_type: DataType, nullability: Nullability) -> Self {
         #[cfg(feature = "narrow")]

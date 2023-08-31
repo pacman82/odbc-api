@@ -31,7 +31,7 @@ pub trait ResultSetMetadata: AsStatementRef {
             .into_result(&stmt)
     }
 
-    /// Number of columns in result set. Can also be used to see wether executing a prepared
+    /// Number of columns in result set. Can also be used to see whether executing a prepared
     /// Statement ([`crate::Prepared`]) would yield a result set, as this would return `0` if it
     /// does not.
     ///

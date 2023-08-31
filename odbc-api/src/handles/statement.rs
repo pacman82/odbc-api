@@ -90,7 +90,7 @@ impl<'s> StatementImpl<'s> {
 
 /// A borrowed valid (i.e. successfully allocated) ODBC statement handle. This can be used instead
 /// of a mutable reference to a [`StatementImpl`]. The main advantage here is that the lifetime
-/// paramater remains covariant, thereas if we would just take a mutable reference to an owned
+/// paramater remains covariant, whereas if we would just take a mutable reference to an owned
 /// statement it would become invariant.
 pub struct StatementRef<'s> {
     parent: PhantomData<&'s HDbc>,
@@ -126,7 +126,7 @@ unsafe impl<'c> AsHandle for StatementRef<'c> {
 pub trait AsStatementRef {
     /// Get an exclusive reference to the underlying statement handle. This method is used to
     /// implement other more higher level methods on top of it. It is not intended to be called by
-    /// users of this crate directly, yet it may serve as an escape hatch for low level usecases.
+    /// users of this crate directly, yet it may serve as an escape hatch for low level use cases.
     fn as_stmt_ref(&mut self) -> StatementRef<'_>;
 }
 
@@ -666,7 +666,7 @@ pub trait Statement: AsHandle {
                 // probably best to resize by `string_length_in_bytes / 2 + 1`. Yet e.g. SQLite
                 // seems to report the length in characters, so to work with a wide range of DB
                 // systems, and since buffers for names are not expected to become super large we
-                // ommit the division by two here.
+                // omit the division by two here.
                 buffer.resize((string_length_in_bytes + 1).try_into().unwrap(), 0);
 
                 res = sql_col_attribute(

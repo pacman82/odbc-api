@@ -30,7 +30,7 @@ pub unsafe trait Blob: HasDataType {
     /// passed to the driver and the indicator will be set to [`crate::sys::DATA_AT_EXEC`].
     fn size_hint(&self) -> Option<usize>;
 
-    /// Retrieve the netxt batch of data from the source. Batches may not be empty. `None` indicates
+    /// Retrieve the next batch of data from the source. Batches may not be empty. `None` indicates
     /// the last batch has been reached.
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>>;
 
@@ -311,7 +311,7 @@ impl BlobRead<BufReader<File>> {
     ///
     /// # Example
     ///
-    /// [`BlobRead::from_path`] is the most convinient way to turn a file path into a [`Blob`]
+    /// [`BlobRead::from_path`] is the most convenient way to turn a file path into a [`Blob`]
     /// parameter. The following example also demonstrates that the streamed blob parameter can be
     /// combined with reqular input parmeters like `id`.
     ///

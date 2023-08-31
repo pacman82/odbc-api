@@ -186,7 +186,7 @@ pub struct OutputStringBuffer {
 
 impl OutputStringBuffer {
     /// Creates an empty string buffer. Useful if you want to e.g. use a prompt to complete the
-    /// connection string, but are not interessted in the actual completed connection string.
+    /// connection string, but are not interested in the actual completed connection string.
     pub fn empty() -> Self {
         Self::with_buffer_size(0)
     }

@@ -58,7 +58,7 @@ impl<'o> Preallocated<'o> {
     /// Returns `Some` if a cursor is created. If `None` is returned no cursor has been created (
     /// e.g. the query came back empty). Note that an empty query may also create a cursor with zero
     /// rows. Since we want to reuse the statement handle a returned cursor will not take ownership
-    /// of it and instead burrow it.
+    /// of it and instead borrow it.
     ///
     /// # Example
     ///

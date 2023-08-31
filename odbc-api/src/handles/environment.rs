@@ -24,7 +24,7 @@ use odbc_sys::{SQLDataSourcesW as sql_data_sources, SQLDriversW as sql_drivers};
 /// * The `Environment`'s state
 /// * The current environment-level diagnostics
 /// * The handles of connections currently allocated on the environment
-/// * The current stetting of each environment attribute
+/// * The current setting of each environment attribute
 #[derive(Debug)]
 pub struct Environment {
     /// Invariant: Should always point to a valid ODBC Environment
@@ -34,7 +34,7 @@ pub struct Environment {
 /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
 unsafe impl Send for Environment {}
 
-// We are not declaring Environment as Sync due to its interior mutablity with regards to iterator
+// We are not declaring Environment as Sync due to its interior mutability with regards to iterator
 // state and error handilng
 
 unsafe impl AsHandle for Environment {
@@ -93,7 +93,7 @@ impl Environment {
     /// An allocated ODBC Environment handle
     pub fn new() -> SqlResult<Self> {
         // After running a lot of unit tests in parallel on both linux and windows architectures and
-        // never seeing a race condition related to this I deem this save. In the past I feared
+        // never seeing a race condition related to this I deem this safe. In the past I feared
         // concurrent construction of multiple Environments might race on shared state. Mostly due
         // to <https://github.com/Koka/odbc-rs/issues/29> and
         // <http://old.vk.pp.ru/docs/sybase-any/interfaces/00000034.htm>. Since however I since
@@ -145,7 +145,7 @@ impl Environment {
     ///
     /// Callers need to make sure only one thread is iterating over driver information at a time.
     /// Method changes environment state. This method would be safe to call via an exclusive `&mut`
-    /// reference, yet that would restrict usecases. E.g. requesting information would only be
+    /// reference, yet that would restrict use cases. E.g. requesting information would only be
     /// possible before connections borrow a reference.
     ///
     /// # Parameters
@@ -189,7 +189,7 @@ impl Environment {
     ///
     /// Callers need to make sure only one thread is iterating over driver information at a time.
     /// Method changes environment state. This method would be safe to call via an exclusive `&mut`
-    /// reference, yet that would restrict usecases. E.g. requesting information would only be
+    /// reference, yet that would restrict use cases. E.g. requesting information would only be
     /// possible before connections borrow a reference.
     ///
     /// # Parameters
@@ -232,7 +232,7 @@ impl Environment {
     ///
     /// Callers need to make sure only one thread is iterating over data source information at a
     /// time. Method changes environment state. This method would be safe to call via an exclusive
-    /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
+    /// `&mut` reference, yet that would restrict use cases. E.g. requesting information would only
     /// be possible before connections borrow a reference.
     ///
     /// # Parameters
@@ -273,7 +273,7 @@ impl Environment {
     ///
     /// Callers need to make sure only one thread is iterating over data source information at a
     /// time. Method changes environment state. This method would be safe to call via an exclusive
-    /// `&mut` reference, yet that would restrict usecases. E.g. requesting information would only
+    /// `&mut` reference, yet that would restrict use cases. E.g. requesting information would only
     /// be possible before connections borrow a reference. [`SqlResult::NoData`]
     ///
     /// # Parameters

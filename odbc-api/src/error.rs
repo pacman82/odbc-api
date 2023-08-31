@@ -72,7 +72,7 @@ pub enum Error {
     #[error("Sending data to the database at statement execution time failed. IO error:\n{0}")]
     FailedReadingInput(io::Error),
     /// Driver returned "invalid attribute" then setting the row array size. Most likely the array
-    /// size is to large. Instead of returing "option value changed (SQLSTATE 01S02)" like suggested
+    /// size is too large. Instead of returing "option value changed (SQLSTATE 01S02)" as suggested
     /// in <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function> the
     /// driver returned an error instead.
     #[error(
