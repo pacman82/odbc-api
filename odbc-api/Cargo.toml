@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "0.57.0"
+version = "0.57.1"
 authors = ["Markus Klein"]
 edition = "2021"
 license = "MIT"
