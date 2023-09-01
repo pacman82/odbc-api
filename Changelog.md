@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.57.1
+
+* Corrected typos in documentation. Thanks to @zachbateman
+
 ## 0.57.0
 
 * Support for `U16String` and `Option<U16Str>` as input parameter via `IntoParameter` trait.
