@@ -20,6 +20,7 @@ use odbc_api::{
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
     IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
+use widestring::{WideStr, WideString};
 use std::{
     ffi::CString,
     io::{self, Write},
@@ -3710,6 +3711,34 @@ fn execute_select_insert_select(profile: &Profile) {
 
     let fourth_cursor = third_cursor.more_results().unwrap();
     assert!(fourth_cursor.is_none());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn chinese_text_argument(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    // When
+    let arg = WideString::from_str("您好");
+    conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
+
+    // Then
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u16>::new(1, 50))]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let utf16 = batch.column(0).get(0).unwrap();
+    let utf16 = WideStr::from_slice(utf16);
+    let actual = utf16.to_string().unwrap();
+    assert_eq!("您好", actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
