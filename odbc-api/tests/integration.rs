@@ -20,13 +20,13 @@ use odbc_api::{
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
     IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
-use widestring::{WideStr, WideString};
 use std::{
     ffi::CString,
     io::{self, Write},
     iter, str, thread,
     time::Duration,
 };
+use widestring::WideString;
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
