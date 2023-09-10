@@ -13,6 +13,7 @@ mod error;
 mod execute;
 mod fixed_sized;
 mod into_parameter;
+mod narrow;
 mod nullable;
 mod parameter_collection;
 mod preallocated;
@@ -38,6 +39,7 @@ pub use self::{
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
+    narrow::Narrow,
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},

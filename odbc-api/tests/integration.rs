@@ -18,7 +18,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
-    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String, Narrow,
 };
 use std::{
     ffi::CString,
@@ -1441,6 +1441,44 @@ fn bind_str_parameter_to_char(profile: &Profile) {
 
     let actual = table.content_as_string(&conn);
     assert_eq!("Hello", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bind_narrow_parameter_to_varchar(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    // String Slice
+    conn.execute(&insert_sql, &Narrow("Hello").into_parameter())
+        .unwrap();
+    // Option slice
+    conn.execute(&insert_sql, &Narrow(Some("Hello")).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &Narrow(None::<&str>).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &Some(Narrow("Hello")).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &None::<Narrow::<&str>>.into_parameter())
+        .unwrap();
+    // String
+    conn.execute(&insert_sql, &Narrow("Hello".to_string()).into_parameter())
+        .unwrap();
+    // Option String
+    conn.execute(&insert_sql, &Narrow(Some("Hello".to_string())).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &Narrow(None::<String>).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &Some(Narrow("Hello".to_string())).into_parameter())
+        .unwrap();
+    conn.execute(&insert_sql, &None::<Narrow::<String>>.into_parameter())
+        .unwrap();
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello\nHello\nNULL\nHello\nNULL\nHello\nHello\nNULL\nHello\nNULL", actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
