@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[cfg(feature = "narrow")]
-use parameter::{VarCharBox, VarCharSlice};
+use crate::parameter::{VarCharBox, VarCharSlice};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
