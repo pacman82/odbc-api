@@ -1,5 +1,27 @@
 # Changelog
 
+## (next)
+
+* The `IntoParameter` implementation for `str` slices and `Strings` will now be converting them to `VarWCharBox` if the `narrow` compile time feature is **not** activated. This has been done in order to allow for easier writing of portable code between Windows and non-Windows platforms. Usually you would like to activate the `narrow` feature on non-windows platform there a UTF-8 default locale can be assumed. On Windows you want utilize UTF-16 encoding since it is the only reliable way to to transfer non ASCII characters independent from the systems locale. With this change on both platforms one can now simply write:
+
+```rust
+// Uses UTF-16 if `narrow` is not set. Otherwise directly binds the UTF-8 silce.
+conn.execute(&insert_sql, &"Frühstück".into_parameter()).unwrap();
+```
+
+```rust
+// Guaranteed to use UTF-16 independent of compiliation flags.
+let arg = U16String::from_str("Frühstück");
+conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
+```
+
+```rust
+// Guaranteed to use UTF-8 independent of compiliation flags. This relies on the ODBC driver to use
+// UTF-8 encoding.
+let arg = Narrow("Frühstück");
+conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
+```
+
 ## 0.57.1
 
 * Corrected typos in documentation. Thanks to @zachbateman

@@ -3765,8 +3765,7 @@ fn chinese_text_argument(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // When
-    let arg = U16String::from_str("您好");
-    conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"您好".into_parameter()).unwrap();
 
     // Then
     let cursor = conn
@@ -3793,8 +3792,7 @@ fn chinese_text_argument_nvarchar(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // When
-    let arg = U16String::from_str("您好");
-    conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"您好".into_parameter()).unwrap();
 
     // Then
     let cursor = conn
