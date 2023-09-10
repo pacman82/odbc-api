@@ -3715,7 +3715,9 @@ fn execute_select_insert_select(profile: &Profile) {
 // #[test_case(MSSQL; "Microsoft SQL Server")] Without changing server configuration VARCHAR(50)
 // does not seem to store things in UTF-8, but rather use an ASCII encoding which can not represent
 // the chinese characters.
-#[test_case(MARIADB; "Maria DB")]
+// Window hosted MARIA DB seems to also have trouble storying utf-8 in a varchar(50). Runs fine
+// though with windows client and linux server
+// #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn chinese_text_argument(profile: &Profile) {
