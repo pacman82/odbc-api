@@ -17,7 +17,7 @@ impl<'a> IntoParameter for Narrow<Option<&'a str>> {
 
     fn into_parameter(self) -> Self::Parameter {
         match self.0 {
-            Some(str) => str.into_parameter(),
+            Some(str) => Narrow(str).into_parameter(),
             None => VarCharSlice::NULL,
         }
     }
@@ -28,7 +28,7 @@ impl<'a> IntoParameter for Option<Narrow<&'a str>> {
 
     fn into_parameter(self) -> Self::Parameter {
         match self {
-            Some(str) => str.0.into_parameter(),
+            Some(str) => Narrow(str.0).into_parameter(),
             None => VarCharSlice::NULL,
         }
     }
@@ -47,7 +47,7 @@ impl IntoParameter for Narrow<Option<String>> {
 
     fn into_parameter(self) -> Self::Parameter {
         match self.0 {
-            Some(str) => str.into_parameter(),
+            Some(str) => Narrow(str).into_parameter(),
             None => VarCharBox::null(),
         }
     }
@@ -58,7 +58,7 @@ impl IntoParameter for Option<Narrow<String>> {
 
     fn into_parameter(self) -> Self::Parameter {
         match self {
-            Some(str) => str.0.into_parameter(),
+            Some(str) => Narrow(str.0).into_parameter(),
             None => VarCharBox::null(),
         }
     }

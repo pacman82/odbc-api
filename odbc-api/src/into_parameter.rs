@@ -3,12 +3,12 @@ use widestring::{U16Str, U16String};
 use crate::{
     buffers::Indicator,
     fixed_sized::Pod,
-    parameter::{
-        InputParameter, VarBinaryBox, VarBinarySlice, VarCharBox, VarCharSlice, VarWCharBox,
-        VarWCharSlice,
-    },
+    parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarWCharBox, VarWCharSlice},
     Nullable,
 };
+
+#[cfg(feature = "narrow")]
+use parameter::{VarCharBox, VarCharSlice};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
 /// execution.
@@ -35,6 +35,7 @@ where
     }
 }
 
+#[cfg(feature = "narrow")]
 impl<'a> IntoParameter for &'a str {
     type Parameter = VarCharSlice<'a>;
 
@@ -43,17 +44,30 @@ impl<'a> IntoParameter for &'a str {
     }
 }
 
+#[cfg(not(feature = "narrow"))]
+impl<'a> IntoParameter for &'a str {
+    type Parameter = VarWCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarWCharBox::from_str_slice(self)
+    }
+}
+
 impl<'a> IntoParameter for Option<&'a str> {
-    type Parameter = VarCharSlice<'a>;
+    type Parameter = <&'a str as IntoParameter>::Parameter;
 
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
+            #[cfg(feature = "narrow")]
             None => VarCharSlice::NULL,
+            #[cfg(not(feature = "narrow"))]
+            None => VarWCharBox::null(),
         }
     }
 }
 
+#[cfg(feature = "narrow")]
 impl IntoParameter for String {
     type Parameter = VarCharBox;
 
@@ -62,13 +76,25 @@ impl IntoParameter for String {
     }
 }
 
+#[cfg(not(feature = "narrow"))]
+impl IntoParameter for String {
+    type Parameter = VarWCharBox;
+
+    fn into_parameter(self) -> Self::Parameter {
+        VarWCharBox::from_str_slice(&self)
+    }
+}
+
 impl IntoParameter for Option<String> {
-    type Parameter = VarCharBox;
+    type Parameter = <String as IntoParameter>::Parameter;
 
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
+            #[cfg(feature = "narrow")]
             None => VarCharBox::null(),
+            #[cfg(not(feature = "narrow"))]
+            None => VarWCharBox::null(),
         }
     }
 }

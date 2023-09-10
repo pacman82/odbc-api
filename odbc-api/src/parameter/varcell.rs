@@ -183,6 +183,13 @@ where
     pub fn from_u16_string(val: U16String) -> Self {
         Self::from_vec(val.into_vec())
     }
+
+    /// Create an owned parameter containing the character data from the passed string. Converts it
+    /// to UTF-16 and allocates it.
+    pub fn from_str_slice(val: &str) -> Self {
+        let utf16 = U16String::from_str(val);
+        Self::from_u16_string(utf16)
+    }
 }
 
 impl<B, K> VarCell<B, K>
