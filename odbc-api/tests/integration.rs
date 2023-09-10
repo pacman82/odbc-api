@@ -3792,7 +3792,8 @@ fn chinese_text_argument_nvarchar(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // When
-    conn.execute(&insert_sql, &"您好".into_parameter()).unwrap();
+    let arg = U16String::from_str("您好"); // Narrow build will fail for MSSQL without this line.
+    conn.execute(&insert_sql, &arg.into_parameter()).unwrap();
 
     // Then
     let cursor = conn
