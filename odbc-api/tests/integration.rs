@@ -3809,6 +3809,35 @@ fn chinese_text_argument_nvarchar(profile: &Profile) {
     assert_eq!("您好", actual);
 }
 
+/// Inspired by <https://github.com/pacman82/odbc-api/issues/428>
+/// Microsoft driver seems to report wrong sizes for the remaining strings if a text column can not
+/// be fetched on first try.
+// #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn cursor_get_text_from_text(profile: &Profile) {
+    // Given a text column with a string larger than 255 characters. It also must contain non ASCII
+    // characters.
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["TEXT"]).unwrap();
+    // For this test we want to run into a scenario, there we can not fetch everything in the first
+    // roundtrip, so we choose a text larger than 256 characters.
+    let text = "€".repeat(300);
+    let insert_sql = table.sql_insert();
+    conn.execute(&insert_sql, &text.into_parameter()).unwrap();
+
+    // When
+    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut buffer = Vec::new();
+    row.get_text(1, &mut buffer).unwrap();
+
+    // Then
+    let actual = String::from_utf8(buffer).unwrap();
+    assert_eq!("€".repeat(300), actual);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
