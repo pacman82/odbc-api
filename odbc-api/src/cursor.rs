@@ -9,7 +9,7 @@ use crate::{
     Error, ResultSetMetadata,
 };
 
-use std::{mem::MaybeUninit, ptr, thread::panicking};
+use std::{mem::{MaybeUninit, size_of}, ptr, thread::panicking};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
@@ -137,10 +137,10 @@ impl<'s> CursorRow<'s> {
         self.get_variadic::<Binary>(col_or_param_num, buf)
     }
 
-    fn get_variadic<K: VarKind<Element = u8>>(
+    fn get_variadic<K: VarKind>(
         &mut self,
         col_or_param_num: u16,
-        buf: &mut Vec<u8>,
+        buf: &mut Vec<K::Element>,
     ) -> Result<bool, Error> {
         if buf.capacity() == 0 {
             // User did just provide an empty buffer. So it is fair to assume not much domain
@@ -153,7 +153,7 @@ impl<'s> CursorRow<'s> {
             buf.reserve(256);
         }
         // Utilize all of the allocated buffer.
-        buf.resize(buf.capacity(), 0);
+        buf.resize(buf.capacity(), K::ZERO);
 
         // Did we learn how much capacity we need in the last iteration? We use this only to panic
         // on erroneous implementations of get_data and avoid endless looping until we run out of
@@ -164,12 +164,12 @@ impl<'s> CursorRow<'s> {
         // to contain the **next** part of the data, whereas buf contains the entire accumulated
         // value so far.
         let mut target =
-            VarCell::<&mut [u8], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
+            VarCell::<&mut [K::Element], K>::from_buffer(buf.as_mut_slice(), Indicator::NoTotal);
         self.get_data(col_or_param_num, &mut target)?;
         while !target.is_complete() {
             // Amount of payload bytes (excluding terminating zeros) fetched with the last call to
             // get_data.
-            let fetched = target.as_bytes().unwrap().len();
+            let fetched = target.len_in_bytes();
             match target.indicator() {
                 // If Null the value would be complete
                 Indicator::Null => unreachable!(),
@@ -178,8 +178,8 @@ impl<'s> CursorRow<'s> {
                 Indicator::NoTotal => {
                     let old_len = buf.len();
                     // Use an exponential strategy for increasing buffer size.
-                    buf.resize(old_len * 2, 0);
-                    let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
+                    buf.resize(old_len * 2, K::ZERO);
+                    let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES * size_of::<K::Element>())..];
                     target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::NoTotal);
                 }
                 // We did not get all of the value in one go, but the data source has been friendly

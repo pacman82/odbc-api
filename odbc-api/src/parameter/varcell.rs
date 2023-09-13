@@ -294,6 +294,24 @@ where
             self.indicator = (binary_length - K::TERMINATING_ZEROES).try_into().unwrap();
         }
     }
+
+    /// Length of the (potentially truncated) value within the cell in characters. Excluding
+    /// terminating zero.
+    pub fn len_in_bytes(&self) -> Option<usize> {
+        let max_len_in_bytes =
+            (self.buffer.borrow().len() - K::TERMINATING_ZEROES) * size_of::<K::Element>();
+        match self.indicator() {
+            Indicator::Null => None,
+            Indicator::NoTotal => Some(max_len_in_bytes),
+            Indicator::Length(len) => {
+                if self.is_complete() {
+                    Some(len)
+                } else {
+                    Some(max_len_in_bytes)
+                }
+            }
+        }
+    }
 }
 
 impl<B, K> VarCell<B, K>
@@ -305,17 +323,7 @@ where
     /// case the indicator is `NULL_DATA`.
     pub fn as_bytes(&self) -> Option<&[u8]> {
         let slice = self.buffer.borrow();
-        match self.indicator() {
-            Indicator::Null => None,
-            Indicator::NoTotal => Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)]),
-            Indicator::Length(len) => {
-                if self.is_complete() {
-                    Some(&slice[..len])
-                } else {
-                    Some(&slice[..(slice.len() - K::TERMINATING_ZEROES)])
-                }
-            }
-        }
+        self.len_in_bytes().map(|len| &slice[..len])
     }
 
     /// The payload in bytes the buffer can hold including terminating zeroes
