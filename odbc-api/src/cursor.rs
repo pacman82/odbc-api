@@ -9,7 +9,11 @@ use crate::{
     Error, ResultSetMetadata,
 };
 
-use std::{mem::{MaybeUninit, size_of}, ptr, thread::panicking};
+use std::{
+    mem::{size_of, MaybeUninit},
+    ptr,
+    thread::panicking,
+};
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
@@ -169,7 +173,9 @@ impl<'s> CursorRow<'s> {
         while !target.is_complete() {
             // Amount of payload bytes (excluding terminating zeros) fetched with the last call to
             // get_data.
-            let fetched = target.len_in_bytes();
+            let fetched = target
+                .len_in_bytes()
+                .expect("ODBC driver must always report how many bytes were fetched.");
             match target.indicator() {
                 // If Null the value would be complete
                 Indicator::Null => unreachable!(),
@@ -179,8 +185,12 @@ impl<'s> CursorRow<'s> {
                     let old_len = buf.len();
                     // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, K::ZERO);
-                    let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES * size_of::<K::Element>())..];
-                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::NoTotal);
+                    let buf_extend =
+                        &mut buf[(old_len - K::TERMINATING_ZEROES * size_of::<K::Element>())..];
+                    target = VarCell::<&mut [K::Element], K>::from_buffer(
+                        buf_extend,
+                        Indicator::NoTotal,
+                    );
                 }
                 // We did not get all of the value in one go, but the data source has been friendly
                 // enough to tell us how much is missing.
@@ -196,11 +206,12 @@ impl<'s> CursorRow<'s> {
                     remaining_length_known = true;
                     // Amount of bytes missing from the value using get_data, excluding terminating
                     // zero.
-                    let still_missing = len - fetched;
+                    let still_missing_in_bytes = len - fetched;
+                    let still_missing = still_missing_in_bytes / size_of::<K::Element>();
                     let old_len = buf.len();
-                    buf.resize(old_len + still_missing, 0);
+                    buf.resize(old_len + still_missing, K::ZERO);
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
-                    target = VarCell::<&mut [u8], K>::from_buffer(buf_extend, Indicator::NoTotal);
+                    target = VarCell::<&mut [K::Element], K>::from_buffer(buf_extend, Indicator::NoTotal);
                 }
             }
             // Fetch binary data into buffer.
@@ -208,12 +219,13 @@ impl<'s> CursorRow<'s> {
         }
         // We did get the complete value, including the terminating zero. Let's resize the buffer to
         // match the retrieved value exactly (excluding terminating zero).
-        if let Some(len) = target.indicator().value_len() {
+        if let Some(len_in_bytes) = target.indicator().value_len() {
             // Since the indicator refers to value length without terminating zero, and capacity is
             // including the terminating zero this also implicitly drops the terminating zero at the
             // end of the buffer.
-            let shrink_by = target.capacity() - len;
-            buf.resize(buf.len() - shrink_by, 0);
+            let shrink_by_bytes = target.capacity_in_bytes() - len_in_bytes;
+            let shrink_by_chars = shrink_by_bytes / size_of::<K::Element>();
+            buf.resize(buf.len() - shrink_by_chars, K::ZERO);
             Ok(true)
         } else {
             // value is NULL

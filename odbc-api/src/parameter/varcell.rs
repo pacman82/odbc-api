@@ -312,6 +312,11 @@ where
             }
         }
     }
+
+    /// The payload in bytes the buffer can hold including terminating zeroes
+    pub fn capacity_in_bytes(&self) -> usize {
+        size_of_val(self.buffer.borrow())
+    }
 }
 
 impl<B, K> VarCell<B, K>
@@ -324,11 +329,6 @@ where
     pub fn as_bytes(&self) -> Option<&[u8]> {
         let slice = self.buffer.borrow();
         self.len_in_bytes().map(|len| &slice[..len])
-    }
-
-    /// The payload in bytes the buffer can hold including terminating zeroes
-    pub fn capacity(&self) -> usize {
-        self.buffer.borrow().len()
     }
 }
 
