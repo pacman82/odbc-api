@@ -199,7 +199,7 @@ impl<'s> CursorRow<'s> {
                     // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, K::ZERO);
                     let buf_extend =
-                        &mut buf[(old_len - K::TERMINATING_ZEROES * size_of::<K::Element>())..];
+                        &mut buf[(old_len - K::TERMINATING_ZEROES)..];
                     target = VarCell::<&mut [K::Element], K>::from_buffer(
                         buf_extend,
                         Indicator::NoTotal,
