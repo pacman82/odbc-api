@@ -4,7 +4,7 @@ use crate::{
     buffers::Indicator,
     error::ExtendResult,
     handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
-    parameter::{Binary, CElement, Text, VarCell, VarKind},
+    parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
     sleep::{wait_for, Sleep},
     Error, ResultSetMetadata,
 };
@@ -120,7 +120,9 @@ impl<'s> CursorRow<'s> {
     }
 
     /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
-    /// index starts at `1`.
+    /// index starts at `1`. The used encoding is accordig to the ODBC standard determined by your
+    /// system local. Ultimatly the choice is up to the implementation of your ODBC driver, which
+    /// often defaults to always UTF-8.
     ///
     /// # Return
     ///
@@ -128,6 +130,17 @@ impl<'s> CursorRow<'s> {
     /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
     pub fn get_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u8>) -> Result<bool, Error> {
         self.get_variadic::<Text>(col_or_param_num, buf)
+    }
+
+    /// Retrieves arbitrary large character data from the row and stores it in the buffer. Column
+    /// index starts at `1`. The used encoding is UTF-16.
+    ///
+    /// # Return
+    ///
+    /// `true` indicates that the value has not been `NULL` and the value has been placed in `buf`.
+    /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
+    pub fn get_wide_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u16>) -> Result<bool, Error> {
+        self.get_variadic::<WideText>(col_or_param_num, buf)
     }
 
     /// Retrieves arbitrary large binary data from the row and stores it in the buffer. Column index
