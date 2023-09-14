@@ -1,7 +1,8 @@
 # Changelog
 
-## (next)
+## 1.0.0
 
+* Introduced `CursorRow::get_wide_text` in order to fetch large UTF-16 values into a buffer.
 * The `IntoParameter` implementation for `str` slices and `Strings` will now be converting them to `VarWCharBox` if the `narrow` compile time feature is **not** activated. This has been done in order to allow for easier writing of portable code between Windows and non-Windows platforms. Usually you would like to activate the `narrow` feature on non-windows platform there a UTF-8 default locale can be assumed. On Windows you want utilize UTF-16 encoding since it is the only reliable way to to transfer non ASCII characters independent from the systems locale. With this change on both platforms one can now simply write:
 
 ```rust
