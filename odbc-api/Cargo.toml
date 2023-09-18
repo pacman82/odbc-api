@@ -79,7 +79,7 @@ lazy_static = "1.4.0"
 env_logger = "0.10.0"
 anyhow = "1.0.75"
 csv = "1.2.2"
-test-case = "3.1.0"
+test-case = "3.2.1"
 tempfile = "3.8.0"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 tokio = { version = "1.32.0", features = ["rt", "macros", "time"] }
