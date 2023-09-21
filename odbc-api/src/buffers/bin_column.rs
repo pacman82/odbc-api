@@ -111,10 +111,7 @@ impl BinColumn {
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| match Indicator::from_isize(indicator) {
-                Indicator::Null | Indicator::NoTotal => true,
-                Indicator::Length(length) => self.max_len < length,
-            })
+            .any(|indicator| Indicator::from_isize(indicator).is_truncated(self.max_len))
     }
 
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+
+* Updated dependencies
+* Fixed an issue which could cause errouneous report of truncation in presence of other warnings.
+
 ## 0.4.19
 
 * Updated dependencies
