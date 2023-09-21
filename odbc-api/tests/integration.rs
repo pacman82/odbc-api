@@ -3483,7 +3483,7 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     let query = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    matches!(cursor.fetch(), Err(Error::TooLargeValueForBuffer));
+    assert!(matches!(cursor.fetch_with_truncation_check(true), Err(Error::TooLargeValueForBuffer)))
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
