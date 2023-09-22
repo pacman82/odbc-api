@@ -40,7 +40,7 @@ services:
       --health-timeout 240s
       --health-start-period 240s
       --health-retries 5
-    env:
+    environment:
       LICENSE: accept
       DB2INSTANCE: db2inst1
       DB2INST1_PASSWORD: password
