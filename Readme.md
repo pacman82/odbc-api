@@ -5,7 +5,14 @@
 [![Crates.io](https://img.shields.io/crates/v/odbc-api)](https://crates.io/crates/odbc-api)
 [![Coverage Status](https://coveralls.io/repos/github/pacman82/odbc-api/badge.svg?branch=main)](https://coveralls.io/github/pacman82/odbc-api?branch=main)
 
-Rust ODBC bindings. ODBC (Open Database Connectivity) is an open standard to connect to a variaty of data sources. Most data sources offer ODBC drivers. This crate is currently tested against:
+Rust ODBC bindings. ODBC (Open Database Connectivity) is an open standard to connect to a variaty of data sources. Most data sources offer ODBC drivers. There are two typical usage scenarios for ODBC:
+
+* Your appliciation is designed to work with a wide range of Databases without the need of redeploying it.
+* There is no native Rust driver in suitable quality available for your Database so you want to use the ODBC driver instead.
+
+See also: [Is ODBC the Answer?]<https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/is-odbc-the-answer>
+
+This crate is currently tested against:
 
 * Microsoft SQL Server
 * PostgreSQL
