@@ -10,7 +10,7 @@ use crate::{
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer,
+    Error, ResultSetMetadata, RowSetBuffer, cursor::TruncationDiagnostics,
 };
 
 use super::{Indicator, TextColumn};
@@ -104,10 +104,10 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&self) -> bool {
+    fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         self.columns
             .iter()
-            .any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
+            .any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows)).then_some(TruncationDiagnostics {  })
     }
 }
 
