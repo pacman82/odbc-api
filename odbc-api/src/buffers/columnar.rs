@@ -107,7 +107,7 @@ where
     fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         self.columns
             .iter()
-            .any(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows)).then_some(TruncationDiagnostics {  })
+            .find_map(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
     }
 }
 
@@ -155,12 +155,12 @@ pub unsafe trait ColumnBuffer: CDataMut {
     /// Current capacity of the column
     fn capacity(&self) -> usize;
 
-    /// `true` if any value is truncated in the range [0, num_rows).
+    /// `Some` if any value is truncated in the range [0, num_rows).
     ///
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    fn has_truncated_values(&self, num_rows: usize) -> bool;
+    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics>;
 }
 
 unsafe impl<T> ColumnBuffer for WithDataType<T>
@@ -181,7 +181,7 @@ where
         self.value.capacity()
     }
 
-    fn has_truncated_values(&self, num_rows: usize) -> bool {
+    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
         self.value.has_truncated_values(num_rows)
     }
 }
@@ -424,8 +424,8 @@ where
         self.len()
     }
 
-    fn has_truncated_values(&self, _num_rows: usize) -> bool {
-        false
+    fn has_truncated_values(&self, _num_rows: usize) -> Option<TruncationDiagnostics> {
+        None
     }
 }
 

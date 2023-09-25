@@ -3,7 +3,7 @@ use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
-    DataType, Error,
+    DataType, Error, cursor::TruncationDiagnostics,
 };
 
 use log::debug;
@@ -101,17 +101,17 @@ impl BinColumn {
         }
     }
 
-    /// `true` if any value is truncated in the range [0, num_rows).
+    /// `Some` if any value is truncated in the range [0, num_rows).
     ///
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    pub fn has_truncated_values(&self, num_rows: usize) -> bool {
+    pub fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
         self.indicators
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(self.max_len))
+            .any(|indicator| Indicator::from_isize(indicator).is_truncated(self.max_len)).then_some(TruncationDiagnostics {  })
     }
 
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find
@@ -350,12 +350,12 @@ impl<'c> BinColumnView<'c> {
         }
     }
 
-    /// `true` if any value is truncated in the range [0, num_rows).
+    /// `Some` if any value is truncated in the range [0, num_rows).
     ///
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    pub fn has_truncated_values(&self) -> bool {
+    pub fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         self.col.has_truncated_values(self.num_rows)
     }
 }

@@ -2,7 +2,7 @@ use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
-    DataType, Error,
+    DataType, Error, cursor::TruncationDiagnostics,
 };
 
 use super::{ColumnBuffer, Indicator};
@@ -135,18 +135,18 @@ impl<C> TextColumn<C> {
         }
     }
 
-    /// `true` if any value is truncated in the range [0, num_rows).
+    /// `Some` if any value is truncated in the range [0, num_rows).
     ///
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    pub fn has_truncated_values(&self, num_rows: usize) -> bool {
+    pub fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
         let max_bin_length = self.max_str_len * size_of::<C>();
         self.indicators
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length))
+            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length)).then_some(TruncationDiagnostics {  })
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find
@@ -330,13 +330,13 @@ where
         self.indicators.len()
     }
 
-    fn has_truncated_values(&self, num_rows: usize) -> bool {
+    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
         let max_bin_length = self.max_str_len * size_of::<C>();
         self.indicators
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length))
+            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length)).then_some(TruncationDiagnostics {  })
     }
 }
 
@@ -405,12 +405,12 @@ impl<'c, C> TextColumnView<'c, C> {
         self.col.max_len()
     }
 
-    /// `true` if any value is truncated.
+    /// `Some` if any value is truncated.
     ///
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    pub fn has_truncated_values(&self) -> bool {
+    pub fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         self.col.has_truncated_values(self.num_rows)
     }
 }

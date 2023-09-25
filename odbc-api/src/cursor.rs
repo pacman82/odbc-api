@@ -417,7 +417,6 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
 
 /// Additional information in case of writing a value into too short a buffer.
 pub struct TruncationDiagnostics {
-
 }
 
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching
