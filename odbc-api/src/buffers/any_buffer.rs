@@ -6,7 +6,7 @@ use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
-    Bit, DataType, Error,
+    Bit, DataType, Error, cursor::TruncationDiagnostics,
 };
 
 use super::{
@@ -633,12 +633,12 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 
-    fn has_truncated_values(&self, num_rows: usize) -> bool {
+    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
         match self {
             AnyBuffer::Binary(col) => col.has_truncated_values(num_rows),
             AnyBuffer::Text(col) => col.has_truncated_values(num_rows),
             AnyBuffer::WText(col) => col.has_truncated_values(num_rows),
-            _ => false,
+            _ => None,
         }
     }
 }
