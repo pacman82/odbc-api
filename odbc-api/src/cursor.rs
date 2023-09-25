@@ -390,7 +390,7 @@ pub unsafe trait RowSetBuffer {
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 
     /// Check if the buffer contains any truncated values for variadic sized columns.
-    fn has_truncated_values(&self) -> bool;
+    fn has_truncated_values(&self) -> Option<TruncationDiagnostics>;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -410,9 +410,14 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).bind_colmuns_to_cursor(cursor)
     }
 
-    fn has_truncated_values(&self) -> bool {
+    fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         (**self).has_truncated_values()
     }
+}
+
+/// Additional information in case of writing a value into too short a buffer.
+pub struct TruncationDiagnostics {
+
 }
 
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching
@@ -717,7 +722,7 @@ fn error_handling_for_fetch(
 ) -> Result<bool, Error> {
     if error_for_truncation
         && result == SqlResult::SuccessWithInfo(())
-        && buffer.has_truncated_values()
+        && buffer.has_truncated_values().is_some()
     {
         Err(Error::TooLargeValueForBuffer)
     } else {

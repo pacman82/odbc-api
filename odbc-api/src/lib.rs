@@ -31,7 +31,8 @@ pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     cursor::{
-        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow, RowSetBuffer,
+        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow,
+        RowSetBuffer, TruncationDiagnostics,
     },
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment},
