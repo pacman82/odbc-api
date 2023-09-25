@@ -139,7 +139,11 @@ impl<'s> CursorRow<'s> {
     ///
     /// `true` indicates that the value has not been `NULL` and the value has been placed in `buf`.
     /// `false` indicates that the value is `NULL`. The buffer is cleared in that case.
-    pub fn get_wide_text(&mut self, col_or_param_num: u16, buf: &mut Vec<u16>) -> Result<bool, Error> {
+    pub fn get_wide_text(
+        &mut self,
+        col_or_param_num: u16,
+        buf: &mut Vec<u16>,
+    ) -> Result<bool, Error> {
         self.get_variadic::<WideText>(col_or_param_num, buf)
     }
 
@@ -198,8 +202,7 @@ impl<'s> CursorRow<'s> {
                     let old_len = buf.len();
                     // Use an exponential strategy for increasing buffer size.
                     buf.resize(old_len * 2, K::ZERO);
-                    let buf_extend =
-                        &mut buf[(old_len - K::TERMINATING_ZEROES)..];
+                    let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
                     target = VarCell::<&mut [K::Element], K>::from_buffer(
                         buf_extend,
                         Indicator::NoTotal,
@@ -224,7 +227,10 @@ impl<'s> CursorRow<'s> {
                     let old_len = buf.len();
                     buf.resize(old_len + still_missing, K::ZERO);
                     let buf_extend = &mut buf[(old_len - K::TERMINATING_ZEROES)..];
-                    target = VarCell::<&mut [K::Element], K>::from_buffer(buf_extend, Indicator::NoTotal);
+                    target = VarCell::<&mut [K::Element], K>::from_buffer(
+                        buf_extend,
+                        Indicator::NoTotal,
+                    );
                 }
             }
             // Fetch binary data into buffer.

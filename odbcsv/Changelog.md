@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+* Fixed an issue which could cause errouneous report of truncation in presence of other warnings. This has been fixed in the previous release for variadic binary column buffers but a similar failure had been missed for variadic text columns.
+
 ## 1.0.0
 
 * Updated dependencies

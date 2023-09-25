@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+* Fix: `Cursor::fetch_with_truncation_check` did erroneously report truncation errors for `NULL` fields, if the query also triggered any ODBC diagnostic. This has been fixed in the previous release for variadic binary column buffers but a similar failure had been missed for variadic text columns.
+
 ## 1.0.1
 
 * Fix: `Cursor::fetch_with_truncation_check` did erroneously report truncation errors for `NULL` fields, if the query also triggered any ODBC diagnostic. This remained undedected for a while, because in every situation that there is a truncation, there must also be a diagnostic according to the ODBC standard. However the reverse is not true. In this situation a `NULL` had been erronously treated the same as a `NO_TOTAL` indicator and a false positive has been reported to a user claiming that there is a truncation, there in fact is none.

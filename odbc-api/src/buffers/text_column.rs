@@ -336,10 +336,7 @@ where
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| match Indicator::from_isize(indicator) {
-                Indicator::Null | Indicator::NoTotal => true,
-                Indicator::Length(length_in_bytes) => max_bin_length < length_in_bytes,
-            })
+            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length))
     }
 }
 

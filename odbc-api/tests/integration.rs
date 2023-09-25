@@ -18,7 +18,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
-    IntoParameter, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String, Narrow,
+    IntoParameter, Narrow, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -1462,23 +1462,32 @@ fn bind_narrow_parameter_to_varchar(profile: &Profile) {
         .unwrap();
     conn.execute(&insert_sql, &Some(Narrow("Hello")).into_parameter())
         .unwrap();
-    conn.execute(&insert_sql, &None::<Narrow::<&str>>.into_parameter())
+    conn.execute(&insert_sql, &None::<Narrow<&str>>.into_parameter())
         .unwrap();
     // String
     conn.execute(&insert_sql, &Narrow("Hello".to_string()).into_parameter())
         .unwrap();
     // Option String
-    conn.execute(&insert_sql, &Narrow(Some("Hello".to_string())).into_parameter())
-        .unwrap();
+    conn.execute(
+        &insert_sql,
+        &Narrow(Some("Hello".to_string())).into_parameter(),
+    )
+    .unwrap();
     conn.execute(&insert_sql, &Narrow(None::<String>).into_parameter())
         .unwrap();
-    conn.execute(&insert_sql, &Some(Narrow("Hello".to_string())).into_parameter())
-        .unwrap();
-    conn.execute(&insert_sql, &None::<Narrow::<String>>.into_parameter())
+    conn.execute(
+        &insert_sql,
+        &Some(Narrow("Hello".to_string())).into_parameter(),
+    )
+    .unwrap();
+    conn.execute(&insert_sql, &None::<Narrow<String>>.into_parameter())
         .unwrap();
 
     let actual = table.content_as_string(&conn);
-    assert_eq!("Hello\nHello\nNULL\nHello\nNULL\nHello\nHello\nNULL\nHello\nNULL", actual);
+    assert_eq!(
+        "Hello\nHello\nNULL\nHello\nNULL\nHello\nHello\nNULL\nHello\nNULL",
+        actual
+    );
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -3483,7 +3492,10 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     let query = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    assert!(matches!(cursor.fetch_with_truncation_check(true), Err(Error::TooLargeValueForBuffer)))
+    assert!(matches!(
+        cursor.fetch_with_truncation_check(true),
+        Err(Error::TooLargeValueForBuffer)
+    ))
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -3855,7 +3867,10 @@ fn cursor_get_text_from_text(profile: &Profile) {
     conn.execute(&insert_sql, &text.into_parameter()).unwrap();
 
     // When
-    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
     let mut buffer = Vec::new();
     row.get_text(1, &mut buffer).unwrap();
