@@ -15,7 +15,7 @@ pub use self::{
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnarBuffer, TextRowSet},
     description::BufferDesc,
-    indicator::Indicator,
+    indicator::{Indicator, TruncationDiagnostics},
     item::Item,
     text_column::{
         CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnView, WCharColumn,

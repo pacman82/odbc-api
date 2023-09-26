@@ -3,8 +3,8 @@ use std::{collections::HashSet, ffi::c_void};
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
+    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::BoundInputSlice,
-    cursor::TruncationDiagnostics,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
     Bit, DataType, Error,

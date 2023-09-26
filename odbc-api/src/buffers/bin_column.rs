@@ -1,7 +1,7 @@
 use crate::{
     buffers::Indicator,
+    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::BoundInputSlice,
-    cursor::TruncationDiagnostics,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
     DataType, Error,

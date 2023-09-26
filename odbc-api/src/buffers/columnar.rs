@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
+    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::BoundInputSlice,
-    cursor::TruncationDiagnostics,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,

@@ -65,3 +65,9 @@ impl Indicator {
         }
     }
 }
+
+/// Additional information in case of writing a value into too short a buffer.
+pub struct TruncationDiagnostics {
+    /// Size indicator reported by the driver indicating the size of the complete value in the DBMS.
+    pub indicator: Indicator,
+}
