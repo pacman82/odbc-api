@@ -1,9 +1,10 @@
 use crate::{
     buffers::Indicator,
     columnar_bulk_inserter::BoundInputSlice,
+    cursor::TruncationDiagnostics,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
-    DataType, Error, cursor::TruncationDiagnostics,
+    DataType, Error,
 };
 
 use log::debug;
@@ -111,7 +112,12 @@ impl BinColumn {
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(self.max_len)).then_some(TruncationDiagnostics {  })
+            .find_map(|indicator| {
+                let indicator = Indicator::from_isize(indicator);
+                indicator
+                    .is_truncated(self.max_len)
+                    .then_some(TruncationDiagnostics { indicator })
+            })
     }
 
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find

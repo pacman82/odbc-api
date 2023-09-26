@@ -6,11 +6,12 @@ use std::{
 
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
+    cursor::TruncationDiagnostics,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer, cursor::TruncationDiagnostics,
+    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
