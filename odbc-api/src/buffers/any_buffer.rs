@@ -4,9 +4,10 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
+    cursor::TruncationDiagnostics,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
-    Bit, DataType, Error, cursor::TruncationDiagnostics,
+    Bit, DataType, Error,
 };
 
 use super::{

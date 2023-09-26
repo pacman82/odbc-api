@@ -1,8 +1,9 @@
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
+    cursor::TruncationDiagnostics,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
-    DataType, Error, cursor::TruncationDiagnostics,
+    DataType, Error,
 };
 
 use super::{ColumnBuffer, Indicator};
@@ -146,7 +147,12 @@ impl<C> TextColumn<C> {
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length)).then_some(TruncationDiagnostics {  })
+            .find_map(|indicator| {
+                let indicator = Indicator::from_isize(indicator);
+                indicator
+                    .is_truncated(max_bin_length)
+                    .then_some(TruncationDiagnostics { indicator })
+            })
     }
 
     /// Changes the maximum string length the buffer can hold. This operation is useful if you find
@@ -336,7 +342,12 @@ where
             .iter()
             .copied()
             .take(num_rows)
-            .any(|indicator| Indicator::from_isize(indicator).is_truncated(max_bin_length)).then_some(TruncationDiagnostics {  })
+            .find_map(|indicator| {
+                let indicator = Indicator::from_isize(indicator);
+                indicator
+                    .is_truncated(max_bin_length)
+                    .then_some(TruncationDiagnostics { indicator })
+            })
     }
 }
 
