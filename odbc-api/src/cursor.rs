@@ -1,7 +1,7 @@
 use odbc_sys::HStmt;
 
 use crate::{
-    buffers::Indicator,
+    buffers::{Indicator, TruncationDiagnostics},
     error::ExtendResult,
     handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
@@ -413,12 +413,6 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
         (**self).has_truncated_values()
     }
-}
-
-/// Additional information in case of writing a value into too short a buffer.
-pub struct TruncationDiagnostics {
-    /// Size indicator reported by the driver indicating the size of the complete value in the DBMS.
-    pub indicator: Indicator,
 }
 
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching
