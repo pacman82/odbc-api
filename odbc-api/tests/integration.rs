@@ -3494,7 +3494,9 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     assert!(matches!(
         cursor.fetch_with_truncation_check(true),
-        Err(Error::TooLargeValueForBuffer)
+        Err(Error::TooLargeValueForBuffer {
+            indicator: Indicator::Length(10)
+        })
     ))
 }
 
