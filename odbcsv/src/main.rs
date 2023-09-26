@@ -2,8 +2,10 @@ use anyhow::{anyhow, bail, Error};
 use clap::{ArgAction, Args, Parser};
 use log::info;
 use odbc_api::{
-    buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection,
-    ConnectionOptions, Cursor, DriverCompleteOption, Environment, IntoParameter,
+    buffers::{Indicator, TextRowSet},
+    escape_attribute_value,
+    handles::OutputStringBuffer,
+    Connection, ConnectionOptions, Cursor, DriverCompleteOption, Environment, IntoParameter,
 };
 use std::{
     fs::{read_to_string, File},
@@ -580,15 +582,32 @@ fn cursor_to_csv(
 
 fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
     match error {
-        odbc_api::Error::TooLargeValueForBuffer => {
+        odbc_api::Error::TooLargeValueForBuffer {
+            indicator: Indicator::Length(required),
+        } => {
             anyhow!(
-                "Truncation of text or binary data detected. Try using larger values of \
-                `--max-str-len` (or do not specify it at all) in order to allow for larger values.
-                You can also use the `--ignore-truncation` flag in order to consider truncations
-                warnings only. This will cause the truncated value to be written into the csv, and
-                execution to be continued normally."
+                "Truncation of text or binary data detected. Try using of \
+                `--max-str-len` larger than {required}. Or do not specify it at all in order to \
+                allow for larger values. You can also use the `--ignore-truncation` flag in order \
+                to consider truncations warnings only. This will cause the truncated value to be \
+                written into the csv, and execution to be continued normally."
             )
         }
+        odbc_api::Error::TooLargeValueForBuffer {
+            indicator: Indicator::NoTotal,
+        } => {
+            anyhow!(
+                "Truncation of text or binary data detected. Try using larger values of \
+                `--max-str-len` (or do not specify it at all) in order to allow for larger values. \
+                You can also use the `--ignore-truncation` flag in order to consider truncations \
+                warnings only. This will cause the truncated value to be written into the csv, and \
+                execution to be continued normally. The ODBC driver has been unable to tell how \
+                large the value that caused the truncation is."
+            )
+        }
+        odbc_api::Error::TooLargeValueForBuffer {
+            indicator: Indicator::Null,
+        } => unreachable!(),
         other => other.into(),
     }
 }

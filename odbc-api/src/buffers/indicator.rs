@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use odbc_sys::{NO_TOTAL, NULL_DATA};
 
 /// Indicates existence and length of a value.
@@ -10,6 +12,16 @@ pub enum Indicator {
     /// Fields exists. Value indicates number of bytes required to store the value. In case of
     /// truncated data, this is the true length of the data, before truncation occurred.
     Length(usize),
+}
+
+impl Display for Indicator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Indicator::Null => write!(f, "Null"),
+            Indicator::NoTotal => write!(f, "No Total"),
+            Indicator::Length(length) => write!(f, "{length}"),
+        }
+    }
 }
 
 impl Indicator {

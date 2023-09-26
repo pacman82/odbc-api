@@ -2,7 +2,10 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult};
+use crate::{
+    buffers::Indicator,
+    handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult},
+};
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]
@@ -118,9 +121,12 @@ pub enum Error {
     },
     #[error(
         "A value (at least one) is too large to be written into the allocated buffer without
-        truncation."
+        truncation. Size in bytes indicated by ODBC driver: {indicator}"
     )]
-    TooLargeValueForBuffer,
+    TooLargeValueForBuffer {
+        /// Length of the complete value in bytes as reported by the ODBC driver.
+        indicator: Indicator,
+    },
 }
 
 impl Error {

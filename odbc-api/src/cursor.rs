@@ -715,28 +715,33 @@ fn error_handling_for_fetch(
     buffer: &impl RowSetBuffer,
     error_for_truncation: bool,
 ) -> Result<bool, Error> {
-    if error_for_truncation
-        && result == SqlResult::SuccessWithInfo(())
-        && buffer.has_truncated_values().is_some()
-    {
-        Err(Error::TooLargeValueForBuffer)
-    } else {
-        let has_row = result
-            .on_success(|| true)
-            .into_result_with(&stmt.as_stmt_ref(), Some(false), None)
-            // Oracle's ODBC driver does not support 64Bit integers. Furthermore, it does not
-            // tell it to the user when binding parameters, but rather now then we fetch
-            // results. The error code returned is `HY004` rather than `HY003` which should
-            // be used to indicate invalid buffer types.
-            .provide_context_for_diagnostic(|record, function| {
-                if record.state == State::INVALID_SQL_DATA_TYPE {
-                    Error::OracleOdbcDriverDoesNotSupport64Bit(record)
-                } else {
-                    Error::Diagnostics { record, function }
-                }
-            })?;
-        Ok(has_row)
+    // Only check for truncation if a) the user indicated that he wants to error instead of just
+    // ignoring it and if there is at least one diagnostic record. ODBC standard requires a
+    // diagnostic record to be there in case of truncation. Sadly we can not rely on this particular
+    // record to be there, as the driver could generate a large amount of diagnostic records,
+    // while we are limited in the amount we can check. The second check serves as an optimization
+    // for the happy path.
+    if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
+        if let Some(TruncationDiagnostics { indicator }) = buffer.has_truncated_values() {
+            return Err(Error::TooLargeValueForBuffer { indicator });
+        }
     }
+
+    let has_row = result
+        .on_success(|| true)
+        .into_result_with(&stmt.as_stmt_ref(), Some(false), None)
+        // Oracle's ODBC driver does not support 64Bit integers. Furthermore, it does not
+        // tell it to the user when binding parameters, but rather now then we fetch
+        // results. The error code returned is `HY004` rather than `HY003` which should
+        // be used to indicate invalid buffer types.
+        .provide_context_for_diagnostic(|record, function| {
+            if record.state == State::INVALID_SQL_DATA_TYPE {
+                Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+            } else {
+                Error::Diagnostics { record, function }
+            }
+        })?;
+    Ok(has_row)
 }
 
 impl<C, B> Drop for BlockCursorPolling<C, B>
