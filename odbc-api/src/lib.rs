@@ -28,7 +28,6 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
-    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     cursor::{
