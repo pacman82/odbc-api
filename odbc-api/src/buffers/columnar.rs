@@ -104,7 +104,7 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&self) -> Option<Indicator> {
+    fn find_truncation(&self) -> Option<Indicator> {
         self.columns
             .iter()
             .find_map(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))

@@ -209,7 +209,7 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&self) -> Option<Indicator> {
+    fn find_truncation(&self) -> Option<Indicator> {
         unimplemented!()
     }
 }
