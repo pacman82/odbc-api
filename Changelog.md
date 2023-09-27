@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0
+
+* Variant `Error::TooLargeValueForBuffer` now has a member `indicator`, indicating the size of the complete value in the DBMS. This has been introduced to help users decide how to pick a maximum string size in bulk fetches, in the presence of large variadic columns.
+
 ## 1.0.2
 
 * Fix: `Cursor::fetch_with_truncation_check` did erroneously report truncation errors for `NULL` fields, if the query also triggered any ODBC diagnostic. This has been fixed in the previous release for variadic binary column buffers but a similar failure had been missed for variadic text columns.
