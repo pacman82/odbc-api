@@ -364,7 +364,7 @@ impl<'c> BinColumnView<'c> {
     }
 }
 
-/// Iterator over a binary column. See [`crate::buffers::AnyColumnView`]
+/// Iterator over a binary column. See [`crate::buffers::BinColumn`]
 #[derive(Debug)]
 pub struct BinColumnIt<'c> {
     pos: usize,

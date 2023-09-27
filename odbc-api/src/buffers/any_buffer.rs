@@ -297,7 +297,7 @@ impl ColumnarAnyBuffer {
 
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions. If not enough memory is
     /// available to allocate the buffers this function fails with
-    /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_description`]
+    /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_descs`]
     /// which would just panic if not enough memory is available for allocation.
     pub fn try_from_descs(
         capacity: usize,
@@ -380,8 +380,8 @@ pub enum AnySlice<'a> {
 }
 
 impl<'a> AnySlice<'a> {
-    /// This method is useful if you expect the variant to be [`AnyColumnView::Text`]. It allows you
-    /// to unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySlice::Text`]. It allows you to
+    /// unwrap the inner column view without explictly matching it.
     pub fn as_text_view(self) -> Option<TextColumnView<'a, u8>> {
         if let Self::Text(view) = self {
             Some(view)
@@ -390,8 +390,8 @@ impl<'a> AnySlice<'a> {
         }
     }
 
-    /// This method is useful if you expect the variant to be [`AnyColumnView::WText`]. It allows
-    /// you to unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySlice::WText`]. It allows you to
+    /// unwrap the inner column view without explictly matching it.
     pub fn as_w_text_view(self) -> Option<TextColumnView<'a, u16>> {
         if let Self::WText(view) = self {
             Some(view)
@@ -400,8 +400,8 @@ impl<'a> AnySlice<'a> {
         }
     }
 
-    /// This method is useful if you expect the variant to be [`AnyColumnView::Binary`]. It allows
-    /// you to unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySlice::Binary`]. It allows you to
+    /// unwrap the inner column view without explictly matching it.
     pub fn as_bin_view(self) -> Option<BinColumnView<'a>> {
         if let Self::Binary(view) = self {
             Some(view)
@@ -410,12 +410,12 @@ impl<'a> AnySlice<'a> {
         }
     }
 
-    /// Extract the array type from an [`AnyColumnView`].
+    /// Extract the array type from an [`AnySlice`].
     pub fn as_slice<I: Item>(self) -> Option<&'a [I]> {
         I::as_slice(self)
     }
 
-    /// Extract the typed nullable buffer from an [`AnyColumnView`].
+    /// Extract the typed nullable buffer from an [`AnySlice`].
     pub fn as_nullable_slice<I: Item>(self) -> Option<NullableSlice<'a, I>> {
         I::as_nullable_slice(self)
     }
@@ -498,8 +498,8 @@ pub enum AnySliceMut<'a> {
 }
 
 impl<'a> AnySliceMut<'a> {
-    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Binary`]. It
-    /// allows to you unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySliceMut::Binary`]. It allows you
+    /// to unwrap the inner column view without explictly matching it.
     pub fn as_bin_view(self) -> Option<BinColumnSliceMut<'a>> {
         if let Self::Binary(view) = self {
             Some(view)
@@ -508,8 +508,8 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::Text`]. It allows
-    /// to you unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySliceMut::Text`]. It allows you
+    /// to unwrap the inner column view without explictly matching it.
     pub fn as_text_view(self) -> Option<TextColumnSliceMut<'a, u8>> {
         if let Self::Text(view) = self {
             Some(view)
@@ -518,8 +518,8 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// This method is useful if you expect the variant to be [`AnyColumnSliceMut::WText`]. It
-    /// allows you to unwrap the inner column view without explictly matching it.
+    /// This method is useful if you expect the variant to be [`AnySliceMut::WText`]. It allows you
+    /// to unwrap the inner column view without explictly matching it.
     pub fn as_w_text_view(self) -> Option<TextColumnSliceMut<'a, u16>> {
         if let Self::WText(view) = self {
             Some(view)
@@ -528,12 +528,12 @@ impl<'a> AnySliceMut<'a> {
         }
     }
 
-    /// Extract the array type from an [`AnyColumnSliceMut`].
+    /// Extract the array type from an [`AnySliceMut`].
     pub fn as_slice<I: Item>(self) -> Option<&'a mut [I]> {
         I::as_slice_mut(self)
     }
 
-    /// Extract the typed nullable buffer from an [`AnyColumnSliceMut`].
+    /// Extract the typed nullable buffer from an [`AnySliceMut`].
     pub fn as_nullable_slice<I: Item>(self) -> Option<NullableSliceMut<'a, I>> {
         I::as_nullable_slice_mut(self)
     }

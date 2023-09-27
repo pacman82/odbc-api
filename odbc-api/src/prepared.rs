@@ -232,7 +232,7 @@ where
     }
 
     /// A [`crate::ColumnarBulkInserter`] which has ownership of the bound array parameter buffers
-    /// and borrows the statement. For most usecases [`Self::into_any_column_inserter`] is what you
+    /// and borrows the statement. For most usecases [`Self::into_column_inserter`] is what you
     /// want to use, yet on some instances you may want to bind new paramater buffers to the same
     /// prepared statement. E.g. to grow the capacity dynamically during insertions with several
     /// chunks. In such use cases you may only want to borrow the prepared statemnt, so it can be

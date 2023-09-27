@@ -56,9 +56,9 @@ unsafe impl VarKind for Text {
     }
 }
 
-/// Intended to be used as a generic argument for [`VariadicCell`] to declare that this buffer is
-/// used to hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate
-/// `[u16]` buffers.
+/// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
+/// hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate `[u16]`
+/// buffers.
 pub struct WideText;
 
 unsafe impl VarKind for WideText {
