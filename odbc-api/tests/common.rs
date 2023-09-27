@@ -2,9 +2,9 @@ use std::iter::repeat;
 
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers,
+    buffers::{self, TruncationDiagnostics},
     handles::{CDataMut, Statement, StatementRef},
-    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer, TruncationDiagnostics,
+    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
