@@ -2,7 +2,7 @@ use std::iter::repeat;
 
 use lazy_static::lazy_static;
 use odbc_api::{
-    buffers::{self, TruncationDiagnostics},
+    buffers::{self, Indicator},
     handles::{CDataMut, Statement, StatementRef},
     Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer,
 };
@@ -209,7 +209,7 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self) -> Option<Indicator> {
         unimplemented!()
     }
 }

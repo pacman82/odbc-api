@@ -3,7 +3,6 @@ use std::{collections::HashSet, ffi::c_void};
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
-    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
@@ -18,8 +17,8 @@ use super::{
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Item, NullableSlice,
-    NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
+    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
+    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
 /// Since buffer shapes are same for all time / timestamps independent of the precision and we do
@@ -634,7 +633,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 
-    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
         match self {
             AnyBuffer::Binary(col) => col.has_truncated_values(num_rows),
             AnyBuffer::Text(col) => col.has_truncated_values(num_rows),

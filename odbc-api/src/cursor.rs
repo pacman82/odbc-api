@@ -1,7 +1,7 @@
 use odbc_sys::HStmt;
 
 use crate::{
-    buffers::{Indicator, TruncationDiagnostics},
+    buffers::Indicator,
     error::ExtendResult,
     handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
@@ -389,8 +389,8 @@ pub unsafe trait RowSetBuffer {
     /// unbound or the statement handle is deleted.
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 
-    /// Check if the buffer contains any truncated values for variadic sized columns.
-    fn has_truncated_values(&self) -> Option<TruncationDiagnostics>;
+    /// Find an indicator larger than the maximum element size of the buffer.
+    fn has_truncated_values(&self) -> Option<Indicator>;
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -410,7 +410,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).bind_colmuns_to_cursor(cursor)
     }
 
-    fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self) -> Option<Indicator> {
         (**self).has_truncated_values()
     }
 }
@@ -722,7 +722,7 @@ fn error_handling_for_fetch(
     // while we are limited in the amount we can check. The second check serves as an optimization
     // for the happy path.
     if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
-        if let Some(TruncationDiagnostics { indicator }) = buffer.has_truncated_values() {
+        if let Some(indicator) = buffer.has_truncated_values() {
             return Err(Error::TooLargeValueForBuffer { indicator });
         }
     }
