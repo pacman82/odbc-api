@@ -5,7 +5,6 @@ use std::{
 };
 
 use crate::{
-    buffers::TruncationDiagnostics,
     columnar_bulk_inserter::BoundInputSlice,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
@@ -105,7 +104,7 @@ where
         Ok(())
     }
 
-    fn has_truncated_values(&self) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self) -> Option<Indicator> {
         self.columns
             .iter()
             .find_map(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
@@ -161,7 +160,7 @@ pub unsafe trait ColumnBuffer: CDataMut {
     /// After fetching data we may want to know if any value has been truncated due to the buffer
     /// not being able to hold elements of that size. This method checks the indicator buffer
     /// element wise.
-    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics>;
+    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator>;
 }
 
 unsafe impl<T> ColumnBuffer for WithDataType<T>
@@ -182,7 +181,7 @@ where
         self.value.capacity()
     }
 
-    fn has_truncated_values(&self, num_rows: usize) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
         self.value.has_truncated_values(num_rows)
     }
 }
@@ -425,7 +424,7 @@ where
         self.len()
     }
 
-    fn has_truncated_values(&self, _num_rows: usize) -> Option<TruncationDiagnostics> {
+    fn has_truncated_values(&self, _num_rows: usize) -> Option<Indicator> {
         None
     }
 }
