@@ -426,6 +426,7 @@ impl<'c> Connection<'c> {
     /// able to perform operations in parallel.
     ///
     /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
+    #[deprecated(note="No longer required. Connections are now Send")]
     pub unsafe fn promote_to_send(self) -> force_send_sync::Send<Self> {
         force_send_sync::Send::new(self)
     }

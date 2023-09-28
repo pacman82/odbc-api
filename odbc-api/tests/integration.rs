@@ -1836,8 +1836,6 @@ fn send_connection(profile: &Profile) {
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (1),(2),(3)");
     conn.execute(&insert_sql, ()).unwrap();
 
-    let conn = unsafe { conn.promote_to_send() };
-
     let actual = thread::scope(|s| {
         let handle = s.spawn(|| move || table.content_as_string(&conn));
         handle.join().unwrap()()

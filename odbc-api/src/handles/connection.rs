@@ -59,6 +59,17 @@ impl<'c> Drop for Connection<'c> {
     }
 }
 
+/// According to the ODBC documentation this is safe. See: 
+/// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
+/// 
+/// In addition to that, this has not caused trouble in a while. So we mark sending connections to
+/// other threads as safe. Reading through the documentation, one might get the impression that
+/// Connections are also `Sync`. This could be theoretically true on the level of the handle, but at
+/// the latest once the interior mutability due to error handling comes in to play, higher level
+/// abstraction have to content themselves with `Send`. This is currently how far my trust with most
+/// ODBC drivers.
+unsafe impl<'c> Send for Connection<'c> {}
+
 impl<'c> Connection<'c> {
     /// # Safety
     ///
