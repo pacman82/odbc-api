@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+It is now better possible to use `odbc-api` with multithreading in completly safe code.
+
+* `Connection` is now `Send`.
+* `StatementConnection` is now `Send`.
+
+According to the standard this is guaranteed to be safe. By now this has also worked in practice long enough and with enough different drivers, that this can be considered safe, not only by the ODBC standard, but also in practice.
+
 ## 2.0.0
 
 * Variant `Error::TooLargeValueForBuffer` now has a member `indicator`, indicating the size of the complete value in the DBMS. This has been introduced to help users decide how to pick a maximum string size in bulk fetches, in the presence of large variadic columns.
