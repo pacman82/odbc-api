@@ -541,6 +541,13 @@ where
     }
 }
 
+impl<C,B> BlockCursor<C, B> where B: RowSetBuffer, C: AsStatementRef {
+    /// Maximum amount of rows fetched from the database in the next call to fetch.
+    pub fn row_array_size(&self) -> usize {
+        self.buffer.row_array_size()
+    }
+}
+
 impl<C, B> Drop for BlockCursor<C, B>
 where
     C: AsStatementRef,

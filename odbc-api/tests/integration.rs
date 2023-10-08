@@ -3880,6 +3880,30 @@ fn cursor_get_text_from_text(profile: &Profile) {
     assert_eq!("€".repeat(300), actual);
 }
 
+/// If we want to use two buffers alternating to fetch data (like in the concurrent use case in
+/// the arrow-odbc downstream crate) we may want to generate a second row set buffer from an
+/// existing one. For this it is useful if we can infer the capacity of the block cursor, without
+/// unbinding it first.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_arrary_size_from_block_cursor(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    
+    // When
+    let capacity_used_to_create_buffer = 42;
+    let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let buffer = ColumnarAnyBuffer::from_descs(capacity_used_to_create_buffer, [BufferDesc::I32 { nullable: true }]);
+    let block_cursor = cursor.bind_buffer(buffer).unwrap();
+    let capacity_reported_by_block_cursor = block_cursor.row_array_size();
+
+    // Then
+    assert_eq!(capacity_used_to_create_buffer, capacity_reported_by_block_cursor);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.0
+
+* Adds `BlockCursor::row_array_size`, in order to infer maximum batch size without unbinding the row set buffer first. This allows downstream `arrow-odbc` for a faster implementation then creating a double buffered concurrent stream of batches directly from a block cursor.
+
 ## 2.1.0
 
 It is now better possible to use `odbc-api` with multithreading in completly safe code.
