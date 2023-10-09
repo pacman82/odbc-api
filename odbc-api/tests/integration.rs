@@ -3881,12 +3881,17 @@ fn cursor_get_text_from_text(profile: &Profile) {
 }
 
 // This triggers a bug in the ODBC driver at least version 17 and 18
+//
+// In addition this bug does not seem to occur then talking to an MSSQL server hosted in a windows
+// Enivornment. In our current CI test suite, if the client runs on windows so does the server, so
+// we do not execute this test on windows.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[should_panic(
     expected = "SQLGetData has been unable to fetch all data, even though the capacity of the \
     target buffer has been adapted to hold the entire payload based on the indicator of the last \
     part. You may consider filing a bug with the ODBC driver you are using."
 )]
+#[cfg(not(target_os="windows"))]
 fn cursor_get_text_from_text_mssql(profile: &Profile) {
     // Given a text column with a string larger than 255 characters. It also must contain non ASCII
     // characters.
