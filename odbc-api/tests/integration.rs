@@ -3880,6 +3880,38 @@ fn cursor_get_text_from_text(profile: &Profile) {
     assert_eq!("€".repeat(300), actual);
 }
 
+// This triggers a bug in the ODBC driver at least version 17 and 18
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[should_panic(
+    expected = "SQLGetData has been unable to fetch all data, even though the capacity of the \
+    target buffer has been adapted to hold the entire payload based on the indicator of the last \
+    part. You may consider filing a bug with the ODBC driver you are using."
+)]
+fn cursor_get_text_from_text_mssql(profile: &Profile) {
+    // Given a text column with a string larger than 255 characters. It also must contain non ASCII
+    // characters.
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["TEXT"]).unwrap();
+    // For this test we want to run into a scenario, there we can not fetch everything in the first
+    // roundtrip, so we choose a text larger than 256 characters.
+    let text = "€".repeat(300);
+    let insert_sql = table.sql_insert();
+    conn.execute(&insert_sql, &text.into_parameter()).unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let mut row = cursor.next_row().unwrap().unwrap();
+    let mut buffer = Vec::new();
+    row.get_text(1, &mut buffer).unwrap();
+
+    // Microsoft driver is buggy in this situation, as it does not use the indicator to report the
+    // true size of the string or the `NO_TOTAL`. We can at least test that a panic occurs and not
+    // some endless loop or buffer overflow.
+}
+
 /// If we want to use two buffers alternating to fetch data (like in the concurrent use case in
 /// the arrow-odbc downstream crate) we may want to generate a second row set buffer from an
 /// existing one. For this it is useful if we can infer the capacity of the block cursor, without
@@ -3892,16 +3924,25 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
-    
+
     // When
     let capacity_used_to_create_buffer = 42;
-    let cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
-    let buffer = ColumnarAnyBuffer::from_descs(capacity_used_to_create_buffer, [BufferDesc::I32 { nullable: true }]);
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let buffer = ColumnarAnyBuffer::from_descs(
+        capacity_used_to_create_buffer,
+        [BufferDesc::I32 { nullable: true }],
+    );
     let block_cursor = cursor.bind_buffer(buffer).unwrap();
     let capacity_reported_by_block_cursor = block_cursor.row_array_size();
 
     // Then
-    assert_eq!(capacity_used_to_create_buffer, capacity_reported_by_block_cursor);
+    assert_eq!(
+        capacity_used_to_create_buffer,
+        capacity_reported_by_block_cursor
+    );
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
