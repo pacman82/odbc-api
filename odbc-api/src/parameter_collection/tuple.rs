@@ -79,6 +79,7 @@ where
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
+        self.assert_completness();
         stmt.bind_input_parameter(parameter_number, *self)
             .into_result(stmt)
     }

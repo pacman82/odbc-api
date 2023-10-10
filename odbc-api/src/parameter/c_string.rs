@@ -37,7 +37,11 @@ impl HasDataType for CStr {
         }
     }
 }
-unsafe impl CElement for CStr {}
+unsafe impl CElement for CStr {
+    /// `CStr` is terminated by zero. Indicator can therefore never indicate a truncated value and
+    /// is always complete.
+    fn assert_completness(&self) {}
+}
 impl InputParameter for CStr {}
 
 unsafe impl CData for CString {
@@ -66,4 +70,8 @@ impl HasDataType for CString {
     }
 }
 
-unsafe impl CElement for CString {}
+unsafe impl CElement for CString {
+    /// `CString`` is terminated by zero. Indicator can therefore never indicate a truncated value
+    /// and is always complete.
+    fn assert_completness(&self) {}
+}

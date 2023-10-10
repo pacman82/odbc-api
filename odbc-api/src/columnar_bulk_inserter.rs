@@ -20,6 +20,7 @@ pub struct ColumnarBulkInserter<S, C> {
     statement: S,
     parameter_set_size: usize,
     capacity: usize,
+    /// We maintain the invariant that none of these buffers is truncated.
     parameters: Vec<C>,
 }
 
@@ -199,9 +200,10 @@ where
 ///
 /// # Safety
 ///
-/// If any operations have been performed which would invalidate the pointers bound to the
-/// statement, the slice must use the statement handle to rebind the column, at the end of its
-/// lifetime (at the latest).
+/// * If any operations have been performed which would invalidate the pointers bound to the
+///   statement, the slice must use the statement handle to rebind the column, at the end of its
+///   lifetime (at the latest).
+/// * All values must be complete. I.e. none of the values must be truncated.
 pub unsafe trait BoundInputSlice<'a> {
     /// Intended to allow for modifying buffer contents, while leaving the bound parameter buffers
     /// valid.
@@ -212,8 +214,9 @@ pub unsafe trait BoundInputSlice<'a> {
     ///
     /// # Safety
     ///
-    /// The statement must be the statment the column buffer is bound to. The index must be the
-    /// parameter index it is bound at.
+    /// * The statement must be the statment the column buffer is bound to. The index must be the
+    ///   parameter index it is bound at.
+    /// * All values must be complete. I.e. none of the values must be truncated.
     unsafe fn as_view_mut(
         &'a mut self,
         parameter_index: u16,

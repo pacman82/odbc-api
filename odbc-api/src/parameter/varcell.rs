@@ -298,16 +298,18 @@ where
     /// Length of the (potentially truncated) value within the cell in characters. Excluding
     /// terminating zero.
     pub fn len_in_bytes(&self) -> Option<usize> {
-        let max_len_in_bytes =
+        // The maximum length is one larger for untruncated values without terminating zero. E.g.
+        // if instantiated from string literal.
+        let max_trunc_len_in_bytes =
             (self.buffer.borrow().len() - K::TERMINATING_ZEROES) * size_of::<K::Element>();
         match self.indicator() {
             Indicator::Null => None,
-            Indicator::NoTotal => Some(max_len_in_bytes),
+            Indicator::NoTotal => Some(max_trunc_len_in_bytes),
             Indicator::Length(len) => {
                 if self.is_complete() {
                     Some(len)
                 } else {
-                    Some(max_len_in_bytes)
+                    Some(max_trunc_len_in_bytes)
                 }
             }
         }
@@ -316,6 +318,21 @@ where
     /// The payload in bytes the buffer can hold including terminating zeroes
     pub fn capacity_in_bytes(&self) -> usize {
         size_of_val(self.buffer.borrow())
+    }
+
+    /// Method backing the implementation of the CElement trait
+    fn impl_assert_completness(&self) {
+        // There is one edge case in that this is different from `is_complete``, and this is with
+        // regards to values of which the payload ends with a terminating zero. All we care about
+        // is that the buffer we bind as input is valid. Not necessarily if the value in it is
+        // complete.
+        let slice = self.buffer.borrow();
+        // Terminating zero intenionally not accounted for. Since `VarCell` may hold values without
+        // it, if constructed from string literals.
+        let max_len_bytes = size_of_val(slice);
+        if self.indicator().is_truncated(max_len_bytes) {
+            panic!("Truncated values must not be used be bound as input parameters.")
+        }
     }
 }
 
@@ -532,15 +549,31 @@ where
 // because erroneous but still safe implementation of these traits could cause invalid memory access
 // down the road. E.g. think about returning a different slice with a different length for borrow
 // and borrow_mut.
-unsafe impl<K: VarKind> CElement for VarCell<&'_ [K::Element], K> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ [K::Element], K> {
+    fn assert_completness(&self) {
+        self.impl_assert_completness()
+    }
+}
 
-unsafe impl<const LENGTH: usize, K: VarKind> CElement for VarCell<[K::Element; LENGTH], K> {}
+unsafe impl<const LENGTH: usize, K: VarKind> CElement for VarCell<[K::Element; LENGTH], K> {
+    fn assert_completness(&self) {
+        self.impl_assert_completness()
+    }
+}
 unsafe impl<const LENGTH: usize, K: VarKind> OutputParameter for VarCell<[K::Element; LENGTH], K> {}
 
-unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [K::Element], K> {}
+unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [K::Element], K> {
+    fn assert_completness(&self) {
+        todo!()
+    }
+}
 unsafe impl<K: VarKind> OutputParameter for VarCell<&'_ mut [K::Element], K> {}
 
-unsafe impl<K: VarKind> CElement for VarCell<Box<[K::Element]>, K> {}
+unsafe impl<K: VarKind> CElement for VarCell<Box<[K::Element]>, K> {
+    fn assert_completness(&self) {
+        self.impl_assert_completness()
+    }
+}
 unsafe impl<K: VarKind> OutputParameter for VarCell<Box<[K::Element]>, K> {}
 
 #[cfg(test)]

@@ -82,7 +82,13 @@ where
     }
 }
 
-unsafe impl<T> CElement for Nullable<T> where T: Pod {}
+unsafe impl<T> CElement for Nullable<T>
+where
+    T: Pod,
+{
+    /// Does nothing. A [`Pod`] is fixed size and therfore always complete.
+    fn assert_completness(&self) {}
+}
 
 unsafe impl<T> CDataMut for Nullable<T>
 where

@@ -369,23 +369,23 @@ use crate::{
 /// the buffer, care must be taken to prevent out of bounds access in case the implementation also
 /// is used as an output parameter, and contains truncated values (i.e. the indicator is longer than
 /// the buffer and the value within).
-pub unsafe trait CElement: CData {}
-
-/// Can be used to fill in a field value indicated by a placeholder (`?`) then executing an SQL
-/// statement.
-pub trait InputParameter: HasDataType + CElement {
+pub unsafe trait CElement: CData {
     /// Must panic if the parameter is not complete. I.e. the indicator of a variable length
-    /// parameter indicates a value larger than what is present in the value buffer. For array
-    /// parameters every value must be complete.
-    /// 
+    /// parameter indicates a value larger than what is present in the value buffer.
+    ///
     /// This is used to prevent using truncacted values as input buffers, which could cause
     /// inserting invalid memory with drivers which just copy values for the length of the indicator
     /// buffer without checking the length of the target buffer first. The ODBC standard is
     /// inconclusive wether the driver has to check for this or not. So we need to check this. We
     /// can not manifest this as an invariant expressed by a type for all cases, due to the
     /// existence of input/output parameters.
-    fn assert_completness(&self) { todo!() }
+    fn assert_completness(&self);
 }
+
+/// Can be used to fill in a field value indicated by a placeholder (`?`) then executing an SQL
+/// statement.
+pub trait InputParameter: HasDataType + CElement {}
+
 impl<T> InputParameter for T where T: CElement + HasDataType {}
 
 /// # Safety
@@ -536,7 +536,14 @@ impl<T> HasDataType for WithDataType<T> {
     }
 }
 
-unsafe impl<T> CElement for WithDataType<T> where T: CElement {}
+unsafe impl<T> CElement for WithDataType<T>
+where
+    T: CElement,
+{
+    fn assert_completness(&self) {
+        todo!()
+    }
+}
 unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
 
 // Allow for input parameters whose type is only known at runtime.
@@ -563,4 +570,8 @@ impl HasDataType for Box<dyn InputParameter> {
         self.as_ref().data_type()
     }
 }
-unsafe impl CElement for Box<dyn InputParameter> {}
+unsafe impl CElement for Box<dyn InputParameter> {
+    fn assert_completness(&self) {
+        self.as_ref().assert_completness()
+    }
+}

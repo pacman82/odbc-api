@@ -21,7 +21,7 @@ pub unsafe trait InputParameterCollection {
     ///
     /// On execution a statement may want to read/write to the bound paramaters. It is the callers
     /// responsibility that by then the buffers are either unbound from the statement or still
-    /// valild.
+    /// valid.
     unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error>;
 }
 
@@ -47,6 +47,7 @@ where
     }
 
     unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error> {
+        self.assert_completness();
         stmt.bind_input_parameter(1, self).into_result(stmt)
     }
 }
@@ -61,6 +62,7 @@ where
 
     unsafe fn bind_input_parameters_to(&self, stmt: &mut impl Statement) -> Result<(), Error> {
         for (index, parameter) in self.iter().enumerate() {
+            parameter.assert_completness();
             stmt.bind_input_parameter(index as u16 + 1, parameter)
                 .into_result(stmt)?;
         }
