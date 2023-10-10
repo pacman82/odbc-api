@@ -564,7 +564,7 @@ unsafe impl<const LENGTH: usize, K: VarKind> OutputParameter for VarCell<[K::Ele
 
 unsafe impl<K: VarKind> CElement for VarCell<&'_ mut [K::Element], K> {
     fn assert_completness(&self) {
-        todo!()
+        self.impl_assert_completness()
     }
 }
 unsafe impl<K: VarKind> OutputParameter for VarCell<&'_ mut [K::Element], K> {}

@@ -13,10 +13,10 @@ use odbc_api::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
     handles::{OutputStringBuffer, ParameterDescription, Statement},
-    parameter::InputParameter,
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
+    parameter::{InputParameter, VarCharSliceMut},
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
     IntoParameter, Narrow, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
 };
@@ -938,9 +938,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
-    let prepared = conn
-        .prepare(&table.sql_insert())
-        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let parameter_buffers = vec![WithDataType {
         value: TextColumn::try_new(4, 5).unwrap(),
         data_type: DataType::Integer,
@@ -967,7 +965,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn insert_text_as_sql_integer(profile: &Profile) {
+fn insert_str_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
     let insert_sql = table.sql_insert();
@@ -981,6 +979,25 @@ fn insert_text_as_sql_integer(profile: &Profile) {
     // Bind buffer and insert values.
     let actual = table.content_as_string(&conn);
     let expected = "42";
+    assert_eq!(expected, actual);
+}
+
+/// Frankly more about testing edge cases in the API than a real use case.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn var_char_slice_mut_as_input_parameter(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+
+    let mut buffer = *b"Hello, World!";
+    let indicator = Indicator::Length(buffer.len());
+    let param = VarCharSliceMut::from_buffer(&mut buffer, indicator);
+    conn.execute(&table.sql_insert(), &param).unwrap();
+
+    let actual = table.content_as_string(&conn);
+    let expected = "Hello, World!";
     assert_eq!(expected, actual);
 }
 
