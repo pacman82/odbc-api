@@ -2641,7 +2641,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
 
 /// Verify that the driver does not insert from invalid memory if inserting a truncated value
 #[test_case(MSSQL; "Microsoft SQL Server")]
-//#[test_case(MARIADB => inconclusive; "Maria DB")] Expected fail. Inconclusive seems not to work.
+#[test_case(MARIADB => inconclusive; "Maria DB")] //Expected fail.
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn insert_truncated_value(profile: &Profile) {
