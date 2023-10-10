@@ -971,6 +971,27 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     assert_eq!(expected, actual);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn insert_text_as_sql_integer(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let insert_sql = table.sql_insert();
+
+    let parameter = WithDataType {
+        value: "42".into_parameter(),
+        data_type: DataType::Integer,
+    };
+    conn.execute(&insert_sql, &parameter).unwrap();
+
+    // Bind buffer and insert values.
+    let actual = table.content_as_string(&conn);
+    let expected = "42";
+    assert_eq!(expected, actual);
+}
+
 /// Inserts a Vector of integers using a generic implementation
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
