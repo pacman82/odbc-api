@@ -936,13 +936,10 @@ fn columnar_insert_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
-    // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
-        .unwrap();
+    let (conn, table) = profile.given(&table_name, &["INTEGER"]).unwrap();
 
     let prepared = conn
-        .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .prepare(&table.sql_insert())
         .unwrap();
     let parameter_buffers = vec![WithDataType {
         value: TextColumn::try_new(4, 5).unwrap(),
@@ -957,16 +954,11 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     writer.set_cell(1, Some("2".as_bytes()));
     writer.set_cell(2, None);
     writer.set_cell(3, Some("4".as_bytes()));
-
     // Bind buffer and insert values.
     prebound.execute().unwrap();
 
     // Query values and compare with expectation
-    let cursor = conn
-        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), ())
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table.content_as_string(&conn);
     let expected = "1\n2\nNULL\n4";
     assert_eq!(expected, actual);
 }
