@@ -984,20 +984,37 @@ fn insert_str_as_sql_integer(profile: &Profile) {
 
 /// Frankly more about testing edge cases in the API than a real use case.
 #[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn var_char_slice_mut_as_input_parameter(profile: &Profile) {
-    let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+fn var_char_slice_mut_as_input_output_parameter(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+    conn.execute(
+        r#"
+        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestInOutText')  
+        DROP PROCEDURE TestInOutText  
+        "#,
+        (),
+    )
+    .unwrap();
 
-    let mut buffer = *b"Hello, World!";
+    conn.execute(
+        r#"CREATE PROCEDURE TestInOutText   
+        @OutParm VARCHAR(15) OUTPUT   
+        AS
+        SELECT @OutParm = 'Hello, World!'  
+        RETURN 99  
+        "#,
+        (),
+    )
+    .unwrap();
+
+    let mut buffer = [b'a'; 15];
     let indicator = Indicator::Length(buffer.len());
-    let param = VarCharSliceMut::from_buffer(&mut buffer, indicator);
-    conn.execute(&table.sql_insert(), &param).unwrap();
+    let mut param = VarCharSliceMut::from_buffer(&mut buffer, indicator);
+    // This is akward! Maybe we can do something so we do not need to wrap it in (InOut, ) in order
+    // to bind it as an input output parameter.
+    conn.execute("{call TestInOutText(?)}", (InOut(&mut param),)).unwrap();
 
-    let actual = table.content_as_string(&conn);
-    let expected = "Hello, World!";
+    let actual = str::from_utf8(&buffer).unwrap();
+    let expected = "Hello, World!\0a";
     assert_eq!(expected, actual);
 }
 
