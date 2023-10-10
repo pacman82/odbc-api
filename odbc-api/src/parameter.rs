@@ -541,7 +541,7 @@ where
     T: CElement,
 {
     fn assert_completness(&self) {
-        todo!()
+        self.value.assert_completness()
     }
 }
 unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
