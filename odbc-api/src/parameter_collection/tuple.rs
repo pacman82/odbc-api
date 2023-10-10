@@ -88,13 +88,14 @@ where
 /// Bind mutable references as input/output parameter.
 unsafe impl<'a, T> ParameterTupleElement for InOut<'a, T>
 where
-    T: OutputParameter,
+    T: OutputParameter + InputParameter,
 {
     unsafe fn bind_to(
         &mut self,
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
+        self.0.assert_completness();
         stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
             .into_result(stmt)
     }
