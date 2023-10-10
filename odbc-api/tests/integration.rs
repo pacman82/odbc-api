@@ -2639,11 +2639,12 @@ fn use_truncated_output_as_input(profile: &Profile) {
     assert_eq!("Hello, World!\nHell", actual);
 }
 
-/// Verify that the driver does not insert from invalid memory if inserting a truncated value
+/// Assert that we prevent binding `VarCharSlice` buffers with truncated values as input parameters
 #[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB => inconclusive; "Maria DB")] //Expected fail.
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+#[should_panic(expected = "Truncated values must not be used be bound as input parameters.")]
 fn insert_truncated_value(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
@@ -2670,10 +2671,12 @@ fn insert_truncated_value(profile: &Profile) {
     }
 }
 
+/// Assert that we prevent binding `VarCharArray` buffers with truncated values as input parameters
 #[test_case(MSSQL; "Microsoft SQL Server")]
-// #[test_case(MARIADB => inconclusive; "Maria DB expected fail")] Expected failure.
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+#[should_panic(expected = "Truncated values must not be used be bound as input parameters.")]
 fn insert_truncated_var_char_array(profile: &Profile) {
     let table_name = table_name!();
 
@@ -2683,25 +2686,7 @@ fn insert_truncated_var_char_array(profile: &Profile) {
     let memory = "Hello, World!";
     // Truncated value. Buffer can only hold 'Hello'
     let parameter = VarCharArray::<5>::new(memory.as_bytes());
-    let result = conn.execute(&table.sql_insert(), &parameter);
-
-    match result {
-        Err(e) => {
-            // Failing is fine, especially with an error indicating truncation.
-            eprintln!("{e}")
-        }
-        Ok(None) => {
-            // If this was successful we should make sure we did not insert 'INVALID MEMORY' into
-            // the database. The better database drivers do not do this, and this could be seen as
-            // wrong, but we are only interested in unsafe behaviour.
-            let actual = table.content_as_string(&conn);
-            eprintln!("{actual}");
-            // SQLite just emmits 'Hell' instead of 'Hello'. It's not beautiful, but it is not
-            // invalid memory access either.
-            assert!(matches!(actual.as_str(), "Hello" | "Hell"))
-        }
-        _ => panic!("Unexpected cursor"),
-    }
+    let _ = conn.execute(&table.sql_insert(), &parameter);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -3891,7 +3876,7 @@ fn cursor_get_text_from_text(profile: &Profile) {
     target buffer has been adapted to hold the entire payload based on the indicator of the last \
     part. You may consider filing a bug with the ODBC driver you are using."
 )]
-#[cfg(not(target_os="windows"))]
+#[cfg(not(target_os = "windows"))]
 fn cursor_get_text_from_text_mssql(profile: &Profile) {
     // Given a text column with a string larger than 255 characters. It also must contain non ASCII
     // characters.

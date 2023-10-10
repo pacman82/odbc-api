@@ -88,7 +88,10 @@ macro_rules! impl_pod {
             }
         }
 
-        unsafe impl CElement for $t {}
+        unsafe impl CElement for $t {
+            /// Fixed sized types are always complete
+            fn assert_completness(&self) {}
+        }
 
         unsafe impl Pod for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;

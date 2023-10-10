@@ -59,9 +59,9 @@ impl<'c> Drop for Connection<'c> {
     }
 }
 
-/// According to the ODBC documentation this is safe. See: 
+/// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
-/// 
+///
 /// In addition to that, this has not caused trouble in a while. So we mark sending connections to
 /// other threads as safe. Reading through the documentation, one might get the impression that
 /// Connections are also `Sync`. This could be theoretically true on the level of the handle, but at

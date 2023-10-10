@@ -493,6 +493,7 @@ pub trait Statement: AsHandle {
     ///
     /// * It is up to the caller to ensure the lifetimes of the bound parameters.
     /// * Calling this function may influence other statements that share the APD.
+    /// * `parameter` must be complete, i.e not be truncated.
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,

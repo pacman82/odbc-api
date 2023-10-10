@@ -32,9 +32,9 @@ impl<'s> Drop for StatementConnection<'s> {
     }
 }
 
-/// According to the ODBC documentation this is safe. See: 
+/// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
-/// 
+///
 /// Operations to a statement imply that interior state of the connection might be mutated,
 /// depending on the implementation detail of the ODBC driver. According to the ODBC documentation
 /// this could always be considered save, since Connection handles are basically described as
@@ -49,7 +49,7 @@ impl<'s> Drop for StatementConnection<'s> {
 /// perform operations in parallel.
 ///
 /// See: <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
-/// 
+///
 /// `StatementConnection` however also owns the connection exclusively. Since connections are `Send`
 /// it is reasonable to assume this would work even if implementers of the ODBC driver do not care
 /// in particular about thread safety.
