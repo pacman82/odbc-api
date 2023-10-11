@@ -1011,7 +1011,8 @@ fn var_char_slice_mut_as_input_output_parameter(profile: &Profile) {
     let mut param = VarCharSliceMut::from_buffer(&mut buffer, indicator);
     // This is akward! Maybe we can do something so we do not need to wrap it in (InOut, ) in order
     // to bind it as an input output parameter.
-    conn.execute("{call TestInOutText(?)}", (InOut(&mut param),)).unwrap();
+    conn.execute("{call TestInOutText(?)}", (InOut(&mut param),))
+        .unwrap();
 
     let actual = str::from_utf8(&buffer).unwrap();
     let expected = "Hello, World!\0a";
@@ -1677,20 +1678,20 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 }
 
 #[test_case(MSSQL, &[
-    ParameterDescription {data_type: DataType::Integer, nullable: Nullability::Nullable},
+    ParameterDescription {data_type: DataType::Integer, nullability: Nullability::Nullable},
     ParameterDescription {
         data_type: DataType::Varchar { length: 13 },
-        nullable: Nullability::Nullable
+        nullability: Nullability::Nullable
     }
 ]; "Microsoft SQL Server")]
 #[test_case(MARIADB, &[
     ParameterDescription {
         data_type: DataType::Varchar { length: 25165824 },
-        nullable: Nullability::Unknown
+        nullability: Nullability::Unknown
     },
     ParameterDescription {
         data_type: DataType::Varchar { length: 25165824 },
-        nullable: Nullability::Unknown
+        nullability: Nullability::Unknown
     }
 ]; "Maria DB")]
 // PostgrelSQL and SQLite 3 expose different behaviours with various platforms and drivers

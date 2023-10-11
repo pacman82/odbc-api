@@ -740,7 +740,7 @@ pub trait Statement: AsHandle {
         .into_sql_result("SQLDescribeParam")
         .on_success(|| ParameterDescription {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
-            nullable: Nullability::new(nullable),
+            nullability: Nullability::new(nullable),
         })
     }
 
@@ -932,9 +932,8 @@ impl<'o> Statement for StatementImpl<'o> {
 /// by [`crate::Prepared::describe_param`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ParameterDescription {
-    // Todo: rename to nullability.
     /// Indicates whether the parameter may be NULL not.
-    pub nullable: Nullability,
+    pub nullability: Nullability,
     /// The SQL Type associated with that parameter.
     pub data_type: DataType,
 }
