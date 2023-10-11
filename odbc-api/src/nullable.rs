@@ -86,7 +86,7 @@ unsafe impl<T> CElement for Nullable<T>
 where
     T: Pod,
 {
-    /// Does nothing. A [`Pod`] is fixed size and therfore always complete.
+    /// Does nothing. `T` is fixed size and therfore always complete.
     fn assert_completness(&self) {}
 }
 

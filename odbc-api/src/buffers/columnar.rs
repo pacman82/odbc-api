@@ -22,7 +22,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     ///
     /// You do not want to call this constructor directly unless you want to provide your own buffer
     /// implentation. Most users of this crate may want to use the constructors like
-    /// [`crate::buffers::ColumnarAnyBuffer::from_description`] or
+    /// [`crate::buffers::ColumnarAnyBuffer::from_descs`] or
     /// [`crate::buffers::TextRowSet::from_max_str_lens`] instead.
     pub fn new(columns: Vec<(u16, C)>) -> Self {
         // Assert capacity
