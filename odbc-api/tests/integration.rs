@@ -3984,6 +3984,37 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
+fn fetch_decimal_as_numeric_struct(profile: &Profile) {
+    // Given a cursor over a result set with a decimal in its first column
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["DECIMAL(5,3)"]).unwrap();
+    conn.execute(&table.sql_insert(), &(25.212).into_parameter())
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    let mut numeric = odbc_sys::Numeric { precision: 0, scale: 0, sign: 0, val: Default::default() };
+    unsafe {
+        // Bind numeric column
+        let mut stmt = cursor.into_stmt();
+        stmt.bind_col(1, &mut numeric);
+
+        stmt.fetch();
+
+        stmt.close_cursor();
+    }
+
+    // Then
+    assert_eq!(1, numeric.sign);
+    // assert_eq!(b'|', numeric.val[0]);
+    // assert_eq!(b'b', numeric.val[1]);
+    // assert_eq!(b'0', numeric.val[2]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
