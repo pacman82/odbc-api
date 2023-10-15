@@ -4001,6 +4001,7 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
         .unwrap();
 
     // When
+    // Binding numeric withouth this wrapper would bind it without the App Row Descriptor
     struct BindNumericAsAppRowDesc(Numeric);
     let mut target = BindNumericAsAppRowDesc(Numeric {
         precision: 0,
