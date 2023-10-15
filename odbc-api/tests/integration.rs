@@ -1,8 +1,7 @@
 mod common;
 
-use odbc_sys::{SqlDataType, Timestamp};
 use stdext::function_name;
-use sys::NULL_DATA;
+use sys::{CDataType, Numeric, Pointer, SqlDataType, Timestamp, NULL_DATA};
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
@@ -12,7 +11,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{OutputStringBuffer, ParameterDescription, Statement},
+    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
@@ -23,7 +22,9 @@ use odbc_api::{
 use std::{
     ffi::CString,
     io::{self, Write},
-    iter, str, thread,
+    iter,
+    ptr::null_mut,
+    str, thread,
     time::Duration,
 };
 
@@ -3984,7 +3985,11 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
-fn fetch_decimal_as_numeric_struct(profile: &Profile) {
+
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] SQLite just returns a zeroed out numeric struct
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     // Given a cursor over a result set with a decimal in its first column
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["DECIMAL(5,3)"]).unwrap();
@@ -3996,22 +4001,77 @@ fn fetch_decimal_as_numeric_struct(profile: &Profile) {
         .unwrap();
 
     // When
-    let mut numeric = odbc_sys::Numeric { precision: 0, scale: 0, sign: 0, val: Default::default() };
+    struct BindNumericAsAppRowDesc(Numeric);
+    let mut target = BindNumericAsAppRowDesc(Numeric {
+        precision: 0,
+        scale: 0,
+        sign: 0,
+        val: Default::default(),
+    });
+    unsafe impl CData for BindNumericAsAppRowDesc {
+        fn cdata_type(&self) -> CDataType {
+            CDataType::Ard
+        }
+        fn indicator_ptr(&self) -> *const isize {
+            std::ptr::null()
+        }
+        fn value_ptr(&self) -> *const std::ffi::c_void {
+            &self.0 as *const Numeric as *const std::ffi::c_void
+        }
+        fn buffer_length(&self) -> isize {
+            0
+        }
+    }
+    unsafe impl CDataMut for BindNumericAsAppRowDesc {
+        fn mut_indicator_ptr(&mut self) -> *mut isize {
+            null_mut()
+        }
+        fn mut_value_ptr(&mut self) -> Pointer {
+            &mut self.0 as *mut Numeric as *mut std::ffi::c_void
+        }
+    }
     unsafe {
-        // Bind numeric column
         let mut stmt = cursor.into_stmt();
-        stmt.bind_col(1, &mut numeric);
+
+        let mut hdesc: odbc_sys::HDesc = null_mut();
+        let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
+        let _ = odbc_sys::SQLGetStmtAttr(
+            stmt.as_sys(),
+            odbc_sys::StatementAttribute::AppRowDesc,
+            hdesc_out,
+            0,
+            null_mut(),
+        );
+
+        // Setting Field descriptors always seems to yield structs field with zeroes
+        let _ = odbc_sys::SQLSetDescField(
+            hdesc,
+            1,
+            odbc_sys::Desc::Type,
+            odbc_sys::CDataType::Numeric as i16 as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
+        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
 
         stmt.fetch();
+
+        stmt.get_data(1, &mut target);
 
         stmt.close_cursor();
     }
 
     // Then
-    assert_eq!(1, numeric.sign);
-    // assert_eq!(b'|', numeric.val[0]);
-    // assert_eq!(b'b', numeric.val[1]);
-    // assert_eq!(b'0', numeric.val[2]);
+    assert_eq!(5, target.0.precision);
+    assert_eq!(3, target.0.scale);
+    // 1 is positive, 0 is negative
+    assert_eq!(1, target.0.sign);
+    // Hex representation of 25212 is 627C
+    // First character contains '7C' -> C ~ 12, 7 ~ 7; 12 + 16 * 7 = 124
+    assert_eq!(124, target.0.val[0]);
+    // Second character encodes '62' -> 2 + 16 * 6 = 98
+    assert_eq!(98, target.0.val[1]);
+    assert_eq!(0, target.0.val[2]);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
