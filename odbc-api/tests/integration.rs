@@ -3985,7 +3985,6 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
-
 #[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite just returns a zeroed out numeric struct
 #[test_case(POSTGRES; "PostgreSQL")]
@@ -4044,7 +4043,6 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
             null_mut(),
         );
 
-        // Setting Field descriptors always seems to yield structs field with zeroes
         let _ = odbc_sys::SQLSetDescField(
             hdesc,
             1,
@@ -4073,6 +4071,73 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     // Second character encodes '62' -> 2 + 16 * 6 = 98
     assert_eq!(98, target.0.val[1]);
     assert_eq!(0, target.0.val[2]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
+    // Given a cursor over a result set with a decimal in its first column
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["DECIMAL(5,3)"]).unwrap();
+    conn.execute(&table.sql_insert(), &(25.212).into_parameter())
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    // Binding numeric withouth this wrapper would bind it without the App Row Descriptor
+    let mut target = Numeric {
+        precision: 0,
+        scale: 0,
+        sign: 0,
+        val: Default::default(),
+    };
+    unsafe {
+        let mut stmt = cursor.into_stmt();
+
+        stmt.bind_col(1, &mut target);
+
+        let mut hdesc: odbc_sys::HDesc = null_mut();
+        let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
+        let _ = odbc_sys::SQLGetStmtAttr(
+            stmt.as_sys(),
+            odbc_sys::StatementAttribute::AppRowDesc,
+            hdesc_out,
+            0,
+            null_mut(),
+        );
+
+        // Setting Field descriptors always seems to yield structs field with zeroes
+        let _ = odbc_sys::SQLSetDescField(
+            hdesc,
+            1,
+            odbc_sys::Desc::Type,
+            odbc_sys::CDataType::Numeric as i16 as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
+        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+
+        stmt.fetch();
+
+        stmt.close_cursor();
+    }
+
+    // Then
+    assert_eq!(5, target.precision);
+    assert_eq!(3, target.scale);
+    // 1 is positive, 0 is negative
+    assert_eq!(1, target.sign);
+    // Hex representation of 25212 is 627C
+    // First character contains '7C' -> C ~ 12, 7 ~ 7; 12 + 16 * 7 = 124
+    assert_eq!(124, target.val[0]);
+    // Second character encodes '62' -> 2 + 16 * 6 = 98
+    assert_eq!(98, target.val[1]);
+    assert_eq!(0, target.val[2]);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
