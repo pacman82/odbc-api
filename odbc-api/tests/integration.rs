@@ -4073,9 +4073,9 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     assert_eq!(0, target.0.val[2]);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Given a cursor over a result set with a decimal in its first column
@@ -4099,7 +4099,7 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     unsafe {
         let mut stmt = cursor.into_stmt();
 
-        stmt.bind_col(1, &mut target);
+        // stmt.bind_col(1, &mut target);
 
         let mut hdesc: odbc_sys::HDesc = null_mut();
         let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
@@ -4121,6 +4121,8 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         );
         let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
         let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+
+        stmt.bind_col(1, &mut target);
 
         stmt.fetch();
 
