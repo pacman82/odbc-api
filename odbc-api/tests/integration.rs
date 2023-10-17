@@ -1,7 +1,9 @@
 mod common;
 
 use stdext::function_name;
-use sys::{CDataType, Numeric, Pointer, SqlDataType, Timestamp, NULL_DATA};
+use sys::{
+    CDataType, Numeric, Pointer, SQLGetInfo, SqlDataType, Timestamp, NULL_DATA, SqlReturn,
+};
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
@@ -24,7 +26,7 @@ use std::{
     io::{self, Write},
     iter,
     ptr::null_mut,
-    str, thread,
+    str::{self, from_utf8}, thread,
     time::Duration,
 };
 
@@ -3986,6 +3988,94 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+#[tokio::test]
+async fn async_preallocated_statement_execution(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
+    let sleep = || tokio::time::sleep(Duration::from_millis(10));
+
+    // When
+    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
+    statement.execute(&query, (), sleep).await.unwrap();
+
+    // Then
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello, World!", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+#[tokio::test]
+async fn async_bulk_fetch(profile: &Profile) {
+    // Given a table with a thousand records
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
+    for index in 0..1000 {
+        inserter
+            .append([Some(index.to_string().as_bytes())].iter().copied())
+            .unwrap();
+    }
+    inserter.execute().unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let sleep = || tokio::time::sleep(Duration::from_millis(50));
+
+    // When
+    let mut sum_rows_fetched = 0;
+    let cursor = conn
+        .execute_polling(&query, (), sleep)
+        .await
+        .unwrap()
+        .unwrap();
+    // Fetching results in ten batches
+    let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    while let Some(batch) = maybe_batch {
+        sum_rows_fetched += batch.num_rows();
+        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    }
+
+    // Then
+    assert_eq!(1000, sum_rows_fetched)
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn investigate_static_scroll_cursor_capability(profile: &Profile) {
+    // Given a connecwion
+    let conn = profile.connection().unwrap();
+
+    // When
+    let handle = conn.into_handle();
+    let mut str_len = 0i16;
+    let mut buffer = [0u8; 128];
+    unsafe {
+        let ret = SQLGetInfo(
+            handle.as_sys(),
+            sys::InfoType::ScrollOptions,
+            buffer.as_mut_ptr() as Pointer,
+            128,
+            &mut str_len as *mut i16,
+        );
+        assert_eq!(ret, SqlReturn::SUCCESS);
+    }
+    let actual = from_utf8(&buffer[0..str_len as usize]).unwrap();
+
+    assert_eq!(actual, "Hi")
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite just returns a zeroed out numeric struct
 #[test_case(POSTGRES; "PostgreSQL")]
 fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
@@ -4114,65 +4204,4 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Second character encodes '62' -> 2 + 16 * 6 = 98
     assert_eq!(98, target.val[1]);
     assert_eq!(0, target.val[2]);
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-#[tokio::test]
-async fn async_preallocated_statement_execution(profile: &Profile) {
-    // Given a table
-    let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
-    let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
-    let sleep = || tokio::time::sleep(Duration::from_millis(10));
-
-    // When
-    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
-    statement.execute(&query, (), sleep).await.unwrap();
-
-    // Then
-    let actual = table.content_as_string(&conn);
-    assert_eq!("Hello, World!", actual);
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-#[tokio::test]
-async fn async_bulk_fetch(profile: &Profile) {
-    // Given a table with a thousand records
-    let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
-    let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
-    for index in 0..1000 {
-        inserter
-            .append([Some(index.to_string().as_bytes())].iter().copied())
-            .unwrap();
-    }
-    inserter.execute().unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let sleep = || tokio::time::sleep(Duration::from_millis(50));
-
-    // When
-    let mut sum_rows_fetched = 0;
-    let cursor = conn
-        .execute_polling(&query, (), sleep)
-        .await
-        .unwrap()
-        .unwrap();
-    // Fetching results in ten batches
-    let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
-    while let Some(batch) = maybe_batch {
-        sum_rows_fetched += batch.num_rows();
-        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
-    }
-
-    // Then
-    assert_eq!(1000, sum_rows_fetched)
 }
