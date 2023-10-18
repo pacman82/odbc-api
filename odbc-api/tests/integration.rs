@@ -11,7 +11,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{CData, CDataMut, Descriptor, OutputStringBuffer, ParameterDescription, Statement},
+    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
@@ -4033,19 +4033,10 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     unsafe {
         let mut stmt = cursor.into_stmt();
 
-        let mut hdesc: odbc_sys::HDesc = null_mut();
-        let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
-        let _ = odbc_sys::SQLGetStmtAttr(
-            stmt.as_sys(),
-            odbc_sys::StatementAttribute::AppRowDesc,
-            hdesc_out,
-            0,
-            null_mut(),
-        );
-        let ard = Descriptor::new(hdesc);
+        let ard = stmt.application_row_descriptor().unwrap();
 
         let _ = odbc_sys::SQLSetDescField(
-            hdesc,
+            ard.as_sys(),
             1,
             odbc_sys::Desc::Type,
             odbc_sys::CDataType::Numeric as i16 as Pointer,
@@ -4102,33 +4093,24 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         let mut stmt = cursor.into_stmt();
 
         // stmt.bind_col(1, &mut target);
-
-        let mut hdesc: odbc_sys::HDesc = null_mut();
-        let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
-        let _ = odbc_sys::SQLGetStmtAttr(
-            stmt.as_sys(),
-            odbc_sys::StatementAttribute::AppRowDesc,
-            hdesc_out,
-            0,
-            null_mut(),
-        );
+        let ard = stmt.application_row_descriptor().unwrap();
 
         // Setting Field descriptors always seems to yield structs field with zeroes
         let _ = odbc_sys::SQLSetDescField(
-            hdesc,
+            ard.as_sys(),
             1,
             odbc_sys::Desc::Type,
             odbc_sys::CDataType::Numeric as i16 as Pointer,
             0,
         );
-        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
-        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+        let _ = odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
+        let _ = odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
         // Setting the dataptr directly on the ARD is required to make it work for MSSQL which does
         // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
         // intended with bind_col.
         // stmt.bind_col(1, &mut target);
         let _ = odbc_sys::SQLSetDescField(
-            hdesc,
+            ard.as_sys(),
             1,
             odbc_sys::Desc::DataPtr,
             &mut target as *mut Numeric as Pointer,

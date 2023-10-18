@@ -7,7 +7,7 @@ use super::{
     drop_handle,
     sql_char::{binary_length, is_truncated_bin, resize_to_fit_without_tz},
     sql_result::ExtSqlReturn,
-    CData, SqlChar, SqlResult, SqlText,
+    CData, Descriptor, SqlChar, SqlResult, SqlText,
 };
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
@@ -918,6 +918,27 @@ pub trait Statement: AsHandle {
     /// bound buffers are used correctly.
     unsafe fn more_results(&mut self) -> SqlResult<()> {
         unsafe { SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults") }
+    }
+
+    /// Application Row Descriptor (ARD) associated with the statement handle. It describes the row
+    /// afte the conversions for the application have been applied. It can be used to query
+    /// information as well as to set specific desired conversions. E.g. precision and scale for
+    /// numeric structs. Usually applications have no need to interact directly with the ARD
+    /// though.
+    fn application_row_descriptor(&mut self) -> SqlResult<Descriptor<'_>> {
+        unsafe {
+            let mut hdesc: odbc_sys::HDesc = null_mut();
+            let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
+            odbc_sys::SQLGetStmtAttr(
+                self.as_sys(),
+                odbc_sys::StatementAttribute::AppRowDesc,
+                hdesc_out,
+                0,
+                null_mut(),
+            )
+            .into_sql_result("SQLGetStmtAttr")
+            .on_success(|| Descriptor::new(hdesc))
+        }
     }
 }
 
