@@ -4073,9 +4073,9 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     assert_eq!(0, target.0.val[2]);
 }
 
-// #[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")]
+// #[test_case(SQLITE_3; "SQLite 3")] Always filled with zero
 #[test_case(POSTGRES; "PostgreSQL")]
 fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Given a cursor over a result set with a decimal in its first column
@@ -4121,8 +4121,17 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         );
         let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
         let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
-
-        stmt.bind_col(1, &mut target);
+        // Setting the dataptr directly on the ARD is required to make it work for MSSQL which does
+        // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
+        // intended with bind_col.
+        // stmt.bind_col(1, &mut target);
+        let _ = odbc_sys::SQLSetDescField(
+            hdesc,
+            1,
+            odbc_sys::Desc::DataPtr,
+            &mut target as *mut Numeric as Pointer,
+            0,
+        );
 
         stmt.fetch();
 
