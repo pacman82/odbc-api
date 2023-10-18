@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use odbc_sys::{HDesc, HStmt, Handle, HandleType};
+use odbc_sys::{Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField};
 
-use super::AsHandle;
+use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};
 
 /// A descriptor associated with a statement. This wrapper does not wrap explicitly allocated
 /// descriptors which have the connection as parent, but usually implicitly allocated ones
@@ -32,6 +32,18 @@ impl<'stmt> Descriptor<'stmt> {
     /// Directly acces the underlying ODBC handle.
     pub fn as_sys(&self) -> HDesc {
         self.handle
+    }
+
+    /// Number of digits for an exact numeric type, the number of bits in the mantissa (binary
+    /// precision) for an approximate numeric type, or the numbers of digits in the fractional
+    /// seconds component for the SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, or SQL_INTERVAL_SECOND data
+    /// type. This field is undefined for all other data types.
+    /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlsetdescfield-function>
+    pub fn set_precision(&mut self, rec_number: i16, precision: i16) -> SqlResult<()> {
+        unsafe {
+            SQLSetDescField(self.as_sys(), rec_number, Desc::Precision, precision as Pointer, 0)
+                .into_sql_result("SQLSetDescField")
+        }
     }
 }
 
