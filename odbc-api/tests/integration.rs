@@ -11,7 +11,7 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
-    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
+    handles::{CData, CDataMut, Descriptor, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
@@ -4042,6 +4042,7 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
             0,
             null_mut(),
         );
+        let ard = Descriptor::new(hdesc);
 
         let _ = odbc_sys::SQLSetDescField(
             hdesc,
@@ -4050,8 +4051,9 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
             odbc_sys::CDataType::Numeric as i16 as Pointer,
             0,
         );
-        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
-        let _ = odbc_sys::SQLSetDescField(hdesc, 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+        let _ =
+            odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Precision, 5 as Pointer, 0);
+        let _ = odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
 
         stmt.fetch();
 

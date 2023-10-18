@@ -11,6 +11,7 @@ mod buffer;
 mod column_description;
 mod connection;
 mod data_type;
+mod descriptor;
 mod diagnostics;
 mod environment;
 mod logging;
@@ -24,6 +25,7 @@ pub use {
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
     data_type::DataType,
+    descriptor::Descriptor,
     diagnostics::{Diagnostics, Record, State},
     environment::Environment,
     logging::log_diagnostics,
