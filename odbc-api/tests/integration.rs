@@ -4043,7 +4043,7 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
             0,
         );
         ard.set_precision(1, 5).unwrap();
-        let _ = odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+        ard.set_scale(1, 3).unwrap();
 
         stmt.fetch();
 
@@ -4103,8 +4103,7 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
             0,
         );
         ard.set_precision(1, 5).unwrap();
-        // Scale ~ SQLSMALLINT
-        let _ = odbc_sys::SQLSetDescField(ard.as_sys(), 1, odbc_sys::Desc::Scale, 3 as Pointer, 0);
+        ard.set_scale(1, 3);
         // Setting the dataptr directly on the ARD is required to make it work for MSSQL which does
         // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
         // intended with bind_col.

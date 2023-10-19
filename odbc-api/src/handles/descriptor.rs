@@ -41,7 +41,22 @@ impl<'stmt> Descriptor<'stmt> {
     /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlsetdescfield-function>
     pub fn set_precision(&mut self, rec_number: i16, precision: i16) -> SqlResult<()> {
         unsafe {
-            SQLSetDescField(self.as_sys(), rec_number, Desc::Precision, precision as Pointer, 0)
+            SQLSetDescField(
+                self.as_sys(),
+                rec_number,
+                Desc::Precision,
+                precision as Pointer,
+                0,
+            )
+            .into_sql_result("SQLSetDescField")
+        }
+    }
+
+    /// The defined scale for decimal and numeric data types. The field is undefined for all other
+    /// data types.
+    pub fn set_scale(&mut self, rec_number: i16, scale: i16) -> SqlResult<()> {
+        unsafe {
+            SQLSetDescField(self.as_sys(), rec_number, Desc::Scale, scale as Pointer, 0)
                 .into_sql_result("SQLSetDescField")
         }
     }
