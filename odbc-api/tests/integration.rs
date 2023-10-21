@@ -4035,13 +4035,7 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
 
         let mut ard = stmt.application_row_descriptor().unwrap();
 
-        let _ = odbc_sys::SQLSetDescField(
-            ard.as_sys(),
-            1,
-            odbc_sys::Desc::Type,
-            odbc_sys::CDataType::Numeric as i16 as Pointer,
-            0,
-        );
+        ard.set_type(1, CDataType::Numeric).unwrap();
         ard.set_precision(1, 5).unwrap();
         ard.set_scale(1, 3).unwrap();
 
@@ -4095,15 +4089,9 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         let mut ard = stmt.application_row_descriptor().unwrap();
 
         // Setting Field descriptors always seems to yield structs field with zeroes
-        let _ = odbc_sys::SQLSetDescField(
-            ard.as_sys(),
-            1,
-            odbc_sys::Desc::Type,
-            odbc_sys::CDataType::Numeric as i16 as Pointer,
-            0,
-        );
+        ard.set_type(1, CDataType::Numeric).unwrap();
         ard.set_precision(1, 5).unwrap();
-        ard.set_scale(1, 3);
+        ard.set_scale(1, 3).unwrap();
         // Setting the dataptr directly on the ARD is required to make it work for MSSQL which does
         // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
         // intended with bind_col.

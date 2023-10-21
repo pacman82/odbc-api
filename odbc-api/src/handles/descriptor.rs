@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use odbc_sys::{Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField};
+use odbc_sys::{CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField};
 
 use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};
 
@@ -59,6 +59,23 @@ impl<'stmt> Descriptor<'stmt> {
             SQLSetDescField(self.as_sys(), rec_number, Desc::Scale, scale as Pointer, 0)
                 .into_sql_result("SQLSetDescField")
         }
+    }
+
+    /// C-Type bound to the data pointer.
+    /// 
+    /// # Safety
+    /// 
+    /// The buffer bound to the data pointer in ARD must match, otherwise calls to fetch might e.g.
+    /// write beyond the bounds of these types, if e.g. a larger type is bound
+    pub unsafe fn set_type(&mut self, rec_number: i16, c_type: CDataType) -> SqlResult<()> {
+        SQLSetDescField(
+            self.as_sys(),
+            rec_number,
+            Desc::Type,
+            c_type as i16 as Pointer,
+            0,
+        )
+        .into_sql_result("SQLSetDescField")
     }
 }
 
