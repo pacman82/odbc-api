@@ -4096,13 +4096,7 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
         // intended with bind_col.
         // stmt.bind_col(1, &mut target);
-        let _ = odbc_sys::SQLSetDescField(
-            ard.as_sys(),
-            1,
-            odbc_sys::Desc::DataPtr,
-            &mut target as *mut Numeric as Pointer,
-            0,
-        );
+        ard.set_data_ptr(1, &mut target as *mut Numeric as Pointer).unwrap();
 
         stmt.fetch();
 

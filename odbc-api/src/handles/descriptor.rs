@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use odbc_sys::{CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField};
+use odbc_sys::{CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField, IS_POINTER, IS_SMALLINT};
 
 use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};
 
@@ -46,7 +46,7 @@ impl<'stmt> Descriptor<'stmt> {
                 rec_number,
                 Desc::Precision,
                 precision as Pointer,
-                0,
+                IS_SMALLINT,
             )
             .into_sql_result("SQLSetDescField")
         }
@@ -56,15 +56,15 @@ impl<'stmt> Descriptor<'stmt> {
     /// data types.
     pub fn set_scale(&mut self, rec_number: i16, scale: i16) -> SqlResult<()> {
         unsafe {
-            SQLSetDescField(self.as_sys(), rec_number, Desc::Scale, scale as Pointer, 0)
+            SQLSetDescField(self.as_sys(), rec_number, Desc::Scale, scale as Pointer, IS_SMALLINT)
                 .into_sql_result("SQLSetDescField")
         }
     }
 
     /// C-Type bound to the data pointer.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// The buffer bound to the data pointer in ARD must match, otherwise calls to fetch might e.g.
     /// write beyond the bounds of these types, if e.g. a larger type is bound
     pub unsafe fn set_type(&mut self, rec_number: i16, c_type: CDataType) -> SqlResult<()> {
@@ -73,9 +73,19 @@ impl<'stmt> Descriptor<'stmt> {
             rec_number,
             Desc::Type,
             c_type as i16 as Pointer,
-            0,
+            IS_SMALLINT,
         )
         .into_sql_result("SQLSetDescField")
+    }
+
+    /// Data pointer filled with values from the source when fetching data.
+    /// 
+    /// # Safety
+    /// 
+    /// Pointer must be valid and match the description set using set_type.
+    pub unsafe fn set_data_ptr(&mut self, rec_number: i16, data_ptr: Pointer) -> SqlResult<()> {
+        odbc_sys::SQLSetDescField(self.as_sys(), rec_number, Desc::DataPtr, data_ptr, IS_POINTER)
+            .into_sql_result("SQLSetDescField")
     }
 }
 
