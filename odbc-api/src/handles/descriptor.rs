@@ -1,8 +1,17 @@
 use std::marker::PhantomData;
 
-use odbc_sys::{CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, SQLSetDescField, IS_POINTER, IS_SMALLINT};
+use odbc_sys::{
+    CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, IS_POINTER,
+    IS_SMALLINT,
+};
 
 use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};
+
+#[cfg(feature = "narrow")]
+use odbc_sys::SQLSetDescField as sql_set_desc_field;
+
+#[cfg(not(feature = "narrow"))]
+use odbc_sys::SQLSetDescFieldW as sql_set_desc_field;
 
 /// A descriptor associated with a statement. This wrapper does not wrap explicitly allocated
 /// descriptors which have the connection as parent, but usually implicitly allocated ones
@@ -41,7 +50,7 @@ impl<'stmt> Descriptor<'stmt> {
     /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlsetdescfield-function>
     pub fn set_precision(&mut self, rec_number: i16, precision: i16) -> SqlResult<()> {
         unsafe {
-            SQLSetDescField(
+            sql_set_desc_field(
                 self.as_sys(),
                 rec_number,
                 Desc::Precision,
@@ -56,8 +65,14 @@ impl<'stmt> Descriptor<'stmt> {
     /// data types.
     pub fn set_scale(&mut self, rec_number: i16, scale: i16) -> SqlResult<()> {
         unsafe {
-            SQLSetDescField(self.as_sys(), rec_number, Desc::Scale, scale as Pointer, IS_SMALLINT)
-                .into_sql_result("SQLSetDescField")
+            sql_set_desc_field(
+                self.as_sys(),
+                rec_number,
+                Desc::Scale,
+                scale as Pointer,
+                IS_SMALLINT,
+            )
+            .into_sql_result("SQLSetDescField")
         }
     }
 
@@ -68,7 +83,7 @@ impl<'stmt> Descriptor<'stmt> {
     /// The buffer bound to the data pointer in ARD must match, otherwise calls to fetch might e.g.
     /// write beyond the bounds of these types, if e.g. a larger type is bound
     pub unsafe fn set_type(&mut self, rec_number: i16, c_type: CDataType) -> SqlResult<()> {
-        SQLSetDescField(
+        sql_set_desc_field(
             self.as_sys(),
             rec_number,
             Desc::Type,
@@ -79,13 +94,19 @@ impl<'stmt> Descriptor<'stmt> {
     }
 
     /// Data pointer filled with values from the source when fetching data.
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// Pointer must be valid and match the description set using set_type.
     pub unsafe fn set_data_ptr(&mut self, rec_number: i16, data_ptr: Pointer) -> SqlResult<()> {
-        odbc_sys::SQLSetDescField(self.as_sys(), rec_number, Desc::DataPtr, data_ptr, IS_POINTER)
-            .into_sql_result("SQLSetDescField")
+        sql_set_desc_field(
+            self.as_sys(),
+            rec_number,
+            Desc::DataPtr,
+            data_ptr,
+            IS_POINTER,
+        )
+        .into_sql_result("SQLSetDescField")
     }
 }
 
