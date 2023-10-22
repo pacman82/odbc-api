@@ -337,7 +337,7 @@ impl<'c> Connection<'c> {
     /// ```
     pub fn preallocate(&self) -> Result<Preallocated<'_>, Error> {
         let stmt = self.allocate_statement()?;
-        Ok(Preallocated::new(stmt))
+        unsafe { Ok(Preallocated::new(stmt)) }
     }
 
     /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode.

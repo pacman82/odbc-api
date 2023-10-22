@@ -39,7 +39,16 @@ pub struct Preallocated<'open_connection> {
 }
 
 impl<'o> Preallocated<'o> {
-    pub(crate) fn new(statement: StatementImpl<'o>) -> Self {
+
+    /// Users which intend to write their application in safe Rust should prefer using 
+    /// [`crate::Connection::preallocate`] as opposed to this constructor.
+    ///
+    /// # Safety
+    /// 
+    /// `statement` must be an allocated handled with no pointers bound for either results or
+    /// arguments. The statement must not be prepared, but in the state of a "freshly" allocated
+    /// handle.
+    pub unsafe fn new(statement: StatementImpl<'o>) -> Self {
         Self { statement }
     }
 
