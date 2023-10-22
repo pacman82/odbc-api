@@ -17,7 +17,8 @@ use odbc_api::{
     },
     parameter::{InputParameter, VarCharSliceMut},
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
-    IntoParameter, Narrow, Nullability, Nullable, Out, ResultSetMetadata, U16Str, U16String,
+    IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, U16Str,
+    U16String,
 };
 use std::{
     ffi::CString,
@@ -4096,7 +4097,8 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
         // seem to set the wrong pointer if just using bind col. Postgres and MariaDB would work as
         // intended with bind_col.
         // stmt.bind_col(1, &mut target);
-        ard.set_data_ptr(1, &mut target as *mut Numeric as Pointer).unwrap();
+        ard.set_data_ptr(1, &mut target as *mut Numeric as Pointer)
+            .unwrap();
 
         stmt.fetch();
 
@@ -4114,6 +4116,77 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Second character encodes '62' -> 2 + 16 * 6 = 98
     assert_eq!(98, target.val[1]);
     assert_eq!(0, target.val[2]);
+}
+
+/// Learning test to see how scrolling cursors behave
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn scroll_cursor(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    conn.execute(&table.sql_insert(), &"one".into_parameter())
+        .unwrap();
+    conn.execute(&table.sql_insert(), &"two".into_parameter())
+        .unwrap();
+    conn.execute(&table.sql_insert(), &"three".into_parameter())
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+
+    // When
+    let stmt = conn.preallocate().unwrap();
+    let stmt = stmt.into_statement();
+    let stmt_ptr = stmt.as_sys();
+    let first;
+    let second;
+    let third;
+    unsafe {
+        // 3(UL) ~ SQL_CURSOR_STATIC
+        let _ = odbc_sys::SQLSetStmtAttr(
+            stmt_ptr,
+            odbc_sys::StatementAttribute::CursorType,
+            3 as Pointer,
+            0,
+        );
+        // Bind row set buffer
+        let mut stmt = Preallocated::new(stmt);
+        let mut cursor = stmt.execute(&query, ()).unwrap().unwrap();
+        let mut buffer = TextRowSet::for_cursor(1, &mut cursor, Some(10)).unwrap();
+        let mut block_cursor = cursor.bind_buffer(&mut buffer).unwrap();
+        // Move cursor two forward
+        first = block_cursor
+            .fetch()
+            .unwrap()
+            .unwrap()
+            .at_as_str(0, 0)
+            .unwrap()
+            .unwrap()
+            .to_owned();
+        second = block_cursor
+            .fetch()
+            .unwrap()
+            .unwrap()
+            .at_as_str(0, 0)
+            .unwrap()
+            .unwrap()
+            .to_owned();
+        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, sys::FetchOrientation::Absolute, 1);
+        third = block_cursor
+            .fetch()
+            .unwrap()
+            .unwrap()
+            .at_as_str(0, 0)
+            .unwrap()
+            .unwrap()
+            .to_owned();
+    }
+
+    // Then
+    assert_eq!("one", first);
+    assert_eq!("two", second);
+    assert_eq!("two", third);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
