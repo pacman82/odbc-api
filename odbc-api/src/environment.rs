@@ -11,7 +11,7 @@ use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
-use winit::{event_loop::EventLoop, platform::windows::WindowExtWindows, window::WindowBuilder};
+use winit::{event_loop::EventLoop, window::WindowBuilder};
 
 #[cfg(not(feature = "odbc_version_3_5"))]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
@@ -381,10 +381,12 @@ impl Environment {
                     panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.")
                 }
                 // We need a parent window, let's provide a message only window.
+                let event_loop = EventLoop::new()
+                    .expect("Window event loop must be initialized from main thread and only once");
                 Some(
                     WindowBuilder::new()
                         .with_visible(false)
-                        .build(&EventLoop::new())
+                        .build(&event_loop)
                         .unwrap(),
                 )
             }
@@ -392,7 +394,14 @@ impl Environment {
         #[cfg(target_os = "windows")]
         let hwnd = parent_window
             .as_ref()
-            .map(|window| window.hwnd() as HWnd)
+            .map(|window| {
+                use winit::raw_window_handle::{RawWindowHandle, HasWindowHandle, Win32WindowHandle};
+                match  window.window_handle().unwrap().as_raw() {
+                    RawWindowHandle::Win32(Win32WindowHandle{ hwnd, .. }) => hwnd.get() as HWnd,
+                    RawWindowHandle::WinRt(_) => todo!(),
+                    _ => panic!("ODBC Prompt is only supported on window platforms"),
+                }
+            })
             .unwrap_or(null_mut());
         #[cfg(not(target_os = "windows"))]
         let hwnd = null_mut();

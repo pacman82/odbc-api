@@ -39,7 +39,6 @@ pub struct Preallocated<'open_connection> {
 }
 
 impl<'o> Preallocated<'o> {
-
     /// Users which intend to write their application in safe Rust should prefer using 
     /// [`crate::Connection::preallocate`] as opposed to this constructor.
     ///
