@@ -398,7 +398,6 @@ impl Environment {
                 use winit::raw_window_handle::{RawWindowHandle, HasWindowHandle, Win32WindowHandle};
                 match  window.window_handle().unwrap().as_raw() {
                     RawWindowHandle::Win32(Win32WindowHandle{ hwnd, .. }) => hwnd.get() as HWnd,
-                    RawWindowHandle::WinRt(_) => todo!(),
                     _ => panic!("ODBC Prompt is only supported on window platforms"),
                 }
             })
