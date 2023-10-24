@@ -381,8 +381,11 @@ impl Environment {
                     panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.")
                 }
                 // We need a parent window, let's provide a message only window.
-                let event_loop = EventLoop::new()
-                    .expect("Window event loop must be initialized from main thread and only once");
+                //
+                // Currently unsure in which situation this would fail. Can this only be intantiated
+                // once in the main thread? We could think about a version taking a raw window
+                // handle.
+                let event_loop = EventLoop::new().unwrap();
                 Some(
                     WindowBuilder::new()
                         .with_visible(false)
