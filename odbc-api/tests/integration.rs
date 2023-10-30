@@ -3987,6 +3987,67 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+#[tokio::test]
+async fn async_preallocated_statement_execution(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
+    let sleep = || tokio::time::sleep(Duration::from_millis(10));
+
+    // When
+    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
+    statement.execute(&query, (), sleep).await.unwrap();
+
+    // Then
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello, World!", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+#[tokio::test]
+async fn async_bulk_fetch(profile: &Profile) {
+    // Given a table with a thousand records
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
+    for index in 0..1000 {
+        inserter
+            .append([Some(index.to_string().as_bytes())].iter().copied())
+            .unwrap();
+    }
+    inserter.execute().unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let sleep = || tokio::time::sleep(Duration::from_millis(50));
+
+    // When
+    let mut sum_rows_fetched = 0;
+    let cursor = conn
+        .execute_polling(&query, (), sleep)
+        .await
+        .unwrap()
+        .unwrap();
+    // Fetching results in ten batches
+    let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
+    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
+    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    while let Some(batch) = maybe_batch {
+        sum_rows_fetched += batch.num_rows();
+        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    }
+
+    // Then
+    assert_eq!(1000, sum_rows_fetched)
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] SQLite just returns a zeroed out numeric struct
 #[test_case(POSTGRES; "PostgreSQL")]
 fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
@@ -4189,63 +4250,66 @@ fn scroll_cursor(profile: &Profile) {
     assert_eq!("two", third);
 }
 
+/// Learning test to see how downstream applications could recover from truncations during bulk
+/// fetches
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-#[tokio::test]
-async fn async_preallocated_statement_execution(profile: &Profile) {
+fn recover_from_truncation(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
-    let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
-    let sleep = || tokio::time::sleep(Duration::from_millis(10));
-
-    // When
-    let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
-    statement.execute(&query, (), sleep).await.unwrap();
-
-    // Then
-    let actual = table.content_as_string(&conn);
-    assert_eq!("Hello, World!", actual);
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-#[tokio::test]
-async fn async_bulk_fetch(profile: &Profile) {
-    // Given a table with a thousand records
-    let table_name = table_name!();
-    let (conn, table) = profile.given(&table_name, &["VARCHAR(50)"]).unwrap();
-    let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
-    for index in 0..1000 {
-        inserter
-            .append([Some(index.to_string().as_bytes())].iter().copied())
-            .unwrap();
-    }
-    inserter.execute().unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let sleep = || tokio::time::sleep(Duration::from_millis(50));
-
-    // When
-    let mut sum_rows_fetched = 0;
-    let cursor = conn
-        .execute_polling(&query, (), sleep)
-        .await
-        .unwrap()
+    let (conn, table) = profile.given(&table_name, &["VARCHAR(10)"]).unwrap();
+    conn.execute(&table.sql_insert(), &"1".into_parameter())
         .unwrap();
-    // Fetching results in ten batches
-    let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
-    let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
-    while let Some(batch) = maybe_batch {
-        sum_rows_fetched += batch.num_rows();
-        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    conn.execute(&table.sql_insert(), &"123456789".into_parameter())
+        .unwrap();
+    conn.execute(&table.sql_insert(), &"1".into_parameter())
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+
+    // When
+    let stmt = conn.preallocate().unwrap();
+    let stmt = stmt.into_statement();
+    let stmt_ptr = stmt.as_sys();
+    let untruncated;
+    unsafe {
+        // 3(UL) ~ SQL_CURSOR_STATIC
+        let _ = odbc_sys::SQLSetStmtAttr(
+            stmt_ptr,
+            odbc_sys::StatementAttribute::CursorType,
+            3 as Pointer,
+            0,
+        );
+        // Bind row set buffer
+        let mut stmt = Preallocated::new(stmt);
+        let cursor = stmt.execute(&query, ()).unwrap().unwrap();
+        let buffer = TextRowSet::from_max_str_lens(1, [1]).unwrap();
+        let mut block_cursor = cursor.bind_buffer(buffer).unwrap();
+        // Fetch first row set (one row). This would be truncated
+        let _ = block_cursor
+            .fetch()
+            .unwrap()
+            .unwrap();
+        // Fetch second rowset with truncation
+        let _ = block_cursor
+            .fetch()
+            .unwrap()
+            .unwrap();
+        // In order to recover we set the position back and bind a large enough buffer.
+
+        // Set position back
+        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, sys::FetchOrientation::Prior, 0);
+
+        // Bind large enough buffer
+        let (cursor, _) = block_cursor.unbind().unwrap();
+        let buffer = TextRowSet::from_max_str_lens(1, [10]).unwrap();
+        let mut block_cursor = cursor.bind_buffer(buffer).unwrap();
+
+        let batch = block_cursor.fetch().unwrap().unwrap();
+        untruncated = batch.at_as_str(0, 0).unwrap().unwrap().to_owned();
     }
 
     // Then
-    assert_eq!(1000, sum_rows_fetched)
+    assert_eq!("123456789", untruncated);
 }
