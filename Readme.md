@@ -10,7 +10,7 @@ Rust ODBC bindings. ODBC (Open Database Connectivity) is an open standard to con
 * Your appliciation is designed to work with a wide range of Databases without the need of redeploying it.
 * There is no native Rust driver in suitable quality available for your Database so you want to use the ODBC driver instead.
 
-See also: [Is ODBC the Answer?]<https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/is-odbc-the-answer>
+See also: [Is ODBC the Answer?](https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/is-odbc-the-answer)
 
 This crate is currently tested against:
 
