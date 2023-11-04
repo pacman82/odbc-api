@@ -159,6 +159,7 @@ impl Environment {
         // Status code S1009 has been seen with unixODBC 2.3.1. S1009 meant (among other things)
         // invalid attribute. If we see this then we try to declare the ODBC version it is of course
         // likely that the driver manager only knows ODBC 2.x.
+        // See: <https://learn.microsoft.com/sql/odbc/reference/develop-app/sqlstate-mappings>
         const ODBC_2_INVALID_ATTRIBUTE: State = State(*b"S1009");
 
         // Translate invalid attribute into a more meaningful error, provided the additional

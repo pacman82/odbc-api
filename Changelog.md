@@ -1,8 +1,10 @@
 # Changelog
 
-## 3.0.0 (next)
+## 3.0.0
 
 * `ParameterDescription::nullable` has been renamed to `ParameterDescription::nullability`
+* Remove deprecated function `Connection::promote_to_send`.
+* `ErrorUnsupportedOdbcVersion` is now returned if driver manager emits a diagnostic record using with status `S1009` then setting ODBC version. That status code used to mean "Invalid Attribute" back in the days of ODBC 2.x.
 
 ## 2.2.0
 
