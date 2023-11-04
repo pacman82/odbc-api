@@ -156,6 +156,11 @@ impl Environment {
             .declare_version(ODBC_API_VERSION)
             .into_result(&environment);
 
+        // Status code S1009 has been seen with unixODBC 2.3.1. S1009 meant (among other things)
+        // invalid attribute. If we see this then we try to declare the ODBC version it is of course
+        // likely that the driver manager only knows ODBC 2.x.
+        const ODBC_2_INVALID_ATTRIBUTE: State = State(*b"S1009");
+
         // Translate invalid attribute into a more meaningful error, provided the additional
         // context that we know we tried to set version number.
         result.provide_context_for_diagnostic(|record, function| match record.state {
@@ -164,9 +169,9 @@ impl Environment {
             // INVALID_ATTRIBUTE_VALUE is the correct status code to emit for a driver manager if it
             // does not know the version and has been seen with an unknown version of unixODBC on an
             // Oracle Linux.
-            State::INVALID_STATE_TRANSACTION | State::INVALID_ATTRIBUTE_VALUE => {
-                Error::UnsupportedOdbcApiVersion(record)
-            }
+            ODBC_2_INVALID_ATTRIBUTE
+            | State::INVALID_STATE_TRANSACTION
+            | State::INVALID_ATTRIBUTE_VALUE => Error::UnsupportedOdbcApiVersion(record),
             _ => Error::Diagnostics { record, function },
         })?;
 
@@ -398,9 +403,11 @@ impl Environment {
         let hwnd = parent_window
             .as_ref()
             .map(|window| {
-                use winit::raw_window_handle::{RawWindowHandle, HasWindowHandle, Win32WindowHandle};
-                match  window.window_handle().unwrap().as_raw() {
-                    RawWindowHandle::Win32(Win32WindowHandle{ hwnd, .. }) => hwnd.get() as HWnd,
+                use winit::raw_window_handle::{
+                    HasWindowHandle, RawWindowHandle, Win32WindowHandle,
+                };
+                match window.window_handle().unwrap().as_raw() {
+                    RawWindowHandle::Win32(Win32WindowHandle { hwnd, .. }) => hwnd.get() as HWnd,
                     _ => panic!("ODBC Prompt is only supported on window platforms"),
                 }
             })

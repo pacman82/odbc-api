@@ -28,6 +28,12 @@ impl TooLargeBufferSize {
     }
 }
 
+#[cfg(feature = "odbc_version_3_80")]
+const ODBC_VERSION_STRING: &str = "3.80";
+
+#[cfg(feature = "odbc_version_3_5")]
+const ODBC_VERSION_STRING: &str = "3.5";
+
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
 pub enum Error {
@@ -43,8 +49,8 @@ pub enum Error {
     /// This should never happen, given that ODBC driver manager and ODBC driver do not have any
     /// Bugs. Since we may link vs a bunch of these, better to be on the safe side.
     #[error(
-        "No Diagnostics available. The ODBC function call to {} returned an error. Sadly neither the
-        ODBC driver manager, nor the driver were polite enough to leave a diagnostic record
+        "No Diagnostics available. The ODBC function call to {} returned an error. Sadly neither \
+        the ODBC driver manager, nor the driver were polite enough to leave a diagnostic record \
         specifying what exactly went wrong.", function
     )]
     NoDiagnostics {
@@ -65,10 +71,10 @@ pub enum Error {
     AbortedConnectionStringCompletion,
     /// An error returned if we fail to set the ODBC version
     #[error(
-        "The ODBC diver manager installed in your system does not seem to support ODBC API version
-        3.80. Which is required by this application. Most likely you need to update your driver
-        manager. Your driver manager is most likely unixODBC if you run on a Linux. Diagnostic
-        record returned by SQLSetEnvAttr:\n{0}"
+        "The ODBC diver manager installed in your system does not seem to support ODBC API version \
+        {ODBC_VERSION_STRING}. Which is required by this application. Most likely you need to \
+        update your driver manager. Your driver manager is most likely unixODBC if you run on a \
+        Linux. Diagnostic record returned by SQLSetEnvAttr:\n{0}"
     )]
     UnsupportedOdbcApiVersion(DiagnosticRecord),
     /// An error emitted by an `std::io::ReadBuf` implementation used as an input argument.
@@ -89,9 +95,9 @@ pub enum Error {
         size: usize,
     },
     #[error(
-        "Tried to retrieve a value from the database. The value turned out to be `NULL` yet this
-        turned out to not be representable. So the application is written as if the value could
-        never be `NULL` in the datasource, yet the in actuallity a `NULL` has been returned.
+        "Tried to retrieve a value from the database. The value turned out to be `NULL` yet this \
+        turned out to not be representable. So the application is written as if the value could \
+        never be `NULL` in the datasource, yet the in actuallity a `NULL` has been returned. \
         Diagnostic record returned:\n{0}"
     )]
     UnableToRepresentNull(DiagnosticRecord),
@@ -99,12 +105,12 @@ pub enum Error {
     /// message, should make it easier identify what is going on, since the message emmitted by,
     /// Oracles ODBC driver is a bit cryptic: `[Oracle][ODBC]Invalid SQL data type <-25>`.
     #[error(
-        "SQLFetch came back with an error indicating you specified an invalid SQL Type. You very
-        likely did not do that however. Actually SQLFetch is not supposed to return that error type. 
-        You should have received it back than you were still binding columns or parameters. All this
-        is circumstancial evidence that you are using an Oracle Database and want to use 64Bit
-        integers, which are not supported by Oracles ODBC driver manager. In case this diagnose is
-        wrong the original error is:\n{0}."
+        "SQLFetch came back with an error indicating you specified an invalid SQL Type. You very \
+        likely did not do that however. Actually SQLFetch is not supposed to return that error \
+        type.  You should have received it back than you were still binding columns or parameters. \
+        All this is circumstancial evidence that you are using an Oracle Database and want to use \
+        64Bit integers, which are not supported by Oracles ODBC driver manager. In case this \
+        diagnose is wrong the original error is:\n{0}."
     )]
     OracleOdbcDriverDoesNotSupport64Bit(DiagnosticRecord),
     #[error(
@@ -120,7 +126,7 @@ pub enum Error {
         element_size: usize,
     },
     #[error(
-        "A value (at least one) is too large to be written into the allocated buffer without
+        "A value (at least one) is too large to be written into the allocated buffer without \
         truncation. Size in bytes indicated by ODBC driver: {indicator}"
     )]
     TooLargeValueForBuffer {
