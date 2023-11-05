@@ -28,11 +28,10 @@ impl TooLargeBufferSize {
     }
 }
 
-#[cfg(feature = "odbc_version_3_80")]
-const ODBC_VERSION_STRING: &str = "3.80";
-
 #[cfg(feature = "odbc_version_3_5")]
 const ODBC_VERSION_STRING: &str = "3.5";
+#[cfg(not(feature = "odbc_version_3_5"))]
+const ODBC_VERSION_STRING: &str = "3.80";
 
 #[derive(Debug, ThisError)]
 /// Error type used to indicate a low level ODBC call returned with SQL_ERROR.
