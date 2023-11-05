@@ -3846,12 +3846,25 @@ fn chinese_text_argument(profile: &Profile) {
         .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
-    let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u16>::new(1, 50))]);
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let batch = cursor.fetch().unwrap().unwrap();
-    let utf16 = batch.column(0).get(0).unwrap();
-    let utf16 = U16Str::from_slice(utf16);
-    let actual = utf16.to_string().unwrap();
+    #[cfg(not(feature = "narrow"))]
+    let actual = {
+        let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u16>::new(1, 50))]);
+        let mut cursor = cursor.bind_buffer(buffer).unwrap();
+        let batch = cursor.fetch().unwrap().unwrap();
+        let utf16 = batch.column(0).get(0).unwrap();
+        let utf16 = U16Str::from_slice(utf16);
+        utf16.to_string().unwrap()
+    };
+
+    // Fetching non narrow should always work, but does not for PostgreSQL with narrow compilation
+    // flag.
+    #[cfg(feature = "narrow")]
+    let actual = {
+        let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u8>::new(1, 50))]);
+        let mut cursor = cursor.bind_buffer(buffer).unwrap();
+        let batch = cursor.fetch().unwrap().unwrap();
+        batch.at_as_str(0,0).unwrap().unwrap().to_string()
+    };
     assert_eq!("您好", actual);
 }
 
