@@ -47,6 +47,22 @@ impl_parameters_for_tuple! { A B C D E F G }
 impl_parameters_for_tuple! { A B C D E F G H }
 impl_parameters_for_tuple! { A B C D E F G H I }
 impl_parameters_for_tuple! { A B C D E F G H I J }
+impl_parameters_for_tuple! { A B C D E F G H I J K }
+impl_parameters_for_tuple! { A B C D E F G H I J K L }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X Y }
+impl_parameters_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X Y Z}
 
 /// Implementers of this trait can be used as individual parameters of in a tuple of parameter
 /// references. This includes input parameters, output or in/out parameters.
