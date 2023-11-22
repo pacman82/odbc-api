@@ -24,9 +24,10 @@ use std::{
     ffi::CString,
     io::{self, Write},
     iter,
+    num::NonZeroUsize,
     ptr::null_mut,
     str, thread,
-    time::Duration, num::NonZeroUsize,
+    time::Duration,
 };
 
 const MSSQL_CONNECTION: &str =
@@ -150,7 +151,9 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
 
-    let kind = DataType::Varchar { length: NonZeroUsize::new(255) };
+    let kind = DataType::Varchar {
+        length: NonZeroUsize::new(255),
+    };
     let expected = ColumnDescription::new("a", kind, Nullability::NoNulls);
     cursor.describe_col(1, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -162,19 +165,25 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(2).unwrap());
 
-    let kind = DataType::Binary { length: NonZeroUsize::new(12) };
+    let kind = DataType::Binary {
+        length: NonZeroUsize::new(12),
+    };
     let expected = ColumnDescription::new("c", kind, Nullability::Nullable);
     cursor.describe_col(3, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(3).unwrap());
 
-    let kind = DataType::Varbinary { length: NonZeroUsize::new(100) };
+    let kind = DataType::Varbinary {
+        length: NonZeroUsize::new(100),
+    };
     let expected = ColumnDescription::new("d", kind, Nullability::Nullable);
     cursor.describe_col(4, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(4).unwrap());
 
-    let kind = DataType::WChar { length: NonZeroUsize::new(10) };
+    let kind = DataType::WChar {
+        length: NonZeroUsize::new(10),
+    };
     let expected = ColumnDescription::new("e", kind, Nullability::Nullable);
     cursor.describe_col(5, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -205,13 +214,17 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
 
-    let kind = DataType::LongVarchar { length: NonZeroUsize::new(2147483647) };
+    let kind = DataType::LongVarchar {
+        length: NonZeroUsize::new(2147483647),
+    };
     let expected = ColumnDescription::new("i", kind, Nullability::Nullable);
     cursor.describe_col(9, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(9).unwrap());
 
-    let kind = DataType::LongVarbinary { length: NonZeroUsize::new(2147483647) };
+    let kind = DataType::LongVarbinary {
+        length: NonZeroUsize::new(2147483647),
+    };
     let expected = ColumnDescription::new("j", kind, Nullability::Nullable);
     cursor.describe_col(10, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -534,7 +547,12 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
-    assert_eq!(DataType::Varbinary { length: NonZeroUsize::new(10) }, data_type);
+    assert_eq!(
+        DataType::Varbinary {
+            length: NonZeroUsize::new(10)
+        },
+        data_type
+    );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { length: 10 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
@@ -600,7 +618,12 @@ fn columnar_fetch_binary(profile: &Profile) {
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
-    assert_eq!(DataType::Binary { length: NonZeroUsize::new(5) }, data_type);
+    assert_eq!(
+        DataType::Binary {
+            length: NonZeroUsize::new(5)
+        },
+        data_type
+    );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { length: 5 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
@@ -3864,7 +3887,7 @@ fn chinese_text_argument(profile: &Profile) {
         let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u8>::new(1, 50))]);
         let mut cursor = cursor.bind_buffer(buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
-        batch.at_as_str(0,0).unwrap().unwrap().to_string()
+        batch.at_as_str(0, 0).unwrap().unwrap().to_string()
     };
     assert_eq!("您好", actual);
 }
@@ -3997,6 +4020,29 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
         capacity_used_to_create_buffer,
         capacity_reported_by_block_cursor
     );
+}
+
+/// Learning test what display size drivers report for JSON columns
+// #[test_case(MSSQL, "@json VARCHAR(max)", None; "Microsoft SQL Server")] // Unknown data type JSON
+// #[test_case(MARIADB, Some(1073741823); "Maria DB")] // Different size reported if MariaDB runs on windows
+#[test_case(SQLITE_3, Some(255); "SQLite 3")]
+#[test_case(POSTGRES, Some(255); "PostgreSQL")]
+fn json_column_display_size(profile: &Profile, expected_display_size: Option<usize>) {
+    // Given a table with a column type which will return `NO_TOTAL`
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["JSON"]).unwrap();
+    let query = table.sql_all_ordered_by_id();
+
+    // When obtaining result set metadata
+    let mut result_set = conn.execute(&query, ()).unwrap().unwrap();
+    // First column is id with index `0`. Second index (`1`) referes to the JSON column
+    let size = result_set
+        .col_display_size(1)
+        .unwrap()
+        .map(NonZeroUsize::get);
+
+    // Then it is equal to the recorded display size
+    assert_eq!(expected_display_size, size);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -4301,15 +4347,9 @@ fn recover_from_truncation(profile: &Profile) {
         let buffer = TextRowSet::from_max_str_lens(1, [1]).unwrap();
         let mut block_cursor = cursor.bind_buffer(buffer).unwrap();
         // Fetch first row set (one row). This would be truncated
-        let _ = block_cursor
-            .fetch()
-            .unwrap()
-            .unwrap();
+        let _ = block_cursor.fetch().unwrap().unwrap();
         // Fetch second rowset with truncation
-        let _ = block_cursor
-            .fetch()
-            .unwrap()
-            .unwrap();
+        let _ = block_cursor.fetch().unwrap().unwrap();
         // In order to recover we set the position back and bind a large enough buffer.
 
         // Set position back
