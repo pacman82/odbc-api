@@ -962,9 +962,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bf4d2a193d3ebc4e2315f3d3090ff3e1a04cf1cb58d6a9d5b7cab63a6c53592"
+checksum = "6c219b6a4cd9eb167239d921d7348132cdff2eca05abbf1094e7f7ec9b8936b6"
 
 [[package]]
 name = "odbcsv"
