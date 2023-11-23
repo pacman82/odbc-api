@@ -9,6 +9,7 @@ use super::{
     sql_result::ExtSqlReturn,
     CData, Descriptor, SqlChar, SqlResult, SqlText,
 };
+use log::debug;
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
     SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
@@ -705,7 +706,13 @@ pub trait Statement: AsHandle {
             &mut out as *mut Len,
         )
         .into_sql_result("SQLColAttribute")
-        .on_success(|| out)
+        .on_success(|| {
+            debug!(
+                "SQLColAttribute called with attribute '{attribute:?}' for column \
+                '{column_number}' reported {out}."
+            );
+            out
+        })
     }
 
     /// Sets the SQL_DESC_COUNT field of the APD to 0, releasing all parameter buffers set for the
