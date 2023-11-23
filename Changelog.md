@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.0 (next)
+
+* `ResultSetMetadata::col_display_size` now returns usize
+
 ## 3.0.1
 
 * Setting only `odbc_version_3_5` without deactivating default features now compiles again. It is still recommended though to use the `odbc_version_3_5` flag only in combination with `--no-default-features` since `odbc_version_3_8` is a default feature.

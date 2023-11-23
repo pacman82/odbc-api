@@ -63,9 +63,13 @@ pub trait ResultSetMetadata: AsStatementRef {
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&mut self, column_number: u16) -> Result<isize, Error> {
+    fn col_display_size(&mut self, column_number: u16) -> Result<usize, Error> {
         let stmt = self.as_stmt_ref();
-        stmt.col_display_size(column_number).into_result(&stmt)
+        stmt.col_display_size(column_number)
+            .into_result(&stmt)
+            // Map negative values to `0`.  `0` is used by MSSQL to indicate a missing upper bound
+            // `-4` (`NO_TOTAL`) is used by MySQL to do the same.
+            .map(|signed| signed.max(0) as usize)
     }
 
     /// Precision of the column.
@@ -119,19 +123,19 @@ pub trait ResultSetMetadata: AsStatementRef {
                 length: self.col_octet_length(column_number)?.try_into().unwrap(),
             },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
+                length: self.col_display_size(column_number)?
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::CHAR => DataType::Char {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: self.col_display_size(column_number)?.try_into().unwrap(),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: self.col_precision(column_number)?.try_into().unwrap(),
@@ -191,7 +195,7 @@ pub fn utf8_display_sizes(
         let max_str_len = if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
             encoded_len
         } else {
-            metadata.col_display_size(col_index)? as usize
+            metadata.col_display_size(col_index)?
         };
         Ok(max_str_len)
     });
