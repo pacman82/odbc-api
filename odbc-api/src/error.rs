@@ -114,14 +114,15 @@ pub enum Error {
     OracleOdbcDriverDoesNotSupport64Bit(DiagnosticRecord),
     #[error(
         "There is not enough memory to allocate enough memory for a column buffer. Number of \
-        elements requested for the column buffer: {num_elements}; Size of an element: \
-        {element_size}."
+        elements requested for the column buffer: {num_elements}; Size needed to hold the largest \
+        possible element: {element_size}."
     )]
     TooLargeColumnBufferSize {
         /// Zero based column buffer index. Note that this is different from the 1 based column
         /// index.
         buffer_index: u16,
         num_elements: usize,
+        /// `usize::MAX` may be used to indicate a missing aupper bound of an element.
         element_size: usize,
     },
     #[error(

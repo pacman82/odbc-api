@@ -210,14 +210,14 @@ pub trait ResultSetMetadata: AsStatementRef {
 ///   interpret the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
 pub fn utf8_display_sizes(
     metadata: &mut impl ResultSetMetadata,
-) -> Result<impl Iterator<Item = Result<usize, Error>> + '_, Error> {
+) -> Result<impl Iterator<Item = Result<Option<NonZeroUsize>, Error>> + '_, Error> {
     let num_cols: u16 = metadata.num_result_cols()?.try_into().unwrap();
     let it = (1..(num_cols + 1)).map(move |col_index| {
         // Ask driver for buffer length
         let max_str_len = if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
-            encoded_len
+            NonZeroUsize::new(encoded_len)
         } else {
-            metadata.col_display_size(col_index)?.map(NonZeroUsize::get).unwrap_or(0)
+            metadata.col_display_size(col_index)?
         };
         Ok(max_str_len)
     });

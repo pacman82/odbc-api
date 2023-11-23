@@ -1,6 +1,6 @@
 use std::{
-    cmp::min,
     collections::HashSet,
+    num::NonZeroUsize,
     str::{from_utf8, Utf8Error},
 };
 
@@ -297,8 +297,8 @@ impl TextRowSet {
     /// * `max_str_limit`: Some queries make it hard to estimate a sensible upper bound and
     ///   sometimes drivers are just not that good at it. This argument allows you to specify an
     ///   upper bound for the length of character data. Any size reported by the driver is capped to
-    ///   this value. In case the database returns a size of 0 (which some systems used to indicate)
-    ///   arbitrarily large values, the element size is set to upper bound.
+    ///   this value. In case the upper bound can not inferred by the metadata reported by the
+    ///   driver the element size is set to this upper bound, too.
     pub fn for_cursor(
         batch_size: usize,
         cursor: &mut impl ResultSetMetadata,
@@ -311,13 +311,19 @@ impl TextRowSet {
                 let col_index = buffer_index + 1;
                 let max_str_len = reported_len?;
                 let buffer = if let Some(upper_bound) = max_str_limit {
-                    let max_str_len = if max_str_len == 0 {
-                        upper_bound
-                    } else {
-                        min(max_str_len, upper_bound)
-                    };
+                    let max_str_len = max_str_len
+                        .map(NonZeroUsize::get)
+                        .unwrap_or(upper_bound)
+                        .min(upper_bound);
                     TextColumn::new(batch_size, max_str_len)
                 } else {
+                    let max_str_len = max_str_len.map(NonZeroUsize::get).ok_or(
+                        Error::TooLargeColumnBufferSize {
+                            buffer_index,
+                            num_elements: batch_size,
+                            element_size: usize::MAX,
+                        },
+                    )?;
                     TextColumn::try_new(batch_size, max_str_len).map_err(|source| {
                         Error::TooLargeColumnBufferSize {
                             buffer_index,
