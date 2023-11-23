@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use odbc_sys::SqlDataType;
 
 use crate::{
@@ -60,16 +62,21 @@ pub trait ResultSetMetadata: AsStatementRef {
         stmt.col_octet_length(column_number).into_result(&stmt)
     }
 
-    /// Maximum number of characters required to display data from the column.
+    /// Maximum number of characters required to display data from the column. If the driver is
+    /// unable to provide a maximum `None` is returned.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&mut self, column_number: u16) -> Result<usize, Error> {
+    fn col_display_size(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
         let stmt = self.as_stmt_ref();
         stmt.col_display_size(column_number)
             .into_result(&stmt)
-            // Map negative values to `0`.  `0` is used by MSSQL to indicate a missing upper bound
-            // `-4` (`NO_TOTAL`) is used by MySQL to do the same.
-            .map(|signed| signed.max(0) as usize)
+            // Map negative values to `0`. `0` is used by MSSQL to indicate a missing upper bound
+            // `-4` (`NO_TOTAL`) is used by MySQL to do the same. Mapping them both to the same
+            // value allows for less error prone generic applications. Making this value `None`
+            // instead of zero makes it explicit, that an upper bound can not always be known. It
+            // also prevents the order from being misunderstood, because the largest possible value
+            // is obviously `> 0` in this case, yet `0` is smaller than any other value.
+            .map(|signed| NonZeroUsize::new(signed.max(0) as usize))
     }
 
     /// Precision of the column.
@@ -123,19 +130,34 @@ pub trait ResultSetMetadata: AsStatementRef {
                 length: self.col_octet_length(column_number)?.try_into().unwrap(),
             },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: self.col_display_size(column_number)?
+                length: self
+                    .col_display_size(column_number)?
+                    .map(NonZeroUsize::get)
+                    .unwrap_or(0),
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: self.col_display_size(column_number)?,
+                length: self
+                    .col_display_size(column_number)?
+                    .map(NonZeroUsize::get)
+                    .unwrap_or(0),
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self.col_display_size(column_number)?,
+                length: self
+                    .col_display_size(column_number)?
+                    .map(NonZeroUsize::get)
+                    .unwrap_or(0),
             },
             SqlDataType::CHAR => DataType::Char {
-                length: self.col_display_size(column_number)?,
+                length: self
+                    .col_display_size(column_number)?
+                    .map(NonZeroUsize::get)
+                    .unwrap_or(0),
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: self.col_display_size(column_number)?,
+                length: self
+                    .col_display_size(column_number)?
+                    .map(NonZeroUsize::get)
+                    .unwrap_or(0),
             },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: self.col_precision(column_number)?.try_into().unwrap(),
@@ -195,7 +217,7 @@ pub fn utf8_display_sizes(
         let max_str_len = if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
             encoded_len
         } else {
-            metadata.col_display_size(col_index)?
+            metadata.col_display_size(col_index)?.map(NonZeroUsize::get).unwrap_or(0)
         };
         Ok(max_str_len)
     });

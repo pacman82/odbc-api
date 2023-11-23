@@ -2,7 +2,7 @@
 
 ## 4.0.0 (next)
 
-* `ResultSetMetadata::col_display_size` now returns usize
+* `ResultSetMetadata::col_display_size` now returns `Option<NonZeroUsize>`, instead of `isize`.
 
 ## 3.0.1
 
