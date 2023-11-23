@@ -26,7 +26,7 @@ use std::{
     iter,
     ptr::null_mut,
     str, thread,
-    time::Duration,
+    time::Duration, num::NonZeroUsize,
 };
 
 const MSSQL_CONNECTION: &str =
@@ -150,7 +150,7 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(cursor.num_result_cols().unwrap(), 11);
     let mut actual = ColumnDescription::default();
 
-    let kind = DataType::Varchar { length: 255 };
+    let kind = DataType::Varchar { length: NonZeroUsize::new(255) };
     let expected = ColumnDescription::new("a", kind, Nullability::NoNulls);
     cursor.describe_col(1, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -162,19 +162,19 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(2).unwrap());
 
-    let kind = DataType::Binary { length: 12 };
+    let kind = DataType::Binary { length: NonZeroUsize::new(12) };
     let expected = ColumnDescription::new("c", kind, Nullability::Nullable);
     cursor.describe_col(3, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(3).unwrap());
 
-    let kind = DataType::Varbinary { length: 100 };
+    let kind = DataType::Varbinary { length: NonZeroUsize::new(100) };
     let expected = ColumnDescription::new("d", kind, Nullability::Nullable);
     cursor.describe_col(4, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(4).unwrap());
 
-    let kind = DataType::WChar { length: 10 };
+    let kind = DataType::WChar { length: NonZeroUsize::new(10) };
     let expected = ColumnDescription::new("e", kind, Nullability::Nullable);
     cursor.describe_col(5, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -205,13 +205,13 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(8).unwrap());
 
-    let kind = DataType::LongVarchar { length: 2147483647 };
+    let kind = DataType::LongVarchar { length: NonZeroUsize::new(2147483647) };
     let expected = ColumnDescription::new("i", kind, Nullability::Nullable);
     cursor.describe_col(9, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(9).unwrap());
 
-    let kind = DataType::LongVarbinary { length: 2147483647 };
+    let kind = DataType::LongVarbinary { length: NonZeroUsize::new(2147483647) };
     let expected = ColumnDescription::new("j", kind, Nullability::Nullable);
     cursor.describe_col(10, &mut actual).unwrap();
     assert_eq!(expected, actual);
@@ -534,7 +534,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
-    assert_eq!(DataType::Varbinary { length: 10 }, data_type);
+    assert_eq!(DataType::Varbinary { length: NonZeroUsize::new(10) }, data_type);
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { length: 10 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
@@ -600,7 +600,7 @@ fn columnar_fetch_binary(profile: &Profile) {
         .unwrap()
         .unwrap();
     let data_type = cursor.col_data_type(1).unwrap();
-    assert_eq!(DataType::Binary { length: 5 }, data_type);
+    assert_eq!(DataType::Binary { length: NonZeroUsize::new(5) }, data_type);
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { length: 5 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
@@ -1682,17 +1682,17 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 #[test_case(MSSQL, &[
     ParameterDescription {data_type: DataType::Integer, nullability: Nullability::Nullable},
     ParameterDescription {
-        data_type: DataType::Varchar { length: 13 },
+        data_type: DataType::Varchar { length: NonZeroUsize::new(13) },
         nullability: Nullability::Nullable
     }
 ]; "Microsoft SQL Server")]
 #[test_case(MARIADB, &[
     ParameterDescription {
-        data_type: DataType::Varchar { length: 25165824 },
+        data_type: DataType::Varchar { length: NonZeroUsize::new(25165824) },
         nullability: Nullability::Unknown
     },
     ParameterDescription {
-        data_type: DataType::Varchar { length: 25165824 },
+        data_type: DataType::Varchar { length: NonZeroUsize::new(25165824) },
         nullability: Nullability::Unknown
     }
 ]; "Maria DB")]

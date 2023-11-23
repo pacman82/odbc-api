@@ -9,7 +9,7 @@ use super::{ColumnBuffer, Indicator};
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void, mem::size_of, panic};
+use std::{cmp::min, ffi::c_void, mem::size_of, num::NonZeroUsize, panic};
 use widestring::U16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
@@ -601,7 +601,7 @@ unsafe impl CDataMut for CharColumn {
 impl HasDataType for CharColumn {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
-            length: self.max_str_len,
+            length: NonZeroUsize::new(self.max_str_len),
         }
     }
 }
@@ -637,7 +637,7 @@ unsafe impl CDataMut for WCharColumn {
 impl HasDataType for WCharColumn {
     fn data_type(&self) -> DataType {
         DataType::WVarchar {
-            length: self.max_str_len,
+            length: NonZeroUsize::new(self.max_str_len),
         }
     }
 }

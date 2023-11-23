@@ -121,43 +121,43 @@ pub trait ResultSetMetadata: AsStatementRef {
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
             },
             SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
             },
             SqlDataType::EXT_BINARY => DataType::Binary {
-                length: self.col_octet_length(column_number)?.try_into().unwrap(),
+                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
             },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: self
+                length: NonZeroUsize::new(self
                     .col_display_size(column_number)?
                     .map(NonZeroUsize::get)
-                    .unwrap_or(0),
+                    .unwrap_or(0)),
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: self
+                length: NonZeroUsize::new(self
                     .col_display_size(column_number)?
                     .map(NonZeroUsize::get)
-                    .unwrap_or(0),
+                    .unwrap_or(0)),
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self
+                length: NonZeroUsize::new(self
                     .col_display_size(column_number)?
                     .map(NonZeroUsize::get)
-                    .unwrap_or(0),
+                    .unwrap_or(0)),
             },
             SqlDataType::CHAR => DataType::Char {
-                length: self
+                length: NonZeroUsize::new(self
                     .col_display_size(column_number)?
                     .map(NonZeroUsize::get)
-                    .unwrap_or(0),
+                    .unwrap_or(0)),
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: self
+                length: NonZeroUsize::new(self
                     .col_display_size(column_number)?
                     .map(NonZeroUsize::get)
-                    .unwrap_or(0),
+                    .unwrap_or(0)),
             },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: self.col_precision(column_number)?.try_into().unwrap(),
@@ -215,7 +215,7 @@ pub fn utf8_display_sizes(
     let it = (1..(num_cols + 1)).map(move |col_index| {
         // Ask driver for buffer length
         let max_str_len = if let Some(encoded_len) = metadata.col_data_type(col_index)?.utf8_len() {
-            NonZeroUsize::new(encoded_len)
+            Some(encoded_len)
         } else {
             metadata.col_display_size(col_index)?
         };

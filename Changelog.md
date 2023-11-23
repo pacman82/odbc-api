@@ -4,6 +4,11 @@
 
 * `ResultSetMetadata::col_display_size` now returns `Option<NonZeroUsize>`, instead of `isize`.
 * `ResultSetMetadata::utf8_display_sizes` now iterates over `Option<NonZeroUsize>`, instead of `usize`.
+* `DataType` now stores the length of variadic types as `Option<NonZeroUsize`> insteaf of `usize`.
+* `DataType::display_size` now returns `Option<NonZeroUSize>` instead of `Option<usize>`.
+* `DataType::utf8_len` now returns `Option<NonZeroUSize>` instead of `Option<usize>`.
+* `DataType::utf16_len` now returns `Option<NonZeroUSize>` instead of `Option<usize>`
+* `BufferDesc::from_data_type` now returns `None` for variadic types without upper bound instead of a zero sized buffer.
 
 ## 3.0.1
 

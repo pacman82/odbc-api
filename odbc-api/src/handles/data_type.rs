@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use odbc_sys::SqlDataType;
 
 /// The relational type of the column. Think of it as the type used in the `CREATE TABLE` statement
@@ -17,12 +19,12 @@ pub enum DataType {
     /// `Char(n)`. Character string of fixed length.
     Char {
         /// Column size in characters (excluding terminating zero).
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `NChar(n)`. Character string of fixed length.
     WChar {
         /// Column size in characters (excluding terminating zero).
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `Numeric(p,s). Signed, exact, numeric value with a precision p and scale s (1 <= p <= 15; s
     /// <= p)
@@ -67,25 +69,25 @@ pub enum DataType {
         /// To find out how to interpret this value for a particular datasource you can use the
         /// `odbcsv` command line tool `list-columns` subcommand and query a Varchar column. If the
         /// buffer/octet length matches the column size, you can interpret this as the byte length.
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `NVARCHAR(n)`. Variable length character string. Indicates the use of wide character strings
     /// and use of UCS2 encoding on the side of the database.
     WVarchar {
         /// Maximum length of the character string (excluding terminating zero).
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `TEXT`. Variable length characeter string for long text objects.
     LongVarchar {
         /// Maximum length of the character string (excluding terminating zero). Maximum size
         /// depends on the capabilities of the driver and datasource. E.g. its 2^31 - 1 for MSSQL.
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `BLOB`. Variable length data for long binary objects.
     LongVarbinary {
         /// Maximum length of the binary data. Maximum size depends on the capabilities of the
         /// driver and datasource.
-        length: usize,
+        length: Option<NonZeroUsize>,
     },
     /// `Date`. Year, month, and day fields, conforming to the rules of the Gregorian calendar.
     Date,
@@ -116,9 +118,9 @@ pub enum DataType {
     /// `BIT`. Single bit binary data.
     Bit,
     /// `VARBINARY(n)`. Type for variable sized binary data.
-    Varbinary { length: usize },
+    Varbinary { length: Option<NonZeroUsize> },
     /// `BINARY(n)`. Type for fixed sized binary data.
-    Binary { length: usize },
+    Binary { length: Option<NonZeroUsize> },
     /// The driver returned a type, but it is not among the other types of these enumeration. This
     /// is a catchall, in case the library is incomplete, or the data source supports custom or
     /// non-standard types.
@@ -140,22 +142,22 @@ impl DataType {
         match data_type {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::EXT_BINARY => DataType::Binary {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::CHAR => DataType::Char {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: column_size,
@@ -183,10 +185,10 @@ impl DataType {
             SqlDataType::EXT_TINY_INT => DataType::TinyInt,
             SqlDataType::EXT_BIT => DataType::Bit,
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: column_size,
+                length: NonZeroUsize::new(column_size),
             },
             other => DataType::Other {
                 data_type: other,
@@ -226,7 +228,8 @@ impl DataType {
     }
 
     /// Return the column size, as it is required to bind the data type as a parameter. This implies
-    // it can be zero for fixed sized types. See also [crates::Cursor::describe_col].
+    // it can be zero for fixed sized types. See also [crates::Cursor::describe_col]. Variadic types
+    // without upper bound are also mapped to zero.
     pub fn column_size(&self) -> usize {
         match self {
             DataType::Unknown
@@ -247,7 +250,7 @@ impl DataType {
             | DataType::Binary { length }
             | DataType::WChar { length }
             | DataType::WVarchar { length }
-            | DataType::LongVarchar { length } => *length,
+            | DataType::LongVarchar { length } => length.map(NonZeroUsize::get).unwrap_or_default(),
             DataType::Float { precision, .. }
             | DataType::Numeric { precision, .. }
             | DataType::Decimal { precision, .. } => *precision,
@@ -285,7 +288,7 @@ impl DataType {
     /// The maximum number of characters needed to display data in character form.
     ///
     /// See: <https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/display-size>
-    pub fn display_size(&self) -> Option<usize> {
+    pub fn display_size(&self) -> Option<NonZeroUsize> {
         match self {
             DataType::Unknown
             | DataType::Other {
@@ -296,14 +299,16 @@ impl DataType {
             // Each binary byte is represented by a 2-digit hexadecimal number.
             DataType::Varbinary { length }
             | DataType::Binary { length }
-            | DataType::LongVarbinary { length } => Some(*length * 2),
+            | DataType::LongVarbinary { length } => {
+                length.map(|l| l.get() * 2).and_then(NonZeroUsize::new)
+            }
             // The defined (for fixed types) or maximum (for variable types) number of characters
             // needed to display the data in character form.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
             | DataType::Char { length }
-            | DataType::LongVarchar { length } => Some(*length),
+            | DataType::LongVarchar { length } => *length,
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.
             DataType::Numeric {
@@ -313,22 +318,22 @@ impl DataType {
             | DataType::Decimal {
                 precision,
                 scale: _,
-            } => Some(precision + 2),
+            } => NonZeroUsize::new(precision + 2),
             // 11 if signed (a sign and 10 digits) or 10 if unsigned (10 digits).
-            DataType::Integer => Some(11),
+            DataType::Integer => NonZeroUsize::new(11),
             // 6 if signed (a sign and 5 digits) or 5 if unsigned (5 digits).
-            DataType::SmallInt => Some(6),
+            DataType::SmallInt => NonZeroUsize::new(6),
             // 24 (a sign, 15 digits, a decimal point, the letter E, a sign, and 3 digits).
-            DataType::Float { .. } | DataType::Double => Some(24),
+            DataType::Float { .. } | DataType::Double => NonZeroUsize::new(24),
             // 14 (a sign, 7 digits, a decimal point, the letter E, a sign, and 2 digits).
-            DataType::Real => Some(14),
+            DataType::Real => NonZeroUsize::new(14),
             // 10 (a date in the format yyyy-mm-dd).
-            DataType::Date => Some(10),
+            DataType::Date => NonZeroUsize::new(10),
             // 8 (a time in the format hh:mm:ss)
             // or
             // 9 + s (a time in the format hh:mm:ss[.fff...], where s is the fractional seconds
             // precision).
-            DataType::Time { precision } => Some(if *precision == 0 {
+            DataType::Time { precision } => NonZeroUsize::new(if *precision == 0 {
                 8
             } else {
                 9 + *precision as usize
@@ -337,17 +342,17 @@ impl DataType {
             // or
             // 20 + s (for a timestamp in the yyyy-mm-dd hh:mm:ss[.fff...] format, where s is the
             // fractional seconds precision).
-            DataType::Timestamp { precision } => Some(if *precision == 0 {
+            DataType::Timestamp { precision } => NonZeroUsize::new(if *precision == 0 {
                 19
             } else {
                 20 + *precision as usize
             }),
             // 20 (a sign and 19 digits if signed or 20 digits if unsigned).
-            DataType::BigInt => Some(20),
+            DataType::BigInt => NonZeroUsize::new(20),
             // 4 if signed (a sign and 3 digits) or 3 if unsigned (3 digits).
-            DataType::TinyInt => Some(4),
+            DataType::TinyInt => NonZeroUsize::new(4),
             // 1 digit.
-            DataType::Bit => Some(1),
+            DataType::Bit => NonZeroUsize::new(1),
         }
     }
 
@@ -355,22 +360,25 @@ impl DataType {
     ///
     /// ```
     /// use odbc_api::DataType;
+    /// use std::num::NonZeroUsize;
+    /// 
+    /// let nz = NonZeroUsize::new;
     /// // Character set data types length is multiplied by four.
-    /// assert_eq!(DataType::Varchar { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::Char { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::WVarchar { length: 10 }.utf8_len(), Some(40));
-    /// assert_eq!(DataType::WChar { length: 10 }.utf8_len(), Some(40));
+    /// assert_eq!(DataType::Varchar { length: nz(10) }.utf8_len(), nz(40));
+    /// assert_eq!(DataType::Char { length: nz(10) }.utf8_len(), nz(40));
+    /// assert_eq!(DataType::WVarchar { length: nz(10) }.utf8_len(), nz(40));
+    /// assert_eq!(DataType::WChar { length: nz(10) }.utf8_len(), nz(40));
     /// // For other types return value is identical to display size as they are assumed to be
     /// // entirely representable with ASCII characters.
-    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), Some(10 + 2));
+    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), nz(10 + 2));
     /// ```
-    pub fn utf8_len(&self) -> Option<usize> {
+    pub fn utf8_len(&self) -> Option<NonZeroUsize> {
         match self {
             // One character may need up to four bytes to be represented in utf-8.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => Some(length * 4),
+            | DataType::Char { length } => length.map(|l| l.get() * 4).and_then(NonZeroUsize::new),
             other => other.display_size(),
         }
     }
@@ -379,22 +387,26 @@ impl DataType {
     ///
     /// ```
     /// use odbc_api::DataType;
+    /// use std::num::NonZeroUsize;
+    /// 
+    /// let nz = NonZeroUsize::new;
+    /// 
     /// // Character set data types length is multiplied by two.
-    /// assert_eq!(DataType::Varchar { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::Char { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::WVarchar { length: 10 }.utf16_len(), Some(20));
-    /// assert_eq!(DataType::WChar { length: 10 }.utf16_len(), Some(20));
+    /// assert_eq!(DataType::Varchar { length: nz(10) }.utf16_len(), nz(20));
+    /// assert_eq!(DataType::Char { length: nz(10) }.utf16_len(), nz(20));
+    /// assert_eq!(DataType::WVarchar { length: nz(10) }.utf16_len(), nz(20));
+    /// assert_eq!(DataType::WChar { length: nz(10) }.utf16_len(), nz(20));
     /// // For other types return value is identical to display size as they are assumed to be
     /// // entirely representable with ASCII characters.
-    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), Some(10 + 2));
+    /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), nz(10 + 2));
     /// ```
-    pub fn utf16_len(&self) -> Option<usize> {
+    pub fn utf16_len(&self) -> Option<NonZeroUsize> {
         match self {
             // One character may need up to two u16 to be represented in utf-16.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => Some(length * 2),
+            | DataType::Char { length } => length.map(|l| l.get() * 2).and_then(NonZeroUsize::new),
             other => other.display_size(),
         }
     }

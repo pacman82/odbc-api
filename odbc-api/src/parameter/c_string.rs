@@ -1,6 +1,6 @@
 //! Module contains trait implementations for `CStr` and `CString`.
 
-use std::ffi::{c_void, CStr, CString};
+use std::{ffi::{c_void, CStr, CString}, num::NonZeroUsize};
 
 use odbc_sys::{CDataType, NTS};
 
@@ -33,7 +33,7 @@ unsafe impl CData for CStr {
 impl HasDataType for CStr {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
-            length: self.to_bytes().len(),
+            length: NonZeroUsize::new(self.to_bytes().len()),
         }
     }
 }
@@ -65,7 +65,7 @@ unsafe impl CData for CString {
 impl HasDataType for CString {
     fn data_type(&self) -> DataType {
         DataType::Varchar {
-            length: self.as_bytes().len(),
+            length: NonZeroUsize::new(self.as_bytes().len()),
         }
     }
 }

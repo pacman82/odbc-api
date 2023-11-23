@@ -8,7 +8,7 @@ use std::{
     ffi::c_void,
     fs::File,
     io::{self, BufRead, BufReader},
-    path::Path,
+    path::Path, num::NonZeroUsize,
 };
 
 /// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
@@ -194,11 +194,11 @@ impl HasDataType for BlobSlice<'_> {
     fn data_type(&self) -> DataType {
         if self.is_binary {
             DataType::LongVarbinary {
-                length: self.blob.len(),
+                length: NonZeroUsize::new(self.blob.len()),
             }
         } else {
             DataType::LongVarchar {
-                length: self.blob.len(),
+                length: NonZeroUsize::new(self.blob.len()),
             }
         }
     }
@@ -350,7 +350,7 @@ where
     R: BufRead,
 {
     fn data_type(&self) -> DataType {
-        DataType::LongVarbinary { length: self.size }
+        DataType::LongVarbinary { length: NonZeroUsize::new(self.size) }
     }
 }
 

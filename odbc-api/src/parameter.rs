@@ -46,6 +46,7 @@
 //!
 //! ```no_run
 //! use odbc_api::{Environment, ConnectionOptions, DataType, parameter::WithDataType};
+//! use std::num::NonZeroUsize;
 //!
 //! let env = Environment::new()?;
 //!
@@ -55,7 +56,7 @@
 //! )?;
 //! let year = WithDataType{
 //!    value: 1980,
-//!    data_type: DataType::Varchar {length: 4}
+//!    data_type: DataType::Varchar {length: NonZeroUsize::new(4) }
 //! };
 //! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 //!     // Use cursor to process query results.
@@ -452,6 +453,7 @@ pub struct Out<'a, T>(pub &'a mut T);
 ///
 /// ```no_run
 /// use odbc_api::{Environment, ConnectionOptions, DataType, parameter::WithDataType};
+/// use std::num::NonZeroUsize;
 ///
 /// let env = Environment::new()?;
 ///
@@ -462,7 +464,7 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// // Bind year as VARCHAR(4) rather than integer.
 /// let year = WithDataType{
 ///    value: 1980,
-///    data_type: DataType::Varchar {length: 4}
+///    data_type: DataType::Varchar {length: NonZeroUsize::new(4)}
 /// };
 /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
 ///     // Use cursor to process query results.

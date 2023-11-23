@@ -131,17 +131,19 @@ impl BufferDesc {
             DataType::Bit => BufferDesc::Bit { nullable },
             DataType::Varbinary { length }
             | DataType::Binary { length  }
-            | DataType::LongVarbinary { length } => BufferDesc::Binary { length },
+            | DataType::LongVarbinary { length } => length.map(|l| BufferDesc::Binary { length: l.get() })?,
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
             | DataType::WChar {length }
             | DataType::Char { length }
-            | DataType::LongVarchar { length } => BufferDesc::Text { max_str_len : length },
+            | DataType::LongVarchar { length } => {
+                length.map(|length| BufferDesc::Text { max_str_len : length.get() } )?
+            },
             // Specialized buffers for Numeric and decimal are not yet supported.
             | DataType::Numeric { precision: _, scale: _ }
             | DataType::Decimal { precision: _, scale: _ }
-            | DataType::Time { precision: _ } => BufferDesc::Text { max_str_len: data_type.display_size().unwrap() },
+            | DataType::Time { precision: _ } => BufferDesc::Text { max_str_len: data_type.display_size().unwrap().get() },
             DataType::Unknown
             | DataType::Float { precision: _ }
             | DataType::Other { data_type: _, column_size: _, decimal_digits: _ } => return None,

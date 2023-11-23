@@ -8,7 +8,7 @@ use crate::{
 
 use log::debug;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void};
+use std::{cmp::min, ffi::c_void, num::NonZeroUsize};
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of bytes up to a maximum length. Since elements of this type have variable
@@ -414,7 +414,7 @@ unsafe impl CData for BinColumn {
 impl HasDataType for BinColumn {
     fn data_type(&self) -> DataType {
         DataType::Varbinary {
-            length: self.max_len,
+            length: NonZeroUsize::new(self.max_len),
         }
     }
 }
