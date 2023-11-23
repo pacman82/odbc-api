@@ -16,7 +16,7 @@ use odbc_sys::{
     SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData,
     SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
-use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut};
+use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, ptr::null_mut, num::NonZeroUsize};
 
 #[cfg(feature = "odbc_version_3_80")]
 use odbc_sys::SQLCompleteAsync;
@@ -507,7 +507,7 @@ pub trait Statement: AsHandle {
             ParamType::Input,
             parameter.cdata_type(),
             parameter_type.data_type(),
-            parameter_type.column_size(),
+            parameter_type.column_size().map(NonZeroUsize::get).unwrap_or_default(),
             parameter_type.decimal_digits(),
             // We cast const to mut here, but we specify the input_output_type as input.
             parameter.value_ptr() as *mut c_void,
@@ -542,7 +542,7 @@ pub trait Statement: AsHandle {
             input_output_type,
             parameter.cdata_type(),
             parameter_type.data_type(),
-            parameter_type.column_size(),
+            parameter_type.column_size().map(NonZeroUsize::get).unwrap_or_default(),
             parameter_type.decimal_digits(),
             parameter.value_ptr() as *mut c_void,
             parameter.buffer_length(),
@@ -573,7 +573,7 @@ pub trait Statement: AsHandle {
             ParamType::Input,
             parameter.cdata_type(),
             paramater_type.data_type(),
-            paramater_type.column_size(),
+            paramater_type.column_size().map(NonZeroUsize::get).unwrap_or_default(),
             paramater_type.decimal_digits(),
             parameter.stream_ptr(),
             0,

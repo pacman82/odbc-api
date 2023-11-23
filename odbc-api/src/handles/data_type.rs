@@ -128,7 +128,7 @@ pub enum DataType {
         /// Type of the column
         data_type: SqlDataType,
         /// Size of column element
-        column_size: usize,
+        column_size: Option<NonZeroUsize>,
         /// Decimal digits returned for the column element. Exact meaning if any depends on the
         /// `data_type` field.
         decimal_digits: i16,
@@ -192,7 +192,7 @@ impl DataType {
             },
             other => DataType::Other {
                 data_type: other,
-                column_size,
+                column_size: NonZeroUsize::new(column_size),
                 decimal_digits,
             },
         }
@@ -227,10 +227,10 @@ impl DataType {
         }
     }
 
-    /// Return the column size, as it is required to bind the data type as a parameter. This implies
-    // it can be zero for fixed sized types. See also [crates::Cursor::describe_col]. Variadic types
-    // without upper bound are also mapped to zero.
-    pub fn column_size(&self) -> usize {
+    // Return the column size, as it is required to bind the data type as a parameter. Fixed sized
+    // types are mapped to `None` and should be bound using `0`. See also
+    // [crates::Cursor::describe_col]. Variadic types without upper bound are also mapped to `None`.
+    pub fn column_size(&self) -> Option<NonZeroUsize> {
         match self {
             DataType::Unknown
             | DataType::Integer
@@ -242,7 +242,7 @@ impl DataType {
             | DataType::Timestamp { .. }
             | DataType::BigInt
             | DataType::TinyInt
-            | DataType::Bit => 0,
+            | DataType::Bit => None,
             DataType::Char { length }
             | DataType::Varchar { length }
             | DataType::Varbinary { length }
@@ -250,10 +250,10 @@ impl DataType {
             | DataType::Binary { length }
             | DataType::WChar { length }
             | DataType::WVarchar { length }
-            | DataType::LongVarchar { length } => length.map(NonZeroUsize::get).unwrap_or_default(),
+            | DataType::LongVarchar { length } => *length,
             DataType::Float { precision, .. }
             | DataType::Numeric { precision, .. }
-            | DataType::Decimal { precision, .. } => *precision,
+            | DataType::Decimal { precision, .. } => NonZeroUsize::new(*precision),
             DataType::Other { column_size, .. } => *column_size,
         }
     }

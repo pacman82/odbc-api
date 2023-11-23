@@ -197,7 +197,7 @@ fn describe_columns(profile: &Profile) {
 
     let kind = DataType::Other {
         data_type: SqlDataType(-154),
-        column_size: 16,
+        column_size: NonZeroUsize::new(16),
         decimal_digits: 7,
     };
     let expected = ColumnDescription::new("h", kind, Nullability::Nullable);
