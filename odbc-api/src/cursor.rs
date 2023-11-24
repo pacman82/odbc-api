@@ -397,8 +397,8 @@ pub unsafe trait RowSetBuffer {
 pub struct TruncationInfo {
     /// Indicator of the complete untruncated value.
     pub indicator: Indicator,
-    // /// Zero based buffer index of the column in which the truncation occurred.
-    // pub buffer_index: usize,
+    /// Zero based buffer index of the column in which the truncation occurred.
+    pub buffer_index: usize,
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -741,7 +741,7 @@ fn error_handling_for_fetch(
     // while we are limited in the amount we can check. The second check serves as an optimization
     // for the happy path.
     if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
-        if let Some(TruncationInfo { indicator }) = buffer.find_truncation() {
+        if let Some(TruncationInfo { indicator, buffer_index }) = buffer.find_truncation() {
             return Err(Error::TooLargeValueForBuffer { indicator });
         }
     }

@@ -6,11 +6,12 @@ use std::{
 
 use crate::{
     columnar_bulk_inserter::BoundInputSlice,
+    cursor::TruncationInfo,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer, cursor::TruncationInfo,
+    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -107,8 +108,15 @@ where
     fn find_truncation(&self) -> Option<TruncationInfo> {
         self.columns
             .iter()
-            .find_map(|col_buffer| col_buffer.1.has_truncated_values(*self.num_rows))
-            .map(|indicator| TruncationInfo { indicator })
+            .enumerate()
+            .find_map(|(buffer_index, (col_index, col_buffer))| {
+                col_buffer
+                    .has_truncated_values(*self.num_rows)
+                    .map(|indicator| TruncationInfo {
+                        indicator,
+                        buffer_index,
+                    })
+            })
     }
 }
 
