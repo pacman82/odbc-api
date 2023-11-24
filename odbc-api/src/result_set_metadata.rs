@@ -53,13 +53,15 @@ pub trait ResultSetMetadata: AsStatementRef {
         stmt.is_unsigned_column(column_number).into_result(&stmt)
     }
 
-    /// Returns the size in bytes of the columns. For variable sized types the maximum size is
-    /// returned, excluding a terminating zero.
+    /// Size in bytes of the columns. For variable sized types this is the maximum size, excluding a
+    /// terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&mut self, column_number: u16) -> Result<isize, Error> {
+    fn col_octet_length(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
         let stmt = self.as_stmt_ref();
-        stmt.col_octet_length(column_number).into_result(&stmt)
+        stmt.col_octet_length(column_number)
+            .into_result(&stmt)
+            .map(|signed| NonZeroUsize::new(signed.max(0) as usize))
     }
 
     /// Maximum number of characters required to display data from the column. If the driver is
@@ -121,43 +123,28 @@ pub trait ResultSetMetadata: AsStatementRef {
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
-                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
+                length: self.col_octet_length(column_number)?,
             },
             SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
-                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
+                length: self.col_octet_length(column_number)?,
             },
             SqlDataType::EXT_BINARY => DataType::Binary {
-                length: NonZeroUsize::new(self.col_octet_length(column_number)?.try_into().unwrap()),
+                length: self.col_octet_length(column_number)?,
             },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: NonZeroUsize::new(self
-                    .col_display_size(column_number)?
-                    .map(NonZeroUsize::get)
-                    .unwrap_or(0)),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: NonZeroUsize::new(self
-                    .col_display_size(column_number)?
-                    .map(NonZeroUsize::get)
-                    .unwrap_or(0)),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: NonZeroUsize::new(self
-                    .col_display_size(column_number)?
-                    .map(NonZeroUsize::get)
-                    .unwrap_or(0)),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::CHAR => DataType::Char {
-                length: NonZeroUsize::new(self
-                    .col_display_size(column_number)?
-                    .map(NonZeroUsize::get)
-                    .unwrap_or(0)),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: NonZeroUsize::new(self
-                    .col_display_size(column_number)?
-                    .map(NonZeroUsize::get)
-                    .unwrap_or(0)),
+                length: self.col_display_size(column_number)?,
             },
             SqlDataType::NUMERIC => DataType::Numeric {
                 precision: self.col_precision(column_number)?.try_into().unwrap(),
