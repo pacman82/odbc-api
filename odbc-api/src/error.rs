@@ -135,6 +135,7 @@ pub enum Error {
         /// Only variants [`Indicator::NoTotal`], or [`Indicator::Length`] should be able to cause
         /// this error.
         indicator: Indicator,
+
     },
 }
 
