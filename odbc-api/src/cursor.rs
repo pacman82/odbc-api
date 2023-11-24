@@ -390,7 +390,15 @@ pub unsafe trait RowSetBuffer {
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
 
     /// Find an indicator larger than the maximum element size of the buffer.
-    fn find_truncation(&self) -> Option<Indicator>;
+    fn find_truncation(&self) -> Option<TruncationInfo>;
+}
+
+/// Returned by [`RowSetBuffer::find_truncation`]. Contains information about the truncation found.
+pub struct TruncationInfo {
+    /// Indicator of the complete untruncated value.
+    pub indicator: Indicator,
+    // /// Zero based buffer index of the column in which the truncation occurred.
+    // pub buffer_index: usize,
 }
 
 unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
@@ -410,7 +418,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
         (*self).bind_colmuns_to_cursor(cursor)
     }
 
-    fn find_truncation(&self) -> Option<Indicator> {
+    fn find_truncation(&self) -> Option<TruncationInfo> {
         (**self).find_truncation()
     }
 }
@@ -733,7 +741,7 @@ fn error_handling_for_fetch(
     // while we are limited in the amount we can check. The second check serves as an optimization
     // for the happy path.
     if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
-        if let Some(indicator) = buffer.find_truncation() {
+        if let Some(TruncationInfo { indicator }) = buffer.find_truncation() {
             return Err(Error::TooLargeValueForBuffer { indicator });
         }
     }
