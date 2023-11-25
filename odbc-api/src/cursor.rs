@@ -742,7 +742,7 @@ fn error_handling_for_fetch(
     // for the happy path.
     if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
         if let Some(TruncationInfo { indicator, buffer_index }) = buffer.find_truncation() {
-            return Err(Error::TooLargeValueForBuffer { indicator });
+            return Err(Error::TooLargeValueForBuffer { indicator, buffer_index });
         }
     }
 
