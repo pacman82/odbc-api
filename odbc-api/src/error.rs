@@ -135,6 +135,8 @@ pub enum Error {
         /// Only variants [`Indicator::NoTotal`], or [`Indicator::Length`] should be able to cause
         /// this error.
         indicator: Indicator,
+        /// Index of the buffer in which the truncation occurred.
+        buffer_index: usize,
 
     },
 }

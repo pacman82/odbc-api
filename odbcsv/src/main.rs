@@ -584,6 +584,7 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
     match error {
         odbc_api::Error::TooLargeValueForBuffer {
             indicator: Indicator::Length(required),
+            buffer_index,
         } => {
             anyhow!(
                 "Truncation of text or binary data detected. Try using of \
@@ -595,6 +596,7 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
         }
         odbc_api::Error::TooLargeValueForBuffer {
             indicator: Indicator::NoTotal,
+            buffer_index,
         } => {
             anyhow!(
                 "Truncation of text or binary data detected. Try using larger values of \
@@ -607,6 +609,7 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
         }
         odbc_api::Error::TooLargeValueForBuffer {
             indicator: Indicator::Null,
+            buffer_index,
         } => unreachable!(),
         other => other.into(),
     }

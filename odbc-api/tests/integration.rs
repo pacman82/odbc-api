@@ -3528,7 +3528,8 @@ fn detect_truncated_output_in_bulk_fetch(profile: &Profile) {
     assert!(matches!(
         cursor.fetch_with_truncation_check(true),
         Err(Error::TooLargeValueForBuffer {
-            indicator: Indicator::Length(10)
+            indicator: Indicator::Length(10),
+            buffer_index: 0,
         })
     ))
 }
