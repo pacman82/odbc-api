@@ -583,7 +583,7 @@ fn cursor_to_csv(
 fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
     match error {
         odbc_api::Error::TooLargeValueForBuffer {
-            indicator: Indicator::Length(required),
+            indicator: Some(required),
             buffer_index,
         } => {
             anyhow!(
@@ -595,7 +595,7 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
             )
         }
         odbc_api::Error::TooLargeValueForBuffer {
-            indicator: Indicator::NoTotal,
+            indicator: None,
             buffer_index,
         } => {
             anyhow!(
@@ -607,10 +607,6 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
                 large the value that caused the truncation is."
             )
         }
-        odbc_api::Error::TooLargeValueForBuffer {
-            indicator: Indicator::Null,
-            buffer_index,
-        } => unreachable!(),
         other => other.into(),
     }
 }

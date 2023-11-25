@@ -11,6 +11,7 @@
 * `DataType::utf16_len` now returns `Option<NonZeroUSize>` instead of `Option<usize>`
 * `DataType::column_size` now returns `Option<NonZeroUSize>` instead of `usize`
 * `BufferDesc::from_data_type` now returns `None` for variadic types without upper bound instead of a zero sized buffer.
+* `Indicator::value_len` now is named `Indicator::length`.
 
 ## 3.0.1
 

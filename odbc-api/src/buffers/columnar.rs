@@ -113,7 +113,7 @@ where
                 col_buffer
                     .has_truncated_values(*self.num_rows)
                     .map(|indicator| TruncationInfo {
-                        indicator,
+                        indicator: indicator.length(),
                         buffer_index,
                     })
             })
