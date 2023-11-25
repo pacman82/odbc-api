@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+* Improved diagnostics in case of truncation. Error now describes, in which column the truncation occurred.
+
 ## 1.0.2
 
 * Improved diagnostics in case of truncation. Error now hints and size actually requried for `--max-str-len`

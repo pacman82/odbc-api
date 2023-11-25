@@ -1,6 +1,6 @@
 # Changelog
 
-## 4.0.0 (next)
+## 4.0.0
 
 * `ResultSetMetadata::col_display_size` now returns `Option<NonZeroUsize>` instead of `isize`.
 * `ResultSetMetadata::col_octet_length` now returns `Option<NonZeroUsize>`, instead of `isize`.
@@ -12,6 +12,7 @@
 * `DataType::column_size` now returns `Option<NonZeroUSize>` instead of `usize`
 * `BufferDesc::from_data_type` now returns `None` for variadic types without upper bound instead of a zero sized buffer.
 * `Indicator::value_len` now is named `Indicator::length`.
+* Provide buffer index for truncation errors
 
 ## 3.0.1
 
