@@ -2,10 +2,8 @@ use anyhow::{anyhow, bail, Error};
 use clap::{ArgAction, Args, Parser};
 use log::info;
 use odbc_api::{
-    buffers::{Indicator, TextRowSet},
-    escape_attribute_value,
-    handles::OutputStringBuffer,
-    Connection, ConnectionOptions, Cursor, DriverCompleteOption, Environment, IntoParameter,
+    buffers::TextRowSet, escape_attribute_value, handles::OutputStringBuffer, Connection,
+    ConnectionOptions, Cursor, DriverCompleteOption, Environment, IntoParameter,
 };
 use std::{
     fs::{read_to_string, File},
@@ -557,13 +555,13 @@ fn cursor_to_csv(
     ignore_truncation: bool,
 ) -> Result<(), Error> {
     let headline: Vec<String> = cursor.column_names()?.collect::<Result<_, _>>()?;
-    writer.write_record(headline)?;
+    writer.write_record(&headline)?;
     let mut buffers = TextRowSet::for_cursor(batch_size, &mut cursor, max_str_len)?;
     let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
     let mut num_batch = 0;
     while let Some(buffer) = row_set_cursor
         .fetch_with_truncation_check(!ignore_truncation)
-        .map_err(provide_context_for_truncation_error)?
+        .map_err(|error| provide_context_for_truncation_error(error, &headline))?
     {
         num_batch += 1;
         info!(
@@ -580,14 +578,15 @@ fn cursor_to_csv(
     Ok(())
 }
 
-fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
+fn provide_context_for_truncation_error(error: odbc_api::Error, headline: &[String]) -> Error {
     match error {
         odbc_api::Error::TooLargeValueForBuffer {
             indicator: Some(required),
             buffer_index,
         } => {
+            let col_name = &headline[buffer_index];
             anyhow!(
-                "Truncation of text or binary data detected. Try using of \
+                "Truncation of text or binary data in column '{col_name}' detected. Try using \
                 `--max-str-len` larger than {required}. Or do not specify it at all in order to \
                 allow for larger values. You can also use the `--ignore-truncation` flag in order \
                 to consider truncations warnings only. This will cause the truncated value to be \
@@ -598,13 +597,14 @@ fn provide_context_for_truncation_error(error: odbc_api::Error) -> Error {
             indicator: None,
             buffer_index,
         } => {
+            let col_name = &headline[buffer_index];
             anyhow!(
-                "Truncation of text or binary data detected. Try using larger values of \
-                `--max-str-len` (or do not specify it at all) in order to allow for larger values. \
-                You can also use the `--ignore-truncation` flag in order to consider truncations \
-                warnings only. This will cause the truncated value to be written into the csv, and \
-                execution to be continued normally. The ODBC driver has been unable to tell how \
-                large the value that caused the truncation is."
+                "Truncation of text or binary data in column '{col_name}' detected. Try using \
+                larger values of `--max-str-len` (or do not specify it at all) in order to allow \
+                for larger values. You can also use the `--ignore-truncation` flag in order to \
+                consider truncations warnings only. This will cause the truncated value to be \
+                written into the csv, and execution to be continued normally. The ODBC driver has \
+                been unable to tell how large the value that caused the truncation is."
             )
         }
         other => other.into(),
