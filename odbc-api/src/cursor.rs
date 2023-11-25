@@ -238,7 +238,7 @@ impl<'s> CursorRow<'s> {
         }
         // We did get the complete value, including the terminating zero. Let's resize the buffer to
         // match the retrieved value exactly (excluding terminating zero).
-        if let Some(len_in_bytes) = target.indicator().value_len() {
+        if let Some(len_in_bytes) = target.indicator().length() {
             // Since the indicator refers to value length without terminating zero, and capacity is
             // including the terminating zero this also implicitly drops the terminating zero at the
             // end of the buffer.
@@ -395,8 +395,8 @@ pub unsafe trait RowSetBuffer {
 
 /// Returned by [`RowSetBuffer::find_truncation`]. Contains information about the truncation found.
 pub struct TruncationInfo {
-    /// Indicator of the complete untruncated value.
-    pub indicator: Indicator,
+    /// Length of the untruncated value if known
+    pub indicator: Option<usize>,
     /// Zero based buffer index of the column in which the truncation occurred.
     pub buffer_index: usize,
 }

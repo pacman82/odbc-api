@@ -2,10 +2,7 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::{
-    buffers::Indicator,
-    handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult},
-};
+use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult};
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]
@@ -50,7 +47,8 @@ pub enum Error {
     #[error(
         "No Diagnostics available. The ODBC function call to {} returned an error. Sadly neither \
         the ODBC driver manager, nor the driver were polite enough to leave a diagnostic record \
-        specifying what exactly went wrong.", function
+        specifying what exactly went wrong.",
+        function
     )]
     NoDiagnostics {
         /// ODBC API call which returned error without producing a diagnostic record.
@@ -127,17 +125,14 @@ pub enum Error {
     },
     #[error(
         "A value (at least one) is too large to be written into the allocated buffer without \
-        truncation. Size in bytes indicated by ODBC driver: {indicator}"
+        truncation. Size in bytes indicated by ODBC driver: {indicator:?}"
     )]
     TooLargeValueForBuffer {
-        /// Length of the complete value in bytes as reported by the ODBC driver.
-        ///
-        /// Only variants [`Indicator::NoTotal`], or [`Indicator::Length`] should be able to cause
-        /// this error.
-        indicator: Indicator,
+        /// Length of the complete value in bytes as reported by the ODBC driver. If the length is
+        /// not known, this is `None`.
+        indicator: Option<usize>,
         /// Index of the buffer in which the truncation occurred.
         buffer_index: usize,
-
     },
 }
 
