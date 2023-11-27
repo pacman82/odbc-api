@@ -10,6 +10,7 @@ use super::{
     statement::StatementImpl,
     OutputStringBuffer, SqlResult,
 };
+use log::debug;
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
     HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, IS_UINTEGER,
@@ -395,6 +396,13 @@ impl<'c> Connection<'c> {
             null_mut(),
         )
         .into_sql_result("SQLGetConnectAttr")
-        .on_success(|| out)
+        .on_success(|| {
+            let handle = self.handle;
+            debug!(
+                "SQLGetConnectAttr called with attribute '{attribute:?}' for connection \
+                '{handle:?}' reported '{out}'."
+            );
+            out
+        })
     }
 }

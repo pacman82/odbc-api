@@ -34,6 +34,7 @@ pub use {
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
 };
 
+use log::debug;
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
 use std::thread::panicking;
 
@@ -45,7 +46,9 @@ use std::thread::panicking;
 /// `handle` Must be a valid ODBC handle and `handle_type` must match its type.
 pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
     match SQLFreeHandle(handle_type, handle) {
-        SqlReturn::SUCCESS => (),
+        SqlReturn::SUCCESS => {
+            debug!("SQLFreeHandle dropped {handle:?} of type {handle_type:?}.");
+        },
         other => {
             // Avoid panicking, if we already have a panic. We don't want to mask the
             // original error.

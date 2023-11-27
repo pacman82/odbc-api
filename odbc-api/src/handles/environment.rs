@@ -5,6 +5,7 @@ use super::{
     sql_result::{ExtSqlReturn, SqlResult},
     Connection,
 };
+use log::debug;
 use odbc_sys::{
     AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
     HandleType, SQLAllocHandle, SQLSetEnvAttr,
@@ -129,7 +130,10 @@ impl Environment {
         unsafe {
             SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle)
                 .into_sql_result("SQLAllocHandle")
-                .on_success(|| Connection::new(handle as HDbc))
+                .on_success(|| {
+                    let handle = handle as HDbc;
+                    debug!("SQLAllocHandle allocated connection (Dbc) handle '{handle:?}'");
+                    Connection::new(handle)})
         }
     }
 
