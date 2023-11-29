@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.1
+
+* Additional `debug` log messages around allocating and deallocating handles.
+
 ## 4.0.0
 
 * `ResultSetMetadata::col_display_size` now returns `Option<NonZeroUsize>` instead of `isize`.
