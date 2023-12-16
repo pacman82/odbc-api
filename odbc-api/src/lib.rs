@@ -18,6 +18,7 @@ mod nullable;
 mod parameter_collection;
 mod preallocated;
 mod prepared;
+mod quircks;
 mod result_set_metadata;
 mod sleep;
 mod statement_connection;
@@ -46,6 +47,7 @@ pub use self::{
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
+    quircks::Quirks,
     result_set_metadata::ResultSetMetadata,
     sleep::Sleep,
     statement_connection::StatementConnection,
