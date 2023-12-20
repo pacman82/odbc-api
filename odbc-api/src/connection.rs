@@ -649,7 +649,7 @@ impl<'c> Connection<'c> {
 #[derive(Default, Clone, Copy)]
 pub struct ConnectionOptions {
     /// Number of seconds to wait for a login request to complete before returning to the
-    /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
+    /// application. The default is driver-dependent. If `0` the timeout is disabled and a
     /// connection attempt will wait indefinitely.
     ///
     /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
