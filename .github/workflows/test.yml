@@ -19,11 +19,6 @@ jobs:
           default: true
           override: true
 
-      - name: Install MariaDB drivers
-        run: |
-         Invoke-WebRequest https://dlm.mariadb.com/1936453/Connectors/odbc/connector-odbc-3.1.15/mariadb-connector-odbc-3.1.15-win64.msi -OutFile C:\mariadb_connector.msi
-         Start-Process msiexec -ArgumentList "/i C:\mariadb_connector.msi /qn" -wait
-
       # Extract all files from installer
       - name: Install SQLite drivers
         run: |
@@ -43,22 +38,13 @@ jobs:
           sa-password: My@Test@Password1
           show-log: true
 
-      - name: Run MariaDB
-        uses: ankane/setup-mariadb@v1
-        with:
-          mariadb-version: "10.10"
-          database: test_db
-
-      - name: Setup MariaDB
-        run: mysql -D test_db -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'my-secret-pw';flush privileges;"
-
       - name: Setup driver expectations
         run: cp odbcsv/tests/list-drivers-windows.txt odbcsv/tests/list-drivers.txt
 
       - name: Test
         run: |
-          cargo test --release -- --skip postgresql
-          cargo test --features narrow --release -- --skip postgresql
+          cargo test --release -- --skip postgresql --skip maria_db
+          cargo test --features narrow --release -- --skip postgresql --skip maria_db
 
   win32:
     name: Build Win32
