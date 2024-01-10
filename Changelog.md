@@ -1,5 +1,9 @@
 # Changelog
 
+## (next)
+
+* Removed reexport of force_send_sync
+
 ## 4.1.0
 
 * Introducing `Quirks` to document knoweldege about behaviour from drivers which is different from the ODBC specification. This can be helpful for generic applications in order to support databases if they want to invest in workarounds for bugs or percularities of ODBC drivers.

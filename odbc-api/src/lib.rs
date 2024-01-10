@@ -52,8 +52,7 @@ pub use self::{
     sleep::Sleep,
     statement_connection::StatementConnection,
 };
-// Reexports
-pub use force_send_sync;
+
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this
 /// crate.
 pub use odbc_sys as sys;
