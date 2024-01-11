@@ -144,6 +144,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atoi"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f28d99ec8bfea296261ca1af174f24225171fea9664ba9003cbebee704810528"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -935,9 +944,10 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "4.1.0"
+version = "5.0.0"
 dependencies = [
  "anyhow",
+ "atoi",
  "criterion",
  "csv",
  "env_logger",
@@ -961,7 +971,7 @@ checksum = "6c219b6a4cd9eb167239d921d7348132cdff2eca05abbf1094e7f7ec9b8936b6"
 
 [[package]]
 name = "odbcsv"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "anyhow",
  "assert_cmd",

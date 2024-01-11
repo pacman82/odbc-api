@@ -18,7 +18,7 @@ use odbc_api::{
     parameter::{InputParameter, VarCharSliceMut},
     sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
     IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, U16Str,
-    U16String,
+    U16String, decimal_text_to_i128,
 };
 use std::{
     ffi::CString,
@@ -4043,6 +4043,40 @@ fn json_column_display_size(profile: &Profile, expected_display_size: Option<usi
 
     // Then it is equal to the recorded display size
     assert_eq!(expected_display_size, size);
+}
+
+/// Fetch decimal values in their text interpretation and transform them to their integer
+/// representation.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fetch_decimals_to_int(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["DECIMAL(5,3)"]).unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (12.345), (-12.345), (12), (12.3)"),
+        (),
+    )
+    .unwrap();
+
+    // When
+    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let row_set_buffer = TextRowSet::for_cursor(4, &mut cursor, None).unwrap();
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+    let n = |i| batch.at_as_str(0,i).unwrap().unwrap().as_bytes();
+    let n1 = decimal_text_to_i128(n(0), 3);
+    let n2 = decimal_text_to_i128(n(1), 3);
+    let n3 = decimal_text_to_i128(n(2), 3);
+    let n4 = decimal_text_to_i128(n(3), 3);
+
+    // Then
+    assert_eq!(12345, n1);
+    assert_eq!(-12345, n2);
+    assert_eq!(12000, n3);
+    assert_eq!(12300, n4);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

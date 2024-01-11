@@ -1,8 +1,9 @@
 # Changelog
 
-## (next)
+## 5.0.0
 
-* Removed reexport of force_send_sync
+* removed reexport of `force_send_sync`. It is no longer used within `odbc-api` this should have been removed together with the methods which were promoting Connections to `Send`, but has been overlooked.
+* Adds `decimal_text_to_i128` a useful function for downstream applications including `odbc2parquet` and `arrow-odbc`.
 
 ## 4.1.0
 

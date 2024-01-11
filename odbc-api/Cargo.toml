@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "4.1.0"
+version = "5.0.0"
 authors = ["Markus Klein"]
 edition = "2021"
 license = "MIT"
@@ -72,6 +72,7 @@ thiserror = "1.0.56"
 log = "0.4.20"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.0.2"
+atoi = "2.0.0"
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default

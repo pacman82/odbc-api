@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+* Updated dependencies
+
 ## 1.0.3
 
 * Improved diagnostics in case of truncation. Error now describes, in which column the truncation occurred.
