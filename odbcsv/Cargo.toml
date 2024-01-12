@@ -37,7 +37,7 @@ log = "0.4.20"
 clap = { version = "4.4.16", features = ["derive", "env"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.12"
+assert_cmd = "2.0.13"
 lazy_static = "1.4.0"
 tempfile = "3.9.0"
 
