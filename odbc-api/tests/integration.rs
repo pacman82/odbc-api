@@ -11,14 +11,15 @@ use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
+    decimal_text_to_i128,
     handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
     },
     parameter::{InputParameter, VarCharSliceMut},
-    sys, Bit, ColumnDescription, Connection, ConnectionOptions, Cursor, DataType, Error, InOut,
-    IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, U16Str,
-    U16String, decimal_text_to_i128,
+    sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
+    DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
+    ResultSetMetadata, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4062,11 +4063,14 @@ fn fetch_decimals_to_int(profile: &Profile) {
     .unwrap();
 
     // When
-    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
     let row_set_buffer = TextRowSet::for_cursor(4, &mut cursor, None).unwrap();
     let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
-    let n = |i| batch.at_as_str(0,i).unwrap().unwrap().as_bytes();
+    let n = |i| batch.at_as_str(0, i).unwrap().unwrap().as_bytes();
     let n1 = decimal_text_to_i128(n(0), 3);
     let n2 = decimal_text_to_i128(n(1), 3);
     let n3 = decimal_text_to_i128(n(2), 3);
@@ -4077,6 +4081,99 @@ fn fetch_decimals_to_int(profile: &Profile) {
     assert_eq!(-12345, n2);
     assert_eq!(12000, n3);
     assert_eq!(12300, n4);
+}
+
+/// Bulf fetch in a dedicated system thread. Usually so the application can process the last batch
+/// while the next one is fetched.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn concurrent_bulk_fetch_into_result(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INT"]).unwrap();
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
+        .unwrap();
+
+    // When
+    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn
+        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+
+    let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    assert!(has_another_batch);
+    assert_eq!(1, buffer_a.num_rows());
+    assert_eq!(1i32, buffer_a.column(0).as_slice().unwrap()[0]);
+
+    let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    assert!(has_another_batch);
+    assert_eq!(1, buffer_a.num_rows());
+    assert_eq!(2i32, buffer_a.column(0).as_slice().unwrap()[0]);
+
+    let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    assert!(!has_another_batch);
+}
+
+/// Bulf fetch in a dedicated system thread. Usually so the application can process the last batch
+/// while the next one is fetched.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// SQLite, actually does not create a diagonstic record or is creating any kind of error in this
+// case. It would just report the value to be zero. This has nothing todo with the fetch being
+// concurrent though. To test the error handling, the other DBMs have to suffice
+// #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn concurrent_bulk_fetch_with_invalid_buffer_type(profile: &Profile) {
+    // Given an integer table with a NULL
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INT"]).unwrap();
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
+        .unwrap();
+
+    // When fetching with a Columnar buffer not supporting nullable values
+    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn
+        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let result = concurrent_block_cursor.fetch_into(&mut buffer_a);
+
+    // Then
+    assert!(result.is_err());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
+    // Given
+    let conn = profile.connection().unwrap();
+    let query = "SELECT 1 AS a; SELECT 2 AS b;";
+
+    // When
+    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
+    let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    // Consume first result set.
+    concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    // Now continue with the same cursor to fetch the second
+    let cursor = concurrent_block_cursor.into_cursor().unwrap();
+    let cursor = cursor.more_results().unwrap().unwrap();
+    let mut cursor = cursor.bind_buffer(buffer_a).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

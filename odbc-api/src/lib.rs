@@ -7,6 +7,7 @@
 mod columnar_bulk_inserter;
 mod connection;
 mod conversion;
+mod concurrent_block_cursor;
 mod cursor;
 mod driver_complete_option;
 mod environment;
@@ -31,6 +32,7 @@ pub mod parameter;
 
 pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
+    concurrent_block_cursor::ConcurrentBlockCursor,
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     conversion::decimal_text_to_i128,
     cursor::{
