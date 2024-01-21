@@ -62,7 +62,6 @@ where
                 // cursor in order to start fetching the next batch.
                 let (cursor, buffer) = block_cursor.unbind()?;
                 if send_batch.send(buffer).is_err() {
-                    todo!();
                     // Should the main thread stop receiving buffers, this thread should
                     // also stop fetching batches.
                     break Ok(cursor);
@@ -99,7 +98,6 @@ where
         if let Some(cursor) = self.cursor {
             Ok(cursor)
         } else {
-            todo!();
             self.fetch_thread.unwrap().join().unwrap()
         }
     }
@@ -108,6 +106,16 @@ where
 impl<C> ConcurrentBlockCursor<C> {
     /// Fetches values from the ODBC datasource into buffer. Values are streamed batch by batch in
     /// order to avoid reallocation of the buffers used for tranistion.
+    /// 
+    /// # Parameters
+    /// 
+    /// * `buffer`: A columnar any buffer which can bind to the cursor wrapped by this instance.
+    ///   After the method call the reference will not point to the same instance which had been
+    ///   passed into the function call, but to the one which was bound to the cursor in order to
+    ///   fetch the last batch. The buffer passed into this method, is then used to fetch the next
+    ///   batch. As such this method is ideal to implement concurrent fetching using two buffers.
+    ///   One which is written to, and one that is read, which flip their roles between batches.
+    ///   Also called double buffering.
     /// 
     /// # Return
     /// 
@@ -132,9 +140,9 @@ impl<C> ConcurrentBlockCursor<C> {
                     // We ran out of batches in the result set. End the stream.
                     Ok(false)
                 } else {
-                    todo!();
-                    // This only happen if `next` is called after it returned either a `None` or
-                    // `Err` once. Let us just answer with `None`.
+                    // This only happen if this method is called after it returned either `false` or
+                    // `Err` once. Let us treat this scenario like a result set which is consumed
+                    // completly.
                     Ok(false)
                 }
             }
