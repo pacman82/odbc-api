@@ -36,7 +36,9 @@ where
     /// * `block_cursor`: Taking a BlockCursor instead of a Cursor allows for better resource
     ///   stealing if constructing starting from a sequential Cursor, as we do not need to undbind
     ///   and bind the cursor.
-    pub fn new(block_cursor: BlockCursor<C, ColumnarAnyBuffer>) -> Result<Self, Error> {
+    pub fn from_block_cursor(
+        block_cursor: BlockCursor<C, ColumnarAnyBuffer>,
+    ) -> Result<Self, Error> {
         let (send_buffer, receive_buffer) = sync_channel(1);
         let (send_batch, receive_batch) = sync_channel(1);
 
