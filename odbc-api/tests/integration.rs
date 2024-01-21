@@ -4120,7 +4120,7 @@ fn concurrent_bulk_fetch_into_result(profile: &Profile) {
     assert!(!has_another_batch);
 }
 
-/// Bulf fetch in a dedicated system thread. Usually so the application can process the last batch
+/// Bulk fetch in a dedicated system thread. Usually so the application can process the last batch
 /// while the next one is fetched.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
@@ -4145,10 +4145,14 @@ fn concurrent_bulk_fetch_with_invalid_buffer_type(profile: &Profile) {
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
     let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
-    let result = concurrent_block_cursor.fetch_into(&mut buffer_a);
+    // This line provokes the first error, due to the invalid buffer.
+    let result_one = concurrent_block_cursor.fetch_into(&mut buffer_a);
+    let result_two = concurrent_block_cursor.fetch_into(&mut buffer_a);
 
     // Then
-    assert!(result.is_err());
+    assert!(result_one.is_err());
+    // After the first error, we treat the stream same as we would treat a stream which is consumed.
+    assert!(!result_two.unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -4166,6 +4170,31 @@ fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
     // Consume first result set.
     concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
+    // Now continue with the same cursor to fetch the second
+    let cursor = concurrent_block_cursor.into_cursor().unwrap();
+    let cursor = cursor.more_results().unwrap().unwrap();
+    let mut cursor = cursor.bind_buffer(buffer_a).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+}
+
+/// This test covers a code path in which the thread dedicated to fething is not termintated by
+/// running out of batches.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
+    // Given
+    let conn = profile.connection().unwrap();
+    let query = "SELECT 1 AS a; SELECT 2 AS b;";
+
+    // When
+    let buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
+    let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
+    let concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    // Skip over first result set, without fetching any batches.
     // Now continue with the same cursor to fetch the second
     let cursor = concurrent_block_cursor.into_cursor().unwrap();
     let cursor = cursor.more_results().unwrap().unwrap();
