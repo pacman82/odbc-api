@@ -4089,7 +4089,7 @@ fn fetch_decimals_to_int(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn concurrent_bulk_fetch_into_result(profile: &Profile) {
+fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["INT"]).unwrap();
@@ -4118,6 +4118,73 @@ fn concurrent_bulk_fetch_into_result(profile: &Profile) {
 
     let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     assert!(!has_another_batch);
+}
+
+/// Bulf fetch in a dedicated system thread. Usually so the application can process the last batch
+/// while the next one is fetched.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INT"]).unwrap();
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
+        .unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn
+        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let block_cursor = cursor.bind_buffer(buffer).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+
+    let batch = concurrent_block_cursor.fetch().unwrap().unwrap();
+    assert_eq!(1, batch.num_rows());
+    assert_eq!(1i32, batch.column(0).as_slice().unwrap()[0]);
+    concurrent_block_cursor.fill(batch);
+
+    let batch = concurrent_block_cursor.fetch().unwrap().unwrap();
+    assert_eq!(1, batch.num_rows());
+    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+    concurrent_block_cursor.fill(batch);
+
+    let all_batches_consumed = concurrent_block_cursor.fetch().unwrap().is_none();
+    assert!(all_batches_consumed);
+}
+
+/// Catch edge cases, there we stop the thread, while there are still batches to consume
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["INT"]).unwrap();
+    conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
+        .unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let cursor = conn
+        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+    let block_cursor = cursor.bind_buffer(buffer).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let _ = concurrent_block_cursor.fetch().unwrap().unwrap();
+    // Now instead of sending a buffer and fetching a next one, we interrupt the fetch thread while
+    // it does not own a buffer.
+    let cursor = concurrent_block_cursor.into_cursor().unwrap();
+    // Now we can deterministically fetch the second batch in the main thread again. Since the fetch
+    // thread has only ever seen one buffer, it could have only fetched one batch.
+    
+    let actual = cursor_to_string(cursor);
+    assert_eq!("2", actual);
 }
 
 /// Bulk fetch in a dedicated system thread. Usually so the application can process the last batch
