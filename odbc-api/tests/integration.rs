@@ -4104,7 +4104,7 @@ fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
-    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
 
     let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     assert!(has_another_batch);
@@ -4140,7 +4140,7 @@ fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer).unwrap();
-    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
 
     let batch = concurrent_block_cursor.fetch().unwrap().unwrap();
     assert_eq!(1, batch.num_rows());
@@ -4175,7 +4175,7 @@ fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer).unwrap();
-    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
     let _ = concurrent_block_cursor.fetch().unwrap().unwrap();
     // Now instead of sending a buffer and fetching a next one, we interrupt the fetch thread while
     // it does not own a buffer.
@@ -4211,7 +4211,7 @@ fn concurrent_bulk_fetch_with_invalid_buffer_type(profile: &Profile) {
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
-    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
     // This line provokes the first error, due to the invalid buffer.
     let result_one = concurrent_block_cursor.fetch_into(&mut buffer_a);
     let result_two = concurrent_block_cursor.fetch_into(&mut buffer_a);
@@ -4233,7 +4233,7 @@ fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
-    let mut concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
     // Consume first result set.
     concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
@@ -4260,7 +4260,7 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
-    let concurrent_block_cursor = ConcurrentBlockCursor::new(block_cursor).unwrap();
+    let concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor).unwrap();
     // Skip over first result set, without fetching any batches.
     // Now continue with the same cursor to fetch the second
     let cursor = concurrent_block_cursor.into_cursor().unwrap();
