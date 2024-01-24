@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.0
+
+* Adds `ConcurrentBlockCursor` to ease fetching large result sets in a dedicated system thread.
+
 ## 5.0.0
 
 * removed reexport of `force_send_sync`. It is no longer used within `odbc-api` this should have been removed together with the methods which were promoting Connections to `Send`, but has been overlooked.
