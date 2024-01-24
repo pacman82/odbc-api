@@ -37,7 +37,7 @@ use crate::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor, Error};
 /// // And now we have a sendable block cursor with static lifetime
 /// let block_cursor = cursor.bind_buffer(buffer_a)?;
 /// 
-/// let mut cbc = ConcurrentBlockCursor::from_block_cursor(block_cursor)?;
+/// let mut cbc = ConcurrentBlockCursor::from_block_cursor(block_cursor);
 /// while cbc.fetch_into(&mut buffer_b)? {
 ///     // Proccess batch in buffer b asynchronously to fetching it
 /// }
@@ -76,7 +76,7 @@ where
     ///   and bind the cursor.
     pub fn from_block_cursor(
         block_cursor: BlockCursor<C, ColumnarAnyBuffer>,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         let (send_buffer, receive_buffer) = sync_channel(1);
         let (send_batch, receive_batch) = sync_channel(1);
 
@@ -118,12 +118,12 @@ where
             }
         });
 
-        Ok(Self {
+        Self {
             send_buffer,
             receive_batch,
             fetch_thread: Some(fetch_thread),
             cursor: None,
-        })
+        }
     }
 
     /// Join fetch thread and yield the cursor back.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.0 (next)
+
+* `ConcurrentBlockCursor::from_block_cursor` is now infalliable.
+
 ## 5.1.0
 
 * Adds `ConcurrentBlockCursor` to ease fetching large result sets in a dedicated system thread.
