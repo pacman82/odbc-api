@@ -505,6 +505,43 @@ fn bind_numeric_to_float(profile: &Profile) {
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] SQLLITE does not do this kind of precision
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fetch_double_precision_as_f64(profile: &Profile) {
+    // Setup table
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["DOUBLE PRECISION"]).unwrap();
+    conn.execute(&table.sql_insert(), &123456789.12345678f64).unwrap();
+    
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, ()).unwrap().unwrap();
+    let buf: SingleColumnRowSetBuffer<Vec<f64>> = SingleColumnRowSetBuffer::new(1);
+    let mut row_set_cursor = cursor.bind_buffer(buf).unwrap();
+
+    let actual = row_set_cursor.fetch().unwrap().unwrap().get();
+    assert_eq!(1, actual.len());
+    assert!((123456789.12345678f64 - actual[0]).abs() < f64::EPSILON);
+}
+
+/// What relational types do different dbs report for "Double precision"
+#[test_case(MSSQL, DataType::Float { precision: 53 }; "Microsoft SQL Server")]
+#[test_case(MARIADB, DataType::Double; "Maria DB")]
+#[test_case(SQLITE_3, DataType::Double; "SQLite 3")]
+// Yeah, `0` this seems like a bug in PG
+#[test_case(POSTGRES, DataType::Float { precision: 0 }; "PostgreSQL")]
+fn data_type_reported_for_double_precision(profile: &Profile, expected_data_type: DataType) {
+    // Given a cursor with metadata about double precision
+    let table_name = table_name!();
+    let (conn, table) = profile.given(&table_name, &["DOUBLE PRECISION"]).unwrap();
+    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+
+    let actual_data_type = cursor.col_data_type(1).unwrap();
+
+    assert_eq!(expected_data_type, actual_data_type);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_numeric_to_i64(profile: &Profile) {
