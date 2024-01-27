@@ -1,8 +1,9 @@
 # Changelog
 
-## 6.0.0 (next)
+## 6.0.0
 
 * `ConcurrentBlockCursor::from_block_cursor` is now infalliable.
+* `Quirks::indicators_returned_from_bulk_fetch_are_memory_garbage` will be now set for every database name which starts with `DB2`.
 
 ## 5.1.0
 

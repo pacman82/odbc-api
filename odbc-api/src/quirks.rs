@@ -47,7 +47,7 @@ impl Quirks {
     pub fn from_dbms_name(name: &str) -> Self {
         let mut quirks = Quirks::new();
 
-        if name.starts_with("DB2/LINUX") {
+        if name.starts_with("DB2") {
             quirks.indicators_returned_from_bulk_fetch_are_memory_garbage = true
         }
 
