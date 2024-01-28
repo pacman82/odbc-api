@@ -511,8 +511,9 @@ fn fetch_double_precision_as_f64(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["DOUBLE PRECISION"]).unwrap();
-    conn.execute(&table.sql_insert(), &123456789.12345678f64).unwrap();
-    
+    conn.execute(&table.sql_insert(), &123456789.12345678f64)
+        .unwrap();
+
     let query = table.sql_all_ordered_by_id();
     let cursor = conn.execute(&query, ()).unwrap().unwrap();
     let buf: SingleColumnRowSetBuffer<Vec<f64>> = SingleColumnRowSetBuffer::new(1);
@@ -533,7 +534,10 @@ fn data_type_reported_for_double_precision(profile: &Profile, expected_data_type
     // Given a cursor with metadata about double precision
     let table_name = table_name!();
     let (conn, table) = profile.given(&table_name, &["DOUBLE PRECISION"]).unwrap();
-    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), ()).unwrap().unwrap();
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
 
     let actual_data_type = cursor.col_data_type(1).unwrap();
 
@@ -4219,7 +4223,7 @@ fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
     let cursor = concurrent_block_cursor.into_cursor().unwrap();
     // Now we can deterministically fetch the second batch in the main thread again. Since the fetch
     // thread has only ever seen one buffer, it could have only fetched one batch.
-    
+
     let actual = cursor_to_string(cursor);
     assert_eq!("2", actual);
 }
@@ -4307,6 +4311,27 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
 
     // Then
     assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+}
+
+/// This tests checks if there is more than one attribute returned. We had a bug (see issue:
+/// <https://github.com/pacman82/odbc-api/issues/511>) in which we used a buffer intended for zero
+/// terminated strings to get the attributes. Yet the attributes use the `0` as a delimiter.
+#[test]
+#[should_panic] // Bug not fixed yet
+fn list_all_driver_attributes() {
+    // Given an ODBC environment with drivers installed
+    let environment = &ENV;
+
+    // When fetching driver infors
+    let driver_infos = environment.drivers().unwrap();
+
+    // At least one driver is expecetd to have more than one attribute.
+    let maximum = driver_infos
+        .iter()
+        .map(|info| info.attributes.len())
+        .max()
+        .expect("At least one ODBC driver must be installed");
+    assert!(maximum > 1);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
