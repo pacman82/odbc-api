@@ -4317,7 +4317,6 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
 /// <https://github.com/pacman82/odbc-api/issues/511>) in which we used a buffer intended for zero
 /// terminated strings to get the attributes. Yet the attributes use the `0` as a delimiter.
 #[test]
-#[should_panic] // Bug not fixed yet
 fn list_all_driver_attributes() {
     // Given an ODBC environment with drivers installed
     let environment = &ENV;

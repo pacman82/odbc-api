@@ -3,7 +3,10 @@ use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
 use crate::{
     connection::ConnectionOptions,
     error::ExtendResult,
-    handles::{self, log_diagnostics, OutputStringBuffer, SqlResult, SqlText, State, SzBuffer},
+    handles::{
+        self, log_diagnostics, slice_to_utf8, OutputStringBuffer, SqlChar, SqlResult, SqlText,
+        State, SzBuffer,
+    },
     Connection, DriverCompleteOption, Error,
 };
 use log::debug;
@@ -506,19 +509,18 @@ impl Environment {
 
             // Allocate +1 character extra for terminating zero
             let mut desc_buf = SzBuffer::with_capacity(desc_len as usize);
-            let mut attr_buf = SzBuffer::with_capacity(attr_len as usize);
+            // Do **not** use nul terminated buffer, as nul is used to delimit key value pairs of
+            // attributes.
+            let mut attr_buf: Vec<SqlChar> = vec![0; attr_len as usize];
 
             while self
                 .environment
-                .drivers_buffer_fill(
-                    FetchOrientation::Next,
-                    desc_buf.mut_buf(),
-                    attr_buf.mut_buf(),
-                )
+                .drivers_buffer_fill(FetchOrientation::Next, desc_buf.mut_buf(), &mut attr_buf)
                 .into_result_bool(&self.environment)?
             {
                 let description = desc_buf.to_utf8();
-                let attributes = attr_buf.to_utf8();
+                let attributes =
+                    slice_to_utf8(&attr_buf).expect("Attributes must be interpretable as UTF-8");
 
                 let attributes = attributes_iter(&attributes).collect();
 

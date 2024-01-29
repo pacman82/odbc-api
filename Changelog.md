@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.1
+
+* Fixes an issue with `Environment::drivers`, which caused it to have at most one driver attribute in the `DriverInfo` attributes.
+
 ## 6.0.0
 
 * `ConcurrentBlockCursor::from_block_cursor` is now infalliable.
