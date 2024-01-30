@@ -5,7 +5,7 @@ use atoi::{FromRadix10, FromRadix10Signed};
 /// to the power of scale. E.g. 123.45 of a Decimal with scale 3 is thought of as 123.450 and
 /// represented as 123450. This method will regard any non digit character as a radix character with
 /// the exception of a `+` or `-` at the beginning of the string.
-/// 
+///
 /// This method is robust against representation which do not have trailing zeroes as well as
 /// arbitrary radix character. If you do not write a generic application and now the specific way
 /// your database formats decimals you may come up with faster methods to parse decimals.
@@ -22,7 +22,7 @@ pub fn decimal_text_to_i128(text: &[u8], scale: usize) -> i128 {
         high *= 10;
     }
     // We want to increase the absolute of high by low without changing highs sign
-    let mut n = if high < 0 { high - low } else { high + low };
+    let mut n = if high < 0 || (high == 0 && (text[0] as char) == '-') { high - low } else { high + low };
     // We would be done now, if every database would include trailing zeroes, but they might choose
     // to omit those. Therfore we see if we need to leftshift n further in order to meet scale.
     for _ in 0..(scale - num_digits_low) {
@@ -59,5 +59,11 @@ mod tests {
     fn negative_decimal() {
         let actual = decimal_text_to_i128(b"-10.00000", 5);
         assert_eq!(-1_000_000, actual);
+    }
+
+    #[test]
+    fn negative_decimal_small() {
+        let actual = decimal_text_to_i128(b"-0.1", 5);
+        assert_eq!(-10000, actual);
     }
 }
