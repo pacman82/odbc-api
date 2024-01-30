@@ -22,7 +22,7 @@ pub fn decimal_text_to_i128(text: &[u8], scale: usize) -> i128 {
         high *= 10;
     }
     // We want to increase the absolute of high by low without changing highs sign
-    let mut n = if high < 0 || (high == 0 && (text[0] as char) == '-') { high - low } else { high + low };
+    let mut n = if high < 0 || (high == 0 && text[0] == b'-') { high - low } else { high + low };
     // We would be done now, if every database would include trailing zeroes, but they might choose
     // to omit those. Therfore we see if we need to leftshift n further in order to meet scale.
     for _ in 0..(scale - num_digits_low) {

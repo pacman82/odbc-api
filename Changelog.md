@@ -1,5 +1,9 @@
 # Changelog
 
+## 6.0.2
+
+* Fixes an issue with `decimal_text_to_i128`, which caused a negative value to be treated as positive, if it had been below a magnitude of one. Thanks to @timkpaine for reporting and fixing the issue.
+
 ## 6.0.1
 
 * Fixes an issue with `Environment::drivers`, which caused it to have at most one driver attribute in the `DriverInfo` attributes.
