@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.0.0 (next)
+
+* Removed `Quirks`. Detection of driver problems via dbms name is not relyable enough.
+
 ## 6.0.2
 
 * Fixes an issue with `decimal_text_to_i128`, which caused a negative value to be treated as positive, if it had been below a magnitude of one. Thanks to @timkpaine for reporting and fixing the issue.
