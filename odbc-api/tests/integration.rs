@@ -41,9 +41,9 @@ const MSSQL: &Profile = &Profile {
 };
 
 #[cfg(target_os = "windows")]
-const SQLITE_3_CONNECTION: &str = "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db";
+const SQLITE_3_CONNECTION: &str = "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db;{Journal Mode}=WAL;";
 #[cfg(not(target_os = "windows"))]
-const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db";
+const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db;{Journal Mode}=WAL;";
 
 const SQLITE_3: &Profile = &Profile {
     connection_string: SQLITE_3_CONNECTION,
