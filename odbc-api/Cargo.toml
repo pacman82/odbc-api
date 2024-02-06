@@ -86,7 +86,7 @@ env_logger = "0.10.2"
 anyhow = "1.0.79"
 csv = "1.3.0"
 test-case = "3.3.1"
-tempfile = "3.9.0"
+tempfile = "3.10.0"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 tokio = { version = "1.36.0", features = ["rt", "macros", "time"] }
 stdext = "0.3.1" # Used for function_name macro to generate unique table names for tests
