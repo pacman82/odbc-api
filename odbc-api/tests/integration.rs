@@ -3968,8 +3968,10 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     assert_eq!(batch.num_rows(), 1);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
+// The two failing drivers confuse buffer and character lengths with each other. It could not be
+// worked around by allocating larger buffers.
+// #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn describe_column_name_with_umlaut(profile: &Profile) {
@@ -3977,13 +3979,13 @@ fn describe_column_name_with_umlaut(profile: &Profile) {
     // Given a table with an umlaut in a column name
     let (conn, _table) = Given::new(&table_name)
         .column_types(&["INTEGER"])
-        .column_names(&["hällo"])
+        .column_names(&["hällo𐐏"])
         .build(profile)
         .unwrap();
 
     // When executing a query with a result set containing that column and describing that column
     let mut result_set = conn
-        .execute(&format!("SELECT hällo FROM {table_name}"), ())
+        .execute(&format!("SELECT hällo𐐏 FROM {table_name}"), ())
         .unwrap()
         .unwrap();
     let mut desc = ColumnDescription::default();
@@ -3991,7 +3993,7 @@ fn describe_column_name_with_umlaut(profile: &Profile) {
     let column_name = desc.name_to_string().unwrap();
 
     // Then
-    assert_eq!("hällo", column_name);
+    assert_eq!("hällo𐐏", column_name);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
