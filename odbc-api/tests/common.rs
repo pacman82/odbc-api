@@ -15,6 +15,39 @@ lazy_static! {
     };
 }
 
+pub struct Given<'a> {
+    table_name: &'a str,
+    column_types: &'a [&'a str],
+    column_names: &'a [&'a str],
+}
+
+impl<'a> Given<'a> {
+    pub fn new(table_name: &'a str) -> Self {
+        Given {
+            table_name,
+            column_types: &[],
+            column_names: &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+        }
+    }
+
+    pub fn column_types(&mut self, column_types: &'a [&'a str]) -> &mut Self {
+        self.column_types = column_types;
+        self
+    }
+
+    pub fn column_names(&mut self, column_names: &'a [&'a str]) -> &mut Self {
+        self.column_types = column_names;
+        self
+    }
+
+    pub fn build(
+        &self,
+        profile: &Profile,
+    ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
+        profile.given_build(self.table_name, self.column_types, self.column_names)
+    }
+}
+
 /// Used to adapt test behaviour to different drivers and datasources
 #[derive(Clone, Copy, Debug)]
 pub struct Profile {
@@ -38,10 +71,7 @@ impl Profile {
         table_name: &str,
         column_types: &[&str],
     ) -> Result<Connection<'static>, odbc_api::Error> {
-        let conn = self.connection()?;
-        let table = Table::new(table_name, column_types);
-        conn.execute(&table.sql_drop_if_exists(), ())?;
-        conn.execute(&table.sql_create_table(self.index_type), ())?;
+        let (conn, _table) = self.given(table_name, column_types)?;
         Ok(conn)
     }
 
@@ -58,6 +88,21 @@ impl Profile {
         conn.execute(&table.sql_create_table(self.index_type), ())?;
         Ok((conn, table))
     }
+
+    /// Convenience function, setting up an empty table, and returning the connection used to create
+    /// it.
+    pub fn given_build<'a>(
+        &self,
+        table_name: &'a str,
+        column_types: &'a [&'a str],
+        column_names: &'a [&'a str],
+    ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
+        let conn = self.connection()?;
+        let table = Table::with_column_names(table_name, column_types, column_names);
+        conn.execute(&table.sql_drop_if_exists(), ())?;
+        conn.execute(&table.sql_create_table(self.index_type), ())?;
+        Ok((conn, table))
+    }
 }
 
 /// Declarative description for a table to conveniently build queries for it
@@ -68,8 +113,17 @@ pub struct Table<'a> {
 }
 
 impl<'a> Table<'a> {
+    /// Use letters of the alphabet as column names
     pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
         let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+        Table::with_column_names(name, column_types, column_names)
+    }
+
+    pub fn with_column_names(
+        name: &'a str,
+        column_types: &'a [&'a str],
+        column_names: &'a [&'a str],
+    ) -> Self {
         Table {
             name,
             column_types,
