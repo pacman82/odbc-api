@@ -1723,8 +1723,9 @@ fn bind_u16_string_parameter_to_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn two_parameters_in_tuple(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
         .unwrap();
     let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2), (3), (4);");
     conn.execute(&insert, ()).unwrap();
@@ -1742,8 +1743,9 @@ fn two_parameters_in_tuple(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn heterogenous_parameters_in_array(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(13)"])
+        .build(profile)
         .unwrap();
     let insert_sql = format!(
         "INSERT INTO {table_name} (a, b) VALUES (1, 'Hello'), (2, 'Hello'), (3, 'Hello'), (3, 'Hallo')"
@@ -3973,7 +3975,23 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
 fn describe_column_name_with_umlaut(profile: &Profile) {
     let table_name = table_name!();
     // Given a table with an umlaut in a column name
-    // let a = profile.setup_empty_table(table_name, column_types, &["hällo"]);
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .column_names(&["hällo"])
+        .build(profile)
+        .unwrap();
+
+    // When executing a query with a result set containing that column and describing that column
+    let mut result_set = conn
+        .execute(&format!("SELECT hällo FROM {table_name}"), ())
+        .unwrap()
+        .unwrap();
+    let mut desc = ColumnDescription::default();
+    result_set.describe_col(1, &mut desc).unwrap();
+    let column_name = desc.name_to_string().unwrap();
+
+    // Then
+    assert_eq!("hällo", column_name);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
