@@ -316,7 +316,10 @@ fn into_cursor(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn column_name(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["VARCHAR(255)", "INT"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(255)", "INT"])
+        .build(profile)
+        .unwrap();
 
     let sql = format!("SELECT a, b FROM {table_name};");
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
@@ -343,7 +346,10 @@ fn column_name(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_wide_column_to_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["CHAR(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["CHAR(5)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
     conn.execute(&insert_sql, &"Hello".into_parameter())
         .unwrap();
@@ -368,7 +374,10 @@ fn bind_wide_column_to_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_bit(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["BIT"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["BIT"])
+        .build(profile)
+        .unwrap();
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?),(?);");
     conn.execute(&insert_sql, (&Bit::from_bool(false), &Bit::from_bool(true)))
         .unwrap();
@@ -391,7 +400,10 @@ fn bind_bit(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn truncate_fixed_sized(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["CHAR(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["CHAR(5)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
     conn.execute(&insert_sql, &"Hello".into_parameter())
         .unwrap();
@@ -414,7 +426,10 @@ fn truncate_fixed_sized(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_varchar(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["VARCHAR(100)"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(100)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!');");
     conn.execute(&insert_sql, ()).unwrap();
 
@@ -436,7 +451,10 @@ fn bind_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_varchar_to_wchar(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(100)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(100)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
     conn.execute(&insert_sql, &"Hello, World!".into_parameter())
         .unwrap();
@@ -482,7 +500,10 @@ fn nvarchar_to_text(profile: &Profile) {
 fn bind_numeric_to_float(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["NUMERIC(3,2)"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["NUMERIC(3,2)"])
+        .build(profile)
+        .unwrap();
 
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?);");
     conn.execute(&insert_sql, &1.23).unwrap();
@@ -504,7 +525,10 @@ fn bind_numeric_to_float(profile: &Profile) {
 fn fetch_double_precision_as_f64(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["DOUBLE PRECISION"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DOUBLE PRECISION"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &123456789.12345678f64)
         .unwrap();
 
@@ -527,7 +551,10 @@ fn fetch_double_precision_as_f64(profile: &Profile) {
 fn data_type_reported_for_double_precision(profile: &Profile, expected_data_type: DataType) {
     // Given a cursor with metadata about double precision
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["DOUBLE PRECISION"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DOUBLE PRECISION"])
+        .build(profile)
+        .unwrap();
     let mut cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
@@ -545,7 +572,10 @@ fn data_type_reported_for_double_precision(profile: &Profile, expected_data_type
 fn bind_numeric_to_i64(profile: &Profile) {
     // Setup table
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["NUMERIC(10,0)"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["NUMERIC(10,0)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (?);");
     conn.execute(&insert_sql, &1234567890i64).unwrap();
 
@@ -566,7 +596,10 @@ fn bind_numeric_to_i64(profile: &Profile) {
 fn columnar_fetch_varbinary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARBINARY(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARBINARY(10)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = format!(
         "INSERT INTO {table_name} (a) Values \
         (CONVERT(Varbinary(10), 'Hello')),\
@@ -608,7 +641,10 @@ fn upper_limit_for_varchar_max(profile: &Profile, large_text_type: &'static str)
     // Given
     let table_name = table_name!();
     let types = [large_text_type];
-    let (conn, table) = Given::new(&table_name).column_types( &types).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&types)
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
         .unwrap();
 
@@ -635,12 +671,17 @@ fn upper_limit_for_varchar_max(profile: &Profile, large_text_type: &'static str)
 fn columnar_fetch_binary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types(&["BINARY(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["BINARY(5)"])
+        .build(profile)
+        .unwrap();
     conn.execute(
-        &format!("INSERT INTO {table_name} (a) Values \
+        &format!(
+            "INSERT INTO {table_name} (a) Values \
         (CONVERT(Binary(5), 'Hello')),\
         (CONVERT(Binary(5), 'World')),\
-        (NULL)"),
+        (NULL)"
+        ),
         (),
     )
     .unwrap();
@@ -675,7 +716,10 @@ fn columnar_fetch_binary(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_fetch_timestamp(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["DATETIME2(3)"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["DATETIME2(3)"])
+        .build(profile)
+        .unwrap();
     conn.execute(
         &format!(
             "INSERT INTO {table_name} (a) Values \
@@ -748,7 +792,10 @@ fn columnar_fetch_timestamp(profile: &Profile) {
 fn columnar_insert_timestamp(profile: &Profile) {
     let table_name = table_name!();
     // Setup
-    let (conn, table) = Given::new(&table_name).column_types( &["DATETIME2"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DATETIME2"])
+        .build(profile)
+        .unwrap();
 
     // Fill buffer with values
     let desc = BufferDesc::Timestamp { nullable: true };
@@ -801,7 +848,10 @@ fn columnar_insert_timestamp(profile: &Profile) {
 fn columnar_insert_int_raw(profile: &Profile) {
     let table_name = table_name!();
     // Setup
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     // Fill buffer with values
     let desc = BufferDesc::I32 { nullable: true };
@@ -837,7 +887,10 @@ fn columnar_insert_int_raw(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 fn columnar_insert_timestamp_ms(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = Given::new(&table_name).column_types(&["DATETIME2(3)"]).build(profile).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["DATETIME2(3)"])
+        .build(profile)
+        .unwrap();
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
@@ -891,10 +944,11 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")] different binary text representation
 fn columnar_insert_varbinary(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types(&["VARBINARY(13)"]).build(profile).unwrap();
-    let prepared = conn
-        .prepare(&table.sql_insert())
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARBINARY(13)"])
+        .build(profile)
         .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     // Fill buffer with values
     let desc = BufferDesc::Binary { length: 5 };
     let mut prebound = prepared.into_column_inserter(4, [desc]).unwrap();
@@ -935,9 +989,9 @@ fn columnar_insert_varbinary(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_varchar(profile: &Profile) {
     let table_name = table_name!();
-    // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(13)"])
+        .build(profile)
         .unwrap();
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
@@ -986,7 +1040,10 @@ fn columnar_insert_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let parameter_buffers = vec![WithDataType {
@@ -1017,7 +1074,10 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn insert_str_as_sql_integer(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     let parameter = WithDataType {
@@ -1076,7 +1136,10 @@ fn var_char_slice_mut_as_input_output_parameter(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn insert_vec_column_using_generic_code(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER", "INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     fn insert_tuple2_vec<A: Item, B: Item>(
@@ -1111,9 +1174,9 @@ fn insert_vec_column_using_generic_code(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn adaptive_columnar_insert_varchar(profile: &Profile) {
     let table_name = table_name!();
-    // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(13)"])
+        .build(profile)
         .unwrap();
 
     // Fill buffer with values
@@ -1160,9 +1223,9 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
 // #[test_case(SQLITE_3; "SQLite 3")]
 fn adaptive_columnar_insert_varbin(profile: &Profile) {
     let table_name = table_name!();
-    // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARBINARY(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARBINARY(13)"])
+        .build(profile)
         .unwrap();
     // Fill buffer with values
     let desc = BufferDesc::Binary {
@@ -1212,9 +1275,9 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
 // #[test_case(POSTGRES; "PostgreSQL")] Type NVARCHAR does not exist
 fn columnar_insert_wide_varchar(profile: &Profile) {
     let table_name = table_name!();
-    // Setup
-    let conn = profile
-        .setup_empty_table(&table_name, &["NVARCHAR(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["NVARCHAR(13)"])
+        .build(profile)
         .unwrap();
 
     let prepared = conn
@@ -1256,8 +1319,9 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_integer_parameter(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER"])
+        .build(profile)
         .unwrap();
     let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
@@ -1280,7 +1344,10 @@ fn bind_integer_parameter(profile: &Profile) {
 #[test_case(POSTGRES, "Hell"; "PostgreSQL")]
 fn insert_string_ending_with_nul(profile: &Profile, expected: &str) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
     let sql = table.sql_insert();
     let param = "Hell\0";
     conn.execute(&sql, &param.into_parameter()).unwrap();
@@ -1296,8 +1363,9 @@ fn insert_string_ending_with_nul(profile: &Profile, expected: &str) {
 fn prepared_statement(profile: &Profile) {
     // Setup
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(13)", "INTEGER"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(13)", "INTEGER"])
+        .build(profile)
         .unwrap();
     let insert = format!("INSERT INTO {table_name} (a,b) VALUES ('First', 1), ('Second', 2);");
     conn.execute(&insert, ()).unwrap();
@@ -1327,8 +1395,9 @@ fn prepared_statement(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn preallocated(profile: &Profile) {
     // Prepare the statement once
-    let conn = profile
-        .setup_empty_table("Preallocated", &["VARCHAR(10)"])
+    let (conn, _table) = Given::new("Preallocated")
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
         .unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
@@ -1359,24 +1428,23 @@ fn preallocated(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn preallocation_soundness(profile: &Profile) {
     // Prepare the statement once
-    let conn = profile
-        .setup_empty_table("PreallocationSoundness", &["VARCHAR(10)"])
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
         .unwrap();
     let mut prealloc = conn.preallocate().unwrap();
 
     {
         let res = prealloc
-            .execute(
-                "INSERT INTO PreallocationSoundness (a) VALUES ('Hello')",
-                (),
-            )
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
             .unwrap();
         assert!(res.is_none());
     }
 
     {
         let cursor = prealloc
-            .execute("SELECT a FROM PreallocationSoundness ORDER BY id", ())
+            .execute(&table.sql_all_ordered_by_id(), ())
             .unwrap()
             .unwrap();
         let actual = cursor_to_string(cursor);
@@ -1386,7 +1454,7 @@ fn preallocation_soundness(profile: &Profile) {
 
     {
         let mut cursor = prealloc
-            .execute("SELECT a FROM PreallocationSoundness ORDER BY id", ())
+            .execute(&table.sql_all_ordered_by_id(), ())
             .unwrap()
             .unwrap();
 
@@ -1403,8 +1471,9 @@ fn preallocation_soundness(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn integer_parameter_as_string(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER"])
+        .build(profile)
         .unwrap();
     let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
@@ -1422,8 +1491,9 @@ fn integer_parameter_as_string(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_optional_integer_parameter(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER"])
+        .build(profile)
         .unwrap();
     let insert = format!("INSERT INTO {table_name} (a,b) VALUES (1,1), (2,2);");
     conn.execute(&insert, ()).unwrap();
@@ -1475,8 +1545,9 @@ fn non_ascii_char(profile: &Profile) {
 // #[test_case(POSTGRES; "PostgreSQL")] NVARCHAR does not exist
 fn wchar(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["NVARCHAR(1)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["NVARCHAR(1)"])
+        .build(profile)
         .unwrap();
 
     conn.execute(
@@ -1510,7 +1581,10 @@ fn wchar(profile: &Profile) {
 #[cfg(not(target_os = "windows"))] // Windows does not use UTF-8 locale by default
 fn wchar_as_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["NVARCHAR(1)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["NVARCHAR(1)"])
+        .build(profile)
+        .unwrap();
 
     // With the wide character ODBC function calls passing the arguments as literals worked but with
     // the narrow version "INSERT INTO WCharAsChar (a) VALUES ('A'), ('Ü');" fails. It erroneously
@@ -1531,7 +1605,10 @@ fn wchar_as_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_str_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["CHAR(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["CHAR(5)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     conn.execute(&insert_sql, &"Hello".into_parameter())
@@ -1547,7 +1624,10 @@ fn bind_str_parameter_to_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_narrow_parameter_to_varchar(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     // String Slice
@@ -1594,7 +1674,10 @@ fn bind_narrow_parameter_to_varchar(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_u16_str_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["CHAR(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["CHAR(5)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     let hello = U16String::from_str("Hello");
@@ -1615,7 +1698,10 @@ fn bind_u16_str_parameter_to_char(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bind_u16_string_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["CHAR(5)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["CHAR(5)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     // Usecase: Create an owned parameter from a UTF-16 string
@@ -1928,7 +2014,10 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn send_connection(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     // Insert in one thread, query in another, using the same connection.
     let insert_sql = format!("INSERT INTO {table_name} (a) VALUES (1),(2),(3)");
@@ -2003,7 +2092,10 @@ fn parameter_option_bytes(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn parameter_varchar_512(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
@@ -2024,7 +2116,10 @@ fn parameter_varchar_512(profile: &Profile) {
 // #[test_case(POSTGRES; "PostgreSQL")] Varbinary does not exist
 fn parameter_varbinary_512(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARBINARY(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARBINARY(50)"])
+        .build(profile)
+        .unwrap();
     let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
@@ -2044,7 +2139,10 @@ fn parameter_varbinary_512(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn parameter_cstr(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
 
@@ -2251,7 +2349,10 @@ fn interior_nul(profile: &Profile, expected: &str) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_data_int(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (42),(NULL)"),
         (),
@@ -2283,7 +2384,10 @@ fn get_data_int(profile: &Profile) {
 fn get_data_timestamp(profile: &Profile, timestamp_type: &str) {
     let table_name = table_name!();
     let types = [timestamp_type];
-    let (conn, table) = Given::new(&table_name).column_types( &types).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&types)
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"2022-11-09 06:17:00".into_parameter())
         .unwrap();
     let sql = table.sql_all_ordered_by_id();
@@ -2316,7 +2420,10 @@ fn get_data_timestamp(profile: &Profile, timestamp_type: &str) {
 // #[test_case(POSTGRES; "PostgreSQL")] Return generic error HY000 instead
 fn get_data_int_null(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &None::<i32>.into_parameter())
         .unwrap();
     let sql = table.sql_all_ordered_by_id();
@@ -2381,7 +2488,10 @@ fn get_data_string(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_text(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["Varchar(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["Varchar(50)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
         .unwrap();
     let mut cursor = conn
@@ -2407,7 +2517,10 @@ fn get_text(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_wide_text(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["Varchar(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["Varchar(50)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
         .unwrap();
     let mut cursor = conn
@@ -2473,7 +2586,10 @@ fn get_data_binary(profile: &Profile) {
 fn large_strings(profile: &Profile, column_type: &str) {
     let table_name = table_name!();
     let column_types = [column_type];
-    let (conn, table) = Given::new(&table_name).column_types( &column_types).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&column_types)
+        .build(profile)
+        .unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
     conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
         .unwrap();
@@ -2502,7 +2618,10 @@ fn large_strings(profile: &Profile, column_type: &str) {
 fn large_binary_get_text(profile: &Profile, column_type: &str) {
     let table_name = table_name!();
     let column_types = [column_type];
-    let (conn, table) = Given::new(&table_name).column_types( &column_types).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&column_types)
+        .build(profile)
+        .unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
     conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
         .unwrap();
@@ -2528,7 +2647,10 @@ fn large_binary_get_text(profile: &Profile, column_type: &str) {
 fn large_strings_get_text(profile: &Profile, column_type: &str) {
     let table_name = table_name!();
     let column_types = [column_type];
-    let (conn, table) = Given::new(&table_name).column_types( &column_types).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&column_types)
+        .build(profile)
+        .unwrap();
     let input = String::from_utf8(vec![b'a'; 2000]).unwrap();
     conn.execute(&table.sql_insert(), &input.as_str().into_parameter())
         .unwrap();
@@ -2552,7 +2674,10 @@ fn large_strings_get_text(profile: &Profile, column_type: &str) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn fixed_strings_get_text(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["Char(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["Char(10)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"1234567890".into_parameter())
         .unwrap();
 
@@ -2711,7 +2836,10 @@ fn use_truncated_output_as_input(profile: &Profile) {
     let table_name = table_name!();
 
     // Prepare table content
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(13)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(13)"])
+        .build(profile)
+        .unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!');"),
         (),
@@ -2745,7 +2873,10 @@ fn use_truncated_output_as_input(profile: &Profile) {
 #[should_panic(expected = "Truncated values must not be used be bound as input parameters.")]
 fn insert_truncated_value(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
 
     let memory = "Hello\0INVALID MEMORY\0";
     // Contains hello plus terminating zero.
@@ -2779,7 +2910,10 @@ fn insert_truncated_var_char_array(profile: &Profile) {
     let table_name = table_name!();
 
     // Prepare table content
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
 
     let memory = "Hello, World!";
     // Truncated value. Buffer can only hold 'Hello'
@@ -2846,7 +2980,10 @@ fn synchronized_access_to_driver_and_data_source_info() {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn insert_large_texts(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["Text"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["Text"])
+        .build(profile)
+        .unwrap();
 
     let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
 
@@ -3019,7 +3156,10 @@ fn send_long_data_binary_file(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn escape_hatch(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     let preallocated = conn.preallocate().unwrap();
     let mut statement = preallocated.into_statement();
@@ -3052,7 +3192,10 @@ fn escape_hatch(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn varchar_null(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
 
     let insert = format!("INSERT INTO {table_name} (a) VALUES (?)");
 
@@ -3894,7 +4037,10 @@ fn execute_select_insert_select(profile: &Profile) {
 fn chinese_text_argument(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     // When
@@ -3934,7 +4080,10 @@ fn chinese_text_argument(profile: &Profile) {
 fn chinese_text_argument_nvarchar(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["NVARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["NVARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     // When
@@ -3966,7 +4115,10 @@ fn cursor_get_text_from_text(profile: &Profile) {
     // Given a text column with a string larger than 255 characters. It also must contain non ASCII
     // characters.
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["TEXT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TEXT"])
+        .build(profile)
+        .unwrap();
     // For this test we want to run into a scenario, there we can not fetch everything in the first
     // roundtrip, so we choose a text larger than 256 characters.
     let text = "€".repeat(300);
@@ -4003,7 +4155,10 @@ fn cursor_get_text_from_text_mssql(profile: &Profile) {
     // Given a text column with a string larger than 255 characters. It also must contain non ASCII
     // characters.
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["TEXT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TEXT"])
+        .build(profile)
+        .unwrap();
     // For this test we want to run into a scenario, there we can not fetch everything in the first
     // roundtrip, so we choose a text larger than 256 characters.
     let text = "€".repeat(300);
@@ -4035,7 +4190,10 @@ fn cursor_get_text_from_text_mssql(profile: &Profile) {
 fn row_arrary_size_from_block_cursor(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     // When
     let capacity_used_to_create_buffer = 42;
@@ -4065,7 +4223,10 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 fn json_column_display_size(profile: &Profile, expected_display_size: Option<usize>) {
     // Given a table with a column type which will return `NO_TOTAL`
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["JSON"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["JSON"])
+        .build(profile)
+        .unwrap();
     let query = table.sql_all_ordered_by_id();
 
     // When obtaining result set metadata
@@ -4089,7 +4250,10 @@ fn json_column_display_size(profile: &Profile, expected_display_size: Option<usi
 fn fetch_decimals_to_int(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["DECIMAL(5,3)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (12.345), (-12.345), (12), (12.3)"),
         (),
@@ -4126,7 +4290,10 @@ fn fetch_decimals_to_int(profile: &Profile) {
 fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .build(profile)
+        .unwrap();
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
         .unwrap();
 
@@ -4163,7 +4330,10 @@ fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
 fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .build(profile)
+        .unwrap();
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
         .unwrap();
 
@@ -4198,7 +4368,10 @@ fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
 fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .build(profile)
+        .unwrap();
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (1), (2)"), ())
         .unwrap();
 
@@ -4233,7 +4406,10 @@ fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
 fn concurrent_bulk_fetch_with_invalid_buffer_type(profile: &Profile) {
     // Given an integer table with a NULL
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["INT"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .build(profile)
+        .unwrap();
     conn.execute(&format!("INSERT INTO {table_name} (a) VALUES (NULL)"), ())
         .unwrap();
 
@@ -4334,7 +4510,10 @@ fn list_all_driver_attributes() {
 async fn async_preallocated_statement_execution(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
     let sleep = || tokio::time::sleep(Duration::from_millis(10));
 
@@ -4355,7 +4534,10 @@ async fn async_preallocated_statement_execution(profile: &Profile) {
 async fn async_bulk_fetch(profile: &Profile) {
     // Given a table with a thousand records
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut inserter = prepared.into_text_inserter(1000, [50]).unwrap();
     for index in 0..1000 {
@@ -4394,7 +4576,10 @@ async fn async_bulk_fetch(profile: &Profile) {
 fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     // Given a cursor over a result set with a decimal in its first column
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["DECIMAL(5,3)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &(25.212).into_parameter())
         .unwrap();
     let cursor = conn
@@ -4469,7 +4654,10 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
 fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Given a cursor over a result set with a decimal in its first column
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["DECIMAL(5,3)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &(25.212).into_parameter())
         .unwrap();
     let cursor = conn
@@ -4528,7 +4716,10 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
 fn scroll_cursor(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(50)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"one".into_parameter())
         .unwrap();
     conn.execute(&table.sql_insert(), &"two".into_parameter())
@@ -4600,7 +4791,10 @@ fn scroll_cursor(profile: &Profile) {
 fn recover_from_truncation(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types( &["VARCHAR(10)"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
     conn.execute(&table.sql_insert(), &"1".into_parameter())
         .unwrap();
     conn.execute(&table.sql_insert(), &"123456789".into_parameter())
