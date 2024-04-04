@@ -36,7 +36,7 @@ impl<'a> Given<'a> {
     }
 
     pub fn column_names(&mut self, column_names: &'a [&'a str]) -> &mut Self {
-        self.column_types = column_names;
+        self.column_names = column_names;
         self
     }
 
@@ -64,6 +64,7 @@ impl Profile {
         ENV.connect_with_connection_string(self.connection_string, ConnectionOptions::default())
     }
 
+    // #[deprecated]
     /// Convenience function, setting up an empty table, and returning the connection used to create
     /// it.
     pub fn setup_empty_table(
