@@ -24,13 +24,6 @@ pub type SqlChar = u8;
 #[cfg(not(feature = "narrow"))]
 pub type SqlChar = u16;
 
-/// A UTF-8 codepoint is encoded maximum 4 Bytes long
-#[cfg(feature = "narrow")]
-pub const MAX_CHARACTER_LENGTH_IN_ELEMENTS: usize = 4;
-/// A UTF-8 codepoint is encoded maximum 2 Bytes long
-#[cfg(not(feature = "narrow"))]
-pub const MAX_CHARACTER_LENGTH_IN_ELEMENTS: usize = 2;
-
 #[cfg(feature = "narrow")]
 pub type DecodingError = FromUtf8Error;
 #[cfg(not(feature = "narrow"))]
