@@ -921,7 +921,7 @@ fn columnar_insert_varbinary(profile: &Profile) {
 
     // Query values and compare with expectation
     let cursor = conn
-        .execute("SELECT a FROM ColumnarInsertVarbinary ORDER BY Id", ())
+        .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
