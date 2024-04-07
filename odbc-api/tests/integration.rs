@@ -125,6 +125,17 @@ fn connect_to_db(profile: &Profile) {
     assert!(!conn.is_dead().unwrap())
 }
 
+#[test_case(MSSQL, 4096; "Microsoft SQL Server")]
+#[test_case(MARIADB, 8192; "Maria DB")]
+#[test_case(SQLITE_3, 16384; "SQLite 3")]
+#[test_case(POSTGRES, 4096; "PostgreSQL")]
+fn default_packet_size(profile: &Profile, expected_packet_size: u32) {
+    let conn = profile.connection().unwrap();
+    let actual_packet_size = conn.packet_size().unwrap();
+
+    assert_eq!(expected_packet_size, actual_packet_size)
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 fn describe_columns(profile: &Profile) {
     let table_name = table_name!();

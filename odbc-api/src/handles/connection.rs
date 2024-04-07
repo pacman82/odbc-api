@@ -383,6 +383,11 @@ impl<'c> Connection<'c> {
         }
     }
 
+    /// Networ packet size in bytes.
+    pub fn packet_size(&self) -> SqlResult<u32> {
+        unsafe { self.attribute_u32(ConnectionAttribute::PacketSize) }
+    }
+
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.

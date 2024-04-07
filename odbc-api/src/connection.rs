@@ -372,6 +372,11 @@ impl<'c> Connection<'c> {
         self.connection.is_dead().into_result(&self.connection)
     }
 
+    /// Network packet size in bytes. Requries driver support.
+    pub fn packet_size(&self) -> Result<u32, Error> {
+        self.connection.packet_size().into_result(&self.connection)
+    }
+
     /// Get the name of the database management system used by the connection.
     pub fn database_management_system_name(&self) -> Result<String, Error> {
         let mut buf = Vec::new();
