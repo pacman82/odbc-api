@@ -71,7 +71,7 @@ thiserror = "1.0.58"
 # Used as a log frontend to emit log messages for applications
 log = "0.4.21"
 # Interacting with UTF-16 texts for wide columns or wide function calls
-widestring = "1.0.2"
+widestring = "1.1.0"
 atoi = "2.0.0"
 
 [target.'cfg(windows)'.dependencies]
