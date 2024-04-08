@@ -361,7 +361,7 @@ impl DataType {
     /// ```
     /// use odbc_api::DataType;
     /// use std::num::NonZeroUsize;
-    /// 
+    ///
     /// let nz = NonZeroUsize::new;
     /// // Character set data types length is multiplied by four.
     /// assert_eq!(DataType::Varchar { length: nz(10) }.utf8_len(), nz(40));
@@ -388,9 +388,9 @@ impl DataType {
     /// ```
     /// use odbc_api::DataType;
     /// use std::num::NonZeroUsize;
-    /// 
+    ///
     /// let nz = NonZeroUsize::new;
-    /// 
+    ///
     /// // Character set data types length is multiplied by two.
     /// assert_eq!(DataType::Varchar { length: nz(10) }.utf16_len(), nz(20));
     /// assert_eq!(DataType::Char { length: nz(10) }.utf16_len(), nz(20));

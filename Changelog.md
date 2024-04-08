@@ -1,8 +1,9 @@
 # Changelog
 
-## 7.0.0 (next)
+## 7.0.0
 
 * Removed `Quirks`. Detection of driver problems via dbms name is not relyable enough.
+* Support setting packet size, via `ConnectionOptions::packet_size`.
 
 ## 6.0.2
 

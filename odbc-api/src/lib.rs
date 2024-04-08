@@ -5,9 +5,9 @@
 //! examples.
 
 mod columnar_bulk_inserter;
+mod concurrent_block_cursor;
 mod connection;
 mod conversion;
-mod concurrent_block_cursor;
 mod cursor;
 mod driver_complete_option;
 mod environment;

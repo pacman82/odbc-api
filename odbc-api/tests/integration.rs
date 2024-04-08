@@ -136,6 +136,26 @@ fn default_packet_size(profile: &Profile, expected_packet_size: u32) {
     assert_eq!(expected_packet_size, actual_packet_size)
 }
 
+#[test_case(MSSQL, 8000; "Microsoft SQL Server")]
+#[test_case(MARIADB, 8192; "Maria DB")]
+#[test_case(SQLITE_3, 16384; "SQLite 3")]
+#[test_case(POSTGRES, 4096; "PostgreSQL")]
+fn set_packet_size(profile: &Profile, expected_packet_size: u32) {
+    let desired_packet_size = 8192;
+
+    let conn = ENV
+        .connect_with_connection_string(
+            profile.connection_string,
+            ConnectionOptions {
+                packet_size: Some(desired_packet_size),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let actual_packet_size = conn.packet_size().unwrap();
+    assert_eq!(expected_packet_size, actual_packet_size)
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 fn describe_columns(profile: &Profile) {
     let table_name = table_name!();

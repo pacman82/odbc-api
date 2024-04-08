@@ -624,16 +624,15 @@ pub trait Statement: AsHandle {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
-        unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }
-            .map(|ret| 
-                SqlDataType(ret.try_into().expect(
-                    "Failed to retrieve data type from ODBC driver. The SQLLEN could not be \
+        unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }.map(|ret| {
+            SqlDataType(ret.try_into().expect(
+                "Failed to retrieve data type from ODBC driver. The SQLLEN could not be \
                     converted to a 16 Bit integer. If you are on a 64Bit Platform, this may be \
                     because your database driver being compiled against a SQLLEN with 32Bit size \
                     instead of 64Bit. E.g. IBM offers libdb2o.* and libdb2.*. With libdb2o.* being \
                     the one with the correct size.",
-                ))
-            )
+            ))
+        })
     }
 
     /// Returns the size in bytes of the columns. For variable sized types the maximum size is

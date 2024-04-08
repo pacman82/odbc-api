@@ -8,7 +8,8 @@ use std::{
     ffi::c_void,
     fs::File,
     io::{self, BufRead, BufReader},
-    path::Path, num::NonZeroUsize,
+    num::NonZeroUsize,
+    path::Path,
 };
 
 /// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
@@ -350,7 +351,9 @@ where
     R: BufRead,
 {
     fn data_type(&self) -> DataType {
-        DataType::LongVarbinary { length: NonZeroUsize::new(self.size) }
+        DataType::LongVarbinary {
+            length: NonZeroUsize::new(self.size),
+        }
     }
 }
 

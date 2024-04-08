@@ -665,6 +665,8 @@ pub struct ConnectionOptions {
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
     pub login_timeout_sec: Option<u32>,
+    /// Packet size in bytes. Not all drivers support this option.
+    pub packet_size: Option<u32>,
 }
 
 impl ConnectionOptions {
@@ -675,6 +677,9 @@ impl ConnectionOptions {
     pub fn apply(&self, handle: &handles::Connection) -> Result<(), Error> {
         if let Some(timeout) = self.login_timeout_sec {
             handle.set_login_timeout_sec(timeout).into_result(handle)?;
+        }
+        if let Some(packet_size) = self.packet_size {
+            handle.set_packet_size(packet_size).into_result(handle)?;
         }
         Ok(())
     }

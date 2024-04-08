@@ -1,6 +1,9 @@
 //! Module contains trait implementations for `CStr` and `CString`.
 
-use std::{ffi::{c_void, CStr, CString}, num::NonZeroUsize};
+use std::{
+    ffi::{c_void, CStr, CString},
+    num::NonZeroUsize,
+};
 
 use odbc_sys::{CDataType, NTS};
 

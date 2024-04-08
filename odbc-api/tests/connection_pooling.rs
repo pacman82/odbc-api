@@ -30,6 +30,7 @@ fn connect() {
                 // Fail faster if we forgot to boot up docker containers
                 ConnectionOptions {
                     login_timeout_sec: Some(2),
+                    ..Default::default()
                 },
             )
             .unwrap();

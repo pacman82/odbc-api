@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
 use odbc_sys::{
-    CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, IS_POINTER,
-    IS_SMALLINT,
+    CDataType, Desc, HDesc, HStmt, Handle, HandleType, Pointer, IS_POINTER, IS_SMALLINT,
 };
 
 use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};

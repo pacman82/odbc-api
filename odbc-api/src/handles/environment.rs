@@ -133,7 +133,8 @@ impl Environment {
                 .on_success(|| {
                     let handle = handle as HDbc;
                     debug!("SQLAllocHandle allocated connection (Dbc) handle '{handle:?}'");
-                    Connection::new(handle)})
+                    Connection::new(handle)
+                })
         }
     }
 

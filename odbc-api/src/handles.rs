@@ -48,7 +48,7 @@ pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
     match SQLFreeHandle(handle_type, handle) {
         SqlReturn::SUCCESS => {
             debug!("SQLFreeHandle dropped {handle:?} of type {handle_type:?}.");
-        },
+        }
         other => {
             // Avoid panicking, if we already have a panic. We don't want to mask the
             // original error.

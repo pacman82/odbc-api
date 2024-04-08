@@ -2,7 +2,8 @@ use std::{
     borrow::{Borrow, BorrowMut},
     ffi::c_void,
     marker::PhantomData,
-    mem::{size_of, size_of_val}, num::NonZeroUsize,
+    mem::{size_of, size_of_val},
+    num::NonZeroUsize,
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
@@ -52,7 +53,9 @@ unsafe impl VarKind for Text {
     fn relational_type(length: usize) -> DataType {
         // Since we might use as an input buffer, we report the full buffer length in the type and
         // do not deduct 1 for the terminating zero.
-        DataType::Varchar { length: NonZeroUsize::new(length) }
+        DataType::Varchar {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 
@@ -70,7 +73,9 @@ unsafe impl VarKind for WideText {
     fn relational_type(length: usize) -> DataType {
         // Since we might use as an input buffer, we report the full buffer length in the type and
         // do not deduct 1 for the terminating zero.
-        DataType::WVarchar { length: NonZeroUsize::new(length) }
+        DataType::WVarchar {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 
@@ -85,7 +90,9 @@ unsafe impl VarKind for Binary {
     const C_DATA_TYPE: CDataType = CDataType::Binary;
 
     fn relational_type(length: usize) -> DataType {
-        DataType::Varbinary { length: NonZeroUsize::new(length) }
+        DataType::Varbinary {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 

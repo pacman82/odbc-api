@@ -84,7 +84,8 @@ impl Profile {
         column_types: &'a [&'a str],
     ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
         let conn = self.connection()?;
-        let table = Table::new(table_name, column_types);
+        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+        let table = Table::new(table_name, column_types, column_names);
         conn.execute(&table.sql_drop_if_exists(), ())?;
         conn.execute(&table.sql_create_table(self.index_type), ())?;
         Ok((conn, table))
@@ -99,7 +100,7 @@ impl Profile {
         column_names: &'a [&'a str],
     ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
         let conn = self.connection()?;
-        let table = Table::with_column_names(table_name, column_types, column_names);
+        let table = Table::new(table_name, column_types, column_names);
         conn.execute(&table.sql_drop_if_exists(), ())?;
         conn.execute(&table.sql_create_table(self.index_type), ())?;
         Ok((conn, table))
@@ -114,17 +115,7 @@ pub struct Table<'a> {
 }
 
 impl<'a> Table<'a> {
-    /// Use letters of the alphabet as column names
-    pub fn new(name: &'a str, column_types: &'a [&'a str]) -> Self {
-        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
-        Table::with_column_names(name, column_types, column_names)
-    }
-
-    pub fn with_column_names(
-        name: &'a str,
-        column_types: &'a [&'a str],
-        column_names: &'a [&'a str],
-    ) -> Self {
+    pub fn new(name: &'a str, column_types: &'a [&'a str], column_names: &'a [&'a str]) -> Self {
         Table {
             name,
             column_types,

@@ -225,6 +225,27 @@ impl<'c> Connection<'c> {
         }
     }
 
+    /// Specifying the network packet size in bytes. Note: Many data sources either do not support
+    /// this option or only can return but not set the network packet size. If the specified size
+    /// exceeds the maximum packet size or is smaller than the minimum packet size, the driver
+    /// substitutes that value and returns SQLSTATE 01S02 (Option value changed). If the application
+    /// sets packet size after a connection has already been made, the driver will return SQLSTATE
+    /// HY011 (Attribute cannot be set now).
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    pub fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
+        unsafe {
+            sql_set_connect_attr(
+                self.handle,
+                ConnectionAttribute::PacketSize,
+                packet_size as Pointer,
+                0,
+            )
+            .into_sql_result("SQLSetConnectAttr")
+        }
+    }
+
     /// To commit a transaction in manual-commit mode.
     pub fn commit(&self) -> SqlResult<()> {
         unsafe {

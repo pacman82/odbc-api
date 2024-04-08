@@ -109,7 +109,7 @@ where
         self.columns
             .iter()
             .enumerate()
-            .find_map(|(buffer_index, (_col_index , col_buffer))| {
+            .find_map(|(buffer_index, (_col_index, col_buffer))| {
                 col_buffer
                     .has_truncated_values(*self.num_rows)
                     .map(|indicator| TruncationInfo {
