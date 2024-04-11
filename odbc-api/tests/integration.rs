@@ -1798,11 +1798,13 @@ fn heterogenous_parameters_in_array(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn column_names_iterator(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(13)"])
+        .build(profile)
         .unwrap();
-    let sql = format!("SELECT a, b FROM {table_name};");
+    let sql = table.sql_all_ordered_by_id();
     let mut cursor = conn.execute(&sql, ()).unwrap().unwrap();
+
     let names: Vec<_> = cursor
         .column_names()
         .unwrap()
@@ -1818,10 +1820,11 @@ fn column_names_iterator(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn column_names_from_prepared_query(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(13)"])
+        .build(profile)
         .unwrap();
-    let sql = format!("SELECT a, b FROM {table_name};");
+    let sql = table.sql_all_ordered_by_id();
     let mut prepared = conn.prepare(&sql).unwrap();
     let names: Vec<_> = prepared
         .column_names()
@@ -1838,10 +1841,11 @@ fn column_names_from_prepared_query(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn metadata_from_prepared_insert_query(profile: &Profile) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(13)"])
+        .build(profile)
         .unwrap();
-    let sql = format!("INSERT INTO {table_name} (a, b) VALUES (42, 'Hello');");
+    let sql = table.sql_insert();
     let mut prepared = conn.prepare(&sql).unwrap();
     assert_eq!(0, prepared.num_result_cols().unwrap());
 }
@@ -1869,8 +1873,9 @@ fn describe_parameters_of_prepared_statement(
     expected: &[ParameterDescription; 2],
 ) {
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["INTEGER", "VARCHAR(13)"])
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(13)"])
+        .build(profile)
         .unwrap();
     let sql = format!("SELECT a, b FROM {table_name} WHERE a=? AND b=?;");
     let mut prepared = conn.prepare(&sql).unwrap();
