@@ -4772,9 +4772,9 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
 
         fn find_truncation(&self) -> Option<TruncationInfo> {
             if self.a.is_complete() {
-                Some(TruncationInfo { buffer_index: 0, indicator: self.a.len_in_bytes() })
-            } else {
                 None
+            } else {
+                Some(TruncationInfo { buffer_index: 0, indicator: self.a.indicator().length() })
             }
         }
     }
@@ -4824,10 +4824,10 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
     drop(block_cursor);
     assert_eq!(
         TruncationInfo {
-            indicator: Some(15),
+            indicator: Some(13),
             buffer_index: 0
         },
-        (&mut row_set_buffer).find_truncation().unwrap()
+        (&(&mut row_set_buffer)).find_truncation().unwrap()
     )
 }
 
