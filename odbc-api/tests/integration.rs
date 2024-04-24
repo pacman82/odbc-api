@@ -19,7 +19,7 @@ use odbc_api::{
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, U16Str, U16String,
+    ResultSetMetadata, Row, RowSetBuffer, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4641,7 +4641,8 @@ fn row_wise_bulk_query(profile: &Profile) {
     conn.execute(
         &table.sql_insert(),
         (&42.into_parameter(), &"Hello, World!".into_parameter()),
-    ).unwrap();
+    )
+    .unwrap();
     conn.execute(
         &table.sql_insert(),
         (&5.into_parameter(), &"Hallo, Welt!".into_parameter()),
@@ -4654,23 +4655,46 @@ fn row_wise_bulk_query(profile: &Profile) {
 
     // When
     #[derive(Clone, Copy)]
-    struct Row {
+    struct RowSample {
         a: i32,
         b: VarCharArray<50>,
     }
 
-    struct RowWiseBuffer {
+    impl Default for RowSample {
+        fn default() -> Self {
+            RowSample {
+                a: 0,
+                b: VarCharArray::NULL,
+            }
+        }
+    }
+
+    unsafe impl Row for RowSample {
+        unsafe fn bind_columns_to_cursor(
+            &mut self,
+            mut cursor: StatementRef<'_>,
+        ) -> Result<(), Error> {
+            cursor.bind_col(1, &mut self.a).into_result(&cursor)?;
+            cursor.bind_col(2, &mut self.b).into_result(&cursor)?;
+            Ok(())
+        }
+    }
+
+    struct RowWiseBuffer<R> {
         num_fetch_rows: Box<usize>,
-        rows: Vec<Row>
+        rows: Vec<R>,
     }
     let row_set_buffer = RowWiseBuffer {
         num_fetch_rows: Box::new(0),
-        rows: vec![Row {a: 0, b: VarCharArray::NULL}; 10],
+        rows: vec![RowSample::default(); 10],
     };
 
-    unsafe impl RowSetBuffer for RowWiseBuffer {
+    unsafe impl<R> RowSetBuffer for RowWiseBuffer<R>
+    where
+        R: Row + Default,
+    {
         fn bind_type(&self) -> usize {
-            mem::size_of::<Row>()
+            mem::size_of::<R>()
         }
 
         fn row_array_size(&self) -> usize {
@@ -4681,10 +4705,8 @@ fn row_wise_bulk_query(profile: &Profile) {
             &mut self.num_fetch_rows
         }
 
-        unsafe fn bind_colmuns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
-            cursor.bind_col(1, &mut self.rows[0].a).into_result(&cursor)?;
-            cursor.bind_col(2, &mut self.rows[0].b).into_result(&cursor)?;
-            Ok(())
+        unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
+            self.rows[0].bind_columns_to_cursor(cursor)
         }
 
         fn find_truncation(&self) -> Option<odbc_api::TruncationInfo> {

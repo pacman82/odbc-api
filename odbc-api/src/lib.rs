@@ -35,7 +35,7 @@ pub use self::{
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     conversion::decimal_text_to_i128,
     cursor::{
-        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow,
+        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow, Row,
         RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
