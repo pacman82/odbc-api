@@ -394,6 +394,7 @@ pub unsafe trait RowSetBuffer {
 }
 
 /// Returned by [`RowSetBuffer::find_truncation`]. Contains information about the truncation found.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct TruncationInfo {
     /// Length of the untruncated value if known
     pub indicator: Option<usize>,
@@ -443,6 +444,9 @@ pub unsafe trait Row: Sized {
     ///
     /// Caller must ensure self is alive and not moved in memory for the duration of the binding.
     unsafe fn bind_columns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
+
+    /// If it exists, this returns the "buffer index" of a member, which has been truncated.
+    fn find_truncation(&self) -> Option<TruncationInfo>;
 }
 
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching

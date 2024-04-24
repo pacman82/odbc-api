@@ -19,7 +19,7 @@ use odbc_api::{
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, Row, RowSetBuffer, U16Str, U16String,
+    ResultSetMetadata, Row, RowSetBuffer, TruncationInfo, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4678,6 +4678,10 @@ fn row_wise_bulk_query(profile: &Profile) {
             cursor.bind_col(2, &mut self.b).into_result(&cursor)?;
             Ok(())
         }
+
+        fn find_truncation(&self) -> Option<TruncationInfo> {
+            panic!("No truncation detection used in this test")
+        }
     }
 
     struct RowWiseBuffer<R> {
@@ -4723,6 +4727,108 @@ fn row_wise_bulk_query(profile: &Profile) {
     assert_eq!(b"Hello, World!", batch.rows[0].b.as_bytes().unwrap());
     assert_eq!(5, batch.rows[1].a);
     assert_eq!(b"Hallo, Welt!", batch.rows[1].b.as_bytes().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
+    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    #[derive(Clone, Copy)]
+    struct RowSample {
+        a: VarCharArray<10>,
+    }
+
+    impl Default for RowSample {
+        fn default() -> Self {
+            RowSample {
+                a: VarCharArray::NULL,
+            }
+        }
+    }
+
+    unsafe impl Row for RowSample {
+        unsafe fn bind_columns_to_cursor(
+            &mut self,
+            mut cursor: StatementRef<'_>,
+        ) -> Result<(), Error> {
+            cursor.bind_col(1, &mut self.a).into_result(&cursor)?;
+            Ok(())
+        }
+
+        fn find_truncation(&self) -> Option<TruncationInfo> {
+            if self.a.is_complete() {
+                Some(TruncationInfo { buffer_index: 0, indicator: self.a.len_in_bytes() })
+            } else {
+                None
+            }
+        }
+    }
+
+    struct RowWiseBuffer<R> {
+        num_fetch_rows: Box<usize>,
+        rows: Vec<R>,
+    }
+    let mut row_set_buffer = RowWiseBuffer {
+        num_fetch_rows: Box::new(0),
+        rows: vec![RowSample::default(); 10],
+    };
+
+    unsafe impl<R> RowSetBuffer for &mut RowWiseBuffer<R>
+    where
+        R: Row + Default,
+    {
+        fn bind_type(&self) -> usize {
+            mem::size_of::<R>()
+        }
+
+        fn row_array_size(&self) -> usize {
+            self.rows.len()
+        }
+
+        fn mut_num_fetch_rows(&mut self) -> &mut usize {
+            &mut self.num_fetch_rows
+        }
+
+        unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
+            self.rows[0].bind_columns_to_cursor(cursor)
+        }
+
+        fn find_truncation(&self) -> Option<odbc_api::TruncationInfo> {
+            self.rows.iter().find_map(|row| row.find_truncation())
+        }
+    }
+
+    let mut block_cursor = cursor.bind_buffer(&mut row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(
+        "Hello, Wo",
+        std::str::from_utf8(batch.rows[0].a.as_bytes().unwrap()).unwrap()
+    );
+    drop(block_cursor);
+    assert_eq!(
+        TruncationInfo {
+            indicator: Some(15),
+            buffer_index: 0
+        },
+        (&mut row_set_buffer).find_truncation().unwrap()
+    )
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
