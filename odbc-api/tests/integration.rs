@@ -12,19 +12,19 @@ use odbc_api::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
     },
     decimal_text_to_i128,
-    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
+    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement, StatementRef},
     parameter::{
-        Blob, BlobRead, BlobSlice, VarBinaryArray, VarCharArray, VarCharSlice, WithDataType,
+        Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
+        VarCharSliceMut, WithDataType,
     },
-    parameter::{InputParameter, VarCharSliceMut},
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, U16Str, U16String,
+    ResultSetMetadata, RowSetBuffer, U16Str, U16String,
 };
 use std::{
     ffi::CString,
     io::{self, Write},
-    iter,
+    iter, mem,
     num::NonZeroUsize,
     ptr::null_mut,
     str, thread,
@@ -4625,6 +4625,82 @@ async fn async_bulk_fetch(profile: &Profile) {
 
     // Then
     assert_eq!(1000, sum_rows_fetched)
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(50)"])
+        .build(profile)
+        .unwrap();
+    conn.execute(
+        &table.sql_insert(),
+        (&42.into_parameter(), &"Hello, World!".into_parameter()),
+    ).unwrap();
+    conn.execute(
+        &table.sql_insert(),
+        (&5.into_parameter(), &"Hallo, Welt!".into_parameter()),
+    )
+    .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    #[derive(Clone, Copy)]
+    struct Row {
+        a: i32,
+        b: VarCharArray<50>,
+    }
+
+    struct RowWiseBuffer {
+        num_fetch_rows: Box<usize>,
+        rows: Vec<Row>
+    }
+    let row_set_buffer = RowWiseBuffer {
+        num_fetch_rows: Box::new(0),
+        rows: vec![Row {a: 0, b: VarCharArray::NULL}; 10],
+    };
+
+    unsafe impl RowSetBuffer for RowWiseBuffer {
+        fn bind_type(&self) -> usize {
+            mem::size_of::<Row>()
+        }
+
+        fn row_array_size(&self) -> usize {
+            self.rows.len()
+        }
+
+        fn mut_num_fetch_rows(&mut self) -> &mut usize {
+            &mut self.num_fetch_rows
+        }
+
+        unsafe fn bind_colmuns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+            cursor.bind_col(1, &mut self.rows[0].a).into_result(&cursor)?;
+            cursor.bind_col(2, &mut self.rows[0].b).into_result(&cursor)?;
+            Ok(())
+        }
+
+        fn find_truncation(&self) -> Option<odbc_api::TruncationInfo> {
+            panic!("We do not look for truncation in this test")
+        }
+    }
+
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(2, *batch.num_fetch_rows);
+    assert_eq!(42, batch.rows[0].a);
+    assert_eq!(b"Hello, World!", batch.rows[0].b.as_bytes().unwrap());
+    assert_eq!(5, batch.rows[1].a);
+    assert_eq!(b"Hallo, Welt!", batch.rows[1].b.as_bytes().unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

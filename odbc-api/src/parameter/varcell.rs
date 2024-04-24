@@ -42,6 +42,7 @@ pub unsafe trait VarKind {
 
 /// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
 /// hold narrow (as opposed to wide UTF-16) text.
+#[derive(Clone, Copy)]
 pub struct Text;
 
 unsafe impl VarKind for Text {
@@ -62,6 +63,7 @@ unsafe impl VarKind for Text {
 /// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
 /// hold wide UTF-16 (as opposed to narrow ASCII or UTF-8) text. Use this to annotate `[u16]`
 /// buffers.
+#[derive(Clone, Copy)]
 pub struct WideText;
 
 unsafe impl VarKind for WideText {
@@ -81,6 +83,7 @@ unsafe impl VarKind for WideText {
 
 /// Intended to be used as a generic argument for [`VarCell`] to declare that this buffer is used to
 /// hold raw binary input.
+#[derive(Clone, Copy)]
 pub struct Binary;
 
 unsafe impl VarKind for Binary {
