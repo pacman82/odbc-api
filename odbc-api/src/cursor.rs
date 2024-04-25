@@ -424,31 +424,6 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 }
 
-/// [`Row`]s can be bound to a [`Cursor`] to enable row wise (bulk) fetching of data as opposed to
-/// column wise fetching. Since all rows are bound to a C-API in a contigious block of memory the
-/// row itself should be representable as such. Concretly that means that types like `String` can
-/// not be supported directly by [`Row`]s for efficient bulk fetching, due to the fact it points
-/// to data on the heap.
-///
-/// # Safety
-///
-/// * All the bound buffers need to be valid for the lifetime of the row.
-/// * The offsets into the memory for the field representing a column, must be constant for all
-///   types of the row. This is required to make the row suitable for fetching in bulk, as only the
-///   first row is bound explicitly, and the bindings for all consequitive rows is calculated by
-///   taking the size of the row in bytes multiplied by buffer index.
-pub unsafe trait Row: Sized {
-    /// Binds the columns of the result set to members of the row.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure self is alive and not moved in memory for the duration of the binding.
-    unsafe fn bind_columns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error>;
-
-    /// If it exists, this returns the "buffer index" of a member, which has been truncated.
-    fn find_truncation(&self) -> Option<TruncationInfo>;
-}
-
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching
 /// values individually. This can greatly reduce the time applications need to fetch data. You can
 /// create a block cursor by binding preallocated memory to a cursor using [`Cursor::bind_buffer`].

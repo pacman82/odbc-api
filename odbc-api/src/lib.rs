@@ -21,6 +21,7 @@ mod parameter_collection;
 mod preallocated;
 mod prepared;
 mod result_set_metadata;
+mod row_wise_buffer;
 mod sleep;
 mod statement_connection;
 
@@ -35,7 +36,7 @@ pub use self::{
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     conversion::decimal_text_to_i128,
     cursor::{
-        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow, Row,
+        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow,
         RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
@@ -51,6 +52,7 @@ pub use self::{
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
+    row_wise_buffer::{Row, RowWiseBuffer},
     sleep::Sleep,
     statement_connection::StatementConnection,
 };

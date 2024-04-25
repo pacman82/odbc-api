@@ -19,12 +19,12 @@ use odbc_api::{
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, Row, RowSetBuffer, TruncationInfo, U16Str, U16String,
+    ResultSetMetadata, Row, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
 };
 use std::{
     ffi::CString,
     io::{self, Write},
-    iter, mem,
+    iter,
     num::NonZeroUsize,
     ptr::null_mut,
     str, thread,
@@ -4684,49 +4684,16 @@ fn row_wise_bulk_query(profile: &Profile) {
         }
     }
 
-    struct RowWiseBuffer<R> {
-        num_fetch_rows: Box<usize>,
-        rows: Vec<R>,
-    }
-    let row_set_buffer = RowWiseBuffer {
-        num_fetch_rows: Box::new(0),
-        rows: vec![RowSample::default(); 10],
-    };
-
-    unsafe impl<R> RowSetBuffer for RowWiseBuffer<R>
-    where
-        R: Row + Default,
-    {
-        fn bind_type(&self) -> usize {
-            mem::size_of::<R>()
-        }
-
-        fn row_array_size(&self) -> usize {
-            self.rows.len()
-        }
-
-        fn mut_num_fetch_rows(&mut self) -> &mut usize {
-            &mut self.num_fetch_rows
-        }
-
-        unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
-            self.rows[0].bind_columns_to_cursor(cursor)
-        }
-
-        fn find_truncation(&self) -> Option<odbc_api::TruncationInfo> {
-            panic!("We do not look for truncation in this test")
-        }
-    }
-
+    let row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
     let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
 
     // Then
-    assert_eq!(2, *batch.num_fetch_rows);
-    assert_eq!(42, batch.rows[0].a);
-    assert_eq!(b"Hello, World!", batch.rows[0].b.as_bytes().unwrap());
-    assert_eq!(5, batch.rows[1].a);
-    assert_eq!(b"Hallo, Welt!", batch.rows[1].b.as_bytes().unwrap());
+    assert_eq!(2, batch.num_rows());
+    assert_eq!(42, batch[0].a);
+    assert_eq!(b"Hello, World!", batch[0].b.as_bytes().unwrap());
+    assert_eq!(5, batch[1].a);
+    assert_eq!(b"Hallo, Welt!", batch[1].b.as_bytes().unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -4774,44 +4741,15 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
             if self.a.is_complete() {
                 None
             } else {
-                Some(TruncationInfo { buffer_index: 0, indicator: self.a.indicator().length() })
+                Some(TruncationInfo {
+                    buffer_index: 0,
+                    indicator: self.a.indicator().length(),
+                })
             }
         }
     }
 
-    struct RowWiseBuffer<R> {
-        num_fetch_rows: Box<usize>,
-        rows: Vec<R>,
-    }
-    let mut row_set_buffer = RowWiseBuffer {
-        num_fetch_rows: Box::new(0),
-        rows: vec![RowSample::default(); 10],
-    };
-
-    unsafe impl<R> RowSetBuffer for &mut RowWiseBuffer<R>
-    where
-        R: Row + Default,
-    {
-        fn bind_type(&self) -> usize {
-            mem::size_of::<R>()
-        }
-
-        fn row_array_size(&self) -> usize {
-            self.rows.len()
-        }
-
-        fn mut_num_fetch_rows(&mut self) -> &mut usize {
-            &mut self.num_fetch_rows
-        }
-
-        unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
-            self.rows[0].bind_columns_to_cursor(cursor)
-        }
-
-        fn find_truncation(&self) -> Option<odbc_api::TruncationInfo> {
-            self.rows.iter().find_map(|row| row.find_truncation())
-        }
-    }
+    let mut row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
 
     let mut block_cursor = cursor.bind_buffer(&mut row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
@@ -4819,7 +4757,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
     // Then
     assert_eq!(
         "Hello, Wo",
-        std::str::from_utf8(batch.rows[0].a.as_bytes().unwrap()).unwrap()
+        std::str::from_utf8(batch[0].a.as_bytes().unwrap()).unwrap()
     );
     drop(block_cursor);
     assert_eq!(

@@ -131,8 +131,8 @@ where
 /// Most applications should find the overhead negligible, especially if instances are reused.
 pub struct ColumnarBuffer<C> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
-    /// number of fetched rows. `num_rows_fetched` is heap allocated, so the pointer is not
-    /// invalidated, even if the `ColumnarBuffer` instance is moved in memory.
+    /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated, 
+    /// even if the `ColumnarBuffer` instance is moved in memory.
     num_rows: Box<usize>,
     /// aka: batch size, row array size
     row_capacity: usize,
