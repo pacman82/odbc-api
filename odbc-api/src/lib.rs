@@ -52,7 +52,7 @@ pub use self::{
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
-    row_wise_buffer::{Row, RowWiseBuffer},
+    row_wise_buffer::{FetchRow, RowWiseBuffer},
     sleep::Sleep,
     statement_connection::StatementConnection,
 };

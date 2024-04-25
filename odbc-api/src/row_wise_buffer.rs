@@ -1,9 +1,14 @@
 use std::{mem, ops::Index};
 
-use crate::{handles::StatementRef, Error, RowSetBuffer, TruncationInfo};
+use crate::{
+    fixed_sized::Pod,
+    handles::{CDataMut, StatementRef},
+    parameter::VarCharArray,
+    Error, RowSetBuffer, TruncationInfo,
+};
 
-/// [`Row`]s can be bound to a [`Cursor`] to enable row wise (bulk) fetching of data as opposed to
-/// column wise fetching. Since all rows are bound to a C-API in a contigious block of memory the
+/// [`FetchRow`]s can be bound to a [`Cursor`] to enable row wise (bulk) fetching of data as opposed
+/// to column wise fetching. Since all rows are bound to a C-API in a contigious block of memory the
 /// row itself should be representable as such. Concretly that means that types like `String` can
 /// not be supported directly by [`Row`]s for efficient bulk fetching, due to the fact it points
 /// to data on the heap.
@@ -15,7 +20,7 @@ use crate::{handles::StatementRef, Error, RowSetBuffer, TruncationInfo};
 ///   types of the row. This is required to make the row suitable for fetching in bulk, as only the
 ///   first row is bound explicitly, and the bindings for all consequitive rows is calculated by
 ///   taking the size of the row in bytes multiplied by buffer index.
-pub unsafe trait Row: Copy {
+pub unsafe trait FetchRow: Copy {
     /// Binds the columns of the result set to members of the row.
     ///
     /// # Safety
@@ -42,7 +47,7 @@ pub struct RowWiseBuffer<R> {
 impl<R> RowWiseBuffer<R> {
     /// Allocates a new Row wise buffer, which can at most `capacity` number of rows in a single
     /// call to [`crate::BlockCursor::fetch`].
-    /// 
+    ///
     /// Panics if `capacity` is `0``.
     pub fn new(capacity: usize) -> Self
     where
@@ -76,7 +81,7 @@ impl<R> Index<usize> for RowWiseBuffer<R> {
 
 unsafe impl<R> RowSetBuffer for RowWiseBuffer<R>
 where
-    R: Row,
+    R: FetchRow,
 {
     fn bind_type(&self) -> usize {
         mem::size_of::<R>()
@@ -102,6 +107,20 @@ where
         self.rows.iter().find_map(|row| row.find_truncation())
     }
 }
+
+/// Can be used as a member of a [`FetchRow`] and bound to a column during row wise fetching.
+///
+/// # Safety
+///
+/// Must only be implemented for types completly representable by consequtive bytes. While members
+/// can bind to Variadic types the length of the type buffering them must be known at compile time.
+/// E.g. [`crate::parameter::VarCharArray`] can also bind to Variadic types but is fixed length at
+/// compile time.
+pub unsafe trait FetchRowMember: CDataMut {}
+
+unsafe impl<T> FetchRowMember for T where T: Pod {}
+// unsafe impl<T> FetchRowMember for Nullable<T> where T: Pod {}
+unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {}
 
 #[cfg(test)]
 mod tests {

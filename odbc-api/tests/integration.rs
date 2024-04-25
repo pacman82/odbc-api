@@ -19,7 +19,7 @@ use odbc_api::{
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, Row, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
+    ResultSetMetadata, FetchRow, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4669,7 +4669,7 @@ fn row_wise_bulk_query(profile: &Profile) {
         }
     }
 
-    unsafe impl Row for RowSample {
+    unsafe impl FetchRow for RowSample {
         unsafe fn bind_columns_to_cursor(
             &mut self,
             mut cursor: StatementRef<'_>,
@@ -4728,7 +4728,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
         }
     }
 
-    unsafe impl Row for RowSample {
+    unsafe impl FetchRow for RowSample {
         unsafe fn bind_columns_to_cursor(
             &mut self,
             mut cursor: StatementRef<'_>,
