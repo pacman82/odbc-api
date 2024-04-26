@@ -44,7 +44,7 @@ impl<'a> Given<'a> {
         &self,
         profile: &Profile,
     ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
-        profile.given_build(self.table_name, self.column_types, self.column_names)
+        profile.create_table(self.table_name, self.column_types, self.column_names)
     }
 }
 
@@ -72,28 +72,13 @@ impl Profile {
         table_name: &str,
         column_types: &[&str],
     ) -> Result<Connection<'static>, odbc_api::Error> {
-        let (conn, _table) = self.given(table_name, column_types)?;
+        let (conn, _table) = self.create_table(table_name, column_types, &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"])?;
         Ok(conn)
     }
 
     /// Convenience function, setting up an empty table, and returning the connection used to create
     /// it.
-    pub fn given<'a>(
-        &self,
-        table_name: &'a str,
-        column_types: &'a [&'a str],
-    ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
-        let conn = self.connection()?;
-        let column_names = &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
-        let table = Table::new(table_name, column_types, column_names);
-        conn.execute(&table.sql_drop_if_exists(), ())?;
-        conn.execute(&table.sql_create_table(self.index_type), ())?;
-        Ok((conn, table))
-    }
-
-    /// Convenience function, setting up an empty table, and returning the connection used to create
-    /// it.
-    pub fn given_build<'a>(
+    pub fn create_table<'a>(
         &self,
         table_name: &'a str,
         column_types: &'a [&'a str],

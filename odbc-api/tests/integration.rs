@@ -18,8 +18,9 @@ use odbc_api::{
         VarCharSliceMut, WithDataType,
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
-    DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, FetchRow, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
+    DataType, Error, FetchRow, InOut, IntoParameter, Narrow, Nullability, Nullable, Out,
+    Preallocated, ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str,
+    U16String,
 };
 use std::{
     ffi::CString,
@@ -275,8 +276,9 @@ fn describe_columns(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_fetch_text(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["VARCHAR(255)", "INT"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(255)", "INT"])
+        .build(profile)
         .unwrap();
 
     // Insert data
@@ -309,8 +311,9 @@ fn bulk_fetch_text(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn into_cursor(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["VARCHAR(255)", "INT"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(255)", "INT"])
+        .build(profile)
         .unwrap();
 
     // Insert data
@@ -2965,8 +2968,9 @@ fn insert_truncated_var_char_array(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn arbitrary_input_parameters(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, table) = profile
-        .given(&table_name, &["VARCHAR(20)", "INTEGER"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(20)", "INT"])
+        .build(profile)
         .unwrap();
 
     let insert_statement = format!("INSERT INTO {table_name} (a, b) VALUES (?, ?);");
@@ -3845,7 +3849,10 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
 fn row_count_one_shot_query(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     let insert = format!("INSERT INTO {table_name} (a) VALUES (1), (2)");
 
     // When
@@ -3865,7 +3872,10 @@ fn row_count_one_shot_query(profile: &Profile) {
 fn row_count_prepared_insert(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     let insert = format!("INSERT INTO {table_name} (a) VALUES (?), (?)");
 
     // When
@@ -4059,7 +4069,10 @@ fn execute_two_select_statements(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn execute_select_insert_select(profile: &Profile) {
     let table_name = table_name!();
-    let (conn, _table) = profile.given(&table_name, &["INTEGER"]).unwrap();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
 
     let first_cursor = conn
         .execute(
