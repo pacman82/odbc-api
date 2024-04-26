@@ -119,6 +119,15 @@ where
 pub unsafe trait FetchRowMember: CDataMut + Copy{
     /// `Some` if the indicator indicates truncation. Always `None` for fixed sized types.
     fn find_truncation(&self) -> Option<TruncationInfo>;
+
+    /// Bind row element to column. Only called for the first row in a row wise buffer.
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to ensure `self` lives for the duration of the binding.
+    unsafe fn bind_to_col(&mut self, col_index: u16, cursor: &mut StatementRef<'_>) -> Result<(), Error> {
+        cursor.bind_col(col_index, self).into_result(cursor)
+    }
 }
 
 unsafe impl<T> FetchRowMember for T where T: Pod {
@@ -140,44 +149,65 @@ unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {
     }
 }
 
-unsafe impl<A> FetchRow for (A,) where A: FetchRowMember {
-    unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
-        cursor.bind_col(1, &mut self.0).into_result(&cursor)
-    }
 
-    fn find_truncation(&self) -> Option<TruncationInfo> {
-        self.0.find_truncation()
-    }
+macro_rules! impl_bind_columns_to_cursor {
+    ($offset:expr, $cursor:ident,) => (
+        Ok(())
+    );
+    ($offset:expr, $cursor:ident, $head:ident, $($tail:ident,)*) => (
+        {
+            $head.bind_to_col($offset, &mut $cursor)?;
+            impl_bind_columns_to_cursor!($offset+1, $cursor, $($tail,)*)
+        }
+    );
 }
 
-// macro_rules! impl_bind_columns_to_cursor {
-//     ($offset:expr, $cursor:ident) => (
-//         Ok(())
-//     );
-//     ($offset:expr, $cursor:ident $head:ident $($tail:ident)*) => (
-//         $cursor.bind_col($offset, &mut $head).into_result(&$cursor)?;
-//         impl_bind_columns_to_cursor!($offset+1, $cursor $($tail)*)
-//     );
-// }
+macro_rules! impl_fetch_row_for_tuple{
+    ($($t:ident)*) => (
+        unsafe impl<$($t:FetchRowMember,)*> FetchRow for ($($t,)*)
+        {
+            #[allow(unused_mut)]
+            #[allow(unused_variables)]
+            #[allow(non_snake_case)]
+            unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+                let ($(ref mut $t,)*) = self;
+                impl_bind_columns_to_cursor!(1, cursor, $($t,)*)
+            }
 
-// macro_rules! impl_fetch_row_for_tuple{
-//     ($($t:ident)*) => (
-//         unsafe impl<$($t:FetchRowMember,)*> FetchRow for ($($t,)*)
-//         {
-//             unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
-//                 let ($(mut $t,)*) = self;
-//                 impl_bind_columns_to_cursor!(1, cursor $($t)*)
-//             }
+            fn find_truncation(&self) -> Option<TruncationInfo> {
+                None
+            }
+        }
+    );
+}
 
-//             fn find_truncation(&self) -> Option<TruncationInfo> {
-//                 None
-//             }
-//         }
-//     );
-// }
-
-// impl_fetch_row_for_tuple! {}
-// impl_fetch_row_for_tuple! { A }
+impl_fetch_row_for_tuple! {}
+impl_fetch_row_for_tuple! { A }
+impl_fetch_row_for_tuple! { A B }
+impl_fetch_row_for_tuple! { A B C }
+impl_fetch_row_for_tuple! { A B C D }
+impl_fetch_row_for_tuple! { A B C D E }
+impl_fetch_row_for_tuple! { A B C D E F }
+impl_fetch_row_for_tuple! { A B C D E F G }
+impl_fetch_row_for_tuple! { A B C D E F G H }
+impl_fetch_row_for_tuple! { A B C D E F G H I }
+impl_fetch_row_for_tuple! { A B C D E F G H I J }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X Y }
+impl_fetch_row_for_tuple! { A B C D E F G H I J K L M N O P Q R S T U V W X Y Z}
 
 #[cfg(test)]
 mod tests {
