@@ -10,17 +10,10 @@ use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
 use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
-    },
-    decimal_text_to_i128,
-    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement, StatementRef},
-    parameter::{
+    }, decimal_text_to_i128, handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement, StatementRef}, parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, WithDataType,
-    },
-    sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
-    DataType, Error, FetchRow, InOut, IntoParameter, Narrow, Nullability, Nullable, Out,
-    Preallocated, ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str,
-    U16String,
+    }, sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType, Error, FetchRow, FetchRowMember, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String
 };
 use std::{
     ffi::CString,
@@ -4751,14 +4744,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
         }
 
         fn find_truncation(&self) -> Option<TruncationInfo> {
-            if self.a.is_complete() {
-                None
-            } else {
-                Some(TruncationInfo {
-                    buffer_index: 0,
-                    indicator: self.a.indicator().length(),
-                })
-            }
+            self.a.find_truncation()
         }
     }
 
@@ -4780,6 +4766,35 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
         },
         (&(&mut row_set_buffer)).find_truncation().unwrap()
     )
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn fetch_fixed_type_row_wise(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
+    conn.execute(&table.sql_insert(), &42.into_parameter())
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    type RowSample = (i32,);
+
+    let row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(42, batch[0].0);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

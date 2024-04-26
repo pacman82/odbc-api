@@ -2,7 +2,7 @@ use std::{mem, ops::Index};
 
 use crate::{
     fixed_sized::Pod,
-    handles::{CDataMut, StatementRef},
+    handles::{CDataMut, Statement, StatementRef},
     parameter::VarCharArray,
     Error, RowSetBuffer, TruncationInfo,
 };
@@ -116,11 +116,68 @@ where
 /// can bind to Variadic types the length of the type buffering them must be known at compile time.
 /// E.g. [`crate::parameter::VarCharArray`] can also bind to Variadic types but is fixed length at
 /// compile time.
-pub unsafe trait FetchRowMember: CDataMut {}
+pub unsafe trait FetchRowMember: CDataMut + Copy{
+    /// `Some` if the indicator indicates truncation. Always `None` for fixed sized types.
+    fn find_truncation(&self) -> Option<TruncationInfo>;
+}
 
-unsafe impl<T> FetchRowMember for T where T: Pod {}
+unsafe impl<T> FetchRowMember for T where T: Pod {
+    fn find_truncation(&self) -> Option<TruncationInfo> {
+        None
+    }
+}
 // unsafe impl<T> FetchRowMember for Nullable<T> where T: Pod {}
-unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {}
+unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {
+    fn find_truncation(&self) -> Option<TruncationInfo> {
+        if self.is_complete() {
+            None
+        } else {
+            Some(TruncationInfo {
+                buffer_index: 0,
+                indicator: self.indicator().length(),
+            })
+        }
+    }
+}
+
+unsafe impl<A> FetchRow for (A,) where A: FetchRowMember {
+    unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+        cursor.bind_col(1, &mut self.0).into_result(&cursor)
+    }
+
+    fn find_truncation(&self) -> Option<TruncationInfo> {
+        self.0.find_truncation()
+    }
+}
+
+// macro_rules! impl_bind_columns_to_cursor {
+//     ($offset:expr, $cursor:ident) => (
+//         Ok(())
+//     );
+//     ($offset:expr, $cursor:ident $head:ident $($tail:ident)*) => (
+//         $cursor.bind_col($offset, &mut $head).into_result(&$cursor)?;
+//         impl_bind_columns_to_cursor!($offset+1, $cursor $($tail)*)
+//     );
+// }
+
+// macro_rules! impl_fetch_row_for_tuple{
+//     ($($t:ident)*) => (
+//         unsafe impl<$($t:FetchRowMember,)*> FetchRow for ($($t,)*)
+//         {
+//             unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+//                 let ($(mut $t,)*) = self;
+//                 impl_bind_columns_to_cursor!(1, cursor $($t)*)
+//             }
+
+//             fn find_truncation(&self) -> Option<TruncationInfo> {
+//                 None
+//             }
+//         }
+//     );
+// }
+
+// impl_fetch_row_for_tuple! {}
+// impl_fetch_row_for_tuple! { A }
 
 #[cfg(test)]
 mod tests {
