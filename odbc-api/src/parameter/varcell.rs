@@ -514,6 +514,16 @@ pub type VarWCharArray<const LENGTH: usize> = VarWChar<[u16; LENGTH]>;
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarBinaryArray<const LENGTH: usize> = VarBinary<[u8; LENGTH]>;
 
+impl<const LENGTH: usize, K> Default for VarCell<[u8; LENGTH], K> {
+    fn default() -> Self {
+        Self {
+            buffer: [0; LENGTH],
+            indicator: Indicator::Null.to_isize(),
+            kind: Default::default(),
+        }
+    }
+}
+
 impl<const LENGTH: usize, K: VarKind> VarCell<[K::Element; LENGTH], K> {
     /// Indicates a missing value.
     pub const NULL: Self = Self {
