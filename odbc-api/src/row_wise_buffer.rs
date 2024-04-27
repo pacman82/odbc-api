@@ -1,10 +1,7 @@
 use std::{mem, ops::Index};
 
 use crate::{
-    fixed_sized::Pod,
-    handles::{CDataMut, Statement, StatementRef},
-    parameter::VarCharArray,
-    Error, RowSetBuffer, TruncationInfo,
+    buffers::Indicator, fixed_sized::Pod, handles::{CDataMut, Statement, StatementRef}, parameter::VarCharArray, Error, RowSetBuffer, TruncationInfo
 };
 
 /// [`FetchRow`]s can be bound to a [`Cursor`] to enable row wise (bulk) fetching of data as opposed
@@ -104,7 +101,7 @@ where
     }
 
     fn find_truncation(&self) -> Option<TruncationInfo> {
-        self.rows.iter().find_map(|row| row.find_truncation())
+        self.rows.iter().take(*self.num_rows).find_map(|row| row.find_truncation())
     }
 }
 
@@ -118,7 +115,15 @@ where
 /// compile time.
 pub unsafe trait FetchRowMember: CDataMut + Copy{
     /// `Some` if the indicator indicates truncation. Always `None` for fixed sized types.
-    fn find_truncation(&self) -> Option<TruncationInfo>;
+    fn find_truncation(&self, buffer_index: usize) -> Option<TruncationInfo> {
+        self.indicator().map(|indicator| TruncationInfo {
+            indicator: indicator.length(),
+            buffer_index,
+        })
+    }
+
+    /// Indicator for variable sized or nullable types, `None` for fixed sized types.
+    fn indicator(&self) -> Option<Indicator>;
 
     /// Bind row element to column. Only called for the first row in a row wise buffer.
     ///
@@ -131,21 +136,15 @@ pub unsafe trait FetchRowMember: CDataMut + Copy{
 }
 
 unsafe impl<T> FetchRowMember for T where T: Pod {
-    fn find_truncation(&self) -> Option<TruncationInfo> {
+    fn indicator(&self) -> Option<Indicator> {
         None
     }
 }
+
 // unsafe impl<T> FetchRowMember for Nullable<T> where T: Pod {}
 unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {
-    fn find_truncation(&self) -> Option<TruncationInfo> {
-        if self.is_complete() {
-            None
-        } else {
-            Some(TruncationInfo {
-                buffer_index: 0,
-                indicator: self.indicator().length(),
-            })
-        }
+    fn indicator(&self) -> Option<Indicator> {
+        Some(self.indicator())
     }
 }
 
@@ -162,20 +161,35 @@ macro_rules! impl_bind_columns_to_cursor {
     );
 }
 
+macro_rules! impl_find_truncation {
+    ($offset:expr,) => (
+        None
+    );
+    ($offset:expr, $head:ident, $($tail:ident,)*) => (
+        {
+            if let Some(truncation_info) = $head.find_truncation($offset) {
+                return Some(truncation_info);
+            }
+            impl_find_truncation!($offset+1, $($tail,)*)
+        }
+    );
+}
+
 macro_rules! impl_fetch_row_for_tuple{
     ($($t:ident)*) => (
+        #[allow(unused_mut)]
+        #[allow(unused_variables)]
+        #[allow(non_snake_case)]
         unsafe impl<$($t:FetchRowMember,)*> FetchRow for ($($t,)*)
         {
-            #[allow(unused_mut)]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
             unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
                 let ($(ref mut $t,)*) = self;
                 impl_bind_columns_to_cursor!(1, cursor, $($t,)*)
             }
 
             fn find_truncation(&self) -> Option<TruncationInfo> {
-                None
+                let ($(ref $t,)*) = self;
+                impl_find_truncation!(0, $($t,)*)
             }
         }
     );

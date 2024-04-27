@@ -10,10 +10,16 @@ use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
 use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
-    }, decimal_text_to_i128, handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement, StatementRef}, parameter::{
+    },
+    decimal_text_to_i128,
+    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
+    parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, WithDataType,
-    }, sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType, Error, FetchRow, FetchRowMember, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String
+    },
+    sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
+    DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
+    ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4660,46 +4666,16 @@ fn row_wise_bulk_query(profile: &Profile) {
         .unwrap();
 
     // When
-    #[derive(Clone, Copy)]
-    struct RowSample {
-        a: i32,
-        b: VarCharArray<50>,
-    }
-
-    impl Default for RowSample {
-        fn default() -> Self {
-            RowSample {
-                a: 0,
-                b: VarCharArray::NULL,
-            }
-        }
-    }
-
-    unsafe impl FetchRow for RowSample {
-        unsafe fn bind_columns_to_cursor(
-            &mut self,
-            mut cursor: StatementRef<'_>,
-        ) -> Result<(), Error> {
-            cursor.bind_col(1, &mut self.a).into_result(&cursor)?;
-            cursor.bind_col(2, &mut self.b).into_result(&cursor)?;
-            Ok(())
-        }
-
-        fn find_truncation(&self) -> Option<TruncationInfo> {
-            panic!("No truncation detection used in this test")
-        }
-    }
-
-    let row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
+    let row_set_buffer = RowWiseBuffer::<(i32, VarCharArray<50>)>::new(10);
     let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
 
     // Then
     assert_eq!(2, batch.num_rows());
-    assert_eq!(42, batch[0].a);
-    assert_eq!(b"Hello, World!", batch[0].b.as_bytes().unwrap());
-    assert_eq!(5, batch[1].a);
-    assert_eq!(b"Hallo, Welt!", batch[1].b.as_bytes().unwrap());
+    assert_eq!(42, batch[0].0);
+    assert_eq!(b"Hello, World!", batch[0].1.as_bytes().unwrap());
+    assert_eq!(5, batch[1].0);
+    assert_eq!(b"Hallo, Welt!", batch[1].1.as_bytes().unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -4721,34 +4697,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
         .unwrap();
 
     // When
-    #[derive(Clone, Copy)]
-    struct RowSample {
-        a: VarCharArray<10>,
-    }
-
-    impl Default for RowSample {
-        fn default() -> Self {
-            RowSample {
-                a: VarCharArray::NULL,
-            }
-        }
-    }
-
-    unsafe impl FetchRow for RowSample {
-        unsafe fn bind_columns_to_cursor(
-            &mut self,
-            mut cursor: StatementRef<'_>,
-        ) -> Result<(), Error> {
-            cursor.bind_col(1, &mut self.a).into_result(&cursor)?;
-            Ok(())
-        }
-
-        fn find_truncation(&self) -> Option<TruncationInfo> {
-            self.a.find_truncation()
-        }
-    }
-
-    let mut row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
+    let mut row_set_buffer = RowWiseBuffer::<(VarCharArray<10>,)>::new(10);
 
     let mut block_cursor = cursor.bind_buffer(&mut row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
@@ -4756,7 +4705,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
     // Then
     assert_eq!(
         "Hello, Wo",
-        std::str::from_utf8(batch[0].a.as_bytes().unwrap()).unwrap()
+        std::str::from_utf8(batch[0].0.as_bytes().unwrap()).unwrap()
     );
     drop(block_cursor);
     assert_eq!(
