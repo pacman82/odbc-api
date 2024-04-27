@@ -59,6 +59,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install unixODBC
+        run: brew install unixodbc
+
       - name: Install latests rust toolchain
         uses: actions-rs/toolchain@v1
         with:
