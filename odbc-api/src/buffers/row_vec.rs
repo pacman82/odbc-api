@@ -67,8 +67,9 @@ pub unsafe trait FetchRow: Copy {
 /// To fetch rows with this buffer type `R` must implement [`FetchRow`]. This is currently
 /// implemented for tuple types. Each element of these tuples must implement [`FetchRowMember`].
 /// 
-/// Currently supported are: `f64`, `f32`, `Date`, `TimeStamp`, `Time`, `Numeric`, `i16`, `u36`,
-/// `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64`.
+/// Currently supported are: `f64`, `f32`, [`odbc_sys::Date`], [`odbc_sys::TimeStamp`],
+/// [`odbc_sys::Time`], `i16`, `u36`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64`,
+/// [`VarCharArray`].
 pub struct RowVec<R> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated,
