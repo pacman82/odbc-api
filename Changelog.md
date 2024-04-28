@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.1.0
+
+* Adds support for row wise bulk fetching via `RowVec`.
+
 ## 7.0.0
 
 * Removed `Quirks`. Detection of driver problems via dbms name is not relyable enough.
