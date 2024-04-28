@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.0
+
+* Adds derive feature for deriving custom implementations of `FetchRow`.
+
 ## 7.1.0
 
 * Adds support for row wise bulk fetching via `RowVec`.

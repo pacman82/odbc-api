@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "7.1.0"
+version = "7.2.0"
 authors = ["Markus Klein"]
 edition = "2021"
 license = "MIT"
@@ -61,7 +61,7 @@ odbc_version_3_80 = ["odbc-sys/odbc_version_3_80"]
 # narrow function calls and preferale link against `libiodbc.so` instead of `libodbc.so`.
 iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
 
-# Experimental support for deriving `FetchRow` for custom structs. Currently considered unstable.
+# Allows deriving custom implementations of `FetchRow` for row wise bulk fetching.
 derive = ["dep:odbc-api-derive"]
 
 default=["odbc_version_3_80"]

@@ -3,10 +3,7 @@ use std::ffi::c_void;
 use odbc_sys::NULL_DATA;
 
 use crate::{
-    fixed_sized::Pod,
-    handles::{CData, CDataMut, HasDataType},
-    parameter::CElement,
-    OutputParameter,
+    buffers::{FetchRowMember, Indicator}, fixed_sized::Pod, handles::{CData, CDataMut, HasDataType}, parameter::CElement, OutputParameter
 };
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null
@@ -49,6 +46,12 @@ impl<T> Nullable<T> {
         } else {
             Some(self.value)
         }
+    }
+}
+
+impl<T> Default for Nullable<T> where T: Default {
+    fn default() -> Self {
+        Self::null()
     }
 }
 
@@ -104,3 +107,9 @@ where
 }
 
 unsafe impl<T> OutputParameter for Nullable<T> where T: Pod + HasDataType {}
+
+unsafe impl<T> FetchRowMember for Nullable<T> where T: Pod {
+    fn indicator(&self) -> Option<crate::buffers::Indicator> {
+        Some(Indicator::from_isize(self.indicator))
+    }
+}

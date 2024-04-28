@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
+/// Use this to derive the trait `FetchRow` for structs defined in the application logic.
 #[proc_macro_derive(Fetch)]
 pub fn derive_fetch_row(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);

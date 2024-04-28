@@ -7,10 +7,10 @@ use std::{
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
-use widestring::U16String;
+use widestring::{U16Str, U16String};
 
 use crate::{
-    buffers::Indicator,
+    buffers::{FetchRowMember, Indicator},
     handles::{CData, CDataMut, HasDataType},
     DataType, OutputParameter,
 };
@@ -305,7 +305,7 @@ where
         }
     }
 
-    /// Length of the (potentially truncated) value within the cell in characters. Excluding
+    /// Length of the (potentially truncated) value within the cell in bytes. Excluding
     /// terminating zero.
     pub fn len_in_bytes(&self) -> Option<usize> {
         // The maximum length is one larger for untruncated values without terminating zero. E.g.
@@ -348,14 +348,26 @@ where
 
 impl<B, K> VarCell<B, K>
 where
+    B: Borrow<[K::Element]>,
+    K: VarKind,
+{
+    /// Valid payload of the buffer (excluding terminating zeroes) returned as slice or `None` in
+    /// case the indicator is `NULL_DATA`.
+    pub fn as_slice(&self) -> Option<&[K::Element]> {
+        let slice = self.buffer.borrow();
+        self.len_in_bytes().map(|len| &slice[..(len/size_of::<K::Element>())])
+    }
+}
+
+impl<B, K> VarCell<B, K>
+where
     B: Borrow<[u8]>,
     K: VarKind<Element = u8>,
 {
     /// Valid payload of the buffer (excluding terminating zeroes) returned as slice or `None` in
     /// case the indicator is `NULL_DATA`.
     pub fn as_bytes(&self) -> Option<&[u8]> {
-        let slice = self.buffer.borrow();
-        self.len_in_bytes().map(|len| &slice[..len])
+        self.as_slice()
     }
 }
 
@@ -368,6 +380,19 @@ impl<B> VarCell<B, Text> where
             Ok(Some(text))
         } else {
             Ok(None)
+        }
+    }
+}
+
+impl<B> VarCell<B, WideText> where
+    B: Borrow<[u16]>,
+{
+    pub fn as_utf16(&self) -> Option<&U16Str> {
+        if let Some(chars) = self.as_slice() {
+            let text = U16Str::from_slice(chars);
+            Some(text)
+        } else {
+            None
         }
     }
 }
@@ -527,10 +552,10 @@ pub type VarWCharArray<const LENGTH: usize> = VarWChar<[u16; LENGTH]>;
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarBinaryArray<const LENGTH: usize> = VarBinary<[u8; LENGTH]>;
 
-impl<const LENGTH: usize, K> Default for VarCell<[u8; LENGTH], K> {
+impl<const LENGTH: usize, K, E> Default for VarCell<[E; LENGTH], K> where E: Default + Copy {
     fn default() -> Self {
         Self {
-            buffer: [0; LENGTH],
+            buffer: [E::default(); LENGTH],
             indicator: Indicator::Null.to_isize(),
             kind: Default::default(),
         }
@@ -608,6 +633,24 @@ unsafe impl<K: VarKind> CElement for VarCell<Box<[K::Element]>, K> {
     }
 }
 unsafe impl<K: VarKind> OutputParameter for VarCell<Box<[K::Element]>, K> {}
+
+unsafe impl<const LENGTH: usize> FetchRowMember for VarCharArray<LENGTH> {
+    fn indicator(&self) -> Option<Indicator> {
+        Some(self.indicator())
+    }
+}
+
+unsafe impl<const LENGTH: usize> FetchRowMember for VarWCharArray<LENGTH> {
+    fn indicator(&self) -> Option<Indicator> {
+        Some(self.indicator())
+    }
+}
+
+unsafe impl<const LENGTH: usize> FetchRowMember for VarBinaryArray<LENGTH> {
+    fn indicator(&self) -> Option<Indicator> {
+        Some(self.indicator())
+    }
+}
 
 #[cfg(test)]
 mod tests {

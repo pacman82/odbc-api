@@ -7,6 +7,8 @@ use test_case::test_case;
 
 use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
 
+#[cfg(feature = "derive")]
+use odbc_api::Fetch;
 use odbc_api::{
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
@@ -16,14 +18,12 @@ use odbc_api::{
     handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
-        VarCharSliceMut, WithDataType,
+        VarCharSliceMut, VarWCharArray, WithDataType,
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
     ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
 };
-#[cfg(feature="derive")]
-use odbc_api::Fetch;
 
 use std::{
     ffi::CString,
@@ -4676,7 +4676,89 @@ fn row_wise_bulk_query_using_tuple(profile: &Profile) {
     assert_eq!("Hallo, Welt!", batch[1].1.as_str().unwrap().unwrap());
 }
 
-#[cfg(feature="derive")]
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query_nullable(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), None]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    let row_set_buffer = RowVec::<(Nullable<i32>,)>::new(10);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(Some(&42), batch[0].0.as_opt());
+    assert_eq!(None, batch[1].0.as_opt());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query_binary(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(20)"])
+        .values_by_column(&[&[Some("Hello, World!"), None]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    let row_set_buffer = RowVec::<(VarBinaryArray<20>,)>::new(2);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(b"Hello, World!", batch[0].0.as_bytes().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query_wide_text(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(20)"])
+        .values_by_column(&[&[Some("Hello, World!"), None]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    let row_set_buffer = RowVec::<(VarWCharArray<20>,)>::new(2);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(
+        "Hello, World!",
+        batch[0].0.as_utf16().unwrap().to_string().unwrap()
+    );
+}
+
+#[cfg(feature = "derive")]
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]

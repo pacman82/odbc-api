@@ -1,6 +1,6 @@
 use crate::{
     handles::{CData, CDataMut, DataType, HasDataType},
-    parameter::{CElement, OutputParameter},
+    parameter::{CElement, OutputParameter}, buffers::{FetchRowMember, Indicator}
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{
@@ -95,6 +95,12 @@ macro_rules! impl_pod {
 
         unsafe impl Pod for $t {
             const C_DATA_TYPE: CDataType = $c_data_type;
+        }
+
+        unsafe impl FetchRowMember for $t {
+            fn indicator(&self) -> Option<Indicator> {
+                None
+            }
         }
     };
 }
