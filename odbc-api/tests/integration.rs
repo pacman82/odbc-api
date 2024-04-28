@@ -22,6 +22,9 @@ use odbc_api::{
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
     ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
 };
+#[cfg(feature="derive")]
+use odbc_api::Fetch;
+
 use std::{
     ffi::CString,
     io::{self, Write},
@@ -4644,23 +4647,17 @@ async fn async_bulk_fetch(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn row_wise_bulk_query(profile: &Profile) {
+fn row_wise_bulk_query_using_tuple(profile: &Profile) {
     // Given a cursor
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["INTEGER", "VARCHAR(50)"])
+        .values_by_column(&[
+            &[Some("42"), Some("5")],
+            &[Some("Hello, World!"), Some("Hallo, Welt!")],
+        ])
         .build(profile)
         .unwrap();
-    conn.execute(
-        &table.sql_insert(),
-        (&42.into_parameter(), &"Hello, World!".into_parameter()),
-    )
-    .unwrap();
-    conn.execute(
-        &table.sql_insert(),
-        (&5.into_parameter(), &"Hallo, Welt!".into_parameter()),
-    )
-    .unwrap();
     let cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
@@ -4679,6 +4676,45 @@ fn row_wise_bulk_query(profile: &Profile) {
     assert_eq!("Hallo, Welt!", batch[1].1.as_str().unwrap().unwrap());
 }
 
+#[cfg(feature="derive")]
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query_using_custom_row(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "VARCHAR(50)"])
+        .values_by_column(&[
+            &[Some("42"), Some("5")],
+            &[Some("Hello, World!"), Some("Hallo, Welt!")],
+        ])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), ())
+        .unwrap()
+        .unwrap();
+
+    // When
+    #[derive(Clone, Copy, Default, Fetch)]
+    struct MyRow {
+        a: i32,
+        b: VarCharArray<50>,
+    }
+    let row_set_buffer = RowVec::<MyRow>::new(10);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = block_cursor.fetch().unwrap().unwrap();
+
+    // Then
+    assert_eq!(2, batch.num_rows());
+    assert_eq!(42, batch[0].a);
+    assert_eq!("Hello, World!", batch[0].b.as_str().unwrap().unwrap());
+    assert_eq!(5, batch[1].a);
+    assert_eq!("Hallo, Welt!", batch[1].b.as_str().unwrap().unwrap());
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
@@ -4688,9 +4724,8 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["VARCHAR(50)"])
+        .values_by_column(&[&[Some("Hello, World!")]])
         .build(profile)
-        .unwrap();
-    conn.execute(&table.sql_insert(), &"Hello, World!".into_parameter())
         .unwrap();
     let cursor = conn
         .execute(&table.sql_all_ordered_by_id(), ())

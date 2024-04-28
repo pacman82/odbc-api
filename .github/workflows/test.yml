@@ -48,8 +48,8 @@ jobs:
 
       - name: Test
         run: |
-          cargo test --release -- --skip postgresql --skip maria_db
-          cargo test --features narrow --release -- --skip postgresql --skip maria_db
+          cargo test --release -- --skip postgresql --skip maria_db --features derive
+          cargo test --features narrow,derive --release -- --skip postgresql --skip maria_db
 
   win32:
     name: Build Win32

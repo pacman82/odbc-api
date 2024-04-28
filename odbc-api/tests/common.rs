@@ -4,7 +4,8 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer, TruncationInfo,
+    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer,
+    TruncationInfo,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
@@ -19,6 +20,8 @@ pub struct Given<'a> {
     table_name: &'a str,
     column_types: &'a [&'a str],
     column_names: &'a [&'a str],
+    /// String representation of values to be inserted into table in column wise order.
+    values: &'a [&'a [Option<&'a str>]],
 }
 
 impl<'a> Given<'a> {
@@ -27,6 +30,7 @@ impl<'a> Given<'a> {
             table_name,
             column_types: &[],
             column_names: &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+            values: &[],
         }
     }
 
@@ -40,11 +44,40 @@ impl<'a> Given<'a> {
         self
     }
 
+    /// String representation of values to be filled into test table in column wise order.
+    pub fn values_by_column(&mut self, values: &'a [&'a [Option<&'a str>]]) -> &mut Self {
+        self.values = values;
+        self
+    }
+
     pub fn build(
         &self,
         profile: &Profile,
     ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
-        profile.create_table(self.table_name, self.column_types, self.column_names)
+        let (conn, table) =
+            profile.create_table(self.table_name, self.column_types, self.column_names)?;
+        if !self.values.is_empty() {
+            let num_rows = self.values[0].len();
+            let max_str_len = self.values.iter().map(|vals| {
+                vals.iter()
+                    .map(|text| text.unwrap_or("").len())
+                    .max()
+                    .expect("Columns may not be empty")
+            });
+            let mut inserter = conn
+                .prepare(&table.sql_insert())?
+                .into_text_inserter(num_rows, max_str_len)?;
+            inserter.set_num_rows(num_rows);
+            for r in 0..num_rows {
+                for c in 0..self.values.len() {
+                    inserter
+                        .column_mut(c)
+                        .set_cell(r, self.values[c][r].map(|text| text.as_bytes()))
+                }
+            }
+            inserter.execute()?;
+        }
+        Ok((conn, table))
     }
 }
 
