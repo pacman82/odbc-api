@@ -1,5 +1,5 @@
 [workspace]
-members=["odbc-api", "odbcsv"]
+members=[ "derive","odbc-api", "odbcsv"]
 resolver = "2"
 
 [profile.release]

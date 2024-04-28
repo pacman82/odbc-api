@@ -61,6 +61,9 @@ odbc_version_3_80 = ["odbc-sys/odbc_version_3_80"]
 # narrow function calls and preferale link against `libiodbc.so` instead of `libodbc.so`.
 iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
 
+# Experimental support for deriving `FetchRow` for custom structs. Currently considered unstable.
+derive = ["dep:odbc-api-derive"]
+
 default=["odbc_version_3_80"]
 
 [dependencies]
@@ -73,6 +76,7 @@ log = "0.4.21"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.1.0"
 atoi = "2.0.0"
+odbc-api-derive ={ version = "0.1.0", path = "../derive", optional = true}
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default
