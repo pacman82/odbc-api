@@ -123,12 +123,10 @@ where
 /// A columnar buffer intended to be bound with [crate::Cursor::bind_buffer] in order to obtain
 /// results from a cursor.
 ///
-/// This buffer is designed to be versatile. It supports a wide variety of usage scenarios. It is
-/// efficient in retrieving data, but expensive to allocate, as columns are allocated separately.
-/// This is required in order to efficiently allow for rebinding columns, if this buffer is used to
-/// provide array input parameters those maximum size is not known in advance.
-///
-/// Most applications should find the overhead negligible, especially if instances are reused.
+/// Binds to the result set column wise. This is usually helpful in dataengineering or data sciense
+/// tasks. This buffer type can be used in situations there the schema of the queried data is known
+/// at compile time, as well as for generic applications which do work with wide range of different
+/// data.
 pub struct ColumnarBuffer<C> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated, 

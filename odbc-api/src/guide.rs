@@ -328,20 +328,23 @@ query a single row many times for many queries, if the application can reuse the
 This crate allows you to provide your own buffers by implementing the [`crate::RowSetBuffer`]
 trait. That however requires `unsafe` code.
 
-This crate also provides two implementation of the [`crate::RowSetBuffer`] trait, ready to be
+This crate also provides three implementations of the [`crate::RowSetBuffer`] trait, ready to be
 used in safe code:
 
-* [`crate::buffers::TextRowSet`]
 * [`crate::buffers::ColumnarBuffer`]
+* [`crate::buffers::TextRowSet`]
+* [`crate::buffers::RowVec`]
 
 ### Fetching results row by row without binding buffers upfront.
 
-Fetching data without binding buffers, may imply lots of round trips to the data source (one by
+⚠ Fetching data without binding buffers, may imply lots of round trips to the data source (one by
 row, or even by field). Also the driver has no upfront knowledge what C-Type your value should
 be represented as, preventing further optimizations. Usually it is the slowest possible way to
-siphon data out of a data source. That being said, it is a convenient programming model, as the
-developer does not need to prepare and allocate the buffers beforehand. It is also a good way to
-retrieve really large single values out of a data source (like one large text file).
+siphon data out of a data source.
+
+That being said, it is a convenient programming model, as the developer does not need to prepare and
+allocate the buffers beforehand. It is also a good way to retrieve really large single values out of
+a data source (like one large text file).
 
 ```
 use odbc_api::{Connection, Error, IntoParameter, Cursor};

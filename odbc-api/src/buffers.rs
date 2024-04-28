@@ -7,6 +7,7 @@ mod columnar;
 mod description;
 mod indicator;
 mod item;
+mod row_vec;
 mod text_column;
 
 pub use self::{
@@ -17,6 +18,7 @@ pub use self::{
     description::BufferDesc,
     indicator::Indicator,
     item::Item,
+    row_vec::{FetchRow, FetchRowMember, RowVec},
     text_column::{
         CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnView, WCharColumn,
     },

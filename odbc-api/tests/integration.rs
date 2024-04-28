@@ -9,7 +9,8 @@ use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
 
 use odbc_api::{
     buffers::{
-        BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, TextColumn, TextRowSet,
+        BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
+        TextRowSet,
     },
     decimal_text_to_i128,
     handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
@@ -19,7 +20,7 @@ use odbc_api::{
     },
     sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
     DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, RowWiseBuffer, TruncationInfo, U16Str, U16String,
+    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
 };
 use std::{
     ffi::CString,
@@ -4666,7 +4667,7 @@ fn row_wise_bulk_query(profile: &Profile) {
         .unwrap();
 
     // When
-    let row_set_buffer = RowWiseBuffer::<(i32, VarCharArray<50>)>::new(10);
+    let row_set_buffer = RowVec::<(i32, VarCharArray<50>)>::new(10);
     let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
 
@@ -4697,7 +4698,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
         .unwrap();
 
     // When
-    let mut row_set_buffer = RowWiseBuffer::<(VarCharArray<10>,)>::new(10);
+    let mut row_set_buffer = RowVec::<(VarCharArray<10>,)>::new(10);
 
     let mut block_cursor = cursor.bind_buffer(&mut row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
@@ -4738,7 +4739,7 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
     // When
     type RowSample = (i32,);
 
-    let row_set_buffer = RowWiseBuffer::<RowSample>::new(10);
+    let row_set_buffer = RowVec::<RowSample>::new(10);
     let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = block_cursor.fetch().unwrap().unwrap();
 

@@ -21,7 +21,6 @@ mod parameter_collection;
 mod preallocated;
 mod prepared;
 mod result_set_metadata;
-mod row_wise_buffer;
 mod sleep;
 mod statement_connection;
 
@@ -52,7 +51,6 @@ pub use self::{
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
-    row_wise_buffer::{FetchRow, FetchRowMember, RowWiseBuffer},
     sleep::Sleep,
     statement_connection::StatementConnection,
 };
