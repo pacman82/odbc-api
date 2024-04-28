@@ -321,6 +321,11 @@ fn interactive(conn: &Connection) -> io::Result<()>{
 
 ## Fetching results
 
+ODBC offers two ways of retrieving values from a cursor over a result set. Row by row fetching and
+bulk fetching using application provided buffers.
+
+### Fetching results by filling application provided buffers
+
 The most efficient way to query results is not query an ODBC data source row by row, but to
 ask for a whole bulk of rows at once. The ODBC driver and driver manager will then fill these
 row sets into buffers which have been previously bound. This is also the most efficient way to
@@ -331,129 +336,18 @@ trait. That however requires `unsafe` code.
 This crate also provides three implementations of the [`crate::RowSetBuffer`] trait, ready to be
 used in safe code:
 
-* [`crate::buffers::ColumnarBuffer`]
-* [`crate::buffers::TextRowSet`]
-* [`crate::buffers::RowVec`]
+* [`crate::buffers::ColumnarBuffer`]: Binds to the result set column wise. This is usually helpful
+  in dataengineering or data sciense tasks. This buffer type can be used in situations there the
+  schema of the queried data is known at compile time, as well as for generic applications which do
+  work with wide range of different data. Checkt the struct documentation for examples.
+* [`crate::buffers::TextRowSet`]: Queries all data as text bound in columns. Since the columns are
+  homogeneous, you can also use this, to iterate row wise over the buffer. Excellent if you want
+  to print the contents of a table, or are for any reason only interessted in the text
+  representation of the values.
+* [`crate::buffers::RowVec`]: A good choice if you know the schema at compile time and your
+  application logic is build in a row by row fashion, rather than column by column.
 
-### Fetching results row by row without binding buffers upfront.
-
-⚠ Fetching data without binding buffers, may imply lots of round trips to the data source (one by
-row, or even by field). Also the driver has no upfront knowledge what C-Type your value should
-be represented as, preventing further optimizations. Usually it is the slowest possible way to
-siphon data out of a data source.
-
-That being said, it is a convenient programming model, as the developer does not need to prepare and
-allocate the buffers beforehand. It is also a good way to retrieve really large single values out of
-a data source (like one large text file).
-
-```
-use odbc_api::{Connection, Error, IntoParameter, Cursor};
-
-fn get_large_text(name: &str, conn: &mut Connection<'_>) -> Result<Option<String>, Error> {
-    let mut cursor = conn
-        .execute("SELECT content FROM LargeFiles WHERE name=?", &name.into_parameter())?
-        .expect("Assume select statement creates cursor");
-    if let Some(mut row) = cursor.next_row()? {
-        let mut buf = Vec::new();
-        row.get_text(1, &mut buf)?;
-        let ret = String::from_utf8(buf).unwrap();
-        Ok(Some(ret))
-    } else {
-        Ok(None)
-    }
-}
-```
-
-### Fetching results column wise with `ColumnarBuffer`.
-
-Consider querying a table with two columns `year` and `name`.
-
-```no_run
-use odbc_api::{
-    Environment, Cursor, ConnectionOptions,
-    buffers::{AnySlice, BufferDesc, Item, ColumnarAnyBuffer},
-};
-
-let env = Environment::new()?;
-
-let batch_size = 1000; // Maximum number of rows in each row set
-let buffer_description = [
-    // We know year to be a Nullable SMALLINT
-    BufferDesc::I16 { nullable: true },
-    // and name to be a required VARCHAR
-    BufferDesc::Text { max_str_len: 255 },
-];
-
-/// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-let mut buffer = ColumnarAnyBuffer::from_descs(batch_size, buffer_description);
-
-let mut conn = env.connect(
-    "YourDatabase", "SA", "My@Test@Password1",
-    ConnectionOptions::default(),
-)?;
-if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
-    // Bind buffer to cursor. We bind the buffer as a mutable reference here, which makes it
-    // easier to reuse for other queries, but we could have taken ownership.
-    let mut row_set_cursor = cursor.bind_buffer(&mut buffer)?;
-    // Loop over row sets
-    while let Some(row_set) = row_set_cursor.fetch()? {
-        // Process years in row set
-        let year_col = row_set.column(0);
-        for year in i16::as_nullable_slice(year_col)
-            .expect("Year column buffer expected to be nullable Int")
-        {
-            // Iterate over `Option<i16>` with it ..
-        }
-        // Process names in row set
-        let name_col = row_set.column(1);
-        for name in name_col
-            .as_text_view()
-            .expect("Name column buffer expected to be text")
-            .iter()
-        {
-            // Iterate over `Option<&CStr> ..
-        }
-    }
-}
-# Ok::<(), odbc_api::Error>(())
-```
-
-This second examples changes two things, we do not know the schema in advance and use the
-SQL DataType to determine the best fit for the buffers. Also we want to do everything in a
-function and return a `Cursor` with an already bound buffer. This approach is best if you have
-few and very long query, so the overhead of allocating buffers is negligible and you want to
-have an easier time with the borrow checker.
-
-```no_run
-use odbc_api::{
-    Connection, BlockCursor, Error, Cursor, Nullability, ResultSetMetadata,
-    buffers::{ AnyBuffer, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer }
-};
-
-fn get_birthdays<'a>(conn: &'a mut Connection)
-    -> Result<BlockCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
-{
-    let mut cursor = conn.execute("SELECT year, name FROM Birthdays;", ())?.unwrap();
-    let mut column_description = Default::default();
-    let buffer_description : Vec<_> = (0..cursor.num_result_cols()?).map(|index| {
-        cursor.describe_col(index as u16 + 1, &mut column_description)?;
-        let nullable = matches!(
-            column_description.nullability,
-            Nullability::Unknown | Nullability::Nullable
-        );
-        let desc = BufferDesc::from_data_type(
-            column_description.data_type,
-            nullable
-        ).unwrap_or(BufferDesc::Text{ max_str_len: 255 });
-        Ok(desc)
-    }).collect::<Result<_, Error>>()?;
-
-    // Row set size of 5000 rows.
-    let buffer = ColumnarAnyBuffer::from_descs(5000, buffer_description);
-    // Bind buffer and take ownership over it.
-    cursor.bind_buffer(buffer)
-}
-```
+You can read more about them in the documentation of the [`crate::buffers`] module.
 
 ## Inserting values into a table
 

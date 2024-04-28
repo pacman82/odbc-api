@@ -2510,7 +2510,7 @@ fn get_data_string(profile: &Profile) {
     let mut actual = VarCharArray::<32>::NULL;
 
     row.get_data(1, &mut actual).unwrap();
-    assert_eq!(Some(&b"Hello, World!"[..]), actual.as_bytes());
+    assert_eq!(Some("Hello, World!"), actual.as_str().unwrap());
 
     // second row
     row = cursor.next_row().unwrap().unwrap();
@@ -2644,7 +2644,7 @@ fn large_strings(profile: &Profile, column_type: &str) {
     let mut actual = String::new();
     loop {
         row.get_data(1, &mut buf).unwrap();
-        actual += std::str::from_utf8(buf.as_bytes().unwrap()).unwrap();
+        actual += buf.as_str().unwrap().unwrap();
         if buf.is_complete() {
             break;
         }
@@ -2894,7 +2894,7 @@ fn use_truncated_output_as_input(profile: &Profile) {
     let mut cursor = conn.execute(&query, ()).unwrap().unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
     row.get_data(1, &mut buf).unwrap();
-    assert_eq!(b"Hell", buf.as_bytes().unwrap());
+    assert_eq!("Hell", buf.as_str().unwrap().unwrap());
     assert!(!buf.is_complete());
     drop(cursor);
 
@@ -4674,9 +4674,9 @@ fn row_wise_bulk_query(profile: &Profile) {
     // Then
     assert_eq!(2, batch.num_rows());
     assert_eq!(42, batch[0].0);
-    assert_eq!(b"Hello, World!", batch[0].1.as_bytes().unwrap());
+    assert_eq!("Hello, World!", batch[0].1.as_str().unwrap().unwrap());
     assert_eq!(5, batch[1].0);
-    assert_eq!(b"Hallo, Welt!", batch[1].1.as_bytes().unwrap());
+    assert_eq!("Hallo, Welt!", batch[1].1.as_str().unwrap().unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -4704,10 +4704,7 @@ fn truncation_in_row_wise_bulk_buffer(profile: &Profile) {
     let batch = block_cursor.fetch().unwrap().unwrap();
 
     // Then
-    assert_eq!(
-        "Hello, Wo",
-        std::str::from_utf8(batch[0].0.as_bytes().unwrap()).unwrap()
-    );
+    assert_eq!("Hello, Wo", batch[0].0.as_str().unwrap().unwrap());
     drop(block_cursor);
     assert_eq!(
         TruncationInfo {

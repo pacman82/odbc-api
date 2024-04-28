@@ -3,7 +3,7 @@ use std::{
     ffi::c_void,
     marker::PhantomData,
     mem::{size_of, size_of_val},
-    num::NonZeroUsize,
+    num::NonZeroUsize, str::Utf8Error,
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
@@ -356,6 +356,19 @@ where
     pub fn as_bytes(&self) -> Option<&[u8]> {
         let slice = self.buffer.borrow();
         self.len_in_bytes().map(|len| &slice[..len])
+    }
+}
+
+impl<B> VarCell<B, Text> where
+    B: Borrow<[u8]>,
+{
+    pub fn as_str(&self) -> Result<Option<&str>, Utf8Error> {
+        if let Some(bytes) = self.as_bytes() {
+            let text = std::str::from_utf8(bytes)?;
+            Ok(Some(text))
+        } else {
+            Ok(None)
+        }
     }
 }
 

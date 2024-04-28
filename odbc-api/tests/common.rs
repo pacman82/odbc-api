@@ -72,7 +72,11 @@ impl Profile {
         table_name: &str,
         column_types: &[&str],
     ) -> Result<Connection<'static>, odbc_api::Error> {
-        let (conn, _table) = self.create_table(table_name, column_types, &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"])?;
+        let (conn, _table) = self.create_table(
+            table_name,
+            column_types,
+            &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+        )?;
         Ok(conn)
     }
 

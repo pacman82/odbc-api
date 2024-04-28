@@ -44,16 +44,20 @@ use std::{
 /// }
 /// ```
 pub trait Cursor: ResultSetMetadata {
-    /// Advances the cursor to the next row in the result set. This is **Slow**. Bind buffers
-    /// instead, for good performance.
+    /// Advances the cursor to the next row in the result set. This is **Slow**. Bind
+    /// [`crate::buffers`] instead, for good performance.
     ///
-    /// While this method is very convenient due to the fact that the application does not have to
-    /// declare and bind specific buffers, it is also in many situations extremely slow. Concrete
+    /// ⚠ While this method is very convenient due to the fact that the application does not have
+    /// to declare and bind specific buffers, it is also in many situations extremely slow. Concrete
     /// performance depends on the ODBC driver in question, but it is likely it performs a roundtrip
     /// to the datasource for each individual row. It is also likely an extra conversion is
     /// performed then requesting individual fields, since the C buffer type is not known to the
     /// driver in advance. Consider binding a buffer to the cursor first using
     /// [`Self::bind_buffer`].
+    ///
+    /// That being said, it is a convenient programming model, as the developer does not need to
+    /// prepare and allocate the buffers beforehand. It is also a good way to retrieve really large
+    /// single values out of a data source (like one large text file). See [`CursorRow::get_text`].
     fn next_row(&mut self) -> Result<Option<CursorRow<'_>>, Error> {
         let row_available = unsafe {
             self.as_stmt_ref()
@@ -123,6 +127,28 @@ impl<'s> CursorRow<'s> {
     /// index starts at `1`. The used encoding is accordig to the ODBC standard determined by your
     /// system local. Ultimatly the choice is up to the implementation of your ODBC driver, which
     /// often defaults to always UTF-8.
+    ///
+    /// # Example
+    ///
+    /// Retrieve an arbitrary large text file from a database field.
+    ///
+    /// ```
+    /// use odbc_api::{Connection, Error, IntoParameter, Cursor};
+    ///
+    /// fn get_large_text(name: &str, conn: &mut Connection<'_>) -> Result<Option<String>, Error> {
+    ///     let mut cursor = conn
+    ///         .execute("SELECT content FROM LargeFiles WHERE name=?", &name.into_parameter())?
+    ///         .expect("Assume select statement creates cursor");
+    ///     if let Some(mut row) = cursor.next_row()? {
+    ///         let mut buf = Vec::new();
+    ///         row.get_text(1, &mut buf)?;
+    ///         let ret = String::from_utf8(buf).unwrap();
+    ///         Ok(Some(ret))
+    ///     } else {
+    ///         Ok(None)
+    ///     }
+    /// }
+    /// ```
     ///
     /// # Return
     ///

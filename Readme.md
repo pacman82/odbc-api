@@ -77,7 +77,7 @@ Alternatively, if you're familiar with the Nix ecosystem or want to try it out, 
 * [x] Columnar bulk inserts.
 * [x] Columnar bulk queries.
 * [ ] Rowise bulk inserts.
-* [ ] Rowise bulk queries.
+* [x] Rowise bulk queries.
 * [x] Output parameters of stored procedures.
 * [x] prepared and 'one shot' queries.
 * [x] Transactions
