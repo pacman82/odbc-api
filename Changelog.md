@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.1
+
+* Fix release pipeline for derive feature
+
 ## 7.2.0
 
 * Adds derive feature for deriving custom implementations of `FetchRow`.
