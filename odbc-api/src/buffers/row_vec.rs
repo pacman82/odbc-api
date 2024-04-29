@@ -54,10 +54,10 @@ pub unsafe trait FetchRow: Copy {
 ///     while let Some(batch) = block_cursor.fetch()? {
 ///         for (first, last) in batch.iter() {
 ///             let first = first.as_str()
-///                 .expect("First name mums be UTF-8")
+///                 .expect("First name must be UTF-8")
 ///                 .expect("First Name must not be NULL");
 ///             let last = last.as_str()
-///                 .expect("Last name mums be UTF-8")
+///                 .expect("Last name must be UTF-8")
 ///                 .expect("Last Name must not be NULL");
 ///             println!("Hello {first} {last}!")
 ///         }
@@ -71,7 +71,7 @@ pub unsafe trait FetchRow: Copy {
 /// 
 /// Currently supported are: `f64`, `f32`, [`odbc_sys::Date`], [`odbc_sys::Timestamp`],
 /// [`odbc_sys::Time`], `i16`, `u36`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64` and
-/// [`VarCharArray`]. Fixed sized types can be wrapped in [`crate::Nullable`].
+/// [`crate::parameter::VarCharArray`]. Fixed sized types can be wrapped in [`crate::Nullable`].
 pub struct RowVec<R> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated,
