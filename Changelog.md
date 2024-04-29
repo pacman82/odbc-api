@@ -1,8 +1,12 @@
 # Changelog
 
+## 7.2.2
+
+* Fix: Add metadata for `odbc-api-derive` crate
+
 ## 7.2.1
 
-* Fix release pipeline for derive feature
+* Fix: Release pipeline for derive feature
 
 ## 7.2.0
 
