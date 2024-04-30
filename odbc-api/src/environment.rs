@@ -396,9 +396,10 @@ impl Environment {
                 hwnd,
             )
         };
-        #[cfg(target_os = "windows")]
+        
         match driver_completion {
             DriverCompleteOption::NoPrompt => (),
+            #[cfg(target_os = "windows")]
             _ => {
                 // We need a parent window, let's provide a message only window.
                 let mut window_app = MessageOnlyWindowEventHandler {
@@ -409,6 +410,8 @@ impl Environment {
                 event_loop.run_app_on_demand(&mut window_app).unwrap();
                 return window_app.result.unwrap();
             }
+            #[cfg(not(target_os = "windows"))]
+            _ => panic!("Prompt is not supported for non-windows systems.")
         };
         let hwnd = null_mut();
         driver_connect(hwnd)
@@ -725,5 +728,14 @@ mod tests {
         assert_eq!(attributes["FileUsage"], "0");
         assert_eq!(attributes["SQLLevel"], "1");
         assert_eq!(attributes["UsageCount"], "1");
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    #[should_panic(expected = "Prompt is not supported for non-windows systems.")]
+    fn driver_connect_with_prompt_panics_under_linux() {
+        let env = Environment::new().unwrap();
+        let mut out = OutputStringBuffer::empty();
+        env.driver_connect("", &mut out, DriverCompleteOption::Prompt).unwrap();
     }
 }
