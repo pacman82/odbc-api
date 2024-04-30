@@ -14,7 +14,7 @@ use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
-use winit::{event_loop::EventLoop, window::WindowBuilder};
+use winit::{event_loop::EventLoop, window::Window};
 
 #[cfg(not(feature = "odbc_version_3_5"))]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
@@ -395,12 +395,10 @@ impl Environment {
                 // once in the main thread? We could think about a version taking a raw window
                 // handle.
                 let event_loop = EventLoop::new().unwrap();
-                Some(
-                    WindowBuilder::new()
-                        .with_visible(false)
-                        .build(&event_loop)
-                        .unwrap(),
-                )
+                let window = event_loop
+                    .create_window(Window::default_attributes().with_visible(false))
+                    .unwrap();
+                Some(window)
             }
         };
         #[cfg(target_os = "windows")]
