@@ -12,7 +12,6 @@ use crate::{
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 
-use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
 use winit::{
@@ -20,6 +19,7 @@ use winit::{
     event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop},
     window::{Window, WindowId},
+    platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 
 #[cfg(not(feature = "odbc_version_3_5"))]
