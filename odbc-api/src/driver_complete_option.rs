@@ -1,5 +1,6 @@
 /// Specifies how the driver and driver manager complete the incoming connection string. See
 /// [`crate::Environment::driver_connect`].
+#[derive(Clone, Copy, Debug)]
 pub enum DriverCompleteOption {
     /// Do not show a prompt to the user. This implies that the connection string, must already
     /// provide all information needed to Connect to the data source, otherwise the operation fails.

@@ -12,9 +12,15 @@ use crate::{
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 
+use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
 #[cfg(target_os = "windows")]
 // Currently only windows driver manager supports prompt.
-use winit::{event_loop::EventLoop, window::Window};
+use winit::{
+    application::ApplicationHandler,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop},
+    window::{Window, WindowId},
+};
 
 #[cfg(not(feature = "odbc_version_3_5"))]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
@@ -382,48 +388,30 @@ impl Environment {
         completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverCompleteOption,
     ) -> Result<Connection<'_>, Error> {
-        #[cfg(target_os = "windows")]
-        let parent_window = match driver_completion {
-            DriverCompleteOption::NoPrompt => None,
-            _ => {
-                if !cfg!(target_os = "windows") {
-                    panic!("Prompt is not supported on non windows platforms. Use `NoPrompt`.")
-                }
-                // We need a parent window, let's provide a message only window.
-                //
-                // Currently unsure in which situation this would fail. Can this only be intantiated
-                // once in the main thread? We could think about a version taking a raw window
-                // handle.
-                let event_loop = EventLoop::new().unwrap();
-                let window = event_loop
-                    .create_window(Window::default_attributes().with_visible(false))
-                    .unwrap();
-                Some(window)
-            }
-        };
-        #[cfg(target_os = "windows")]
-        let hwnd = parent_window
-            .as_ref()
-            .map(|window| {
-                use winit::raw_window_handle::{
-                    HasWindowHandle, RawWindowHandle, Win32WindowHandle,
-                };
-                match window.window_handle().unwrap().as_raw() {
-                    RawWindowHandle::Win32(Win32WindowHandle { hwnd, .. }) => hwnd.get() as HWnd,
-                    _ => panic!("ODBC Prompt is only supported on window platforms"),
-                }
-            })
-            .unwrap_or(null_mut());
-        #[cfg(not(target_os = "windows"))]
-        let hwnd = null_mut();
-        unsafe {
+        let mut driver_connect = |hwnd: HWnd| unsafe {
             self.driver_connect_with_hwnd(
                 connection_string,
                 completed_connection_string,
                 driver_completion,
                 hwnd,
             )
-        }
+        };
+        #[cfg(target_os = "windows")]
+        match driver_completion {
+            DriverCompleteOption::NoPrompt => (),
+            _ => {
+                // We need a parent window, let's provide a message only window.
+                let mut window_app = MessageOnlyWindowEventHandler {
+                    run_prompt_dialog: Some(driver_connect),
+                    result: None
+                };
+                let mut event_loop = EventLoop::new().unwrap();
+                event_loop.run_app_on_demand(&mut window_app).unwrap();
+                return window_app.result.unwrap();
+            }
+        };
+        let hwnd = null_mut();
+        driver_connect(hwnd)
     }
 
     /// Allows to call driver connect with a user supplied HWnd. Same as [`Self::driver_connect`],
@@ -673,6 +661,36 @@ pub struct DataSourceInfo {
     pub server_name: String,
     /// Description of the data source
     pub driver: String,
+}
+
+/// Message loop for prompt dialog. Used by [`Environment::driver_connect`].
+#[cfg(target_os = "windows")]
+struct MessageOnlyWindowEventHandler<'a, F> {
+    run_prompt_dialog: Option<F>,
+    result: Option<Result<Connection<'a>, Error>>,
+}
+
+#[cfg(target_os = "windows")]
+impl<'a, F> ApplicationHandler for MessageOnlyWindowEventHandler<'a, F> where F: FnOnce(HWnd) -> Result<Connection<'a>, Error> {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let parent_window = event_loop
+            .create_window(Window::default_attributes().with_visible(false))
+            .unwrap();
+
+        use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle, Win32WindowHandle};
+
+        let hwnd = match parent_window.window_handle().unwrap().as_raw() {
+            RawWindowHandle::Win32(Win32WindowHandle { hwnd, .. }) => hwnd.get() as HWnd,
+            _ => panic!("ODBC Prompt is only supported on window platforms"),
+        };
+
+        if let Some(run_dialog) = self.run_prompt_dialog.take() {
+            self.result = Some(run_dialog(hwnd))
+        }
+        event_loop.exit();
+    }
+
+    fn window_event(&mut self, _event_loop: &ActiveEventLoop, _id: WindowId, _event: WindowEvent) {}
 }
 
 /// Called by drivers to pares list of attributes
