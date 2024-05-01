@@ -1,5 +1,9 @@
 # Changelog
 
+# 7.2.3
+
+* Update dependencies
+
 ## 7.2.2
 
 * Fix: Add metadata for `odbc-api-derive` crate
