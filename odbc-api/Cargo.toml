@@ -70,7 +70,7 @@ default=["odbc_version_3_80"]
 # Low level bindings to ODBC API calls into libodbc.so
 odbc-sys = { version = ">= 0.22, < 0.25", default-features = false }
 # Used to generate code for the error type
-thiserror = "1.0.60"
+thiserror = "1.0.61"
 # Used as a log frontend to emit log messages for applications
 log = "0.4.21"
 # Interacting with UTF-16 texts for wide columns or wide function calls
@@ -87,7 +87,7 @@ winit = { version = "0.30.0", default-features = false, features = ["rwh_06"]}
 [dev-dependencies]
 lazy_static = "1.4.0"
 env_logger = "0.11.3"
-anyhow = "1.0.83"
+anyhow = "1.0.85"
 csv = "1.3.0"
 test-case = "3.3.1"
 tempfile = "3.10.1"

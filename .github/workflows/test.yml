@@ -128,7 +128,7 @@ jobs:
           cargo build 
 
   dependabot:
-    needs: [test]
+    needs: [linux,win64,osx]
     permissions:
       pull-requests: write
     runs-on: ubuntu-latest
