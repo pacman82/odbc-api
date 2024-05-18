@@ -126,3 +126,16 @@ jobs:
           cd test-compilation
           cargo add odbc-api --path ../odbc-api/odbc-api --no-default-features --features odbc_version_3_5
           cargo build 
+
+  dependabot:
+    needs: [test]
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
+    steps:
+      - name: Merge Depenabot Pull Request
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
