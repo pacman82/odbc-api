@@ -131,6 +131,7 @@ jobs:
     needs: [linux,win64,osx]
     permissions:
       pull-requests: write
+      contents: write
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
     steps:
