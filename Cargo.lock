@@ -1146,7 +1146,6 @@ dependencies = [
  "assert_cmd",
  "clap",
  "csv",
- "lazy_static",
  "log",
  "odbc-api",
  "stderrlog",

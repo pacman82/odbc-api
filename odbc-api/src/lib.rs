@@ -61,5 +61,5 @@ pub use odbc_sys as sys;
 pub use widestring::{U16Str, U16String};
 
 // Reexport fetch if derive feature is enabled
-#[cfg(feature="derive")]
-pub use odbc_api_derive::Fetch as Fetch;
+#[cfg(feature = "derive")]
+pub use odbc_api_derive::Fetch;

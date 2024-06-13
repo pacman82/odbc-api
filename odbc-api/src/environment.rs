@@ -18,8 +18,8 @@ use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop},
-    window::{Window, WindowId},
     platform::run_on_demand::EventLoopExtRunOnDemand,
+    window::{Window, WindowId},
 };
 
 #[cfg(not(feature = "odbc_version_3_5"))]
@@ -396,7 +396,7 @@ impl Environment {
                 hwnd,
             )
         };
-        
+
         match driver_completion {
             DriverCompleteOption::NoPrompt => (),
             #[cfg(target_os = "windows")]
@@ -404,14 +404,14 @@ impl Environment {
                 // We need a parent window, let's provide a message only window.
                 let mut window_app = MessageOnlyWindowEventHandler {
                     run_prompt_dialog: Some(driver_connect),
-                    result: None
+                    result: None,
                 };
                 let mut event_loop = EventLoop::new().unwrap();
                 event_loop.run_app_on_demand(&mut window_app).unwrap();
                 return window_app.result.unwrap();
             }
             #[cfg(not(target_os = "windows"))]
-            _ => panic!("Prompt is not supported for non-windows systems.")
+            _ => panic!("Prompt is not supported for non-windows systems."),
         };
         let hwnd = null_mut();
         driver_connect(hwnd)
@@ -674,7 +674,10 @@ struct MessageOnlyWindowEventHandler<'a, F> {
 }
 
 #[cfg(target_os = "windows")]
-impl<'a, F> ApplicationHandler for MessageOnlyWindowEventHandler<'a, F> where F: FnOnce(HWnd) -> Result<Connection<'a>, Error> {
+impl<'a, F> ApplicationHandler for MessageOnlyWindowEventHandler<'a, F>
+where
+    F: FnOnce(HWnd) -> Result<Connection<'a>, Error>,
+{
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let parent_window = event_loop
             .create_window(Window::default_attributes().with_visible(false))
@@ -736,6 +739,7 @@ mod tests {
     fn driver_connect_with_prompt_panics_under_linux() {
         let env = Environment::new().unwrap();
         let mut out = OutputStringBuffer::empty();
-        env.driver_connect("", &mut out, DriverCompleteOption::Prompt).unwrap();
+        env.driver_connect("", &mut out, DriverCompleteOption::Prompt)
+            .unwrap();
     }
 }

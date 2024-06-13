@@ -4,8 +4,7 @@ use lazy_static::lazy_static;
 use odbc_api::{
     buffers,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer,
-    TruncationInfo,
+    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer, TruncationInfo,
 };
 
 // Rust by default executes tests in parallel. Yet only one environment is allowed at a time.

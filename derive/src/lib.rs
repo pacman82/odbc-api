@@ -3,13 +3,13 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
 /// Use this to derive the trait `FetchRow` for structs defined in the application logic.
-/// 
+///
 /// # Example
 ///
 /// ```
 /// use odbc_api_derive::Fetch;
 /// use odbc_api::{Connection, Error, Cursor, parameter::VarCharArray, buffers::RowVec};
-/// 
+///
 /// #[derive(Default, Clone, Copy, Fetch)]
 /// struct Person {
 ///     first_name: VarCharArray<255>,
@@ -51,9 +51,12 @@ pub fn derive_fetch_row(item: TokenStream) -> TokenStream {
     let fields = struct_data.fields;
 
     let bindings = fields.iter().enumerate().map(|(index, field)| {
-        let field_name = field.ident.as_ref().expect("All struct members must be named");
+        let field_name = field
+            .ident
+            .as_ref()
+            .expect("All struct members must be named");
         let col_index = (index + 1) as u16;
-        quote!{
+        quote! {
             odbc_api::buffers::FetchRowMember::bind_to_col(
                 &mut self.#field_name,
                 #col_index,
@@ -63,8 +66,11 @@ pub fn derive_fetch_row(item: TokenStream) -> TokenStream {
     });
 
     let find_truncation = fields.iter().enumerate().map(|(index, field)| {
-        let field_name = field.ident.as_ref().expect("All struct members must be named");
-        quote!{
+        let field_name = field
+            .ident
+            .as_ref()
+            .expect("All struct members must be named");
+        quote! {
             let maybe_truncation = odbc_api::buffers::FetchRowMember::find_truncation(
                 &self.#field_name,
                 #index,

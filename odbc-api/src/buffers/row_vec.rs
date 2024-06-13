@@ -11,7 +11,7 @@ use crate::{
 /// memory the row itself should be representable as such. Concretly that means that types like
 /// `String` can not be supported directly by [`FetchRow`]s for efficient bulk fetching, due to the
 /// fact it points to data on the heap.
-/// 
+///
 /// This trait is implement by tuples of [`FetchRowMember`]. In addition it can also be derived
 /// for structs there all members implement [`FetchRowMember`] using the `Fetch` derive macro if the
 /// optional derive feature is activated.
@@ -65,10 +65,10 @@ pub unsafe trait FetchRow: Copy {
 ///     Ok(())
 /// }
 /// ```
-/// 
+///
 /// To fetch rows with this buffer type `R` must implement [`FetchRow`]. This is currently
 /// implemented for tuple types. Each element of these tuples must implement [`FetchRowMember`].
-/// 
+///
 /// Currently supported are: `f64`, `f32`, [`odbc_sys::Date`], [`odbc_sys::Timestamp`],
 /// [`odbc_sys::Time`], `i16`, `u36`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64` and
 /// [`crate::parameter::VarCharArray`]. Fixed sized types can be wrapped in [`crate::Nullable`].

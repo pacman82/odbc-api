@@ -1,10 +1,10 @@
 use std::{
     fs::{self, File},
     io::Read,
+    sync::OnceLock,
 };
 
 use assert_cmd::{assert::Assert, Command};
-use lazy_static::lazy_static;
 use odbc_api::{Connection, ConnectionOptions, Environment};
 use tempfile::NamedTempFile;
 
@@ -25,9 +25,18 @@ const MARIADB: &str = "Driver={MariaDB 3.1 Driver};\
     UID=root;PWD=my-secret-pw;\
     Port=3306";
 
-// Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
-lazy_static! {
-    static ref ENV: Environment = Environment::new().unwrap();
+/// We share one environment for all tests.
+static ENV: OnceLock<Environment> = OnceLock::new();
+
+/// A reference to the ODBC environment with static lifetime.
+pub fn env() -> &'static Environment {
+    if let Some(env) = ENV.get() {
+        env
+    } else {
+        let env = Environment::new().expect("Must be able to create ODBC Environment");
+        let odbc_env = ENV.get_or_init(|| env);
+        odbc_env
+    }
 }
 
 /// Test helper using two commands to roundtrip csv to and from a data source.
@@ -40,7 +49,7 @@ lazy_static! {
 /// * `batch_size`: Batch size for insert
 fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
     // Setup table for test. We use the table name only in this test.
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
@@ -108,7 +117,7 @@ fn append_user_and_password_to_connection_string() {
 #[test]
 fn query_mssql() {
     let table_name = "OdbcsvQueryMssql";
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
@@ -145,7 +154,7 @@ fn tables() {
 
     let table_name = "OdbcsvTestTables";
     // Setup table for test. We use the table name only in this test.
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
@@ -179,7 +188,7 @@ fn columns() {
     let table_name = "OdbcsvTestColumns";
     // Setup table for test. We use the table name only in this test.
     // Setup empty table handle would implicitly create an ID column
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
@@ -247,7 +256,7 @@ fn do_not_ignore_truncation() {
 #[test]
 fn placeholders() {
     let table_name = "OdbcsvPlaceholders";
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
@@ -385,7 +394,7 @@ pub fn setup_empty_table(
 #[test]
 fn fetch_from_mssql() {
     let table_name = "OdbcsvFetchMssql";
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
@@ -425,7 +434,7 @@ fn fetch_from_mssql() {
 fn fetch_with_query_read_from_file() {
     // Fill Table with dummy data
     let table_name = "OdbcsvFetchWithQueryReadFromFile";
-    let conn = ENV
+    let conn = env()
         .connect_with_connection_string(MSSQL, ConnectionOptions::default())
         .unwrap();
     setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();

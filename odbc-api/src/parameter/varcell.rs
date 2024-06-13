@@ -3,7 +3,8 @@ use std::{
     ffi::c_void,
     marker::PhantomData,
     mem::{size_of, size_of_val},
-    num::NonZeroUsize, str::Utf8Error,
+    num::NonZeroUsize,
+    str::Utf8Error,
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
@@ -355,7 +356,8 @@ where
     /// case the indicator is `NULL_DATA`.
     pub fn as_slice(&self) -> Option<&[K::Element]> {
         let slice = self.buffer.borrow();
-        self.len_in_bytes().map(|len| &slice[..(len/size_of::<K::Element>())])
+        self.len_in_bytes()
+            .map(|len| &slice[..(len / size_of::<K::Element>())])
     }
 }
 
@@ -371,7 +373,8 @@ where
     }
 }
 
-impl<B> VarCell<B, Text> where
+impl<B> VarCell<B, Text>
+where
     B: Borrow<[u8]>,
 {
     pub fn as_str(&self) -> Result<Option<&str>, Utf8Error> {
@@ -384,7 +387,8 @@ impl<B> VarCell<B, Text> where
     }
 }
 
-impl<B> VarCell<B, WideText> where
+impl<B> VarCell<B, WideText>
+where
     B: Borrow<[u16]>,
 {
     pub fn as_utf16(&self) -> Option<&U16Str> {
@@ -552,7 +556,10 @@ pub type VarWCharArray<const LENGTH: usize> = VarWChar<[u16; LENGTH]>;
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
 pub type VarBinaryArray<const LENGTH: usize> = VarBinary<[u8; LENGTH]>;
 
-impl<const LENGTH: usize, K, E> Default for VarCell<[E; LENGTH], K> where E: Default + Copy {
+impl<const LENGTH: usize, K, E> Default for VarCell<[E; LENGTH], K>
+where
+    E: Default + Copy,
+{
     fn default() -> Self {
         Self {
             buffer: [E::default(); LENGTH],

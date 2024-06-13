@@ -38,6 +38,6 @@ clap = { version = "4.5.7", features = ["derive", "env"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
-lazy_static = "1.4.0"
+# lazy_static = "1.4.0"
 tempfile = "3.10.1"
 

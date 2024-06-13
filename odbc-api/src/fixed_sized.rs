@@ -1,6 +1,7 @@
 use crate::{
+    buffers::{FetchRowMember, Indicator},
     handles::{CData, CDataMut, DataType, HasDataType},
-    parameter::{CElement, OutputParameter}, buffers::{FetchRowMember, Indicator}
+    parameter::{CElement, OutputParameter},
 };
 use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 use std::{
