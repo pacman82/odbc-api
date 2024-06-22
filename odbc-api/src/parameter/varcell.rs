@@ -542,6 +542,20 @@ pub type VarBinarySliceMut<'a> = VarBinary<&'a mut [u8]>;
 ///
 /// Due to its memory layout this type can be bound either as a single parameter, or as a column of
 /// a row-by-row output, but not be used in columnar parameter arrays or output buffers.
+/// 
+/// You can also use [`VarCharArray`] as an output type for statement execution using
+/// [`crate::parameter::Out`] or [`crate::parameter::InOut`].
+/// 
+/// # Example
+/// 
+/// ```no_run
+/// # use odbc_api::{Connection, Error, parameter::{VarCharArray, Out}};
+/// # fn output_example(connection: Connection<'_>) -> Result<(), Error> {
+/// let mut out_msg: VarCharArray<255> = VarCharArray::NULL;
+/// connection.execute("CALL PROCEDURE_NAME(?)", (Out(&mut out_msg),))?; 
+/// # Ok(())
+/// # }
+/// ```
 pub type VarCharArray<const LENGTH: usize> = VarChar<[u8; LENGTH]>;
 
 /// A stack allocated NVARCHAR type.
