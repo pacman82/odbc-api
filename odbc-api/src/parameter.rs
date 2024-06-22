@@ -420,8 +420,10 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 /// ```
 pub struct InOut<'a, T>(pub &'a mut T);
 
-/// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
-/// be bound as an output parameter only.
+/// Use this to warp a mutable reference to an [`OutputParameter`]. This will cause the argument to
+/// be considered an output parameter only. Without this wrapper it would be considered an input
+/// parameter. You can use [`InOut`] if you want to indicate that the argument is an input and an
+/// output parameter.
 ///
 /// # Example
 ///
