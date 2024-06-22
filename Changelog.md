@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.2.4
+
+* Improved documentation
+
 ## 7.2.3
 
 * Update dependencies
