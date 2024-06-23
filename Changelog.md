@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.0.0
+
+* `Connection::into_cursor` now allows you to recover the `Connection` in case of failure. For this the return type has been changed from `Error` to `ConnectionAndError`. `Error` implements `From<ConnectionAndError>`, so converting it to Error via `?` is frictionless.
+
 ## 7.2.4
 
 * Improved documentation
