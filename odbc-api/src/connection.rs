@@ -170,7 +170,7 @@ impl<'c> Connection<'c> {
     /// }
     ///
     /// const CONNECTION_STRING: &str =
-    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     "Driver={ODBC Driver 18 for SQL Server};\
     ///     Server=localhost;UID=SA;\
     ///     PWD=My@Test@Password1;";
     ///
@@ -273,7 +273,7 @@ impl<'c> Connection<'c> {
     /// }
     ///
     /// const CONNECTION_STRING: &str =
-    ///     "Driver={ODBC Driver 17 for SQL Server};\
+    ///     "Driver={ODBC Driver 18 for SQL Server};\
     ///     Server=localhost;UID=SA;\
     ///     PWD=My@Test@Password1;";
     ///
@@ -702,7 +702,7 @@ impl ConnectionOptions {
 /// let password = "abc;123}";
 /// let user = "SA";
 /// let mut connection_string_without_credentials =
-///     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+///     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;";
 ///
 /// let connection_string = format!(
 ///     "{}UID={};PWD={};",
@@ -712,7 +712,7 @@ impl ConnectionOptions {
 /// );
 ///
 /// assert_eq!(
-///     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD={abc;123}}};",
+///     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD={abc;123}}};",
 ///     connection_string
 /// );
 /// ```

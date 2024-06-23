@@ -62,8 +62,8 @@ jobs:
         run: |
           curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
           curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-          ACCEPT_EULA=Y apt-get install -y msodbcsql17
-          ln -s /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.*.so.* /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.so
+          ACCEPT_EULA=Y apt-get install -y msodbcsql18
+          ln -s /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.*.so.* /opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.so
           apt-get install -y sqlite3 libsqliteodbc
           sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
           sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini

@@ -140,7 +140,7 @@ use odbc_api::{ConnectionOptions, Environment};
 let env = Environment::new()?;
 
 let connection_string = "
-    Driver={ODBC Driver 17 for SQL Server};\
+    Driver={ODBC Driver 18 for SQL Server};\
     Server=localhost;\
     UID=SA;\
     PWD=My@Test@Password1;\

@@ -24,7 +24,7 @@ use crate::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor, Error};
 /// let env = Environment::new()?;
 ///
 /// let conn = ENV.get_or_init(|| env).connect_with_connection_string(
-///     "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;",
+///     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;",
 ///     Default::default())?;
 ///
 /// // We must use into_cursor to create a statement handle with static lifetime, which also owns
