@@ -1,4 +1,5 @@
 mod common;
+mod connection_strings;
 
 use stdext::function_name;
 use sys::{CDataType, Numeric, Pointer, SqlDataType, Timestamp, NULL_DATA};
@@ -6,6 +7,9 @@ use tempfile::NamedTempFile;
 use test_case::test_case;
 
 use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
+use connection_strings::{
+    MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION, SQLITE_3_CONNECTION,
+};
 
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
@@ -35,48 +39,17 @@ use std::{
     time::Duration,
 };
 
-const MSSQL_CONNECTION: &str =
-    "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
-    TrustServerCertificate=yes;";
-
 const MSSQL: &Profile = &Profile {
     connection_string: MSSQL_CONNECTION,
     index_type: "int IDENTITY(1,1)",
     blob_type: "Image",
 };
 
-#[cfg(target_os = "windows")]
-const SQLITE_3_CONNECTION: &str =
-    "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db;{Journal Mode}=WAL;";
-#[cfg(not(target_os = "windows"))]
-const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db;{Journal Mode}=WAL;";
-
 const SQLITE_3: &Profile = &Profile {
     connection_string: SQLITE_3_CONNECTION,
     index_type: "int IDENTITY(1,1)",
     blob_type: "BLOB",
 };
-
-#[cfg(target_os = "windows")]
-const MARIADB_CONNECTION: &str = "Driver={MariaDB ODBC 3.1 Driver};\
-    Server=localhost;DB=test_db;\
-    UID=root;PWD=my-secret-pw;\
-    Port=3306";
-
-// Use 127.0.0.1 instead of localhost so the system uses the TCP/IP connector instead of the socket
-// connector. Prevents error message: 'Can't connect to local MySQL server through socket'.
-#[cfg(not(target_os = "windows"))]
-const MARIADB_CONNECTION: &str = "Driver={MariaDB 3.1 Driver};\
-    Server=127.0.0.1;DB=test_db;\
-    UID=root;PWD=my-secret-pw;\
-    Port=3306";
-
-const POSTGRES_CONNECTION: &str = "Driver={PostgreSQL UNICODE};\
-    Server=localhost;\
-    Port=5432;\
-    Database=test;\
-    Uid=test;\
-    Pwd=test;";
 
 const MARIADB: &Profile = &Profile {
     connection_string: MARIADB_CONNECTION,
