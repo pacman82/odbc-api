@@ -6,7 +6,8 @@ pub const MSSQL_CONNECTION: &str =
 pub const SQLITE_3_CONNECTION: &str =
     "Driver={SQLite3 ODBC Driver};Database=sqlite-test.db;{Journal Mode}=WAL;";
 #[cfg(not(target_os = "windows"))]
-pub const SQLITE_3_CONNECTION: &str = "Driver={SQLite3};Database=sqlite-test.db;{Journal Mode}=WAL;";
+pub const SQLITE_3_CONNECTION: &str =
+    "Driver={SQLite3};Database=sqlite-test.db;{Journal Mode}=WAL;";
 
 #[cfg(target_os = "windows")]
 pub const MARIADB_CONNECTION: &str = "Driver={MariaDB ODBC 3.1 Driver};\

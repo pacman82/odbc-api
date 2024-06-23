@@ -431,7 +431,7 @@ impl TextRowSet {
                     })?
                 };
 
-                Ok((col_index, buffer))
+                Ok::<_, Error>((col_index, buffer))
             })
             .collect::<Result<_, _>>()?;
         Ok(TextRowSet {
@@ -451,7 +451,7 @@ impl TextRowSet {
             .into_iter()
             .enumerate()
             .map(|(index, max_str_len)| {
-                Ok((
+                Ok::<_, Error>((
                     (index + 1).try_into().unwrap(),
                     TextColumn::try_new(row_capacity, max_str_len)
                         .map_err(|source| source.add_context(index.try_into().unwrap()))?,

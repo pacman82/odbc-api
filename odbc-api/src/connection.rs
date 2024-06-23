@@ -9,7 +9,7 @@ use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
 use odbc_sys::HDbc;
-use std::{borrow::Cow, mem::ManuallyDrop, str, thread::panicking};
+use std::{borrow::Cow, fmt::Debug, mem::ManuallyDrop, str, thread::panicking};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -182,19 +182,32 @@ impl<'c> Connection<'c> {
     ///
     ///     // connect.execute(&query, ()) // Compiler error: Would return local ref to `conn`.
     ///
-    ///     conn.into_cursor(&query, ())
+    ///     let maybe_cursor = conn.into_cursor(&query, ())?;
+    ///     Ok(maybe_cursor)
     /// }
     /// ```
     pub fn into_cursor(
         self,
         query: &str,
         params: impl ParameterCollectionRef,
-    ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, Error> {
-        let cursor = match self.execute(query, params) {
-            Ok(Some(cursor)) => cursor,
+    ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, ConnectionAndError<'c>> {
+        // With the current Rust version the borrow checker needs some convincing, so that it allows
+        // us to return the Connection, even though the Result of execute borrows it.
+        let mut error = None;
+        let mut cursor = None;
+        match self.execute(query, params) {
+            Ok(Some(c)) => cursor = Some(c),
             Ok(None) => return Ok(None),
-            Err(e) => return Err(e),
+            Err(e) => error = Some(e),
         };
+        if let Some(e) = error {
+            drop(cursor);
+            return Err(ConnectionAndError {
+                error: e,
+                connection: self,
+            });
+        }
+        let cursor = cursor.unwrap();
         // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
         // resulting cursor would depend on the lifetime of `params`.
         let mut cursor = ManuallyDrop::new(cursor);
@@ -650,6 +663,14 @@ impl<'c> Connection<'c> {
     }
 }
 
+/// Implement `Debug` for [`Connection`], in order to play nice with derive Debugs for struct
+/// holding a [`Connection`].
+impl Debug for Connection<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Connection")
+    }
+}
+
 /// Options to be passed then opening a connection to a datasource.
 #[derive(Default, Clone, Copy)]
 pub struct ConnectionOptions {
@@ -738,5 +759,22 @@ pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
         Cow::Owned(format!("{{{escaped}}}"))
     } else {
         Cow::Borrowed(unescaped)
+    }
+}
+
+/// An error type wrapping an [`Error`] and a [`Connection`]. It is used by
+/// [`Connection::into_cursor`], so that in case of failure the user can reuse the connection to try
+/// again. [`Connection::into_cursor`] could achieve the same by returning a tuple in case of an
+/// error, but this type causes less friction in most scenarios because [`Error`] implements
+/// [`From`] [`ConnectionAndError`] and it therfore works with the question mark operater (`?`).
+#[derive(Debug)]
+pub struct ConnectionAndError<'conn> {
+    pub error: Error,
+    pub connection: Connection<'conn>,
+}
+
+impl From<ConnectionAndError<'_>> for Error {
+    fn from(value: ConnectionAndError) -> Self {
+        value.error
     }
 }

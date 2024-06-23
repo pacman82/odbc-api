@@ -310,7 +310,7 @@ impl ColumnarAnyBuffer {
                 let buffer = AnyBuffer::try_from_desc(capacity, desc)
                     .map_err(|source| source.add_context(column_index))?;
                 column_index += 1;
-                Ok((column_index, buffer))
+                Ok::<_, Error>((column_index, buffer))
             })
             .collect::<Result<_, _>>()?;
         Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })

@@ -290,32 +290,61 @@ fn into_cursor(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["VARCHAR(255)", "INT"])
+        .values_by_column(&[
+            &[
+                Some("Interstellar"),
+                Some("2001: A Space Odyssey"),
+                Some("Jurassic Park"),
+            ],
+            &[None, Some("1968"), Some("1993")],
+        ])
         .build(profile)
         .unwrap();
 
-    // Insert data
-    let insert = format!("INSERT INTO {table_name} (a,b) VALUES (?,?), (?,?),(?,?)");
-    conn.execute(
-        &insert,
-        (
-            &"Interstellar".into_parameter(),
-            &None::<i32>.into_parameter(),
-            &"2001: A Space Odyssey".into_parameter(),
-            &1968,
-            &"Jurassic Park".into_parameter(),
-            &1993,
-        ),
-    )
-    .unwrap();
-
     let make_cursor = || {
-        let conn = profile.connection().unwrap();
         let query = table.sql_all_ordered_by_id();
         conn.into_cursor(&query, ()).unwrap().unwrap()
     };
     let cursor = make_cursor();
 
     // Cursor to string helper utilizes the text buffer
+    let actual = cursor_to_string(cursor);
+    let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
+    assert_eq!(expected, actual);
+}
+
+/// Strong exception safety for `into_cursor`. Our first query will fail, because it will query a
+/// non-existing table, but our second one using the same connection will succeed. This is one
+/// scenario in which it is useful not to "swallow" the connection in case of an error.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn into_cursor_reuse_connection_on_failure(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(255)", "INT"])
+        .values_by_column(&[
+            &[
+                Some("Interstellar"),
+                Some("2001: A Space Odyssey"),
+                Some("Jurassic Park"),
+            ],
+            &[None, Some("1968"), Some("1993")],
+        ])
+        .build(profile)
+        .unwrap();
+
+    // When our first call to `.into_cursor` fails
+    let result = conn.into_cursor("Non-existing-table", ());
+    
+    // Then we can extract a valid connection from the error type
+    let error = result.map(|_| ()).unwrap_err();
+    let conn = error.connection;
+    // Extra verification to prove connection is indeed valid
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.into_cursor(&query, ()).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
