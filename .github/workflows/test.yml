@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   win64:
-    name: Build & Test Win64
+    name: Test on Windows 64
     runs-on: windows-latest
 
     steps:
@@ -29,9 +29,6 @@ jobs:
          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Setup" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "UsageCount" /t REG_DWORD /d 1
 
-      - name: Setup driver expectations
-        run: cp odbcsv/tests/list-drivers-windows.txt odbcsv/tests/list-drivers.txt
-
       # selecting a toolchain either by action or manual `rustup` calls should happen
       # before the plugin, as the cache uses the current rustc version as its cache key
       - name: Rust build cache
@@ -39,8 +36,8 @@ jobs:
 
       - name: Test
         run: |
-          cargo test --features derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
-          cargo test --features narrow,derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
+          cargo test --lib --features derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
+          cargo test --lib --features narrow,derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
 
   win32:
     name: Build Win32
