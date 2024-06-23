@@ -1103,7 +1103,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "8.0.0"
+version = "8.0.2"
 dependencies = [
  "anyhow",
  "atoi",
@@ -1125,7 +1125,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api-derive"
-version = "7.2.4"
+version = "8.0.2"
 dependencies = [
  "odbc-api",
  "quote",

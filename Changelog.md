@@ -1,6 +1,6 @@
 # Changelog
 
-## 8.0.1
+## 8.0.1-2
 
 * Fix: Fix version of `odbc-api-derive` crate
 
