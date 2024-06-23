@@ -29,15 +29,6 @@ jobs:
          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Setup" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "UsageCount" /t REG_DWORD /d 1
 
-      # Databases need to be run independently because docker on win64 doesn't support
-      # linux containers
-      - name: Run Microsoft SQL Server
-        uses: potatoqualitee/mssqlsuite@v1
-        with:
-          install: sqlengine, sqlclient
-          sa-password: My@Test@Password1
-          show-log: true
-
       - name: Setup driver expectations
         run: cp odbcsv/tests/list-drivers-windows.txt odbcsv/tests/list-drivers.txt
 
@@ -48,8 +39,8 @@ jobs:
 
       - name: Test
         run: |
-          cargo test --release -- --skip postgresql --skip maria_db --features derive
-          cargo test --features narrow,derive --release -- --skip postgresql --skip maria_db
+          cargo test --features derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
+          cargo test --features narrow,derive -- --skip postgresql --skip maria_db --skip microsoft_sql_server
 
   win32:
     name: Build Win32
@@ -128,7 +119,7 @@ jobs:
           cargo build 
 
   dependabot:
-    needs: [linux,win64,osx]
+    needs: [linux,win64,osx,win32]
     permissions:
       pull-requests: write
       contents: write
