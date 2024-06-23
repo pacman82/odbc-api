@@ -25,7 +25,7 @@ This starts containers called `odbc-api_dev`, `odbc-api_mssql` and `odbc-api_mar
 Otherwise you can install these requirements from here:
 
 * Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
-* [Microsoft ODBC Driver 17 for SQL Server](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver15).
+* [Microsoft ODBC Driver 18 for SQL Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16).
 * Maria DB ODBC Connector
 * PostgreSQL ODBC driver
 

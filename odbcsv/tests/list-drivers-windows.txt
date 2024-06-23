@@ -1,2 +1,2 @@
-ODBC Driver 17 for SQL Server
+ODBC Driver 18 for SQL Server
 SQLite3 ODBC Driver

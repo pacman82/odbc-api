@@ -9,7 +9,8 @@ use odbc_api::{Connection, ConnectionOptions, Environment};
 use tempfile::NamedTempFile;
 
 const MSSQL: &str =
-    "Driver={ODBC Driver 17 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;";
+    "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
+    TrustServerCertificate=yes;";
 
 #[cfg(target_os = "windows")]
 const MARIADB: &str = "Driver={MariaDB ODBC 3.1 Driver};\
@@ -95,7 +96,8 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
 #[test]
 fn append_user_and_password_to_connection_string() {
     // Connection string without user name and password.
-    let connection_string = "Driver={ODBC Driver 17 for SQL Server};Server=localhost;";
+    let connection_string =
+        "Driver={ODBC Driver 18 for SQL Server};Server=localhost;TrustServerCertificate=yes;";
 
     Command::cargo_bin("odbcsv")
         .unwrap()
