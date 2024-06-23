@@ -71,7 +71,7 @@ fn connect(connection_string: &str) {
 
     // Second connection should be from the pool
     let conn = ENV
-        .connect_with_connection_string(MSSQL_CONNECTION, ConnectionOptions::default())
+        .connect_with_connection_string(connection_string, ConnectionOptions::default())
         .unwrap();
     assert!(!conn.is_dead().unwrap());
 }
