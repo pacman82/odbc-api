@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.1.1
+
+* Fix release. Release from main branch
+
+## 8.1.0
+
+* `ConnectionAndError` now implements `std::error::Error`.
+
 ## 8.0.1-2
 
 * Fix: Fix version of `odbc-api-derive` crate

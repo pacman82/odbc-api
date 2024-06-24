@@ -9,7 +9,13 @@ use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
 use odbc_sys::HDbc;
-use std::{borrow::Cow, fmt::Debug, mem::ManuallyDrop, str, thread::panicking};
+use std::{
+    borrow::Cow,
+    fmt::{self, Debug, Display},
+    mem::ManuallyDrop,
+    str,
+    thread::panicking,
+};
 
 impl<'conn> Drop for Connection<'conn> {
     fn drop(&mut self) {
@@ -776,5 +782,17 @@ pub struct ConnectionAndError<'conn> {
 impl From<ConnectionAndError<'_>> for Error {
     fn from(value: ConnectionAndError) -> Self {
         value.error
+    }
+}
+
+impl Display for ConnectionAndError<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.error)
+    }
+}
+
+impl std::error::Error for ConnectionAndError<'_> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.error.source()
     }
 }
