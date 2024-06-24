@@ -338,7 +338,7 @@ fn into_cursor_reuse_connection_on_failure(profile: &Profile) {
 
     // When our first call to `.into_cursor` fails
     let result = conn.into_cursor("Non-existing-table", ());
-    
+
     // Then we can extract a valid connection from the error type
     let error = result.map(|_| ()).unwrap_err();
     let conn = error.connection;
@@ -348,6 +348,28 @@ fn into_cursor_reuse_connection_on_failure(profile: &Profile) {
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
+}
+
+/// Implementing `std::error::Error` allows using the question mark operator in functions using
+/// anyhow's error type, among other things.
+#[test]
+fn connection_and_error_implements_std_error() {
+    // Given any connection, we do not care which database
+    let conn = SQLITE_3.connection().unwrap();
+
+    // When we catch the error returned by `into_cursor`
+    let result = conn.into_cursor("Non-existing-table", ()).map(|_| ());
+    let connection_and_error = result.unwrap_err();
+    let plain_error = connection_and_error.error;
+    let result = connection_and_error
+        .connection
+        .into_cursor("Non-existing-table", ())
+        .map(|_| ());
+    let std_error: Box<dyn std::error::Error> = Box::new(result.unwrap_err().error);
+
+    // Then we can extract a valid connection from the error type
+    assert_eq!(std_error.to_string(), plain_error.to_string());
+    assert!(std_error.source().is_none());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
