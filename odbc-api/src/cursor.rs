@@ -12,6 +12,7 @@ use crate::{
 use std::{
     mem::{size_of, MaybeUninit},
     ptr,
+    sync::{Arc, Mutex},
     thread::panicking,
 };
 
@@ -314,6 +315,7 @@ where
 }
 
 impl<S> ResultSetMetadata for CursorImpl<S> where S: AsStatementRef {}
+impl<S> ResultSetMetadata for CursorPolling<S> where S: AsStatementRef {}
 
 impl<S> Cursor for CursorImpl<S>
 where

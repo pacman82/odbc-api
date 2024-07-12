@@ -12,9 +12,9 @@ use super::{
 use log::debug;
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData,
-    SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
+    SQLBindParameter, SQLCancel, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
+    SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
+    SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, num::NonZeroUsize, ptr::null_mut};
 
@@ -257,6 +257,10 @@ pub trait Statement: AsHandle {
             )
             .into_sql_result("SQLSetStmtAttr")
         }
+    }
+
+    fn cancel(&mut self) -> SqlResult<()> {
+        unsafe { SQLCancel(self.as_sys()) }.into_sql_result("SQLCancel")
     }
 
     /// Fetch a column description using the column index.

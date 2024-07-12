@@ -77,6 +77,8 @@ log = "0.4.22"
 widestring = "1.1.0"
 atoi = "2.0.0"
 odbc-api-derive ={ version = "8.1.1", path = "../derive", optional = true}
+trait-variant = "0.1.2"
+async-trait = "0.1.81"
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default

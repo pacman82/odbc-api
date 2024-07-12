@@ -1,4 +1,7 @@
-use std::future::Future;
+use std::{
+    future::Future,
+    time::{Duration, Instant},
+};
 
 use crate::handles::SqlResult;
 
@@ -35,6 +38,26 @@ where
     while matches!(ret, SqlResult::StillExecuting) {
         sleep.next_poll().await;
         ret = (f)();
+    }
+    ret
+}
+
+pub async fn wait_for_with_cancel<F, O>(
+    mut f: F,
+    sleep: &mut impl Sleep,
+    should_cancel: impl Fn(Duration) -> bool,
+) -> SqlResult<O>
+where
+    F: FnMut(bool) -> SqlResult<O>,
+{
+    let mut ret = (f)(should_cancel(Duration::ZERO));
+
+    let time = Instant::now();
+
+    // Wait for operation to finish, using polling method
+    while matches!(ret, SqlResult::StillExecuting) {
+        sleep.next_poll().await;
+        ret = (f)(should_cancel(time.elapsed()));
     }
     ret
 }
