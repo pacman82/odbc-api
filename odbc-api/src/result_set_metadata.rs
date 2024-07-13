@@ -15,6 +15,8 @@ use crate::{
 /// See also:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/result-set-metadata>
 
+// note that we know that this trait won't be Send, so we suppress the warning
+#[allow(async_fn_in_trait)]
 pub trait AsyncResultSetMetadata: AsStatementRef {
     /// Fetch a column description using the column index.
     ///
