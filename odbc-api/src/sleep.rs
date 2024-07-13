@@ -1,5 +1,7 @@
 use std::future::Future;
 
+use log::info;
+
 use crate::handles::SqlResult;
 
 /// Governs the behaviour of of polling in async functions.
@@ -33,6 +35,7 @@ where
     let mut ret = (f)();
     // Wait for operation to finish, using polling method
     while matches!(ret, SqlResult::StillExecuting) {
+        info!("Waiting for operation to finish.");
         sleep.next_poll().await;
         ret = (f)();
     }
