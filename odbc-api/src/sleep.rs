@@ -1,9 +1,4 @@
-use std::{
-    future::Future,
-    time::{Duration, Instant},
-};
-
-use log::info;
+use std::future::Future;
 
 use crate::handles::SqlResult;
 
@@ -38,7 +33,6 @@ where
     let mut ret = (f)();
     // Wait for operation to finish, using polling method
     while matches!(ret, SqlResult::StillExecuting) {
-        info!("Still executing");
         sleep.next_poll().await;
         ret = (f)();
     }
