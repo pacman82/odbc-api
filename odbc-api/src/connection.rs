@@ -159,7 +159,12 @@ impl<'c> Connection<'c> {
         sleep: impl Sleep,
     ) -> Result<Option<CursorPolling<StatementImpl<'_>>>, Error> {
         let query = SqlText::new(query);
-        let lazy_statement = move || self.allocate_statement();
+        let lazy_statement = move || {
+            self.allocate_statement().and_then(|mut stmt| {
+                stmt.set_async_enable(true).into_result(&stmt)?;
+                Ok(stmt)
+            })
+        };
         execute_with_parameters_polling(lazy_statement, Some(&query), params, sleep).await
     }
 

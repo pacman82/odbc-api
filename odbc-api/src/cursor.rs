@@ -6,12 +6,13 @@ use crate::{
     handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
     sleep::{wait_for, Sleep},
-    Error, ResultSetMetadata,
+    AsyncResultSetMetadata, Error, ResultSetMetadata,
 };
 
 use std::{
     mem::{size_of, MaybeUninit},
     ptr,
+    sync::{Arc, Mutex},
     thread::panicking,
 };
 
@@ -314,6 +315,7 @@ where
 }
 
 impl<S> ResultSetMetadata for CursorImpl<S> where S: AsStatementRef {}
+impl<S> AsyncResultSetMetadata for CursorPolling<S> where S: AsStatementRef {}
 
 impl<S> Cursor for CursorImpl<S>
 where

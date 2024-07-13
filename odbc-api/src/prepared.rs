@@ -2,6 +2,7 @@ use crate::{
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
     handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
+    result_set_metadata::AsyncResultSetMetadata,
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
 };
 
