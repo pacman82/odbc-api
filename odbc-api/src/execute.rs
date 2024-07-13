@@ -1,4 +1,4 @@
-use std::{intrinsics::transmute, time::Duration};
+use std::intrinsics::transmute;
 
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
