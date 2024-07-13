@@ -3,7 +3,7 @@ use std::{intrinsics::transmute, time::Duration};
 use crate::{
     handles::{AsStatementRef, SqlText, Statement},
     parameter::Blob,
-    sleep::{wait_for, wait_for_with_cancel},
+    sleep::wait_for,
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
@@ -146,22 +146,7 @@ where
     let mut stmt = statement.as_stmt_ref();
     let result = if let Some(sql) = query {
         // We execute an unprepared "one shot query"
-        wait_for_with_cancel(
-            |should_cancel| {
-                println!("should_cancel: {:?}", should_cancel);
-                if should_cancel {
-                    stmt.cancel()
-                } else {
-                    println!("exec_direct");
-                    let res = stmt.exec_direct(sql);
-                    println!("done exec_direct");
-                    res
-                }
-            },
-            &mut sleep,
-            |duration| duration > Duration::from_secs(30),
-        )
-        .await
+        wait_for(|| stmt.exec_direct(sql), &mut sleep).await
     } else {
         // We execute a prepared query
         wait_for(|| stmt.execute(), &mut sleep).await
