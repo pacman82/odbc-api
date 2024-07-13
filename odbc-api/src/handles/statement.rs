@@ -157,6 +157,28 @@ impl<'s> AsStatementRef for StatementRef<'s> {
 /// The trait allows us to reason about statements without taking the lifetime of their connection
 /// into account. It also allows for the trait to be implemented by a handle taking ownership of
 /// both, the statement and the connection.
+///
+///
+/// --------------- Notes on Asynchronous Execution ---------------
+/// Additionally, it's important to note that while a function is executing asynchronously, the application can call functions on any other statements. The application can also call functions on any connection, except the one associated with the asynchronous statement.
+// However, the application can only call the original function and the following functions (with the statement handle or its associated connection, environment handle), after a statement operation returns SQL_STILL_EXECUTING:
+
+// SQLCancel
+// SQLCancelHandle (on the statement handle)
+// SQLGetDiagField
+// SQLGetDiagRec
+// SQLAllocHandle
+// SQLGetEnvAttr
+// SQLGetConnectAttr
+// SQLDataSources
+// SQLDrivers
+// SQLGetInfo
+// SQLGetFunctions
+// SQLNativeSql
+
+// These functions can be called simultaneously with an asynchronous function that is being polled.
+// The following statement functions operate on a data source and can execute asynchronously:
+// SQLBulkOperations, SQLColAttribute, SQLColumnPrivileges, SQLColumns, SQLDescribeCol, SQLDescribeParam, SQLExecDirect, SQLExecute, SQLFetch, SQLFetchScroll, SQLForeignKeys, SQLGetData, SQLGetTypeInfo, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPrepare, SQLPrimaryKeys, SQLProcedureColumns, SQLProcedures, SQLPutData, SQLSetPos, SQLSpecialColumns, SQLStatistics, SQLTablePrivileges, SQLTables
 pub trait Statement: AsHandle {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt;
@@ -202,11 +224,15 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// Fetch dereferences bound column pointers.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     unsafe fn fetch(&mut self) -> SqlResult<()> {
         SQLFetch(self.as_sys()).into_sql_result("SQLFetch")
     }
 
     /// Retrieves data for a single column in the result set or for a single parameter.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn get_data(&mut self, col_or_param_num: u16, target: &mut impl CDataMut) -> SqlResult<()> {
         unsafe {
             SQLGetData(
@@ -259,6 +285,7 @@ pub trait Statement: AsHandle {
         }
     }
 
+    /// Can be called concurrently on the same  stmt as a another statement that is being executed asynchronously.
     fn cancel(&mut self) -> SqlResult<()> {
         unsafe { SQLCancel(self.as_sys()) }.into_sql_result("SQLCancel")
     }
@@ -272,6 +299,8 @@ pub trait Statement: AsHandle {
     /// * `column_description`: Holds the description of the column after the call. This method does
     /// not provide strong exception safety as the value of this argument is undefined in case of an
     /// error.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn describe_col(
         &self,
         column_number: u16,
@@ -334,6 +363,7 @@ pub trait Statement: AsHandle {
     /// * [`SqlResult::NeedData`] if execution requires additional data from delayed parameters.
     /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
     ///   the data source.
+    /// Note: This function can be called asynchronously per Microsoft docs.
     unsafe fn exec_direct(&mut self, statement: &SqlText) -> SqlResult<()> {
         sql_exec_direc(
             self.as_sys(),
@@ -351,6 +381,8 @@ pub trait Statement: AsHandle {
     /// Send an SQL statement to the data source for preparation. The application can include one or
     /// more parameter markers in the SQL statement. To include a parameter marker, the application
     /// embeds a question mark (?) into the SQL string at the appropriate position.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn prepare(&mut self, statement: &SqlText) -> SqlResult<()> {
         unsafe {
             sql_prepare(
@@ -378,6 +410,7 @@ pub trait Statement: AsHandle {
     /// * [`SqlResult::NeedData`] if execution requires additional data from delayed parameters.
     /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
     ///   the data source.
+    /// Note: This function can be called asynchronously per Microsoft docs.
     unsafe fn execute(&mut self) -> SqlResult<()> {
         SQLExecute(self.as_sys()).into_sql_result("SQLExecute")
     }
@@ -385,6 +418,8 @@ pub trait Statement: AsHandle {
     /// Number of columns in result set.
     ///
     /// Can also be used to check, whether or not a result set has been created at all.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn num_result_cols(&self) -> SqlResult<i16> {
         let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.as_sys(), &mut out) }
@@ -393,6 +428,8 @@ pub trait Statement: AsHandle {
     }
 
     /// Number of placeholders of a prepared query.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn num_params(&self) -> SqlResult<u16> {
         let mut out: i16 = 0;
         unsafe { SQLNumParams(self.as_sys(), &mut out) }
@@ -600,6 +637,8 @@ pub trait Statement: AsHandle {
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool> {
         unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number) }.map(|out| match out {
             0 => false,
@@ -611,6 +650,8 @@ pub trait Statement: AsHandle {
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
         unsafe { self.numeric_col_attribute(Desc::Type, column_number) }.map(|ret| {
             SqlDataType(ret.try_into().expect(
@@ -627,6 +668,8 @@ pub trait Statement: AsHandle {
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
         unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }.map(|ret| {
             SqlDataType(ret.try_into().expect(
@@ -643,6 +686,8 @@ pub trait Statement: AsHandle {
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_octet_length(&self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
     }
@@ -650,6 +695,8 @@ pub trait Statement: AsHandle {
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_display_size(&self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
     }
@@ -659,18 +706,24 @@ pub trait Statement: AsHandle {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_precision(&self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::Precision, column_number) }
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_scale(&self, column_number: u16) -> SqlResult<Len> {
         unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn col_name(&self, column_number: u16, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
@@ -756,6 +809,8 @@ pub trait Statement: AsHandle {
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn describe_param(&self, parameter_number: u16) -> SqlResult<ParameterDescription> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut parameter_size = 0;
@@ -783,6 +838,8 @@ pub trait Statement: AsHandle {
     /// [`crate::sys::len_data_at_exec`].
     ///
     /// Return value contains a parameter identifier passed to bind parameter as a value pointer.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn param_data(&mut self) -> SqlResult<Option<Pointer>> {
         unsafe {
             let mut param_id: Pointer = null_mut();
@@ -795,6 +852,8 @@ pub trait Statement: AsHandle {
     }
 
     /// Executes a columns query using this statement handle.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn columns(
         &mut self,
         catalog_name: &SqlText,
@@ -824,6 +883,8 @@ pub trait Statement: AsHandle {
     /// The catalog, schema and table parameters are search patterns by default unless
     /// [`Self::set_metadata_id`] is called with `true`. In that case they must also not be `None`
     /// since otherwise a NulPointer error is emitted.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn tables(
         &mut self,
         catalog_name: &SqlText,
@@ -851,6 +912,8 @@ pub trait Statement: AsHandle {
     /// of foreign keys in other table that refer to the primary key of the specified table.
     ///
     /// Like [`Self::tables`] this changes the statement to a cursor over the result set.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn foreign_keys(
         &mut self,
         pk_catalog_name: &SqlText,
@@ -884,6 +947,8 @@ pub trait Statement: AsHandle {
     /// [`SqlResult::NeedData`]
     ///
     /// Panics if batch is empty.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn put_binary_batch(&mut self, batch: &[u8]) -> SqlResult<()> {
         // Probably not strictly necessary. MSSQL returns an error than inserting empty batches.
         // Still strikes me as a programming error. Maybe we could also do nothing instead.
@@ -907,6 +972,8 @@ pub trait Statement: AsHandle {
     ///
     /// <https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlrowcount>
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function>
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     fn row_count(&self) -> SqlResult<isize> {
         let mut ret = 0isize;
         unsafe {
@@ -950,6 +1017,8 @@ pub trait Statement: AsHandle {
     ///
     /// Since a different result set might have a different schema, care needs to be taken that
     /// bound buffers are used correctly.
+    ///
+    /// Note: This function can be called asynchronously per Microsoft docs.
     unsafe fn more_results(&mut self) -> SqlResult<()> {
         unsafe { SQLMoreResults(self.as_sys()).into_sql_result("SQLMoreResults") }
     }

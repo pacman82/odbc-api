@@ -50,7 +50,7 @@ pub use self::{
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
-    result_set_metadata::ResultSetMetadata,
+    result_set_metadata::{AsyncResultSetMetadata, ResultSetMetadata},
     sleep::Sleep,
     statement_connection::StatementConnection,
 };

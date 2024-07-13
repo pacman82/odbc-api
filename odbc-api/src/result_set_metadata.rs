@@ -25,14 +25,19 @@ pub trait AsyncResultSetMetadata: AsStatementRef {
     /// * `column_description`: Holds the description of the column after the call. This method does
     /// not provide strong exception safety as the value of this argument is undefined in case of an
     /// error.
-    fn describe_col(
+    async fn describe_col(
         &mut self,
         column_number: u16,
         column_description: &mut ColumnDescription,
+        mut sleep: impl Sleep,
     ) -> Result<(), Error> {
         let stmt = self.as_stmt_ref();
-        stmt.describe_col(column_number, column_description)
-            .into_result(&stmt)
+        wait_for(
+            || stmt.describe_col(column_number, column_description),
+            &mut sleep,
+        )
+        .await
+        .into_result(&stmt)
     }
 
     /// Number of columns in result set. Can also be used to see whether executing a prepared
@@ -66,9 +71,14 @@ pub trait AsyncResultSetMetadata: AsStatementRef {
     /// terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
+    async fn col_octet_length(
+        &mut self,
+        column_number: u16,
+        mut sleep: impl Sleep,
+    ) -> Result<Option<NonZeroUsize>, Error> {
         let stmt = self.as_stmt_ref();
-        stmt.col_octet_length(column_number)
+        wait_for(|| stmt.col_octet_length(column_number), &mut sleep)
+            .await
             .into_result(&stmt)
             .map(|signed| NonZeroUsize::new(signed.max(0) as usize))
     }
@@ -77,9 +87,14 @@ pub trait AsyncResultSetMetadata: AsStatementRef {
     /// unable to provide a maximum `None` is returned.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
+    async fn col_display_size(
+        &mut self,
+        column_number: u16,
+        mut sleep: impl Sleep,
+    ) -> Result<Option<NonZeroUsize>, Error> {
         let stmt = self.as_stmt_ref();
-        stmt.col_display_size(column_number)
+        wait_for(|| stmt.col_display_size(column_number), &mut sleep)
+            .await
             .into_result(&stmt)
             // Map negative values to `0`. `0` is used by MSSQL to indicate a missing upper bound
             // `-4` (`NO_TOTAL`) is used by MySQL to do the same. Mapping them both to the same
@@ -95,9 +110,15 @@ pub trait AsyncResultSetMetadata: AsStatementRef {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    fn col_precision(&mut self, column_number: u16) -> Result<isize, Error> {
+    async fn col_precision(
+        &mut self,
+        column_number: u16,
+        mut sleep: impl Sleep,
+    ) -> Result<isize, Error> {
         let stmt = self.as_stmt_ref();
-        stmt.col_precision(column_number).into_result(&stmt)
+        wait_for(|| stmt.col_precision(column_number), &mut sleep)
+            .await
+            .into_result(&stmt)
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
@@ -119,70 +140,97 @@ pub trait AsyncResultSetMetadata: AsStatementRef {
     /// Use this if you want to iterate over all column names and allocate a `String` for each one.
     ///
     /// This is a wrapper around `col_name` introduced for convenience.
-    async fn column_names(&mut self) -> Result<ColumnNamesIt<'_, Self>, Error> {
-        ColumnNamesIt::new_async(self).await
+    async fn column_names(&mut self, sleep: impl Sleep) -> Result<ColumnNamesIt<'_, Self>, Error> {
+        ColumnNamesIt::new_async(self, sleep).await
     }
 
     /// Data type of the specified column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_data_type(&mut self, column_number: u16) -> Result<DataType, Error> {
+    async fn col_data_type(
+        &mut self,
+        column_number: u16,
+        mut sleep: impl Sleep,
+    ) -> Result<DataType, Error> {
         let stmt = self.as_stmt_ref();
-        let kind = stmt.col_concise_type(column_number).into_result(&stmt)?;
+        let kind = wait_for(|| stmt.col_concise_type(column_number), &mut sleep)
+            .await
+            .into_result(&stmt)?;
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
             SqlDataType::EXT_VAR_BINARY => DataType::Varbinary {
-                length: self.col_octet_length(column_number)?,
+                length: self.col_octet_length(column_number, sleep).await?,
             },
             SqlDataType::EXT_LONG_VAR_BINARY => DataType::LongVarbinary {
-                length: self.col_octet_length(column_number)?,
+                length: self.col_octet_length(column_number, sleep).await?,
             },
             SqlDataType::EXT_BINARY => DataType::Binary {
-                length: self.col_octet_length(column_number)?,
+                length: self.col_octet_length(column_number, sleep).await?,
             },
             SqlDataType::EXT_W_VARCHAR => DataType::WVarchar {
-                length: self.col_display_size(column_number)?,
+                length: self.col_display_size(column_number, sleep).await?,
             },
             SqlDataType::EXT_W_CHAR => DataType::WChar {
-                length: self.col_display_size(column_number)?,
+                length: self.col_display_size(column_number, sleep).await?,
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
-                length: self.col_display_size(column_number)?,
+                length: self.col_display_size(column_number, sleep).await?,
             },
             SqlDataType::CHAR => DataType::Char {
-                length: self.col_display_size(column_number)?,
+                length: self.col_display_size(column_number, sleep).await?,
             },
             SqlDataType::VARCHAR => DataType::Varchar {
-                length: self.col_display_size(column_number)?,
+                length: self.col_display_size(column_number, sleep).await?,
             },
             SqlDataType::NUMERIC => DataType::Numeric {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                precision: self
+                    .col_precision(column_number, sleep)
+                    .await?
+                    .try_into()
+                    .unwrap(),
                 scale: self.col_scale(column_number)?.try_into().unwrap(),
             },
             SqlDataType::DECIMAL => DataType::Decimal {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                precision: self
+                    .col_precision(column_number, sleep)
+                    .await?
+                    .try_into()
+                    .unwrap(),
                 scale: self.col_scale(column_number)?.try_into().unwrap(),
             },
             SqlDataType::INTEGER => DataType::Integer,
             SqlDataType::SMALLINT => DataType::SmallInt,
             SqlDataType::FLOAT => DataType::Float {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                precision: self
+                    .col_precision(column_number, sleep)
+                    .await?
+                    .try_into()
+                    .unwrap(),
             },
             SqlDataType::REAL => DataType::Real,
             SqlDataType::DOUBLE => DataType::Double,
             SqlDataType::DATE => DataType::Date,
             SqlDataType::TIME => DataType::Time {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                precision: self
+                    .col_precision(column_number, sleep)
+                    .await?
+                    .try_into()
+                    .unwrap(),
             },
             SqlDataType::TIMESTAMP => DataType::Timestamp {
-                precision: self.col_precision(column_number)?.try_into().unwrap(),
+                precision: self
+                    .col_precision(column_number, sleep)
+                    .await?
+                    .try_into()
+                    .unwrap(),
             },
             SqlDataType::EXT_BIG_INT => DataType::BigInt,
             SqlDataType::EXT_TINY_INT => DataType::TinyInt,
             SqlDataType::EXT_BIT => DataType::Bit,
             other => {
                 let mut column_description = ColumnDescription::default();
-                self.describe_col(column_number, &mut column_description)?;
+                self.describe_col(column_number, &mut column_description, sleep)
+                    .await?;
                 DataType::Other {
                     data_type: other,
                     column_size: column_description.data_type.column_size(),
@@ -423,8 +471,8 @@ impl<'c, C: ResultSetMetadata + ?Sized> ColumnNamesIt<'c, C> {
 }
 
 impl<'c, C: AsyncResultSetMetadata + ?Sized> ColumnNamesIt<'c, C> {
-    async fn new_async(cursor: &'c mut C) -> Result<Self, Error> {
-        let num_cols = cursor.num_result_cols()?.try_into().unwrap();
+    async fn new_async(cursor: &'c mut C, sleep: impl Sleep) -> Result<Self, Error> {
+        let num_cols = cursor.num_result_cols(sleep).await?.try_into().unwrap();
         Ok(Self {
             cursor,
             // Some ODBC drivers do not report the required size to hold the column name. Starting
