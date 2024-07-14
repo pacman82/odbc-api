@@ -4625,12 +4625,12 @@ async fn async_preallocated_statement_execution(profile: &Profile) {
     assert_eq!("Hello, World!", actual);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
+#[test_case(MSSQL, true; "Microsoft SQL Server")]
+#[test_case(MARIADB, false; "Maria DB")]
+#[test_case(SQLITE_3, false; "SQLite 3")]
+#[test_case(POSTGRES, false; "PostgreSQL")]
 #[tokio::test]
-async fn async_bulk_fetch(profile: &Profile) {
+async fn async_bulk_fetch(profile: &Profile, expected_to_support_polling: bool) {
     // Given a table with a thousand records
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -4646,26 +4646,34 @@ async fn async_bulk_fetch(profile: &Profile) {
     }
     inserter.execute().unwrap();
     let query = table.sql_all_ordered_by_id();
-    let sleep = || tokio::time::sleep(Duration::from_millis(50));
+    // We use this counter to check if the sleep function is actually invoked and the driver does
+    // actually support asynchronous polling.
+    let mut sleep_counter_spy = 0;
+    let mut sleep = || {
+        sleep_counter_spy += 1;
+        tokio::time::sleep(Duration::from_millis(50))
+    };
 
     // When
     let mut sum_rows_fetched = 0;
     let cursor = conn
-        .execute_polling(&query, (), sleep)
+        .execute_polling(&query, (), &mut sleep)
         .await
         .unwrap()
         .unwrap();
     // Fetching results in ten batches
     let buffer = TextRowSet::from_max_str_lens(100, [50usize]).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(buffer).unwrap();
-    let mut maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+    let mut maybe_batch = row_set_cursor.fetch(&mut sleep).await.unwrap();
     while let Some(batch) = maybe_batch {
         sum_rows_fetched += batch.num_rows();
-        maybe_batch = row_set_cursor.fetch(sleep).await.unwrap();
+        maybe_batch = row_set_cursor.fetch(&mut sleep).await.unwrap();
     }
 
     // Then
-    assert_eq!(1000, sum_rows_fetched)
+    assert_eq!(1000, sum_rows_fetched);
+    let used_polling = sleep_counter_spy != 0;
+    assert_eq!(expected_to_support_polling, used_polling);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
