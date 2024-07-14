@@ -152,6 +152,12 @@ impl<'c> Connection<'c> {
     ///     Ok(())
     /// }
     /// ```
+    /// 
+    /// **Attention**: This feature requires driver support, otherwise the calls will just block
+    /// until they are finished. At the time of writing this out of Microsoft SQL Server,
+    /// PostgerSQL, SQLite and MariaDB this worked only with Microsoft SQL Server. For code generic
+    /// over every driver you may still use this. The functions will return with the correct results
+    /// just be aware that may block until they are finished.
     pub async fn execute_polling(
         &self,
         query: &str,
