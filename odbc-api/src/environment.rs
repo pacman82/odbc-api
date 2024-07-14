@@ -77,23 +77,17 @@ impl Environment {
     ///
     /// # Example
     ///
-    /// ```
-    /// use lazy_static::lazy_static;
+    /// ```no_run
     /// use odbc_api::{Environment, sys::{AttrConnectionPooling, AttrCpMatch}};
     ///
-    /// lazy_static! {
-    ///     pub static ref ENV: Environment = unsafe {
-    ///         // Enable connection pooling. Let driver decide wether the attributes of two connection
-    ///         // are similar enough to change the attributes of a pooled one, to fit the requested
-    ///         // connection, or if it is cheaper to create a new Connection from scratch.
-    ///         // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
-    ///         Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
-    ///         let mut env = Environment::new().unwrap();
-    ///         // Strict is the default, and is set here to be explicit about it.
-    ///         env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
-    ///         env
-    ///     };
-    /// }
+    /// /// Create an environment with connection pooling enabled.
+    /// let env = unsafe {
+    ///     Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+    ///     let mut env = Environment::new().unwrap();
+    ///     // Strict is the default, and is set here to be explicit about it.
+    ///     env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
+    ///     env
+    /// };
     /// ```
     ///
     /// # Safety
@@ -102,6 +96,10 @@ impl Environment {
     /// > support connection pooling. This means the driver is able to handle a call on any thread
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
+    /// 
+    /// Also note that this is changes global mutable state for the entire process. As such it is
+    /// vulnerable to race conditions if called from more than one place in your application. It is
+    /// recommened to call this in the beginning, before creating any connection.
     pub unsafe fn set_connection_pooling(
         scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {

@@ -288,15 +288,10 @@ impl<'c> Connection<'c> {
     ///   execution.
     ///
     /// ```no_run
-    /// use lazy_static::lazy_static;
     /// use odbc_api::{
-    ///     Environment, Error, ColumnarBulkInserter, StatementConnection,
+    ///     environment, Error, ColumnarBulkInserter, StatementConnection,
     ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions
     /// };
-    ///
-    /// lazy_static! {
-    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
-    /// }
     ///
     /// const CONNECTION_STRING: &str =
     ///     "Driver={ODBC Driver 18 for SQL Server};\
@@ -309,7 +304,8 @@ impl<'c> Connection<'c> {
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
-    ///     let conn = ENV.connect_with_connection_string(
+    ///     let env = environment()?;
+    ///     let conn = env.connect_with_connection_string(
     ///         CONNECTION_STRING,
     ///         ConnectionOptions::default()
     ///     )?;
