@@ -4601,12 +4601,15 @@ fn list_all_driver_attributes() {
     assert!(maximum > 1);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
+#[test_case(MSSQL, true; "Microsoft SQL Server")]
+#[test_case(MARIADB, false; "Maria DB")]
+#[test_case(SQLITE_3, false; "SQLite 3")]
+#[test_case(POSTGRES, false; "PostgreSQL")]
 #[tokio::test]
-async fn async_preallocated_statement_execution(profile: &Profile) {
+async fn polling_preallocated_statement_execution(
+    profile: &Profile,
+    expected_to_support_polling: bool,
+) {
     // Given a table
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -4614,7 +4617,13 @@ async fn async_preallocated_statement_execution(profile: &Profile) {
         .build(profile)
         .unwrap();
     let query = format!("INSERT INTO {table_name} (a) VALUES ('Hello, World!')");
-    let sleep = || tokio::time::sleep(Duration::from_millis(10));
+    // We use this counter to check if the sleep function is actually invoked and the driver does
+    // actually support asynchronous polling.
+    let mut sleep_counter_spy = 0;
+    let sleep = || {
+        sleep_counter_spy += 1;
+        tokio::time::sleep(Duration::from_millis(50))
+    };
 
     // When
     let mut statement = conn.preallocate().unwrap().into_polling().unwrap();
@@ -4623,6 +4632,8 @@ async fn async_preallocated_statement_execution(profile: &Profile) {
     // Then
     let actual = table.content_as_string(&conn);
     assert_eq!("Hello, World!", actual);
+    let used_polling = sleep_counter_spy != 0;
+    assert_eq!(expected_to_support_polling, used_polling);
 }
 
 #[test_case(MSSQL, true; "Microsoft SQL Server")]
