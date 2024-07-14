@@ -178,12 +178,8 @@ impl<'c> Connection<'c> {
     /// from the cursor, in order to have an easier time with the borrow checker.
     ///
     /// ```no_run
-    /// use lazy_static::lazy_static;
-    /// use odbc_api::{Environment, Error, Cursor, ConnectionOptions};
+    /// use odbc_api::{environment, Error, Cursor, ConnectionOptions};
     ///
-    /// lazy_static! {
-    ///     static ref ENV: Environment = unsafe { Environment::new().unwrap() };
-    /// }
     ///
     /// const CONNECTION_STRING: &str =
     ///     "Driver={ODBC Driver 18 for SQL Server};\
@@ -191,7 +187,8 @@ impl<'c> Connection<'c> {
     ///     PWD=My@Test@Password1;";
     ///
     /// fn execute_query(query: &str) -> Result<Option<impl Cursor>, Error> {
-    ///     let conn = ENV.connect_with_connection_string(
+    ///     let env = environment()?;
+    ///     let conn = env.connect_with_connection_string(
     ///         CONNECTION_STRING,
     ///         ConnectionOptions::default()
     ///     )?;

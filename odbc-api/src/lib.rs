@@ -39,7 +39,7 @@ pub use self::{
         RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
-    environment::{DataSourceInfo, DriverInfo, Environment},
+    environment::{DataSourceInfo, DriverInfo, Environment, environment},
     error::{Error, TooLargeBufferSize},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},

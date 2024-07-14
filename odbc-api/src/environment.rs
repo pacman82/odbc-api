@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::Mutex};
+use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::{Mutex, OnceLock}};
 
 use crate::{
     connection::ConnectionOptions,
@@ -643,6 +643,28 @@ impl Environment {
         self.environment
             .allocate_connection()
             .into_result(&self.environment)
+    }
+}
+
+/// An ODBC [`Environment`] with static lifetime. This function always returns a reference to the
+/// same instance. The environment is constructed then the function is called for the first time.
+/// Every time after the initial construction this function must succeed.
+/// 
+/// Useful if your application uses ODBC for the entirety of its lifetime, since using a static
+/// lifetime means there is one less lifetime you and the borrow checker need to worry about. If
+/// your application only wants to use odbc for part of its runtime, you may want to use
+/// [`Environment`] directly in order to explicitly free its associated resources earlier. No matter
+/// the application, it is recommended to only have one [`Environment`] per process.
+pub fn environment() -> Result<&'static Environment, Error> {
+    static ENV: OnceLock<Environment> = OnceLock::new();
+    if let Some(env) = ENV.get() {
+        // Environment already initialized, nothing to do, but to return it.
+        Ok(env)
+    } else {
+        // ODBC Environment not initialized yet. Let's do so and return it.
+        let env = Environment::new()?;
+        let env = ENV.get_or_init(|| env);
+        Ok(env)
     }
 }
 
