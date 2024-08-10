@@ -95,10 +95,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build test container
-        run: docker-compose --file docker-compose-ci.yml build test_linux
+        run: docker compose --file docker-compose-ci.yml build test_linux
 
       - name: Test
-        run: docker-compose --file docker-compose-ci.yml run test_linux
+        run: docker compose --file docker-compose-ci.yml run test_linux
 
   odbc_3_5:
     name: Check build with ODBC 3.5
