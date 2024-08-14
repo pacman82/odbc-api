@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.1.4
+
+* Fix failed release 8.1.3 due to out of sync version for derive package
+
 ## 8.1.3
 
 * Fix: Failed attempts to rollback transactions during `Drop` of a connection will no longer panic.
