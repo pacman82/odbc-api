@@ -9,6 +9,7 @@ use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
 use odbc_sys::HDbc;
+use log::error;
 use std::{
     borrow::Cow,
     fmt::{self, Debug, Display},
@@ -27,21 +28,23 @@ impl<'conn> Drop for Connection<'conn> {
             }) if record.state == State::INVALID_STATE_TRANSACTION => {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
                 if let Err(e) = self.rollback() {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the original
-                    // error.
-                    if !panicking() {
-                        panic!(
-                            "Unexpected error rolling back transaction (In order to recover from \
-                                invalid transaction state during disconnect): {e:?}"
-                        )
-                    }
+
+                    // Connection might be in a suspended state. See documentation about suspended
+                    // state here:
+                    // <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlendtran-function>
+                    //
+                    // See also issue:
+                    // <https://github.com/pacman82/odbc-api/issues/574#issuecomment-2286449125>
+
+                    error!("Error during rolling back transaction (In order to recover from \
+                        invalid transaction state during disconnect {}", e);
                 }
-                // Transaction is rolled back. Now let's try again to disconnect.
+                // Transaction might be rolled back or suspended. Now let's try again to disconnect.
                 if let Err(e) = self.connection.disconnect().into_result(&self.connection) {
-                    // Avoid panicking, if we already have a panic. We don't want to mask the original
-                    // error.
+                    // Avoid panicking, if we already have a panic. We don't want to mask the
+                    // original error.
                     if !panicking() {
-                        panic!("Unexpected error disconnecting): {e:?}")
+                        panic!("Unexpected error disconnecting (after rollback attempt): {e:?}")
                     }
                 }
             }

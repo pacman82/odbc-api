@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.1.3
+
+* Fix: Failed attempts to rollback transactions during `Drop` of a connection will no longer panic.
+
 ## 8.1.2
 
 * Fix: `Connection::execute_polling` did not enable asynchronus execution on the statement handle. This means that the operations on that cursor were actually blocking even if the driver does support polling.
