@@ -1,3 +1,4 @@
+#![allow(clippy::needless_doctest_main)]
 /*!
 # Introduction to `odbc-api` (documentation only)
 
@@ -199,25 +200,25 @@ you get from the pool will have exactly the attributes specified in the connecti
 Here is an example of how to create an ODBC environment with connection pooling.
 
 ```
-use lazy_static::lazy_static;
-use odbc_api::{Environment, sys::{AttrConnectionPooling, AttrCpMatch}};
+use odbc_api::{environment, sys::{AttrConnectionPooling, AttrCpMatch}};
 
-lazy_static! {
-    pub static ref ENV: Environment = {
-        // Enable connection pooling. Let driver decide whether the attributes of two connection
-        // are similar enough to change the attributes of a pooled one, to fit the requested
-        // connection, or if it is cheaper to create a new Connection from scratch.
-        // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
-        //
-        // Safety: This call changes global mutable space in the underlying ODBC driver manager.
-        unsafe {
-            Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
-        }
-        let mut env = Environment::new().unwrap();
-        // Strict is the default, and is set here to be explicit about it.
-        env.set_connection_pooling_matching(AttrCpMatch::Strict).unwrap();
-        env
-    };
+fn main() {
+    // Enable connection pooling. Let driver decide whether the attributes of two connection
+    // are similar enough to change the attributes of a pooled one, to fit the requested
+    // connection, or if it is cheaper to create a new Connection from scratch.
+    // See <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/driver-aware-connection-pooling>
+    //
+    // Safety: This call changes global mutable space in the underlying ODBC driver manager. Easiest
+    // to prove it is not causing a raise by calling it once right at the startup of your
+    // application.
+    unsafe {
+        Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+    }
+
+    // As long as `environment` is called for the first time **after** connection pooling is
+    // activated the static environment returned by it will have it activated.
+    let env = environment();
+    // ... use env to do db stuff
 }
 ```
 
