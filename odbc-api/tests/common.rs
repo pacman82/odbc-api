@@ -1,19 +1,10 @@
 use std::iter::repeat;
 
-use lazy_static::lazy_static;
 use odbc_api::{
-    buffers,
+    buffers, environment,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, ConnectionOptions, Cursor, Environment, Error, RowSetBuffer, TruncationInfo,
+    Connection, ConnectionOptions, Cursor, Error, RowSetBuffer, TruncationInfo,
 };
-
-// Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
-lazy_static! {
-    pub static ref ENV: Environment = {
-        let _ = env_logger::builder().is_test(true).try_init();
-        Environment::new().unwrap()
-    };
-}
 
 pub struct Given<'a> {
     table_name: &'a str,
@@ -93,7 +84,8 @@ pub struct Profile {
 impl Profile {
     /// Open a new connection using the connection string of the profile
     pub fn connection(&self) -> Result<Connection<'static>, Error> {
-        ENV.connect_with_connection_string(self.connection_string, ConnectionOptions::default())
+        environment()?
+            .connect_with_connection_string(self.connection_string, ConnectionOptions::default())
     }
 
     // #[deprecated]
