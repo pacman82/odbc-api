@@ -6,7 +6,7 @@ use sys::{CDataType, Numeric, Pointer, SqlDataType, Timestamp, NULL_DATA};
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
-use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer, ENV};
+use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer};
 use connection_strings::{
     MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION, SQLITE_3_CONNECTION,
 };
@@ -18,7 +18,7 @@ use odbc_api::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
     },
-    decimal_text_to_i128,
+    decimal_text_to_i128, environment,
     handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
     parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
@@ -75,7 +75,9 @@ macro_rules! table_name {
 #[test]
 fn bogus_connection_string() {
     // When
-    let result = ENV.connect_with_connection_string("foobar", ConnectionOptions::default());
+    let result = environment()
+        .unwrap()
+        .connect_with_connection_string("foobar", ConnectionOptions::default());
 
     // Then
 
@@ -121,7 +123,8 @@ fn default_packet_size(profile: &Profile, expected_packet_size: u32) {
 fn set_packet_size(profile: &Profile, expected_packet_size: u32) {
     let desired_packet_size = 8192;
 
-    let conn = ENV
+    let conn = environment()
+        .unwrap()
         .connect_with_connection_string(
             profile.connection_string,
             ConnectionOptions {
@@ -3020,8 +3023,8 @@ fn arbitrary_input_parameters(profile: &Profile) {
 /// thread.
 #[test]
 fn synchronized_access_to_driver_and_data_source_info() {
-    let expected_drivers = ENV.drivers().unwrap();
-    let expected_data_sources = ENV.data_sources().unwrap();
+    let expected_drivers = environment().unwrap().drivers().unwrap();
+    let expected_data_sources = environment().unwrap().data_sources().unwrap();
 
     const NUM_THREADS: usize = 5;
     let threads = iter::repeat(())
@@ -3031,9 +3034,9 @@ fn synchronized_access_to_driver_and_data_source_info() {
             let expected_data_sources = expected_data_sources.clone();
 
             thread::spawn(move || {
-                let drivers = ENV.drivers().unwrap();
+                let drivers = environment().unwrap().drivers().unwrap();
                 assert_eq!(expected_drivers, drivers);
-                let data_sources_for_thread = ENV.data_sources().unwrap();
+                let data_sources_for_thread = environment().unwrap().data_sources().unwrap();
                 assert_eq!(expected_data_sources, data_sources_for_thread);
             })
         })
@@ -3282,12 +3285,14 @@ fn varchar_null(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_full_connection_string(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(1024);
-    ENV.driver_connect(
-        profile.connection_string,
-        &mut completed_connection_string,
-        odbc_api::DriverCompleteOption::NoPrompt,
-    )
-    .unwrap();
+    environment()
+        .unwrap()
+        .driver_connect(
+            profile.connection_string,
+            &mut completed_connection_string,
+            odbc_api::DriverCompleteOption::NoPrompt,
+        )
+        .unwrap();
 
     assert!(!completed_connection_string.is_truncated());
 
@@ -3307,12 +3312,14 @@ fn get_full_connection_string(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn get_full_connection_string_truncated(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::with_buffer_size(2);
-    ENV.driver_connect(
-        profile.connection_string,
-        &mut completed_connection_string,
-        odbc_api::DriverCompleteOption::NoPrompt,
-    )
-    .unwrap();
+    environment()
+        .unwrap()
+        .driver_connect(
+            profile.connection_string,
+            &mut completed_connection_string,
+            odbc_api::DriverCompleteOption::NoPrompt,
+        )
+        .unwrap();
 
     eprintln!(
         "Output connection string: {}",
@@ -3330,12 +3337,14 @@ fn get_full_connection_string_truncated(profile: &Profile) {
 #[test_case(POSTGRES; "PostgreSQL")]
 fn driver_connect_with_empty_out_connection_sring(profile: &Profile) {
     let mut completed_connection_string = OutputStringBuffer::empty();
-    ENV.driver_connect(
-        profile.connection_string,
-        &mut completed_connection_string,
-        odbc_api::DriverCompleteOption::NoPrompt,
-    )
-    .unwrap();
+    environment()
+        .unwrap()
+        .driver_connect(
+            profile.connection_string,
+            &mut completed_connection_string,
+            odbc_api::DriverCompleteOption::NoPrompt,
+        )
+        .unwrap();
 
     assert!(completed_connection_string.is_truncated());
     assert!(completed_connection_string.to_utf8().is_empty());
@@ -4587,7 +4596,7 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
 #[test]
 fn list_all_driver_attributes() {
     // Given an ODBC environment with drivers installed
-    let environment = &ENV;
+    let environment = &environment().unwrap();
 
     // When fetching driver infors
     let driver_infos = environment.drivers().unwrap();
