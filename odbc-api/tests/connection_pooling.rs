@@ -1,10 +1,10 @@
 //! Since connection pooling mode is a process level attribute these tests have to run in their own
 //! process.
 
-use lazy_static::lazy_static;
 use odbc_api::{ConnectionOptions, Environment};
 use odbc_sys::{AttrConnectionPooling, AttrCpMatch};
 use test_case::test_case;
+use std::sync::OnceLock;
 
 const MSSQL_CONNECTION: &str =
     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
@@ -37,16 +37,22 @@ const POSTGRES_CONNECTION: &str = "Driver={PostgreSQL UNICODE};\
     Uid=test;\
     Pwd=test;";
 
-// Rust by default executes tests in parallel. Yet only one environment is allowed at a time.
-lazy_static! {
-    pub static ref ENV: Environment = unsafe {
+static ENV: OnceLock<Environment> = std::sync::OnceLock::new();
+
+fn env_with_pool() -> &'static Environment {
+    ENV.get_or_init(|| {
         let _ = env_logger::builder().is_test(true).try_init();
-        Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+        // Manipulates global mutable state within the process. Since we know within this test
+        // process this is the only place it is called, and `get_or_init` guarantees init is only
+        // called once, we are good.
+        unsafe {
+            Environment::set_connection_pooling(AttrConnectionPooling::DriverAware).unwrap();
+        }
         let mut env = Environment::new().unwrap();
         env.set_connection_pooling_matching(AttrCpMatch::Strict)
             .unwrap();
         env
-    };
+    })
 }
 
 #[test_case(MSSQL_CONNECTION; "Microsoft SQL Server")]
@@ -56,7 +62,7 @@ lazy_static! {
 fn connect(connection_string: &str) {
     // First connection should be created on demand
     {
-        let conn = ENV
+        let conn = env_with_pool()
             .connect_with_connection_string(
                 connection_string,
                 // Fail faster if we forgot to boot up docker containers
@@ -70,7 +76,7 @@ fn connect(connection_string: &str) {
     }
 
     // Second connection should be from the pool
-    let conn = ENV
+    let conn = env_with_pool()
         .connect_with_connection_string(connection_string, ConnectionOptions::default())
         .unwrap();
     assert!(!conn.is_dead().unwrap());
