@@ -200,7 +200,7 @@ you get from the pool will have exactly the attributes specified in the connecti
 Here is an example of how to create an ODBC environment with connection pooling.
 
 ```
-use odbc_api::{environment, sys::{AttrConnectionPooling, AttrCpMatch}};
+use odbc_api::{Environment, environment, sys::{AttrConnectionPooling, AttrCpMatch}};
 
 fn main() {
     // Enable connection pooling. Let driver decide whether the attributes of two connection
