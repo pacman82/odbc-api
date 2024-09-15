@@ -19,10 +19,10 @@ pub trait ResultSetMetadata: AsStatementRef {
     /// # Parameters
     ///
     /// * `column_number`: Column index. `0` is the bookmark column. The other column indices start
-    /// with `1`.
+    ///   with `1`.
     /// * `column_description`: Holds the description of the column after the call. This method does
-    /// not provide strong exception safety as the value of this argument is undefined in case of an
-    /// error.
+    ///   not provide strong exception safety as the value of this argument is undefined in case of
+    ///   an error.
     fn describe_col(
         &mut self,
         column_number: u16,

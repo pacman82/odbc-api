@@ -445,9 +445,8 @@ fn insert(environment: &Environment, insert_opt: &InsertOpt) -> Result<(), Error
         .map(|parameter_number| {
             statement
                 .describe_param(parameter_number as u16)
-                .map(|desc| {
+                .inspect(|&desc| {
                     info!("Column {} identified as: {:?}", parameter_number, desc);
-                    desc
                 })
         })
         .collect::<Result<_, _>>()?;

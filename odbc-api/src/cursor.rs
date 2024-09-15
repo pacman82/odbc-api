@@ -555,7 +555,7 @@ where
     /// function include.
     ///
     /// 1. Binding a different buffer to the "same" cursor after letting it point to the next result
-    ///   set obtained with [Cursor::more_results`].
+    ///    set obtained with [Cursor::more_results`].
     /// 2. Reusing the same buffer with a different statement.
     pub fn unbind(self) -> Result<(C, B), Error> {
         // In this method we want to deconstruct self and move cursor out of it. We need to

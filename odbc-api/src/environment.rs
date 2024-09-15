@@ -122,10 +122,10 @@ impl Environment {
     /// The following values are used to set the value of this attribute:
     ///
     /// * [`crate::sys::AttrCpMatch::Strict`] = Only connections that exactly match the connection
-    /// options in the call and the connection attributes set by the application are reused. This is
-    /// the default.
+    ///   options in the call and the connection attributes set by the application are reused. This
+    ///   is the default.
     /// * [`crate::sys::AttrCpMatch::Relaxed`] = Connections with matching connection string \
-    /// keywords can be used. Keywords must match, but not all connection attributes must match.
+    ///   keywords can be used. Keywords must match, but not all connection attributes must match.
     pub fn set_connection_pooling_matching(&mut self, matching: AttrCpMatch) -> Result<(), Error> {
         self.environment
             .set_connection_pooling_matching(matching)
@@ -159,6 +159,7 @@ impl Environment {
 
         debug!("ODBC Environment created.");
 
+        debug!("Setting ODBC API version to {ODBC_API_VERSION:?}");
         let result = environment
             .declare_version(ODBC_API_VERSION)
             .into_result(&environment);
@@ -197,7 +198,7 @@ impl Environment {
     /// # Arguments
     ///
     /// * `data_source_name` - Data source name. The data might be located on the same computer as
-    /// the program, or on another computer somewhere on a network.
+    ///   the program, or on another computer somewhere on a network.
     /// * `user` - User identifier.
     /// * `pwd` - Authentication string (typically the password).
     ///

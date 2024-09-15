@@ -164,15 +164,15 @@ pub trait Statement: AsHandle {
     /// Binds application data buffers to columns in the result set.
     ///
     /// * `column_number`: `0` is the bookmark column. It is not included in some result sets. All
-    /// other columns are numbered starting with `1`. It is an error to bind a higher-numbered
-    /// column than there are columns in the result set. This error cannot be detected until the
-    /// result set has been created, so it is returned by `fetch`, not `bind_col`.
+    ///   other columns are numbered starting with `1`. It is an error to bind a higher-numbered
+    ///   column than there are columns in the result set. This error cannot be detected until the
+    ///   result set has been created, so it is returned by `fetch`, not `bind_col`.
     /// * `target_type`: The identifier of the C data type of the `value` buffer. When it is
-    /// retrieving data from the data source with `fetch`, the driver converts the data to this
-    /// type. When it sends data to the source, the driver converts the data from this type.
+    ///   retrieving data from the data source with `fetch`, the driver converts the data to this
+    ///   type. When it sends data to the source, the driver converts the data from this type.
     /// * `target_value`: Pointer to the data buffer to bind to the column.
     /// * `target_length`: Length of target value in bytes. (Or for a single element in case of bulk
-    /// aka. block fetching data).
+    ///   aka. block fetching data).
     /// * `indicator`: Buffer is going to hold length or indicator values.
     ///
     /// # Safety
@@ -264,10 +264,10 @@ pub trait Statement: AsHandle {
     /// # Parameters
     ///
     /// * `column_number`: Column index. `0` is the bookmark column. The other column indices start
-    /// with `1`.
+    ///   with `1`.
     /// * `column_description`: Holds the description of the column after the call. This method does
-    /// not provide strong exception safety as the value of this argument is undefined in case of an
-    /// error.
+    ///   not provide strong exception safety as the value of this argument is undefined in case of
+    ///   an error.
     fn describe_col(
         &self,
         column_number: u16,

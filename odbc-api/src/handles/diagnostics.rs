@@ -79,20 +79,20 @@ pub trait Diagnostics {
     /// # Arguments
     ///
     /// * `rec_number` - Indicates the status record from which the application seeks information.
-    /// Status records are numbered from 1. Function panics for values smaller < 1.
+    ///   Status records are numbered from 1. Function panics for values smaller < 1.
     /// * `message_text` - Buffer in which to return the diagnostic message text string. If the
-    /// number of characters to return is greater than the buffer length, the message is truncated.
-    /// To determine that a truncation occurred, the application must compare the buffer length to
-    /// the actual number of bytes available, which is found in
-    /// [`self::DiagnosticResult::text_length]`
+    ///   number of characters to return is greater than the buffer length, the message is
+    ///   truncated. To determine that a truncation occurred, the application must compare the
+    ///   buffer length to the actual number of bytes available, which is found in
+    ///   [`self::DiagnosticResult::text_length]`
     ///
     /// # Result
     ///
     /// * `Some(rec)` - The function successfully returned diagnostic information.
-    /// message. No diagnostic records were generated.
+    ///   message. No diagnostic records were generated.
     /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
-    /// the specified Handle. The function also returns `NoData` for any positive `rec_number` if
-    /// there are no diagnostic records available.
+    ///   the specified Handle. The function also returns `NoData` for any positive `rec_number` if
+    ///   there are no diagnostic records available.
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
     fn diagnostic_record(
@@ -110,20 +110,20 @@ pub trait Diagnostics {
     /// # Arguments
     ///
     /// * `rec_number` - Indicates the status record from which the application seeks information.
-    /// Status records are numbered from 1. Function panics for values smaller < 1.
+    ///   Status records are numbered from 1. Function panics for values smaller < 1.
     /// * `message_text` - Buffer in which to return the diagnostic message text string. If the
-    /// number of characters to return is greater than the buffer length, the buffer will be grown to be
-    /// large enough to hold it.
+    ///   number of characters to return is greater than the buffer length, the buffer will be grown
+    ///   to be large enough to hold it.
     ///
     /// # Result
     ///
     /// * `Some(rec)` - The function successfully returned diagnostic information.
-    /// message. No diagnostic records were generated. To determine that a truncation occurred, the
-    /// application must compare the buffer length to the actual number of bytes available, which is
-    /// found in [`self::DiagnosticResult::text_length]`.
-    /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for the
-    /// specified Handle. The function also returns `NoData` for any positive `rec_number` if there are
-    /// no diagnostic records available.
+    ///   message. No diagnostic records were generated. To determine that a truncation occurred,
+    ///   the application must compare the buffer length to the actual number of bytes available,
+    ///   which is found in [`self::DiagnosticResult::text_length]`.
+    /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
+    ///   the specified Handle. The function also returns `NoData` for any positive `rec_number` if
+    ///   there are no diagnostic records available.
     ///
     /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/diagnostic-messages
     fn diagnostic_record_vec(

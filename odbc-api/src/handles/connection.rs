@@ -95,7 +95,7 @@ impl<'c> Connection<'c> {
     /// # Arguments
     ///
     /// * `data_source_name` - Data source name. The data might be located on the same computer as
-    /// the program, or on another computer somewhere on a network.
+    ///   the program, or on another computer somewhere on a network.
     /// * `user` - User identifier.
     /// * `pwd` - Authentication string (typically the password).
     ///
