@@ -33,12 +33,12 @@ use crate::{
 ///     Ok(())
 /// }
 /// ```
-pub struct Preallocated<'open_connection> {
+pub struct Preallocated<S> {
     /// A valid statement handle.
-    statement: StatementImpl<'open_connection>,
+    statement: S,
 }
 
-impl<'o> Preallocated<'o> {
+impl<'o> Preallocated<StatementImpl<'o>> {
     /// Users which intend to write their application in safe Rust should prefer using
     /// [`crate::Connection::preallocate`] as opposed to this constructor.
     ///
@@ -239,7 +239,7 @@ impl<'o> Preallocated<'o> {
     }
 }
 
-impl<'o> AsStatementRef for Preallocated<'o> {
+impl<'o> AsStatementRef for Preallocated<StatementImpl<'o>> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }

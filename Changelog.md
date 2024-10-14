@@ -1,5 +1,9 @@
 # Changelog
 
+## 9.0.0
+
+* `Preallocated` is now generic over the handle of the statement rather than the lifetime. This allows `Preallocated` to also hold `StatementConnection`. For migration you can replace `Preallocated<'o>` -> `Preallocated<StatementImpl<'o>`.
+
 ## 8.1.4
 
 * Fix failed release 8.1.3 due to out of sync version for derive package
