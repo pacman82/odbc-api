@@ -3,7 +3,7 @@ use std::{
     io::Read,
     sync::OnceLock,
 };
-
+use anyhow::Error;
 use assert_cmd::{assert::Assert, Command};
 use odbc_api::{Connection, ConnectionOptions, Environment};
 use tempfile::NamedTempFile;
@@ -94,13 +94,12 @@ fn roundtrip(csv: &'static str, table_name: &str, batch_size: u32) -> Assert {
 /// Query MSSQL database, yet do not specify username and password in the connection string, but
 /// pass them as separate command line options.
 #[test]
-fn append_user_and_password_to_connection_string() {
+fn append_user_and_password_to_connection_string() -> Result<(), Error>{
     // Connection string without user name and password.
     let connection_string =
         "Driver={ODBC Driver 18 for SQL Server};Server=localhost;TrustServerCertificate=yes;";
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "query",
@@ -114,15 +113,15 @@ fn append_user_and_password_to_connection_string() {
         ])
         .assert()
         .success();
+    Ok(())
 }
 
 #[test]
-fn query_mssql() {
+fn query_mssql() -> Result<(), Error> {
     let table_name = "OdbcsvQueryMssql";
     let conn = env()
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())?;
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"])?;
     let insert = format!(
         "INSERT INTO {table_name}
         (a, b)
@@ -131,7 +130,7 @@ fn query_mssql() {
         ('2001: A Space Odyssey', 1968),
         ('Interstellar', NULL);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, ())?;
 
     let csv = "a,b\n\
         Jurassic Park,1993\n\
@@ -146,10 +145,11 @@ fn query_mssql() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
-fn tables() {
+fn tables() -> Result<(), Error> {
     let csv = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS\n\
         master,dbo,OdbcsvTestTables,TABLE,\n\
     ";
@@ -157,12 +157,10 @@ fn tables() {
     let table_name = "OdbcsvTestTables";
     // Setup table for test. We use the table name only in this test.
     let conn = env()
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table(&conn, table_name, &["INTEGER"]).unwrap();
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())?;
+    setup_empty_table(&conn, table_name, &["INTEGER"])?;
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "list-tables",
@@ -174,10 +172,11 @@ fn tables() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
-fn columns() {
+fn columns() -> Result<(), Error> {
     let csv = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,\
     BUFFER_LENGTH,DECIMAL_DIGITS,NUM_PREC_RADIX,NULLABLE,REMARKS,COLUMN_DEF,SQL_DATA_TYPE,\
     SQL_DATETIME_SUB,CHAR_OCTET_LENGTH,ORDINAL_POSITION,IS_NULLABLE,SS_IS_SPARSE,SS_IS_COLUMN_SET,\
@@ -191,15 +190,11 @@ fn columns() {
     // Setup table for test. We use the table name only in this test.
     // Setup empty table handle would implicitly create an ID column
     let conn = env()
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())
-        .unwrap();
-    conn.execute(&format!("CREATE TABLE {table_name} (a VARCHAR(255));"), ())
-        .unwrap();
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())?;
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), ())?;
+    conn.execute(&format!("CREATE TABLE {table_name} (a VARCHAR(255));"), ())?;
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "list-columns",
@@ -213,16 +208,16 @@ fn columns() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
-fn ignore_truncation() {
+fn ignore_truncation() -> Result<(), Error> {
     let csv = "some_string\n\
         1234\n\
     ";
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "query",
@@ -236,12 +231,12 @@ fn ignore_truncation() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
-fn do_not_ignore_truncation() {
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+fn do_not_ignore_truncation() -> Result<(), Error> {
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "query",
@@ -253,15 +248,15 @@ fn do_not_ignore_truncation() {
         ])
         .assert()
         .failure();
+    Ok(())
 }
 
 #[test]
-fn placeholders() {
+fn placeholders() -> Result<(), Error> {
     let table_name = "OdbcsvPlaceholders";
     let conn = env()
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())?;
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"])?;
     let insert = format!(
         "INSERT INTO {table_name}
         (a, b)
@@ -270,14 +265,13 @@ fn placeholders() {
         ('two', 20),
         ('thre', NULL);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, ())?;
 
     let csv = "a\n\
         two\n\
     ";
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "query",
@@ -290,6 +284,7 @@ fn placeholders() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
@@ -338,15 +333,15 @@ fn insert_with_nulls() {
 /// controlled by this repository, but gracefully skip, if we run natively on a developer machine
 /// with a different set of drivers installed.
 #[test]
-fn list_drivers() {
+fn list_drivers() -> Result<(), Error> {
     if let Ok(mut expectation_file) = File::open("tests/list-drivers.txt") {
         let mut expectations = String::new();
-        expectation_file.read_to_string(&mut expectations).unwrap();
+        expectation_file.read_to_string(&mut expectations)?;
 
-        let mut command = Command::cargo_bin("odbcsv").unwrap();
+        let mut command = Command::cargo_bin("odbcsv")?;
         let odbcsv = command.args(["-vvvv", "list-drivers"]);
         odbcsv.assert().success();
-        let output = String::from_utf8(odbcsv.output().unwrap().stdout).unwrap();
+        let output = String::from_utf8(odbcsv.output()?.stdout)?;
 
         let installed_drivers: Vec<&str> = output
             .lines()
@@ -369,6 +364,8 @@ fn list_drivers() {
             );
         }
     }
+
+    Ok(())
 }
 
 /// Creates the table and assures it is empty. Columns are named a,b,c, etc.
@@ -433,13 +430,12 @@ fn fetch_from_mssql() {
 }
 
 #[test]
-fn fetch_with_query_read_from_file() {
+fn fetch_with_query_read_from_file() -> Result<(), Error>  {
     // Fill Table with dummy data
     let table_name = "OdbcsvFetchWithQueryReadFromFile";
     let conn = env()
-        .connect_with_connection_string(MSSQL, ConnectionOptions::default())
-        .unwrap();
-    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"]).unwrap();
+        .connect_with_connection_string(MSSQL, ConnectionOptions::default())?;
+    setup_empty_table(&conn, table_name, &["VARCHAR(255) NOT NULL", "INT"])?;
     let insert = format!(
         "INSERT INTO {table_name}
         (a, b)
@@ -448,13 +444,13 @@ fn fetch_with_query_read_from_file() {
         ('2001: A Space Odyssey', 1968),
         ('Interstellar', NULL);"
     );
-    conn.execute(&insert, ()).unwrap();
+    conn.execute(&insert, ())?;
 
     // Write query into temporary file
-    let named = NamedTempFile::new().unwrap();
+    let named = NamedTempFile::new()?;
     let path = named.into_temp_path();
     let query = format!("SELECT a, b from {table_name}");
-    fs::write(&path, query).unwrap();
+    fs::write(&path, query)?;
 
     // Use query safed in file to fetch dummy data and assert the result
     let csv = "a,b\n\
@@ -463,8 +459,7 @@ fn fetch_with_query_read_from_file() {
         Interstellar,\n\
     ";
 
-    Command::cargo_bin("odbcsv")
-        .unwrap()
+    Command::cargo_bin("odbcsv")?
         .args([
             "-vvvv",
             "fetch",
@@ -476,6 +471,7 @@ fn fetch_with_query_read_from_file() {
         .assert()
         .success()
         .stdout(csv);
+    Ok(())
 }
 
 #[test]
