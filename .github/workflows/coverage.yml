@@ -69,8 +69,6 @@ jobs:
           sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
           # apt-get install -y odbc-mariadb
         shell: sudo bash {0}
-      - name: Copy test expectations
-        run: cp odbcsv/tests/list-drivers-coverage.txt odbcsv/tests/list-drivers.txt
       # Maria DB test currently do not run due to a packaging error of their odbc driver
       - name: Generate coverage report
         run: | 
