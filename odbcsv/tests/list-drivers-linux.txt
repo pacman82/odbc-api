@@ -1,4 +1,0 @@
-MariaDB 3.1 Driver
-ODBC Driver 18 for SQL Server
-SQLite
-SQLite3
