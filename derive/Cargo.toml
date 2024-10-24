@@ -32,7 +32,7 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0.37"
-syn = "2.0.82"
+syn = "2.0.85"
 
 [dev-dependencies]
 odbc-api = { path = "../odbc-api" }
