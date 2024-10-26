@@ -8,8 +8,8 @@ use crate::{
     statement_connection::StatementConnection,
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
-use odbc_sys::HDbc;
 use log::error;
+use odbc_sys::HDbc;
 use std::{
     borrow::Cow,
     fmt::{self, Debug, Display},
@@ -28,7 +28,6 @@ impl<'conn> Drop for Connection<'conn> {
             }) if record.state == State::INVALID_STATE_TRANSACTION => {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
                 if let Err(e) = self.rollback() {
-
                     // Connection might be in a suspended state. See documentation about suspended
                     // state here:
                     // <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlendtran-function>
@@ -36,8 +35,11 @@ impl<'conn> Drop for Connection<'conn> {
                     // See also issue:
                     // <https://github.com/pacman82/odbc-api/issues/574#issuecomment-2286449125>
 
-                    error!("Error during rolling back transaction (In order to recover from \
-                        invalid transaction state during disconnect {}", e);
+                    error!(
+                        "Error during rolling back transaction (In order to recover from \
+                        invalid transaction state during disconnect {}",
+                        e
+                    );
                 }
                 // Transaction might be rolled back or suspended. Now let's try again to disconnect.
                 if let Err(e) = self.connection.disconnect().into_result(&self.connection) {
@@ -155,7 +157,7 @@ impl<'c> Connection<'c> {
     ///     Ok(())
     /// }
     /// ```
-    /// 
+    ///
     /// **Attention**: This feature requires driver support, otherwise the calls will just block
     /// until they are finished. At the time of writing this out of Microsoft SQL Server,
     /// PostgerSQL, SQLite and MariaDB this worked only with Microsoft SQL Server. For code generic

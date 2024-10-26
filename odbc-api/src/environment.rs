@@ -1,4 +1,9 @@
-use std::{cmp::max, collections::HashMap, ptr::null_mut, sync::{Mutex, OnceLock}};
+use std::{
+    cmp::max,
+    collections::HashMap,
+    ptr::null_mut,
+    sync::{Mutex, OnceLock},
+};
 
 use crate::{
     connection::ConnectionOptions,
@@ -96,7 +101,7 @@ impl Environment {
     /// > support connection pooling. This means the driver is able to handle a call on any thread
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
-    /// 
+    ///
     /// Also note that this is changes global mutable state for the entire process. As such it is
     /// vulnerable to race conditions if called from more than one place in your application. It is
     /// recommened to call this in the beginning, before creating any connection.
@@ -648,7 +653,7 @@ impl Environment {
 /// An ODBC [`Environment`] with static lifetime. This function always returns a reference to the
 /// same instance. The environment is constructed then the function is called for the first time.
 /// Every time after the initial construction this function must succeed.
-/// 
+///
 /// Useful if your application uses ODBC for the entirety of its lifetime, since using a static
 /// lifetime means there is one less lifetime you and the borrow checker need to worry about. If
 /// your application only wants to use odbc for part of its runtime, you may want to use
