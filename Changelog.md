@@ -1,5 +1,9 @@
 # Changelog
 
+## 9.0.0
+
+* `ConcurrentBlockCursor` is now generic over the buffer type
+
 ## 8.1.4
 
 * Fix failed release 8.1.3 due to out of sync version for derive package

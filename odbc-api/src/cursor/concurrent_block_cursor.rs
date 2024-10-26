@@ -4,7 +4,9 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor, Error};
+use crate::{BlockCursor, Cursor, Error};
+
+use super::RowSetBuffer;
 
 /// A wrapper around block cursors which fetches data in a dedicated system thread. Intended to
 /// fetch data batch by batch while the application processes the batch last fetched. Works best
@@ -44,14 +46,14 @@ use crate::{buffers::ColumnarAnyBuffer, BlockCursor, Cursor, Error};
 ///
 /// # Ok::<_, odbc_api::Error>(())
 /// ```
-pub struct ConcurrentBlockCursor<C> {
+pub struct ConcurrentBlockCursor<C, B> {
     /// In order to avoid reallocating buffers over and over again, we use this channel to send the
     /// buffers back to the fetch thread after we copied their contents into arrow arrays.
-    send_buffer: SyncSender<ColumnarAnyBuffer>,
+    send_buffer: SyncSender<B>,
     /// Receives filled batches from the fetch thread. Once the source is empty or if an error
     /// occurs its associated sender is dropped, and receiving batches will return an error (which
     /// we expect during normal operation and cleanup, and is not forwarded to the user).
-    receive_batch: Receiver<ColumnarAnyBuffer>,
+    receive_batch: Receiver<B>,
     /// We join with the fetch thread if we stop receiving batches (i.e. receive_batch.recv()
     /// returns an error) or `into_cursor` is called. `None` if the thread has already been joined.
     /// In this case either an error has been reported to the user, or the cursor is stored in
@@ -63,9 +65,10 @@ pub struct ConcurrentBlockCursor<C> {
     cursor: Option<C>,
 }
 
-impl<C> ConcurrentBlockCursor<C>
+impl<C, B> ConcurrentBlockCursor<C, B>
 where
     C: Cursor + Send + 'static,
+    B: RowSetBuffer + Send + 'static,
 {
     /// Construct a new concurrent block cursor.
     ///
@@ -74,7 +77,7 @@ where
     /// * `block_cursor`: Taking a BlockCursor instead of a Cursor allows for better resource
     ///   stealing if constructing starting from a sequential Cursor, as we do not need to undbind
     ///   and bind the cursor.
-    pub fn from_block_cursor(block_cursor: BlockCursor<C, ColumnarAnyBuffer>) -> Self {
+    pub fn from_block_cursor(block_cursor: BlockCursor<C, B>) -> Self {
         let (send_buffer, receive_buffer) = sync_channel(1);
         let (send_batch, receive_batch) = sync_channel(1);
 
@@ -139,13 +142,13 @@ where
     }
 }
 
-impl<C> ConcurrentBlockCursor<C> {
+impl<C, B> ConcurrentBlockCursor<C, B> {
     /// Receive the current batch and take ownership of its buffer. `None` if the cursor is already
     /// consumed, or had an error previously. This method blocks until a new batch available. In
     /// order for new batches available new buffers must be send to the thread in order for it to
     /// fill them. So calling fetch repeatedly without calling [`Self::fill`] in between may
     /// deadlock.
-    pub fn fetch(&mut self) -> Result<Option<ColumnarAnyBuffer>, Error> {
+    pub fn fetch(&mut self) -> Result<Option<B>, Error> {
         match self.receive_batch.recv() {
             // We successfully fetched a batch from the database.
             Ok(batch) => Ok(Some(batch)),
@@ -170,7 +173,7 @@ impl<C> ConcurrentBlockCursor<C> {
 
     /// Send a buffer to the thread fetching in order for it to be filled and to be retrieved later
     /// using either `fetch`, or `fetch_into`.
-    pub fn fill(&mut self, buffer: ColumnarAnyBuffer) {
+    pub fn fill(&mut self, buffer: B) {
         let _ = self.send_buffer.send(buffer);
     }
 
@@ -193,7 +196,7 @@ impl<C> ConcurrentBlockCursor<C> {
     /// * `true`: Fetched a batch from the data source. The contents of that batch are now in
     ///   `buffer`.
     /// * `false`: No batch could be fetched. The result set is consumed completly.
-    pub fn fetch_into(&mut self, buffer: &mut ColumnarAnyBuffer) -> Result<bool, Error> {
+    pub fn fetch_into(&mut self, buffer: &mut B) -> Result<bool, Error> {
         if let Some(mut batch) = self.fetch()? {
             swap(buffer, &mut batch);
             self.fill(batch);
