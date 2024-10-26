@@ -5,7 +5,6 @@
 //! examples.
 
 mod columnar_bulk_inserter;
-mod concurrent_block_cursor;
 mod connection;
 mod conversion;
 mod cursor;
@@ -31,15 +30,14 @@ pub mod parameter;
 
 pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
-    concurrent_block_cursor::ConcurrentBlockCursor,
     connection::{escape_attribute_value, Connection, ConnectionOptions},
     conversion::decimal_text_to_i128,
     cursor::{
-        BlockCursor, BlockCursorPolling, Cursor, CursorImpl, CursorPolling, CursorRow,
-        RowSetBuffer, TruncationInfo,
+        BlockCursor, BlockCursorPolling, ConcurrentBlockCursor, Cursor, CursorImpl, CursorPolling,
+        CursorRow, RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
-    environment::{DataSourceInfo, DriverInfo, Environment, environment},
+    environment::{environment, DataSourceInfo, DriverInfo, Environment},
     error::{Error, TooLargeBufferSize},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},

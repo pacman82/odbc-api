@@ -1,3 +1,5 @@
+mod concurrent_block_cursor;
+
 use odbc_sys::HStmt;
 
 use crate::{
@@ -14,6 +16,8 @@ use std::{
     ptr,
     thread::panicking,
 };
+
+pub use self::concurrent_block_cursor::ConcurrentBlockCursor;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///
