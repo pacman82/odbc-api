@@ -1,6 +1,8 @@
 [workspace]
 [[package]]
 name = "odbc-api"
+# Customize the git tag name to remove the `odbc-api` prefix.
+git_tag_name = "v{{ version }}"
 # Derive does not have its own dedicated changlog. Changes to it should appear in odbc-api
 # changelog instead.
 changelog_include = ["odbc-api-derive"]
@@ -12,3 +14,7 @@ changelog_path = "./CHANGELOG.md"
 name = "odbc-api-derive"
 # We want the changes to the derive crate to appear in the common changelog in root
 changelog_update = false
+# We use the same tags as the main package
+git_tag_enable = false
+# Disable git release.
+git_release_enable = false
