@@ -1,0 +1,12 @@
+# Use release plz toml to use common changelog for odbc-api and its derive crate
+[workspace]
+
+[[package]]
+name = "odbc-api"
+# set the path of the changelog to the root of the repository
+changelog_path = "./CHANGELOG.md"
+
+[[package]]
+name = "odbc-api-derive"
+# set the path of the changelog to the root of the repository
+changelog_path = "./CHANGELOG.md"
