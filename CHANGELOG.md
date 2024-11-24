@@ -4,7 +4,7 @@
 
 ### Added
 
-- [**breaking**] Introduce wide feature flag. Use narrow function calls by default on non-windows platforms.
+- [**breaking**] `odbc-api` will use narrow function calls by default on non-windows systems. This assumes that the ODBC driver on that platform uses UTF-8 encoding. This is usually the case as many Linux systems use a UTF-8 locale. Outside of windows the wide function calls are usually less battle tested on drivers. Downstream artefacts like `arrow-odbc` and `odbc2parquet` therefore have been compiling with the `narrow` flag on non-windows systems for quite a while now to opt into the behavior which most likely works by default. However if somebody had a non-windows platform with a non-utf 8 local and a driver which actually could use UTF-16, he could not set appropriate compiler flags to revert the `narrow` feature added by these crates. Since the default behavior for each platform is now triggered by `odbc-api` itself, downstream artefacts can overwrite it both ways. E.g. using the `narrow` flag on windows to get some speed, if they know their target platform has a UTF-8 local configured. Or the other way around using the `wide` flag on a Linux system to e.g. handle special character in column names, which only seem to work with the wide variants of the drivers. So if you used `odbc-api` previously on Linux without any flags it did by default use the `wide` function calls. It now uses the `narrow` ones by default. If you want the old behavior just specify the `wide` feature flag. For windows users nothing breaks.
 
 ### Other
 
