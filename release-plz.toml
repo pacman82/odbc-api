@@ -1,12 +1,14 @@
-# Use release plz toml to use common changelog for odbc-api and its derive crate
 [workspace]
-
 [[package]]
 name = "odbc-api"
-# set the path of the changelog to the root of the repository
+# Derive does not have its own dedicated changlog. Changes to it should appear in odbc-api
+# changelog instead.
+changelog_include = ["odbc-api-derive"]
+# Set the path of the changelog to the root of the repository. This fits the project better, since
+# it also contains changes to the derive crate.
 changelog_path = "./CHANGELOG.md"
 
 [[package]]
 name = "odbc-api-derive"
-# set the path of the changelog to the root of the repository
-changelog_path = "./CHANGELOG.md"
+# We want the changes to the derive crate to appear in the common changelog in root
+changelog_update = false
