@@ -7,7 +7,7 @@ use crate::{
     Nullable,
 };
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use crate::parameter::{VarCharBox, VarCharSlice};
 
 /// An instance can be consumed and to create a parameter which can be bound to a statement during
@@ -35,7 +35,7 @@ where
     }
 }
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 impl<'a> IntoParameter for &'a str {
     type Parameter = VarCharSlice<'a>;
 
@@ -44,7 +44,7 @@ impl<'a> IntoParameter for &'a str {
     }
 }
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 impl<'a> IntoParameter for &'a str {
     type Parameter = VarWCharBox;
 
@@ -59,15 +59,15 @@ impl<'a> IntoParameter for Option<&'a str> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            #[cfg(feature = "narrow")]
+            #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
             None => VarCharSlice::NULL,
-            #[cfg(not(feature = "narrow"))]
+            #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
             None => VarWCharBox::null(),
         }
     }
 }
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 impl IntoParameter for String {
     type Parameter = VarCharBox;
 
@@ -76,7 +76,7 @@ impl IntoParameter for String {
     }
 }
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 impl IntoParameter for String {
     type Parameter = VarWCharBox;
 
@@ -91,9 +91,9 @@ impl IntoParameter for Option<String> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            #[cfg(feature = "narrow")]
+            #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
             None => VarCharBox::null(),
-            #[cfg(not(feature = "narrow"))]
+            #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
             None => VarWCharBox::null(),
         }
     }

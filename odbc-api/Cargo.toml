@@ -29,21 +29,34 @@ readme = "../Readme.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-# Experimental feature to enabling narrow function calls.
+# Use narrow function calls.
 #
 # Many functions which accept string arguments in the ODBC C API come in two different flavours. For
 # example `SQLConnect` and `SQLConnectW`. The former are called narrow function calls and the latter
 # are called wide. They differ in the type they used to encode characters (`u8` vs `u16`). Sadly
 # narrow may not always be assumed to be UTF-8 as it is dependend on the system locale which is
 # usually not UTF-8 on windows system. The wide function calls could be relied upon to always be
-# UTF-16 on any platform, but do not seem to work well with iodbc.
+# UTF-16 on any platform, but do not seem to work well with iodbc and are less battle tested with
+# Linux versions of ODBC drivers.
 #
-# Currently this library uses wide function call exclusively. This feature can be enabled to cause
-# compliation against narrow functions, but it is not fully implemented yet.
+# Currently this library uses wide function call on windows systems by default. On non windows
+# systems however narrow function calls are used. Enabling this feature will cause the use of
+# the narrow function calls even on windows system. One reason to do so, would be e.g. you know your
+# program is running on a windows system with an UTF-8 locale, and trust the driver to handle UTF-8
+# appropriatly. If both `narrow` and `wide` work, `narrow` usually is faster and needs less encoding
+# and decoding between string representations.
 #
-# Note that this is the encoding used for statement text and other string arguments, not for the
-# payload of VARCHAR columns, or other column types in the result set.
+# Note that this is the encoding used for statement text and other string arguments, yet not for the
+# payload of VARCHAR columns, or other column types in the result set. This can be choosen at
+# runtime by the application.
 narrow=[]
+
+# Use wide function calls.
+#
+# See the documentation of `narrow` feature above for more information. Enabling this feature will
+# trigger the use of `wide` function calls, even on "non-windows" platforms. If both `narrow` and
+# `wide` are enabled, `wide` takes precedence.
+wide=[]
 
 # `odbc-api` uses ODBC 3.80 by default, which is well supported both in windows and on linux through
 # `UnixODBC`. Yet iodbc, for now does only support ODBC 3.5, so you can set this flag in order to

@@ -6,10 +6,10 @@ use odbc_sys::{
 
 use super::{sql_result::ExtSqlReturn, AsHandle, SqlResult};
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::SQLSetDescField as sql_set_desc_field;
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::SQLSetDescFieldW as sql_set_desc_field;
 
 /// A descriptor associated with a statement. This wrapper does not wrap explicitly allocated

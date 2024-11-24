@@ -10,10 +10,10 @@ use std::fmt;
 
 // Starting with odbc 5 we may be able to specify utf8 encoding. Until then, we may need to fall
 // back on the 'W' wide function calls.
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::SQLGetDiagRecW as sql_get_diag_rec;
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::SQLGetDiagRec as sql_get_diag_rec;
 
 /// A buffer large enough to hold an `SOLState` for diagnostics
@@ -280,12 +280,12 @@ mod tests {
 
     use super::Record;
 
-    #[cfg(not(feature = "narrow"))]
+    #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
     fn to_vec_sql_char(text: &str) -> Vec<u16> {
         text.encode_utf16().collect()
     }
 
-    #[cfg(feature = "narrow")]
+    #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
     fn to_vec_sql_char(text: &str) -> Vec<u8> {
         text.bytes().collect()
     }

@@ -17,14 +17,14 @@ use odbc_sys::{
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::{
     SQLConnect as sql_connect, SQLDriverConnect as sql_driver_connect,
     SQLGetConnectAttr as sql_get_connect_attr, SQLGetInfo as sql_get_info,
     SQLSetConnectAttr as sql_set_connect_attr,
 };
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::{
     SQLConnectW as sql_connect, SQLDriverConnectW as sql_driver_connect,
     SQLGetConnectAttrW as sql_get_connect_attr, SQLGetInfoW as sql_get_info,

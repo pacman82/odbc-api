@@ -53,11 +53,11 @@ impl ColumnDescription {
     /// [`ColumnDescription`]. This constructor enables you to do that, without caring which type
     /// `SqlChar` resolves to.
     pub fn new(name: &str, data_type: DataType, nullability: Nullability) -> Self {
-        #[cfg(feature = "narrow")]
+        #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
         pub fn utf8_to_vec_char(text: &str) -> Vec<u8> {
             text.to_owned().into_bytes()
         }
-        #[cfg(not(feature = "narrow"))]
+        #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
         pub fn utf8_to_vec_char(text: &str) -> Vec<u16> {
             use widestring::U16String;
             U16String::from_str(text).into_vec()
