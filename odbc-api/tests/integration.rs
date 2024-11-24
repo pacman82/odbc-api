@@ -4159,7 +4159,7 @@ fn chinese_text_argument(profile: &Profile) {
         .execute(&table.sql_all_ordered_by_id(), ())
         .unwrap()
         .unwrap();
-    #[cfg(not(feature = "narrow"))]
+    #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
     let actual = {
         let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u16>::new(1, 50))]);
         let mut cursor = cursor.bind_buffer(buffer).unwrap();
@@ -4171,7 +4171,7 @@ fn chinese_text_argument(profile: &Profile) {
 
     // Fetching non narrow should always work, but does not for PostgreSQL with narrow compilation
     // flag.
-    #[cfg(feature = "narrow")]
+    #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
     let actual = {
         let buffer = ColumnarBuffer::<_>::new(vec![(1, TextColumn::<u8>::new(1, 50))]);
         let mut cursor = cursor.bind_buffer(buffer).unwrap();

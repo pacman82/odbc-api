@@ -21,7 +21,7 @@ use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, num::NonZeroUsize
 #[cfg(feature = "odbc_version_3_80")]
 use odbc_sys::SQLCompleteAsync;
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
@@ -29,7 +29,7 @@ use odbc_sys::{
     SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
 };
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,

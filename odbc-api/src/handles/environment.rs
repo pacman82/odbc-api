@@ -12,10 +12,10 @@ use odbc_sys::{
 };
 use std::ptr::null_mut;
 
-#[cfg(feature = "narrow")]
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::{SQLDataSources as sql_data_sources, SQLDrivers as sql_drivers};
 
-#[cfg(not(feature = "narrow"))]
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::{SQLDataSourcesW as sql_data_sources, SQLDriversW as sql_drivers};
 
 /// An `Environment` is a global context, in which to access data.
