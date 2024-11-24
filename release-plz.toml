@@ -16,5 +16,3 @@ name = "odbc-api-derive"
 changelog_update = false
 # We use the same tags as the main package
 git_tag_enable = false
-# Disable git release.
-git_release_enable = false
