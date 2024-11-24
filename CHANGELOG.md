@@ -1,5 +1,26 @@
 # Changelog
 
+## [10.0.0](https://github.com/pacman82/odbc-api/compare/odbc-api-v9.0.0...odbc-api-v10.0.0) - 2024-11-24
+
+### Added
+
+- [**breaking**] Introduce wide feature flag. Use narrow function calls by default on non-windows platforms.
+
+### Other
+
+- *(deps)* bump thiserror from 2.0.0 to 2.0.3
+- *(deps)* bump csv from 1.3.0 to 1.3.1
+- *(deps)* bump tempfile from 3.13.0 to 3.14.0
+- *(deps)* bump tokio from 1.41.0 to 1.41.1
+- *(deps)* bump thiserror from 1.0.68 to 2.0.0
+- *(deps)* bump anyhow from 1.0.92 to 1.0.93
+- *(deps)* bump thiserror from 1.0.66 to 1.0.68
+- *(deps)* bump thiserror from 1.0.65 to 1.0.66
+- *(deps)* bump anyhow from 1.0.91 to 1.0.92
+- *(deps)* bump syn from 2.0.87 to 2.0.89
+- *(deps)* bump syn from 2.0.86 to 2.0.87
+- *(deps)* bump syn from 2.0.85 to 2.0.86
+
 ## 9.0.0
 
 * `ConcurrentBlockCursor` is now generic over the buffer type
