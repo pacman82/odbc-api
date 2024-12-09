@@ -460,7 +460,7 @@ where
 
     /// Ensures that the buffer is large enough to hold elements of `element_length`. Does nothing
     /// if the buffer is already large enough. Otherwise it will reallocate and rebind the buffer.
-    /// The first `num_rows_to_copy_elements` will be copied from the old value buffer to the new
+    /// The first `num_rows_to_copy` will be copied from the old value buffer to the new
     /// one. This makes this an extremely expensive operation.
     pub fn ensure_max_element_length(
         &mut self,
