@@ -3075,6 +3075,31 @@ fn insert_large_texts(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn insert_i64_in_bulk(profile: &Profile) -> Result<(), odbc_api::Error> {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = profile.create_table(&table_name, &["BIGINT"], &["a"])?;
+
+    // When
+    let prepared = conn.prepare(&table.sql_insert())?;
+    let mut inserter = prepared.into_column_inserter(2, [BufferDesc::I64 { nullable: true }])?;
+    inserter.set_num_rows(2);
+    let mut view = inserter.column_mut(0).as_nullable_slice().unwrap();
+    view.set_cell(0, Some(1i64));
+    view.set_cell(1, Some(2));
+    inserter.execute()?;
+
+    // Then
+    let actual = table.content_as_string(&conn);
+    assert_eq!("1\n2", actual);
+    
+    Ok(())
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn send_long_data_binary_vec(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
