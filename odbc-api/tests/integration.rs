@@ -3092,7 +3092,7 @@ fn insert_i64_in_bulk(profile: &Profile) -> Result<(), odbc_api::Error> {
     // Then
     let actual = table.content_as_string(&conn);
     assert_eq!("1\n2", actual);
-    
+
     Ok(())
 }
 

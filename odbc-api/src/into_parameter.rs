@@ -59,7 +59,10 @@ impl<'a> IntoParameter for Option<&'a str> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
+            #[cfg(not(any(
+                feature = "wide",
+                all(not(feature = "narrow"), target_os = "windows")
+            )))]
             None => VarCharSlice::NULL,
             #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
             None => VarWCharBox::null(),
@@ -91,7 +94,10 @@ impl IntoParameter for Option<String> {
     fn into_parameter(self) -> Self::Parameter {
         match self {
             Some(str) => str.into_parameter(),
-            #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
+            #[cfg(not(any(
+                feature = "wide",
+                all(not(feature = "narrow"), target_os = "windows")
+            )))]
             None => VarCharBox::null(),
             #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
             None => VarWCharBox::null(),
