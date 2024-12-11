@@ -1,5 +1,18 @@
 # Changelog
 
+## [10.0.1](https://github.com/pacman82/odbc-api/compare/v10.0.0...v10.0.1) - 2024-12-11
+
+### Other
+
+- formatting
+- Validate bulk inserting i64 works.
+- Fix typo in variable name
+- *(deps)* bump thiserror from 2.0.4 to 2.0.6
+- *(deps)* bump thiserror from 2.0.3 to 2.0.4
+- *(deps)* bump anyhow from 1.0.93 to 1.0.94
+- *(deps)* bump tokio from 1.41.1 to 1.42.0
+- *(deps)* bump syn from 2.0.89 to 2.0.90
+
 ## [10.0.0](https://github.com/pacman82/odbc-api/compare/v9.0.0...v10.0.0) - 2024-11-24
 
 ### Added
