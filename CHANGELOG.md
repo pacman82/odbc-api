@@ -1,5 +1,33 @@
 # Changelog
 
+## [10.1.0](https://github.com/pacman82/odbc-api/compare/v10.0.0...v10.1.0) - 2025-01-02
+
+### Added
+
+- autodetect homebrew library path during build
+
+### Other
+
+- *(deps)* bump thiserror from 2.0.8 to 2.0.9
+- *(deps)* bump anyhow from 1.0.94 to 1.0.95
+- *(deps)* bump winit from 0.30.5 to 0.30.7
+- *(deps)* bump env_logger from 0.11.5 to 0.11.6
+- *(deps)* bump thiserror from 2.0.7 to 2.0.8
+- *(deps)* bump thiserror from 2.0.6 to 2.0.7
+- formatting
+- Validate bulk inserting i64 works.
+- Fix typo in variable name
+- *(deps)* bump thiserror from 2.0.4 to 2.0.6
+- *(deps)* bump thiserror from 2.0.3 to 2.0.4
+- *(deps)* bump anyhow from 1.0.93 to 1.0.94
+- *(deps)* bump tokio from 1.41.1 to 1.42.0
+- *(deps)* bump syn from 2.0.93 to 2.0.94
+- *(deps)* bump syn from 2.0.92 to 2.0.93
+- *(deps)* bump syn from 2.0.91 to 2.0.92
+- *(deps)* bump quote from 1.0.37 to 1.0.38
+- *(deps)* bump syn from 2.0.90 to 2.0.91
+- *(deps)* bump syn from 2.0.89 to 2.0.90
+
 ## [10.0.0](https://github.com/pacman82/odbc-api/compare/v9.0.0...v10.0.0) - 2024-11-24
 
 ### Added
