@@ -41,7 +41,7 @@ Nothing to do. ODBC driver manager is preinstalled.
 sudo apt-get install unixodbc-dev
 ```
 
-### OS-X (intel)
+### MAC-OS
 
 You can use homebrew to install UnixODBC
 
@@ -49,11 +49,7 @@ You can use homebrew to install UnixODBC
 brew install unixodbc
 ```
 
-### OS-X (ARM / MAC M1)
-
-`cargo build` is not going to pick up `libodbc.so` installed via homebrew due to the fact that homebrew on ARM Mac installs into `/opt/homebrew/Cellar` as opposed to `/usr/local/opt/`.
-
-You find documentation on what directories are searched during build here: <https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths>.
+**or**
 
 You can also install unixODBC from source:
 
