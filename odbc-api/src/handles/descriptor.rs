@@ -26,7 +26,7 @@ pub struct Descriptor<'stmt> {
     parent: PhantomData<&'stmt HStmt>,
 }
 
-impl<'stmt> Descriptor<'stmt> {
+impl Descriptor<'_> {
     /// # Safety
     ///
     /// Call this method only with a valid (successfully allocated) ODBC descriptor handle.
@@ -109,7 +109,7 @@ impl<'stmt> Descriptor<'stmt> {
     }
 }
 
-unsafe impl<'stmt> AsHandle for Descriptor<'stmt> {
+unsafe impl AsHandle for Descriptor<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }

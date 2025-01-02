@@ -102,7 +102,7 @@ where
 }
 
 /// Bind mutable references as input/output parameter.
-unsafe impl<'a, T> ParameterTupleElement for InOut<'a, T>
+unsafe impl<T> ParameterTupleElement for InOut<'_, T>
 where
     T: OutputParameter + InputParameter,
 {
@@ -118,7 +118,7 @@ where
 }
 
 /// Mutable references wrapped in `Out` are bound as output parameters.
-unsafe impl<'a, T> ParameterTupleElement for Out<'a, T>
+unsafe impl<T> ParameterTupleElement for Out<'_, T>
 where
     T: OutputParameter,
 {

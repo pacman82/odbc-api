@@ -106,7 +106,7 @@ impl<'s> CursorRow<'s> {
     }
 }
 
-impl<'s> CursorRow<'s> {
+impl CursorRow<'_> {
     /// Fills a suitable target buffer with a field from the current row of the result set. This
     /// method drains the data from the field. It can be called repeatedly to if not all the data
     /// fit in the output buffer at once. It should not called repeatedly to fetch the same value

@@ -43,7 +43,7 @@ pub struct StatementImpl<'s> {
     handle: HStmt,
 }
 
-unsafe impl<'c> AsHandle for StatementImpl<'c> {
+unsafe impl AsHandle for StatementImpl<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -53,7 +53,7 @@ unsafe impl<'c> AsHandle for StatementImpl<'c> {
     }
 }
 
-impl<'s> Drop for StatementImpl<'s> {
+impl Drop for StatementImpl<'_> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Stmt);
@@ -61,7 +61,7 @@ impl<'s> Drop for StatementImpl<'s> {
     }
 }
 
-impl<'s> StatementImpl<'s> {
+impl StatementImpl<'_> {
     /// # Safety
     ///
     /// `handle` must be a valid (successfully allocated) statement handle.
@@ -98,7 +98,7 @@ pub struct StatementRef<'s> {
     handle: HStmt,
 }
 
-impl<'s> StatementRef<'s> {
+impl StatementRef<'_> {
     pub(crate) unsafe fn new(handle: HStmt) -> Self {
         Self {
             handle,
@@ -107,13 +107,13 @@ impl<'s> StatementRef<'s> {
     }
 }
 
-impl<'s> Statement for StatementRef<'s> {
+impl Statement for StatementRef<'_> {
     fn as_sys(&self) -> HStmt {
         self.handle
     }
 }
 
-unsafe impl<'c> AsHandle for StatementRef<'c> {
+unsafe impl AsHandle for StatementRef<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -131,19 +131,19 @@ pub trait AsStatementRef {
     fn as_stmt_ref(&mut self) -> StatementRef<'_>;
 }
 
-impl<'o> AsStatementRef for StatementImpl<'o> {
+impl AsStatementRef for StatementImpl<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.as_stmt_ref()
     }
 }
 
-impl<'o> AsStatementRef for &mut StatementImpl<'o> {
+impl AsStatementRef for &mut StatementImpl<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         (*self).as_stmt_ref()
     }
 }
 
-impl<'s> AsStatementRef for StatementRef<'s> {
+impl AsStatementRef for StatementRef<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         unsafe { StatementRef::new(self.handle) }
     }
@@ -972,7 +972,7 @@ pub trait Statement: AsHandle {
     }
 }
 
-impl<'o> Statement for StatementImpl<'o> {
+impl Statement for StatementImpl<'_> {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt {
         self.handle

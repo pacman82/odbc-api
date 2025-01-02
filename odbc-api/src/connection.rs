@@ -18,7 +18,7 @@ use std::{
     thread::panicking,
 };
 
-impl<'conn> Drop for Connection<'conn> {
+impl Drop for Connection<'_> {
     fn drop(&mut self) {
         match self.connection.disconnect().into_result(&self.connection) {
             Ok(()) => (),

@@ -219,7 +219,7 @@ pub struct NullableSliceMut<'a, T> {
     values: &'a mut [T],
 }
 
-impl<'a, T> NullableSliceMut<'a, T> {
+impl<T> NullableSliceMut<'_, T> {
     /// `true` if the slice has a length of `0`.
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
@@ -276,7 +276,7 @@ impl<'a, T> NullableSliceMut<'a, T> {
     }
 }
 
-impl<'a, T> NullableSliceMut<'a, T> {
+impl<T> NullableSliceMut<'_, T> {
     /// Writes the elements returned by the iterator into the buffer, starting at the beginning.
     /// Writes elements until the iterator returns `None` or the buffer can not hold more elements.
     pub fn write(&mut self, it: impl Iterator<Item = Option<T>>) {

@@ -290,7 +290,7 @@ pub struct BinColumnSliceMut<'a> {
     parameter_index: u16,
 }
 
-impl<'a> BinColumnSliceMut<'a> {
+impl BinColumnSliceMut<'_> {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum
     /// allowed element length. `element` must be specified without the terminating zero.
@@ -391,7 +391,7 @@ impl<'c> Iterator for BinColumnIt<'c> {
     }
 }
 
-impl<'c> ExactSizeIterator for BinColumnIt<'c> {}
+impl ExactSizeIterator for BinColumnIt<'_> {}
 
 unsafe impl CData for BinColumn {
     fn cdata_type(&self) -> CDataType {

@@ -45,7 +45,7 @@ impl<'a> IntoParameter for &'a str {
 }
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
-impl<'a> IntoParameter for &'a str {
+impl IntoParameter for &'_ str {
     type Parameter = VarWCharBox;
 
     fn into_parameter(self) -> Self::Parameter {

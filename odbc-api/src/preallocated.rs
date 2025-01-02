@@ -239,7 +239,7 @@ impl<'o> Preallocated<'o> {
     }
 }
 
-impl<'o> AsStatementRef for Preallocated<'o> {
+impl AsStatementRef for Preallocated<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
@@ -315,7 +315,7 @@ impl<'o> PreallocatedPolling<'o> {
     }
 }
 
-impl<'o> AsStatementRef for PreallocatedPolling<'o> {
+impl AsStatementRef for PreallocatedPolling<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }

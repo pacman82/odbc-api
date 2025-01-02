@@ -490,7 +490,7 @@ pub type VarWCharSlice<'a> = VarWChar<&'a [u16]>;
 /// This type is created if `into_parameter` of the `IntoParameter` trait is called on a `&[u8]`.
 pub type VarBinarySlice<'a> = VarBinary<&'a [u8]>;
 
-impl<'a, K> VarCell<&'a [u8], K> {
+impl<K> VarCell<&'_ [u8], K> {
     /// Indicates missing data
     pub const NULL: Self = Self {
         // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`
@@ -502,7 +502,7 @@ impl<'a, K> VarCell<&'a [u8], K> {
     };
 }
 
-impl<'a, K> VarCell<&'a [u16], K> {
+impl<K> VarCell<&'_ [u16], K> {
     /// Indicates missing data
     pub const NULL: Self = Self {
         // We do not want to use the empty buffer (`&[]`) here. It would be bound as `VARCHAR(0)`

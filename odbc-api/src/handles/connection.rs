@@ -42,7 +42,7 @@ pub struct Connection<'c> {
     handle: HDbc,
 }
 
-unsafe impl<'c> AsHandle for Connection<'c> {
+unsafe impl AsHandle for Connection<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -52,7 +52,7 @@ unsafe impl<'c> AsHandle for Connection<'c> {
     }
 }
 
-impl<'c> Drop for Connection<'c> {
+impl Drop for Connection<'_> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Dbc);
@@ -69,9 +69,9 @@ impl<'c> Drop for Connection<'c> {
 /// the latest once the interior mutability due to error handling comes in to play, higher level
 /// abstraction have to content themselves with `Send`. This is currently how far my trust with most
 /// ODBC drivers.
-unsafe impl<'c> Send for Connection<'c> {}
+unsafe impl Send for Connection<'_> {}
 
-impl<'c> Connection<'c> {
+impl Connection<'_> {
     /// # Safety
     ///
     /// Call this method only with a valid (successfully allocated) ODBC connection handle.

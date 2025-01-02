@@ -447,7 +447,7 @@ pub struct TextColumnSliceMut<'a, C> {
     parameter_index: u16,
 }
 
-impl<'a, C> TextColumnSliceMut<'a, C>
+impl<C> TextColumnSliceMut<'_, C>
 where
     C: Default + Copy,
 {
@@ -553,7 +553,7 @@ impl<'c> Iterator for TextColumnIt<'c, u8> {
     }
 }
 
-impl<'c> ExactSizeIterator for TextColumnIt<'c, u8> {}
+impl ExactSizeIterator for TextColumnIt<'_, u8> {}
 
 impl<'c> Iterator for TextColumnIt<'c, u16> {
     type Item = Option<&'c U16Str>;
@@ -568,7 +568,7 @@ impl<'c> Iterator for TextColumnIt<'c, u16> {
     }
 }
 
-impl<'c> ExactSizeIterator for TextColumnIt<'c, u16> {}
+impl ExactSizeIterator for TextColumnIt<'_, u16> {}
 
 unsafe impl CData for CharColumn {
     fn cdata_type(&self) -> CDataType {

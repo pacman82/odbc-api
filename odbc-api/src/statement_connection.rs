@@ -24,7 +24,7 @@ impl<'env> StatementConnection<'env> {
     }
 }
 
-impl<'s> Drop for StatementConnection<'s> {
+impl Drop for StatementConnection<'_> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Stmt);
@@ -53,7 +53,7 @@ impl<'s> Drop for StatementConnection<'s> {
 /// `StatementConnection` however also owns the connection exclusively. Since connections are `Send`
 /// it is reasonable to assume this would work even if implementers of the ODBC driver do not care
 /// in particular about thread safety.
-unsafe impl<'c> Send for StatementConnection<'c> {}
+unsafe impl Send for StatementConnection<'_> {}
 
 unsafe impl AsHandle for StatementConnection<'_> {
     fn as_handle(&self) -> Handle {
@@ -71,7 +71,7 @@ impl Statement for StatementConnection<'_> {
     }
 }
 
-impl<'o> AsStatementRef for StatementConnection<'o> {
+impl AsStatementRef for StatementConnection<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.as_stmt_ref()
     }
