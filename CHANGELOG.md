@@ -14,9 +14,6 @@
 - *(deps)* bump env_logger from 0.11.5 to 0.11.6
 - *(deps)* bump thiserror from 2.0.7 to 2.0.8
 - *(deps)* bump thiserror from 2.0.6 to 2.0.7
-- formatting
-- Validate bulk inserting i64 works.
-- Fix typo in variable name
 - *(deps)* bump thiserror from 2.0.4 to 2.0.6
 - *(deps)* bump thiserror from 2.0.3 to 2.0.4
 - *(deps)* bump anyhow from 1.0.93 to 1.0.94
