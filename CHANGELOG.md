@@ -4,8 +4,7 @@
 
 ### Other
 
-- Improve panic message on negative indicator values
-- Use lifetime ellisions in impls to fix lints
+- Improve panic message on invalid indicator values
 
 ## [10.1.0](https://github.com/pacman82/odbc-api/compare/v10.0.0...v10.1.0) - 2025-01-02
 
