@@ -1,5 +1,12 @@
 # Changelog
 
+## [10.1.1](https://github.com/pacman82/odbc-api/compare/v10.1.0...v10.1.1) - 2025-01-03
+
+### Other
+
+- Improve panic message on negative indicator values
+- Use lifetime ellisions in impls to fix lints
+
 ## [10.1.0](https://github.com/pacman82/odbc-api/compare/v10.0.0...v10.1.0) - 2025-01-02
 
 ### Added
