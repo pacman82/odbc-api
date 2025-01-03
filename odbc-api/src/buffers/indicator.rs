@@ -19,11 +19,14 @@ impl Indicator {
         match indicator {
             NULL_DATA => Indicator::Null,
             NO_TOTAL => Indicator::NoTotal,
-            other => Indicator::Length(
-                other
-                    .try_into()
-                    .expect("Length indicator must be non-negative."),
-            ),
+            other => Indicator::Length(other.try_into().expect(
+                "Length indicator must be non-negative. This is not necessarily a programming \
+                error, in the application. If you are on a 64Bit platfrom and the isize value has \
+                been returned by the driver there may be a better exlpanation for what went wrong: \
+                In the past some driver managers and drivers assumed SQLLEN to be 32Bits even on \
+                64Bit platforms. Please ask your vendor for a version of the driver which is \
+                correctly build using 64Bits for SQLLEN.",
+            )),
         }
     }
 
