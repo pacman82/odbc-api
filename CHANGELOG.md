@@ -1,5 +1,13 @@
 # Changelog
 
+## [10.1.2](https://github.com/pacman82/odbc-api/compare/v10.1.1...v10.1.2) - 2025-01-06
+
+### Other
+
+- *(deps)* bump winit from 0.30.7 to 0.30.8
+- *(deps)* bump tempfile from 3.14.0 to 3.15.0
+- *(deps)* bump syn from 2.0.94 to 2.0.95
+
 ## [10.1.1](https://github.com/pacman82/odbc-api/compare/v10.1.0...v10.1.1) - 2025-01-03
 
 ### Other
