@@ -85,7 +85,7 @@ odbc-sys = { version = "0.25", default-features = false }
 # Used to generate code for the error type
 thiserror = "2.0.11"
 # Used as a log frontend to emit log messages for applications
-log = "0.4.22"
+log = "0.4.25"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.1.0"
 atoi = "2.0.0"
