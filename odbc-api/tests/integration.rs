@@ -4623,9 +4623,8 @@ fn query_timeout(profile: &Profile) {
     let conn = profile.connection().unwrap();
 
     // When
-    use odbc_api::handles::AsStatementRef;
     let mut stmt = conn.preallocate().unwrap();
-    stmt.as_stmt_ref().set_query_timeout_sec(1).unwrap();
+    stmt.set_query_timeout_sec(1).unwrap();
     let start = Instant::now();
     let result = stmt.execute("WAITFOR DELAY '0:0:03'", ());
     let end = Instant::now();

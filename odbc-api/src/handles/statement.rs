@@ -246,10 +246,14 @@ pub trait Statement: AsHandle {
 
     /// The number of seconds to wait for an SQL statement to execute before returning to the
     /// application. If `timeout_sec` is `0` (default), there is no timeout.
+    /// 
+    /// Note that the application need not call SQLCloseCursor to reuse the statement if a SELECT
+    /// statement timed out.
     ///
-    /// # Safety
-    ///
-    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    /// 
+    /// See:
+    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> SqlResult<()> {
         let value = timeout_sec as *mut usize as Pointer;
         // This is safe, because as_sys must return a valid statement handl.
