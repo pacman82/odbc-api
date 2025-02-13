@@ -700,6 +700,14 @@ pub struct ConnectionOptions {
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
     pub login_timeout_sec: Option<u32>,
+    /// The number of seconds to wait for any request on the connection to complete before returning
+    /// to the application.
+    /// 
+    /// This corresponds to the `SQL_ATTR_CONNECTION_TIMEOUT` attribute in the ODBC specification.
+    /// 
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    pub connection_timeout_sec: Option<u32>,
     /// Packet size in bytes. Not all drivers support this option.
     pub packet_size: Option<u32>,
 }
@@ -710,11 +718,14 @@ impl ConnectionOptions {
     /// [`crate::Environment::connect_with_connection_string`] rather than calling this method
     /// yourself.
     pub fn apply(&self, handle: &handles::Connection) -> Result<(), Error> {
-        if let Some(timeout) = self.login_timeout_sec {
-            handle.set_login_timeout_sec(timeout).into_result(handle)?;
+        if let Some(login_timeout) = self.login_timeout_sec {
+            handle.set_login_timeout_sec(login_timeout).into_result(handle)?;
         }
         if let Some(packet_size) = self.packet_size {
             handle.set_packet_size(packet_size).into_result(handle)?;
+        }
+        if let Some(connection_timeout) = self.connection_timeout_sec {
+            handle.set_connection_timeout_sec(connection_timeout).into_result(handle)?;
         }
         Ok(())
     }

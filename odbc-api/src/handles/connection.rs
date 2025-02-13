@@ -225,6 +225,26 @@ impl Connection<'_> {
         }
     }
 
+
+    /// The number of seconds to wait for any request on the connection to complete before returning
+    /// to the application.
+    /// 
+    /// This corresponds to the `SQL_ATTR_CONNECTION_TIMEOUT` attribute in the ODBC specification.
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    pub fn set_connection_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
+        unsafe {
+            sql_set_connect_attr(
+                self.handle,
+                ConnectionAttribute::ConnectionTimeout,
+                timeout as Pointer,
+                0,
+            )
+            .into_sql_result("SQLSetConnectAttr")
+        }
+    }
+
     /// Specifying the network packet size in bytes. Note: Many data sources either do not support
     /// this option or only can return but not set the network packet size. If the specified size
     /// exceeds the maximum packet size or is smaller than the minimum packet size, the driver

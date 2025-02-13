@@ -36,7 +36,7 @@ use std::{
     num::NonZeroUsize,
     ptr::null_mut,
     str, thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const MSSQL: &Profile = &Profile {
@@ -4613,6 +4613,32 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
 
     // Then
     assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+}
+
+/// This test covers a code path in which the thread dedicated to fething is not termintated by
+/// running out of batches.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn validate_timeout(profile: &Profile) {
+    // Given
+    let env = environment().unwrap();
+
+    // When
+    let connection = env
+        .connect_with_connection_string(
+            profile.connection_string,
+            ConnectionOptions {
+                connection_timeout_sec: Some(1),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let start = Instant::now();
+    let _cursor = connection.execute("WAITFOR DELAY '0:0:03'", ()).unwrap();
+    let end = Instant::now();
+
+    // Then
+    let actual_duration = end - start;
+    assert!(actual_duration < Duration::from_secs(2));
 }
 
 /// This tests checks if there is more than one attribute returned. We had a bug (see issue:
