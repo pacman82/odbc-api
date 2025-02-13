@@ -38,6 +38,7 @@ use odbc_sys::{
 };
 
 /// An owned valid (i.e. successfully allocated) ODBC statement handle.
+#[derive(Debug)]
 pub struct StatementImpl<'s> {
     parent: PhantomData<&'s HDbc>,
     handle: HStmt,
@@ -241,6 +242,19 @@ pub trait Statement: AsHandle {
             IS_POINTER,
         )
         .into_sql_result("SQLSetStmtAttr")
+    }
+
+    /// The number of seconds to wait for an SQL statement to execute before returning to the
+    /// application. If `timeout_sec` is `0` (default), there is no timeout.
+    ///
+    /// # Safety
+    ///
+    /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
+    fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> SqlResult<()> {
+        let value = timeout_sec as *mut usize as Pointer;
+        // This is safe, because as_sys must return a valid statement handl.
+        unsafe { sql_set_stmt_attr(self.as_sys(), StatementAttribute::QueryTimeout, value, 0) }
+            .into_sql_result("SQLSetStmtAttr")
     }
 
     /// Unsets the integer set by [`Self::set_num_rows_fetched`].

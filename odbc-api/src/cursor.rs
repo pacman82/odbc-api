@@ -288,6 +288,7 @@ impl CursorRow<'_> {
 /// Cursors are used to process and iterate the result sets returned by executing queries. Created
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
+#[derive(Debug)]
 pub struct CursorImpl<Stmt: AsStatementRef> {
     /// A statement handle in cursor mode.
     statement: Stmt,
