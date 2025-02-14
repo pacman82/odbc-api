@@ -19,7 +19,10 @@ use odbc_api::{
         TextRowSet,
     },
     decimal_text_to_i128, environment,
-    handles::{CData, CDataMut, OutputStringBuffer, ParameterDescription, Statement},
+    handles::{
+        AsStatementRef, CData, CDataMut, OutputStringBuffer, ParameterDescription, SqlResult,
+        Statement,
+    },
     parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
@@ -4637,22 +4640,30 @@ fn query_timeout_validate_functionality(profile: &Profile) {
     eprintln!("{:?}", error);
 }
 
-#[test_case(MSSQL, true; "Microsoft SQL Server")]
-#[test_case(MARIADB, false; "Maria DB")]
-#[test_case(SQLITE_3, false; "SQLite 3")]
-#[test_case(POSTGRES, true; "PostgreSQL")]
-fn query_timeout_set_and_get(profile: &Profile, supports_timeout: bool) {
+#[test_case(MSSQL, true, false; "Microsoft SQL Server")]
+#[test_case(MARIADB, false, true; "Maria DB")]
+#[test_case(SQLITE_3, false, false; "SQLite 3")]
+#[test_case(POSTGRES, true, false; "PostgreSQL")]
+fn query_timeout_set_and_get(profile: &Profile, supports_timeout: bool, returns_diagnostic: bool) {
     // Given
     let conn = profile.connection().unwrap();
 
     // When
     let mut stmt = conn.preallocate().unwrap();
-    stmt.set_query_timeout_sec(42).unwrap();
+    let mut stmt = stmt.as_stmt_ref();
+    let result = stmt.set_query_timeout_sec(42);
     let timeout = stmt.query_timeout_sec().unwrap();
 
     // Then
-    let expected = if supports_timeout { 42 } else { 0 };
-    assert_eq!(expected, timeout);
+    let expected_timeout = if supports_timeout { 42 } else { 0 };
+    assert_eq!(expected_timeout, timeout);
+
+    let expected_result = if returns_diagnostic {
+        SqlResult::SuccessWithInfo(())
+    } else {
+        SqlResult::Success(())
+    };
+    assert_eq!(expected_result, result);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
