@@ -265,7 +265,10 @@ unsafe impl<T> ColumnBuffer for WithDataType<T>
 where
     T: ColumnBuffer,
 {
-    type View<'a> = T::View<'a> where T: 'a;
+    type View<'a>
+        = T::View<'a>
+    where
+        T: 'a;
 
     fn view(&self, valid_rows: usize) -> T::View<'_> {
         self.value.view(valid_rows)

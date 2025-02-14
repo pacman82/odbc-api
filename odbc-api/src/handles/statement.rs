@@ -25,16 +25,16 @@ use odbc_sys::SQLCompleteAsync;
 use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
-    SQLForeignKeys as sql_foreign_keys, SQLPrepare as sql_prepare,
-    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
+    SQLForeignKeys as sql_foreign_keys, SQLGetStmtAttr as sql_get_stmt_attr,
+    SQLPrepare as sql_prepare, SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
 };
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
-    SQLForeignKeysW as sql_foreign_keys, SQLPrepareW as sql_prepare,
-    SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
+    SQLForeignKeysW as sql_foreign_keys, SQLGetStmtAttrW as sql_get_stmt_attr,
+    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
 /// An owned valid (i.e. successfully allocated) ODBC statement handle.
@@ -246,19 +246,39 @@ pub trait Statement: AsHandle {
 
     /// The number of seconds to wait for an SQL statement to execute before returning to the
     /// application. If `timeout_sec` is `0` (default), there is no timeout.
-    /// 
+    ///
     /// Note that the application need not call SQLCloseCursor to reuse the statement if a SELECT
     /// statement timed out.
     ///
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
-    /// 
+    ///
     /// See:
     /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> SqlResult<()> {
         let value = timeout_sec as *mut usize as Pointer;
-        // This is safe, because as_sys must return a valid statement handl.
+        // This is safe, because `.as_sys`  returns a valid statement handle.
         unsafe { sql_set_stmt_attr(self.as_sys(), StatementAttribute::QueryTimeout, value, 0) }
             .into_sql_result("SQLSetStmtAttr")
+    }
+
+    /// The number of seconds to wait for an SQL statement to execute before returning to the
+    /// application. If `timeout_sec` is `0` (default), there is no timeout.
+    ///
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    fn query_timeout_sec(&mut self) -> SqlResult<usize> {
+        let mut out: usize = 0;
+        let value = &mut out as *mut usize as Pointer;
+        unsafe {
+            sql_get_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::QueryTimeout,
+                value,
+                0,
+                null_mut(),
+            )
+        }
+        .into_sql_result("SQLGetStmtAttr")
+        .on_success(|| out)
     }
 
     /// Unsets the integer set by [`Self::set_num_rows_fetched`].

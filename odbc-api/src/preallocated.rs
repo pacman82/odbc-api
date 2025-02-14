@@ -235,9 +235,27 @@ impl<'o> Preallocated<'o> {
     /// timeout exceeds the maximum timeout in the data source or is smaller than the minimum
     /// timeout, SQLSetStmtAttr substitutes that value and logs SQLSTATE 01S02 (Option value
     /// changed). The query timeout set is valid in both synchronous and asynchronous modes.
+    /// 
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    /// See:
+    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     pub fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> Result<(), Error> {
         self.statement
             .set_query_timeout_sec(timeout_sec)
+            .into_result(&self.statement)
+    }
+
+    /// The number of seconds to wait for a SQL statement to execute before returning to the
+    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout.
+    /// 
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    /// See:
+    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
+        self.statement
+            .query_timeout_sec()
             .into_result(&self.statement)
     }
 

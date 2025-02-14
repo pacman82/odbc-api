@@ -4618,7 +4618,7 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
 /// This test covers a code path in which the thread dedicated to fething is not termintated by
 /// running out of batches.
 #[test_case(MSSQL; "Microsoft SQL Server")]
-fn query_timeout(profile: &Profile) {
+fn query_timeout_validate_functionality(profile: &Profile) {
     // Given
     let conn = profile.connection().unwrap();
 
@@ -4635,6 +4635,40 @@ fn query_timeout(profile: &Profile) {
     assert!(result.is_err());
     let error = result.unwrap_err();
     eprintln!("{:?}", error);
+}
+
+#[test_case(MSSQL, true; "Microsoft SQL Server")]
+#[test_case(MARIADB, false; "Maria DB")]
+#[test_case(SQLITE_3, false; "SQLite 3")]
+#[test_case(POSTGRES, true; "PostgreSQL")]
+fn query_timeout_set_and_get(profile: &Profile, supports_timeout: bool) {
+    // Given
+    let conn = profile.connection().unwrap();
+
+    // When
+    let mut stmt = conn.preallocate().unwrap();
+    stmt.set_query_timeout_sec(42).unwrap();
+    let timeout = stmt.query_timeout_sec().unwrap();
+
+    // Then
+    let expected = if supports_timeout { 42 } else { 0 };
+    assert_eq!(expected, timeout);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn query_timeout_default(profile: &Profile) {
+    // Given
+    let conn = profile.connection().unwrap();
+
+    // When
+    let mut stmt = conn.preallocate().unwrap();
+    let timeout = stmt.query_timeout_sec().unwrap();
+
+    // Then
+    assert_eq!(0, timeout);
 }
 
 /// This tests checks if there is more than one attribute returned. We had a bug (see issue:
