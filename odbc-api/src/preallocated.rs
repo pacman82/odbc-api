@@ -3,7 +3,7 @@ use crate::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
         execute_with_parameters_polling,
     },
-    handles::{AsStatementRef, SqlText, Statement, StatementImpl, StatementRef},
+    handles::{AsStatementRef, SqlText, Statement, StatementRef},
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
@@ -264,15 +264,10 @@ where
         stmt.query_timeout_sec().into_result(&stmt)
     }
 
-}
-
-impl<'o> Preallocated<StatementImpl<'o>> {
-    
     /// Call this method to enable asynchronous polling mode on the statement
-    pub fn into_polling(mut self) -> Result<PreallocatedPolling<'o>, Error> {
-        self.statement
-            .set_async_enable(true)
-            .into_result(&self.statement)?;
+    pub fn into_polling(mut self) -> Result<PreallocatedPolling<S>, Error> {
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.set_async_enable(true).into_result(&stmt)?;
         Ok(PreallocatedPolling::new(self.statement))
     }
 }
@@ -288,16 +283,21 @@ where
 
 /// Asynchronous sibling of [`Preallocated`] using polling mode for execution. Can be obtained using
 /// [`Preallocated::into_polling`].
-pub struct PreallocatedPolling<'open_connection> {
+pub struct PreallocatedPolling<S> {
     /// A valid statement handle in polling mode
-    statement: StatementImpl<'open_connection>,
+    statement: S,
 }
 
-impl<'o> PreallocatedPolling<'o> {
-    fn new(statement: StatementImpl<'o>) -> Self {
+impl<S> PreallocatedPolling<S> {
+    fn new(statement: S) -> Self {
         Self { statement }
     }
+}
 
+impl<S> PreallocatedPolling<S>
+where
+    S: AsStatementRef,
+{
     /// Executes a statement. This is the fastest way to sequentially execute different SQL
     /// Statements asynchronously.
     ///
@@ -344,19 +344,17 @@ impl<'o> PreallocatedPolling<'o> {
         query: &str,
         params: impl ParameterCollectionRef,
         sleep: impl Sleep,
-    ) -> Result<Option<CursorPolling<&mut StatementImpl<'o>>>, Error> {
+    ) -> Result<Option<CursorPolling<StatementRef<'_>>>, Error> {
         let query = SqlText::new(query);
-        execute_with_parameters_polling(
-            move || Ok(&mut self.statement),
-            Some(&query),
-            params,
-            sleep,
-        )
-        .await
+        let stmt = self.statement.as_stmt_ref();
+        execute_with_parameters_polling(move || Ok(stmt), Some(&query), params, sleep).await
     }
 }
 
-impl AsStatementRef for PreallocatedPolling<'_> {
+impl<S> AsStatementRef for PreallocatedPolling<S>
+where
+    S: AsStatementRef,
+{
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
