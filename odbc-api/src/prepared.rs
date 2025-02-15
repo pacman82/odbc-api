@@ -289,6 +289,31 @@ where
             }
         })
     }
+
+    /// The number of seconds to wait for a SQL statement to execute before returning to the
+    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout. The specified
+    /// timout may be substituded by the driver with a minuimum or maximum value.
+    ///
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    /// See:
+    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    pub fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> Result<(), Error> {
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.set_query_timeout_sec(timeout_sec).into_result(&stmt)
+    }
+
+    /// The number of seconds to wait for a SQL statement to execute before returning to the
+    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout.
+    ///
+    /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    /// See:
+    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.query_timeout_sec().into_result(&stmt)
+    }
 }
 
 impl<S> ResultSetMetadata for Prepared<S> where S: AsStatementRef {}

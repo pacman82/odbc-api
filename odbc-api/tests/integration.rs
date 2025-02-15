@@ -4640,11 +4640,30 @@ fn query_timeout_validate_functionality(profile: &Profile) {
     eprintln!("{:?}", error);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn query_timeout_set_and_get_prepared_statement(profile: &Profile) {
+    // Given
+    let conn = profile.connection().unwrap();
+
+    // When
+    let mut stmt = conn.prepare("SELECT * FROM my_made_up_table").unwrap();
+    stmt.set_query_timeout_sec(42).unwrap();
+    let timeout = stmt.query_timeout_sec().unwrap();
+
+    // Then
+    assert_eq!(42, timeout);
+}
+
 #[test_case(MSSQL, true, false; "Microsoft SQL Server")]
 #[test_case(MARIADB, false, true; "Maria DB")]
 #[test_case(SQLITE_3, false, false; "SQLite 3")]
 #[test_case(POSTGRES, true, false; "PostgreSQL")]
-fn query_timeout_set_and_get(profile: &Profile, supports_timeout: bool, returns_diagnostic: bool) {
+fn query_timeout_set_and_get_learning_test(
+    profile: &Profile,
+    supports_timeout: bool,
+    returns_diagnostic: bool,
+) {
     // Given
     let conn = profile.connection().unwrap();
 

@@ -18,8 +18,6 @@ use crate::{
 ///
 /// fn interactive(conn: &Connection<'_>) -> io::Result<()>{
 ///     let mut statement = conn.preallocate().unwrap();
-///     // Cancel query after 5 minutes
-///     statement.set_timeout_sec(300)?;
 ///     let mut query = String::new();
 ///     stdin().read_line(&mut query)?;
 ///     while !query.is_empty() {
@@ -233,9 +231,8 @@ impl<'o> Preallocated<'o> {
     }
 
     /// The number of seconds to wait for a SQL statement to execute before returning to the
-    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout. If the specified
-    /// timeout exceeds the maximum timeout in the data source or is smaller than the minimum
-    /// timeout, `timeout_sec` is substituted and we log 01S02 (Option value changed).
+    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout. The specified
+    /// timout may be substituded by the driver with a minuimum or maximum value.
     /// 
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
