@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api-derive"
-version = "9.0.2"
+version = "9.0.3"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/pacman82/odbc-api"

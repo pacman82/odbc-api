@@ -1,5 +1,29 @@
 # Changelog
 
+## [11.0.0](https://github.com/pacman82/odbc-api/compare/v10.1.1...v11.0.0) - 2025-02-15
+
+### Added
+
+- [**breaking**] Set query timout for prepared statements
+- Add preallocated::query_timeout_sec
+- [**breaking**] Added Preallocated::set_query_timeout
+- Query timeout in statement handle
+
+### Other
+
+- query timeout
+- *(deps)* bump winit from 0.30.8 to 0.30.9
+- *(deps)* bump tempfile from 3.15.0 to 3.16.0
+- *(deps)* bump log from 0.4.22 to 0.4.25
+- *(deps)* bump thiserror from 2.0.10 to 2.0.11
+- *(deps)* bump tokio from 1.42.0 to 1.43.0
+- *(deps)* bump thiserror from 2.0.9 to 2.0.10
+- *(deps)* bump winit from 0.30.7 to 0.30.8
+- *(deps)* bump tempfile from 3.14.0 to 3.15.0
+- *(deps)* bump syn from 2.0.96 to 2.0.98
+- *(deps)* bump syn from 2.0.95 to 2.0.96
+- *(deps)* bump syn from 2.0.94 to 2.0.95
+
 ## [10.1.1](https://github.com/pacman82/odbc-api/compare/v10.1.0...v10.1.1) - 2025-01-03
 
 ### Other
