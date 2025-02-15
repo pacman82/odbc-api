@@ -233,7 +233,7 @@ impl<'o> Preallocated<'o> {
     /// The number of seconds to wait for a SQL statement to execute before returning to the
     /// application. If `timeout_sec` is equal to 0 (default), there is no timeout. The specified
     /// timout may be substituded by the driver with a minuimum or maximum value.
-    /// 
+    ///
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
@@ -246,7 +246,7 @@ impl<'o> Preallocated<'o> {
 
     /// The number of seconds to wait for a SQL statement to execute before returning to the
     /// application. If `timeout_sec` is equal to 0 (default), there is no timeout.
-    /// 
+    ///
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:

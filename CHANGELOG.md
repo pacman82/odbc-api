@@ -1,13 +1,10 @@
 # Changelog
 
-## [11.0.0](https://github.com/pacman82/odbc-api/compare/v10.1.1...v11.0.0) - 2025-02-15
+## [10.2.0](https://github.com/pacman82/odbc-api/compare/v10.1.1...v10.2.0) - 2025-02-15
 
 ### Added
 
-- [**breaking**] Set query timout for prepared statements
-- Add preallocated::query_timeout_sec
-- [**breaking**] Added Preallocated::set_query_timeout
-- Query timeout in statement handle
+- Support for query timeouts. `Preallocated::set_query_timeout_sec` and `Prepared::set_query_timeout_sec` can be used to trigger a timeout error, if the first data from that statement exceeds the time limit. This requires driver support.
 
 ### Other
 
