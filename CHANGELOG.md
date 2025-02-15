@@ -1,5 +1,11 @@
 # Changelog
 
+## [10.2.1](https://github.com/pacman82/odbc-api/compare/v10.2.0...v10.2.1) - 2025-02-15
+
+### Other
+
+- More usecase centric documentation for set_query_timeout_sec
+
 ## [10.2.0](https://github.com/pacman82/odbc-api/compare/v10.1.1...v10.2.0) - 2025-02-15
 
 ### Added
