@@ -38,7 +38,10 @@ pub struct Preallocated<S> {
     statement: S,
 }
 
-impl<'o> Preallocated<StatementImpl<'o>> {
+impl<S> Preallocated<S>
+where
+    S: AsStatementRef,
+{
     /// Users which intend to write their application in safe Rust should prefer using
     /// [`crate::Connection::preallocate`] as opposed to this constructor.
     ///
@@ -47,7 +50,7 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     /// `statement` must be an allocated handled with no pointers bound for either results or
     /// arguments. The statement must not be prepared, but in the state of a "freshly" allocated
     /// handle.
-    pub unsafe fn new(statement: StatementImpl<'o>) -> Self {
+    pub unsafe fn new(statement: S) -> Self {
         Self { statement }
     }
 
@@ -95,9 +98,10 @@ impl<'o> Preallocated<StatementImpl<'o>> {
         &mut self,
         query: &str,
         params: impl ParameterCollectionRef,
-    ) -> Result<Option<CursorImpl<&mut StatementImpl<'o>>>, Error> {
+    ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
+        let stmt = self.statement.as_stmt_ref();
         let query = SqlText::new(query);
-        execute_with_parameters(move || Ok(&mut self.statement), Some(&query), params)
+        execute_with_parameters(move || Ok(stmt), Some(&query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.
@@ -108,7 +112,7 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     /// [`crate::handles::StatementImpl::into_sys`] or [`crate::handles::Statement::as_sys`] this
     /// serves as an escape hatch to access the functionality provided by `crate::sys` not yet
     /// accessible through safe abstractions.
-    pub fn into_statement(self) -> StatementImpl<'o> {
+    pub fn into_statement(self) -> S {
         self.statement
     }
 
@@ -131,9 +135,10 @@ impl<'o> Preallocated<StatementImpl<'o>> {
         schema_name: &str,
         table_name: &str,
         table_type: &str,
-    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
+    ) -> Result<CursorImpl<StatementRef<'_>>, Error> {
+        let stmt = self.statement.as_stmt_ref();
         execute_tables(
-            &mut self.statement,
+            stmt,
             &SqlText::new(catalog_name),
             &SqlText::new(schema_name),
             &SqlText::new(table_name),
@@ -156,9 +161,10 @@ impl<'o> Preallocated<StatementImpl<'o>> {
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
+    ) -> Result<CursorImpl<StatementRef<'_>>, Error> {
+        let stmt = self.statement.as_stmt_ref();
         execute_columns(
-            &mut self.statement,
+            stmt,
             &SqlText::new(catalog_name),
             &SqlText::new(schema_name),
             &SqlText::new(table_name),
@@ -178,9 +184,10 @@ impl<'o> Preallocated<StatementImpl<'o>> {
         fk_catalog_name: &str,
         fk_schema_name: &str,
         fk_table_name: &str,
-    ) -> Result<CursorImpl<&mut StatementImpl<'o>>, Error> {
+    ) -> Result<CursorImpl<StatementRef<'_>>, Error> {
+        let stmt = self.statement.as_stmt_ref();
         execute_foreign_keys(
-            &mut self.statement,
+            stmt,
             &SqlText::new(pk_catalog_name),
             &SqlText::new(pk_schema_name),
             &SqlText::new(pk_table_name),
@@ -217,17 +224,15 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     /// }
     /// ```
     pub fn row_count(&mut self) -> Result<Option<usize>, Error> {
-        self.statement
-            .row_count()
-            .into_result(&self.statement)
-            .map(|count| {
-                // ODBC returns -1 in case a row count is not available
-                if count == -1 {
-                    None
-                } else {
-                    Some(count.try_into().unwrap())
-                }
-            })
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.row_count().into_result(&stmt).map(|count| {
+            // ODBC returns -1 in case a row count is not available
+            if count == -1 {
+                None
+            } else {
+                Some(count.try_into().unwrap())
+            }
+        })
     }
 
     /// Use this to limit the time the query is allowed to take, before responding with data to the
@@ -235,15 +240,16 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     /// maximum value. You can specify ``0``, to deactivate the timeout, this is the default. For
     /// this to work the driver must support this feature. E.g. PostgreSQL, and Microsoft SQL Server
     /// do, but SQLite or MariaDB do not.
-    /// 
+    ///
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
     /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     pub fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> Result<(), Error> {
-        self.statement
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.as_stmt_ref()
             .set_query_timeout_sec(timeout_sec)
-            .into_result(&self.statement)
+            .into_result(&stmt)
     }
 
     /// The number of seconds to wait for a SQL statement to execute before returning to the
@@ -254,11 +260,14 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     /// See:
     /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
-        self.statement
-            .query_timeout_sec()
-            .into_result(&self.statement)
+        let mut stmt = self.statement.as_stmt_ref();
+        stmt.query_timeout_sec().into_result(&stmt)
     }
 
+}
+
+impl<'o> Preallocated<StatementImpl<'o>> {
+    
     /// Call this method to enable asynchronous polling mode on the statement
     pub fn into_polling(mut self) -> Result<PreallocatedPolling<'o>, Error> {
         self.statement
@@ -268,7 +277,10 @@ impl<'o> Preallocated<StatementImpl<'o>> {
     }
 }
 
-impl<S> AsStatementRef for Preallocated<S> where S: AsStatementRef {
+impl<S> AsStatementRef for Preallocated<S>
+where
+    S: AsStatementRef,
+{
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }

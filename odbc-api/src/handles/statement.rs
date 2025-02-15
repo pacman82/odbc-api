@@ -94,6 +94,7 @@ impl StatementImpl<'_> {
 /// of a mutable reference to a [`StatementImpl`]. The main advantage here is that the lifetime
 /// paramater remains covariant, whereas if we would just take a mutable reference to an owned
 /// statement it would become invariant.
+#[derive(Debug)]
 pub struct StatementRef<'s> {
     parent: PhantomData<&'s HDbc>,
     handle: HStmt,
@@ -941,7 +942,7 @@ pub trait Statement: AsHandle {
     ///
     /// <https://docs.microsoft.com/en-us/sql/relational-databases/native-client-odbc-api/sqlrowcount>
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlrowcount-function>
-    fn row_count(&self) -> SqlResult<isize> {
+    fn row_count(&mut self) -> SqlResult<isize> {
         let mut ret = 0isize;
         unsafe {
             SQLRowCount(self.as_sys(), &mut ret as *mut isize)

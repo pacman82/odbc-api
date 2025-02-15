@@ -279,7 +279,7 @@ where
     /// }
     /// ```
     pub fn row_count(&mut self) -> Result<Option<usize>, Error> {
-        let stmt = self.statement.as_stmt_ref();
+        let mut stmt = self.statement.as_stmt_ref();
         stmt.row_count().into_result(&stmt).map(|count| {
             // ODBC returns -1 in case a row count is not available
             if count == -1 {
