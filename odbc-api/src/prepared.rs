@@ -290,10 +290,12 @@ where
         })
     }
 
-    /// The number of seconds to wait for a SQL statement to execute before returning to the
-    /// application. If `timeout_sec` is equal to 0 (default), there is no timeout. The specified
-    /// timout may be substituded by the driver with a minuimum or maximum value.
-    ///
+    /// Use this to limit the time the query is allowed to take, before responding with data to the
+    /// application. The driver may replace the number of seconds you provide with a minimum or
+    /// maximum value. You can specify ``0``, to deactivate the timeout, this is the default. For
+    /// this to work the driver must support this feature. E.g. PostgreSQL, and Microsoft SQL Server
+    /// do, but SQLite or MariaDB do not.
+    /// 
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
