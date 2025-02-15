@@ -1488,6 +1488,38 @@ fn preallocated(profile: &Profile) {
     }
 }
 
+/// Reuse a preallocated handle, two times in a row.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn into_preallocated(profile: &Profile) {
+    // Prepare the statement once
+    let (conn, _table) = Given::new("Preallocated")
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
+    let mut prealloc = conn.into_preallocated().unwrap();
+
+    // Execute it two statements in a row. One INSERT, one SELECT.
+    {
+        let res = prealloc
+            .execute("INSERT INTO Preallocated (a) VALUES ('Hello')", ())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute("SELECT a FROM Preallocated ORDER BY id", ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
+    }
+}
+
 /// Reuse a preallocated handle. Verify that columns bound to the statement during a previous
 /// execution are not dereferenced during a second one.
 #[test_case(MSSQL; "Microsoft SQL Server")]

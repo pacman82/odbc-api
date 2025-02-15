@@ -367,6 +367,18 @@ impl<'c> Connection<'c> {
         unsafe { Ok(Preallocated::new(stmt)) }
     }
 
+    /// Creates a preallocated statement handle like [`Self::preallocate`]. Yet the statement handle
+    /// also takes ownership of the connection.
+    pub fn into_preallocated(self) -> Result<Preallocated<StatementConnection<'c>>, Error> {
+        let stmt = self.allocate_statement()?;
+        // Safe: We know `stmt` is a valid statement handle and self is the connection which has
+        // been used to allocate it.
+        unsafe {
+            let stmt = StatementConnection::new(stmt.into_sys(), self);
+            Ok(Preallocated::new(stmt))
+        }
+    }
+
     /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode.
     /// Switching from manual-commit mode to auto-commit mode automatically commits any open
     /// transaction on the connection. There is no open or begin transaction method. Each statement
