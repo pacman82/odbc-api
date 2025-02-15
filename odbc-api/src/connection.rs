@@ -362,7 +362,7 @@ impl<'c> Connection<'c> {
     ///     Ok(())
     /// }
     /// ```
-    pub fn preallocate(&self) -> Result<Preallocated<'_>, Error> {
+    pub fn preallocate(&self) -> Result<Preallocated<StatementImpl<'_>>, Error> {
         let stmt = self.allocate_statement()?;
         unsafe { Ok(Preallocated::new(stmt)) }
     }
