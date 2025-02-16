@@ -557,10 +557,10 @@ fn nvarchar_to_text(profile: &Profile) {
         .unwrap();
     // Trade mark sign (`™`) is longer in utf-8 (3 Bytes) than in utf-16 (2 Bytes).
     let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
-    conn.execute(&insert_sql, &"™".into_parameter()).unwrap();
+    conn.execute(&insert_sql, &"™".into_parameter(), None).unwrap();
 
     let sql = format!("SELECT a FROM {};", table_name);
-    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
     let text = cursor_to_string(cursor);
 
     assert_eq!("™", text);
@@ -1641,11 +1641,12 @@ fn non_ascii_char(profile: &Profile) {
     conn.execute(
         &format!("INSERT INTO {} (a) VALUES (?), (?);", table_name),
         (&"A".into_parameter(), &"Ü".into_parameter()),
+        None,
     )
     .unwrap();
 
     let sql = format!("SELECT a FROM {} ORDER BY id;", table_name);
-    let cursor = conn.execute(&sql, ()).unwrap().unwrap();
+    let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
     let output = cursor_to_string(cursor);
     assert_eq!("A\nÜ", output);
 }
@@ -1706,6 +1707,7 @@ fn wchar_as_char(profile: &Profile) {
     conn.execute(
         &format!("INSERT INTO {table_name} (a) VALUES (?), (?);"),
         (&"A".into_parameter(), &"Ü".into_parameter()),
+        None,
     )
     .unwrap();
 
@@ -4400,11 +4402,11 @@ fn cursor_get_text_from_text_mssql(profile: &Profile) {
     // roundtrip, so we choose a text larger than 256 characters.
     let text = "€".repeat(300);
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &text.into_parameter()).unwrap();
+    conn.execute(&insert_sql, &text.into_parameter(), None).unwrap();
 
     // When
     let mut cursor = conn
-        .execute(&table.sql_all_ordered_by_id(), ())
+        .execute(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
@@ -5073,7 +5075,7 @@ fn row_wise_bulk_query_using_custom_row(profile: &Profile) {
         .build(profile)
         .unwrap();
     let cursor = conn
-        .execute(&table.sql_all_ordered_by_id(), ())
+        .execute(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
 
