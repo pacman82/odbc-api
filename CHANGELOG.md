@@ -1,5 +1,21 @@
 # Changelog
 
+## [11.0.0](https://github.com/pacman82/odbc-api/compare/v10.2.0...v11.0.0) - 2025-02-16
+
+### Added
+
+- [**breaking**] Query timeout for into_cursor
+- [**breaking**] Introduce query timeout to Connection::execute
+- Add Connection::into_preallocated
+
+### Other
+
+- Add missing timeout parameter to failing tests
+- [**breaking**] PreallocatedPolling is generic over handle type
+- All but into_polling of Preallocateds implementation is now generic over statment handle
+- [**breaking**] Preallocated is now dependend on statement handle type, rather than lifetime
+- More usecase centric documentation for set_query_timeout_sec
+
 ## [10.2.0](https://github.com/pacman82/odbc-api/compare/v10.1.1...v10.2.0) - 2025-02-15
 
 ### Added
