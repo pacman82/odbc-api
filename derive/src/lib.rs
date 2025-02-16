@@ -19,7 +19,7 @@ use syn::{parse_macro_input, DeriveInput};
 /// fn send_greetings(conn: &mut Connection) -> Result<(), Error> {
 ///     let max_rows_in_batch = 250;
 ///     let buffer = RowVec::<Person>::new(max_rows_in_batch);
-///     let mut cursor = conn.execute("SELECT first_name, last_name FROM Persons", ())?
+///     let mut cursor = conn.execute("SELECT first_name, last_name FROM Persons", (), None)?
 ///         .expect("SELECT must yield a result set");
 ///     let mut block_cursor = cursor.bind_buffer(buffer)?;
 ///

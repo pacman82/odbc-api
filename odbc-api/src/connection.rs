@@ -101,6 +101,20 @@ impl<'c> Connection<'c> {
     /// * `params`: `?` may be used as a placeholder in the statement text. You can use `()` to
     ///   represent no parameters. See the [`crate::parameter`] module level documentation for more
     ///   information on how to pass parameters.
+    /// * `query_timeout_sec`: Use this to limit the time the query is allowed to take, before
+    ///   responding with data to the application. The driver may replace the number of seconds you
+    ///   provide with a minimum or maximum value.
+    ///
+    ///   For the timeout to work the driver must support this feature. E.g. PostgreSQL, and
+    ///   Microsoft SQL Server do, but SQLite or MariaDB do not.
+    ///
+    ///   You can specify ``0``, to deactivate the timeout, this is the default. So if you want no
+    ///   timeout, just leave it at `None`. Only reason to specify ``0`` is if for some reason your
+    ///   datasource does not have ``0`` as default.
+    ///
+    ///   This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    ///   See: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     ///
     /// # Return
     ///
@@ -119,7 +133,14 @@ impl<'c> Connection<'c> {
     ///     "YourDatabase", "SA", "My@Test@Password1",
     ///     ConnectionOptions::default()
     /// )?;
-    /// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
+    /// // This query does not use any parameters.
+    /// let query_params = ();
+    /// let timeout_sec = None;
+    /// if let Some(cursor) = conn.execute(
+    ///     "SELECT year, name FROM Birthdays;",
+    ///     query_params,
+    ///     timeout_sec)?
+    /// {
     ///     // Use cursor to process query results.  
     /// }
     /// # Ok::<(), odbc_api::Error>(())
@@ -128,9 +149,17 @@ impl<'c> Connection<'c> {
         &self,
         query: &str,
         params: impl ParameterCollectionRef,
+        query_timeout_sec: Option<usize>,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
         let query = SqlText::new(query);
-        let lazy_statement = move || self.allocate_statement();
+        let lazy_statement = move || {
+            let mut stmt = self.allocate_statement()?;
+            if let Some(query_timeout_sec) = query_timeout_sec {
+                stmt.set_query_timeout_sec(query_timeout_sec)
+                    .into_result(&stmt)?;
+            }
+            Ok(stmt)
+        };
         execute_with_parameters(lazy_statement, Some(&query), params)
     }
 
@@ -213,7 +242,7 @@ impl<'c> Connection<'c> {
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
         let mut cursor = None;
-        match self.execute(query, params) {
+        match self.execute(query, params, None) {
             Ok(Some(c)) => cursor = Some(c),
             Ok(None) => return Ok(None),
             Err(e) => error = Some(e),

@@ -114,8 +114,8 @@ impl Profile {
     ) -> Result<(Connection<'static>, Table<'a>), odbc_api::Error> {
         let conn = self.connection()?;
         let table = Table::new(table_name, column_types, column_names);
-        conn.execute(&table.sql_drop_if_exists(), ())?;
-        conn.execute(&table.sql_create_table(self.index_type), ())?;
+        conn.execute(&table.sql_drop_if_exists(), (), None)?;
+        conn.execute(&table.sql_create_table(self.index_type), (), None)?;
         Ok((conn, table))
     }
 }
@@ -176,7 +176,7 @@ impl<'a> Table<'a> {
     /// `\n` and fields separated by `,`.
     pub fn content_as_string(&self, conn: &Connection<'_>) -> String {
         let cursor = conn
-            .execute(&self.sql_all_ordered_by_id(), ())
+            .execute(&self.sql_all_ordered_by_id(), (), None)
             .unwrap()
             .unwrap();
         cursor_to_string(cursor)

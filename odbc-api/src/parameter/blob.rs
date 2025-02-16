@@ -144,7 +144,7 @@ impl<'a> BlobSlice<'a> {
     ///
     ///     let insert = "INSERT INTO Images (id, image_data) VALUES (?,?)";
     ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-    ///     conn.execute(&insert, parameters)?;
+    ///     conn.execute(&insert, parameters, None)?;
     ///     Ok(())
     /// }
     /// ```
@@ -178,7 +178,7 @@ impl<'a> BlobSlice<'a> {
     ///
     ///     let insert = "INSERT INTO Books (title, text) VALUES (?,?)";
     ///     let parameters = (&title.into_parameter(), &mut blob.as_blob_param());
-    ///     conn.execute(&insert, parameters)?;
+    ///     conn.execute(&insert, parameters, None)?;
     ///     Ok(())
     /// }
     /// ```
@@ -274,7 +274,8 @@ impl<R> BlobRead<R> {
     ///
     ///     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
     ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-    ///     conn.execute(sql, parameters)?;
+    ///     let timeout_sec = None;
+    ///     conn.execute(sql, parameters, timeout_sec)?;
     ///     Ok(())
     /// }
     /// ```
@@ -329,7 +330,8 @@ impl BlobRead<BufReader<File>> {
     ///
     ///     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
     ///     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-    ///     conn.execute(sql, parameters)?;
+    ///     let timeout_sec = None;
+    ///     conn.execute(sql, parameters, timeout_sec)?;
     ///     Ok(())
     /// }
     /// ```

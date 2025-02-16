@@ -27,8 +27,10 @@
 //!     "YourDatabase", "SA", "My@Test@Password1",
 //!     ConnectionOptions::default()
 //! )?;
+//! let query = "SELECT year, name FROM Birthdays WHERE year > ?;";
 //! let year = 1980;
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
+//! let timeout_sec = None;
+//! if let Some(cursor) = conn.execute(query, &year, timeout_sec)? {
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
@@ -54,11 +56,13 @@
 //!     "YourDatabase", "SA", "My@Test@Password1",
 //!     ConnectionOptions::default()
 //! )?;
+//! let query = "SELECT year, name FROM Birthdays WHERE year > ?;";
 //! let year = WithDataType{
 //!    value: 1980,
 //!    data_type: DataType::Varchar {length: NonZeroUsize::new(4) }
 //! };
-//! if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
+//! let timeout_sec = None;
+//! if let Some(cursor) = conn.execute(query, &year, timeout_sec)? {
 //!     // Use cursor to process query results.
 //! }
 //! # Ok::<(), odbc_api::Error>(())
@@ -86,9 +90,11 @@
 //! )?;
 //! let too_old = 1980;
 //! let too_young = 2000;
+//! let timeout_sec = None;
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
 //!     (&too_old, &too_young),
+//!     timeout_sec,
 //! )? {
 //!     // Use cursor to congratulate only persons in the right age group...
 //! }
@@ -109,10 +115,10 @@
 //!     "YourDatabase", "SA", "My@Test@Password1",
 //!     ConnectionOptions::default()
 //! )?;
+//! let query = "SELECT year, name FROM Birthdays WHERE ? < year < ?;";
 //! let params = [1980, 2000];
-//! if let Some(cursor) = conn.execute(
-//!     "SELECT year, name FROM Birthdays WHERE ? < year < ?;",
-//!     &params[..])?
+//! let timeout_sec = None;
+//! if let Some(cursor) = conn.execute(query, &params[..], timeout_sec)?
 //! {
 //!     // Use cursor to process query results.
 //! }
@@ -137,9 +143,10 @@
 //!         .map(|param| param.into_parameter())
 //!         .collect();
 //!
+//!     let timeout_sec = None;
 //!     // Execute the query as a one off, and pass the parameters. String parameters are parsed and
 //!     // converted into something more suitable by the data source itself.
-//!     connection.execute(&query, params.as_slice())?;
+//!     connection.execute(&query, params.as_slice(), timeout_sec)?;
 //!     Ok(())
 //! }
 //! ```
@@ -180,7 +187,8 @@
 //!
 //! conn.execute(
 //!     "{? = call TestParam(?)}",
-//!     (Out(&mut ret), InOut(&mut param)))?;
+//!     (Out(&mut ret), InOut(&mut param)),
+//!     None)?;
 //!
 //! assert_eq!(Some(99), ret.into_opt());
 //! assert_eq!(Some(7 + 5), param.into_opt());
@@ -216,7 +224,7 @@
 //!
 //!     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
 //!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-//!     conn.execute(sql, parameters)?;
+//!     conn.execute(sql, parameters, None)?;
 //!     Ok(())
 //! }
 //! ```
@@ -242,7 +250,7 @@
 //!
 //!     let sql = "INSERT INTO Images (id, image_data) VALUES (?, ?)";
 //!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-//!     conn.execute(sql, parameters)?;
+//!     conn.execute(sql, parameters, None)?;
 //!     Ok(())
 //! }
 //! ```
@@ -266,7 +274,7 @@
 //!
 //!     let insert = "INSERT INTO Books (title, text) VALUES (?,?)";
 //!     let parameters = (&title.into_parameter(), &mut blob.as_blob_param());
-//!     conn.execute(&insert, parameters)?;
+//!     conn.execute(&insert, parameters, None)?;
 //!     Ok(())
 //! }
 //! ```
@@ -286,7 +294,7 @@
 //!
 //!     let insert = "INSERT INTO Images (id, image_data) VALUES (?,?)";
 //!     let parameters = (&id.into_parameter(), &mut blob.as_blob_param());
-//!     conn.execute(&insert, parameters)?;
+//!     conn.execute(&insert, parameters, None)?;
 //!     Ok(())
 //! }
 //! ```
@@ -323,7 +331,8 @@
 //! )?;
 //! if let Some(cursor) = conn.execute(
 //!     "SELECT year FROM Birthdays WHERE name=?;",
-//!     &"Bernd".into_parameter())?
+//!     &"Bernd".into_parameter(),
+//!     None)?
 //! {
 //!     // Use cursor to process query results.
 //! };
@@ -414,7 +423,9 @@ pub unsafe trait OutputParameter: CDataMut + HasDataType {}
 ///
 /// conn.execute(
 ///     "{? = call TestParam(?)}",
-///     (Out(&mut ret), InOut(&mut param)))?;
+///     (Out(&mut ret), InOut(&mut param)),
+///     None,
+/// )?;
 ///
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
@@ -442,7 +453,8 @@ pub struct InOut<'a, T>(pub &'a mut T);
 ///
 /// conn.execute(
 ///     "{? = call TestParam(?)}",
-///     (Out(&mut ret), InOut(&mut param)))?;
+///     (Out(&mut ret), InOut(&mut param)),
+///     None)?;
 ///
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
@@ -468,7 +480,12 @@ pub struct Out<'a, T>(pub &'a mut T);
 ///    value: 1980,
 ///    data_type: DataType::Varchar {length: NonZeroUsize::new(4)}
 /// };
-/// if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays WHERE year > ?;", &year)? {
+/// let maybe_cursor = conn.execute(
+///     "SELECT year, name FROM Birthdays WHERE year > ?;",
+///     &year,
+///     None
+/// )?;
+/// if let Some(cursor) = maybe_cursor {
 ///     // Use cursor to process query results.
 /// }
 /// # Ok::<(), odbc_api::Error>(())
@@ -487,7 +504,8 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// };
 /// connection.execute(
 ///     "INSERT INTO Posts (text, timestamps) VALUES (?,?)",
-///     (&"Hello".into_parameter(), &ts.into_parameter())
+///     (&"Hello".into_parameter(), &ts.into_parameter()),
+///     None,
 /// );
 /// # }
 /// ```

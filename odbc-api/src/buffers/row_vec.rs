@@ -47,7 +47,10 @@ pub unsafe trait FetchRow: Copy {
 ///     let max_rows_in_batch = 250;
 ///     type Row = (VarCharArray<255>, VarCharArray<255>);
 ///     let buffer = RowVec::<Row>::new(max_rows_in_batch);
-///     let mut cursor = conn.execute("SELECT first_name, last_name FROM Persons", ())?
+///     let query = "SELECT first_name, last_name FROM Persons";
+///     let parameters = ();
+///     let timeout_sec = None;
+///     let mut cursor = conn.execute(query, parameters, timeout_sec)?
 ///         .expect("SELECT must yield a result set");
 ///     let mut block_cursor = cursor.bind_buffer(buffer)?;
 ///

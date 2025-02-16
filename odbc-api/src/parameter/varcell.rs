@@ -471,7 +471,8 @@ where
 /// )?;
 /// if let Some(cursor) = conn.execute(
 ///     "SELECT year FROM Birthdays WHERE name=?;",
-///     &"Bernd".into_parameter())?
+///     &"Bernd".into_parameter(),
+///     None)?
 /// {
 ///     // Use cursor to process query results.
 /// };
@@ -552,7 +553,7 @@ pub type VarBinarySliceMut<'a> = VarBinary<&'a mut [u8]>;
 /// # use odbc_api::{Connection, Error, parameter::{VarCharArray, Out}};
 /// # fn output_example(connection: Connection<'_>) -> Result<(), Error> {
 /// let mut out_msg: VarCharArray<255> = VarCharArray::NULL;
-/// connection.execute("CALL PROCEDURE_NAME(?)", (Out(&mut out_msg),))?;
+/// connection.execute("CALL PROCEDURE_NAME(?)", (Out(&mut out_msg),), None)?;
 /// # Ok(())
 /// # }
 /// ```

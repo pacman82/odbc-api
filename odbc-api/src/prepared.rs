@@ -295,7 +295,7 @@ where
     /// maximum value. You can specify ``0``, to deactivate the timeout, this is the default. For
     /// this to work the driver must support this feature. E.g. PostgreSQL, and Microsoft SQL Server
     /// do, but SQLite or MariaDB do not.
-    /// 
+    ///
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:

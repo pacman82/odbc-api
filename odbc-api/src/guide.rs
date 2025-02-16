@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
     )?;
 
     // Execute a one of query without any parameters.
-    match connection.execute("SELECT * FROM TableName", ())? {
+    match connection.execute("SELECT * FROM TableName", (), None)? {
         Some(mut cursor) => {
             // Write the column names to stdout
             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
@@ -237,7 +237,10 @@ let mut conn = env.connect(
     "YourDatabase", "SA", "My@Test@Password1",
     ConnectionOptions::default()
 )?;
-if let Some(cursor) = conn.execute("SELECT year, name FROM Birthdays;", ())? {
+let query = "SELECT year, name FROM Birthdays;";
+let parameters = (); // This query does not use any parameters.
+let timeout_sec = None;
+if let Some(cursor) = conn.execute(query, parameters, timeout_sec)? {
     // Use cursor to process query results.
 }
 # Ok::<(), odbc_api::Error>(())
@@ -363,7 +366,8 @@ use odbc_api::{Connection, Error, IntoParameter};
 fn insert_birth_year(conn: &Connection, name: &str, year: i16) -> Result<(), Error>{
     conn.execute(
         "INSERT INTO Birthdays (name, year) VALUES (?, ?)",
-        (&name.into_parameter(), &year)
+        (&name.into_parameter(), &year),
+        None,
     )?;
     Ok(())
 }

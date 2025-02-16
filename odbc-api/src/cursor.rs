@@ -141,8 +141,11 @@ impl CursorRow<'_> {
     /// use odbc_api::{Connection, Error, IntoParameter, Cursor};
     ///
     /// fn get_large_text(name: &str, conn: &mut Connection<'_>) -> Result<Option<String>, Error> {
+    ///     let query = "SELECT content FROM LargeFiles WHERE name=?";
+    ///     let parameters = &name.into_parameter();
+    ///     let timeout_sec = None;
     ///     let mut cursor = conn
-    ///         .execute("SELECT content FROM LargeFiles WHERE name=?", &name.into_parameter())?
+    ///         .execute(query, parameters, timeout_sec)?
     ///         .expect("Assume select statement creates cursor");
     ///     if let Some(mut row) = cursor.next_row()? {
     ///         let mut buf = Vec::new();
