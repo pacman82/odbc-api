@@ -310,7 +310,7 @@ fn into_cursor(profile: &Profile) {
 
     let make_cursor = || {
         let query = table.sql_all_ordered_by_id();
-        conn.into_cursor(&query, ()).unwrap().unwrap()
+        conn.into_cursor(&query, (), None).unwrap().unwrap()
     };
     let cursor = make_cursor();
 
@@ -344,14 +344,14 @@ fn into_cursor_reuse_connection_on_failure(profile: &Profile) {
         .unwrap();
 
     // When our first call to `.into_cursor` fails
-    let result = conn.into_cursor("Non-existing-table", ());
+    let result = conn.into_cursor("Non-existing-table", (), None);
 
     // Then we can extract a valid connection from the error type
     let error = result.map(|_| ()).unwrap_err();
     let conn = error.connection;
     // Extra verification to prove connection is indeed valid
     let query = table.sql_all_ordered_by_id();
-    let cursor = conn.into_cursor(&query, ()).unwrap().unwrap();
+    let cursor = conn.into_cursor(&query, (), None).unwrap().unwrap();
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
@@ -365,12 +365,12 @@ fn connection_and_error_implements_std_error() {
     let conn = SQLITE_3.connection().unwrap();
 
     // When we catch the error returned by `into_cursor`
-    let result = conn.into_cursor("Non-existing-table", ()).map(|_| ());
+    let result = conn.into_cursor("Non-existing-table", (), None).map(|_| ());
     let connection_and_error = result.unwrap_err();
     let plain_error = connection_and_error.error;
     let result = connection_and_error
         .connection
-        .into_cursor("Non-existing-table", ())
+        .into_cursor("Non-existing-table", (), None)
         .map(|_| ());
     let std_error: Box<dyn std::error::Error> = Box::new(result.unwrap_err().error);
 
@@ -4543,7 +4543,7 @@ fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
     let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
-        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
@@ -4586,7 +4586,7 @@ fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
     // When
     let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
-        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer).unwrap();
@@ -4628,7 +4628,7 @@ fn concurrent_bulk_fetch_fetch_one_batch(profile: &Profile) {
     // When
     let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
-        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer).unwrap();
@@ -4671,7 +4671,7 @@ fn concurrent_bulk_fetch_with_invalid_buffer_type(profile: &Profile) {
     let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
-        .into_cursor(&table.sql_all_ordered_by_id(), ())
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
@@ -4695,7 +4695,7 @@ fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
     // When
     let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
+    let cursor = conn.into_cursor(query, (), None).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
     let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
     // Consume first result set.
@@ -4722,7 +4722,7 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
     // When
     let buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let cursor = conn.into_cursor(query, ()).unwrap().unwrap();
+    let cursor = conn.into_cursor(query, (), None).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
     let concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
     // Skip over first result set, without fetching any batches.
@@ -4736,8 +4736,6 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
     assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
 }
 
-/// This test covers a code path in which the thread dedicated to fething is not termintated by
-/// running out of batches.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 fn query_timeout_execute_validate_functionality(profile: &Profile) {
     // Given
@@ -4747,6 +4745,25 @@ fn query_timeout_execute_validate_functionality(profile: &Profile) {
     let timeout_sec = Some(1);
     let start = Instant::now();
     let result = conn.execute("WAITFOR DELAY '0:0:03'", (), timeout_sec);
+    let end = Instant::now();
+
+    // Then
+    let actual_duration = end - start;
+    assert!(actual_duration < Duration::from_secs(2));
+    assert!(result.is_err());
+    let error = result.unwrap_err();
+    eprintln!("{:?}", error);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn query_timeout_into_cursor_validate_functionality(profile: &Profile) {
+    // Given
+    let conn = profile.connection().unwrap();
+
+    // When
+    let timeout_sec = Some(1);
+    let start = Instant::now();
+    let result = conn.into_cursor("WAITFOR DELAY '0:0:03'", (), timeout_sec);
     let end = Instant::now();
 
     // Then

@@ -93,7 +93,9 @@ impl<'c> Connection<'c> {
     }
 
     /// Executes an SQL statement. This is the fastest way to submit an SQL statement for one-time
-    /// execution.
+    /// execution. In case you do **not** want to execute more statements on this connection, you
+    /// may want to use [`Self::into_cursor`] instead, which would create a cursor taking ownership
+    /// of the connection.
     ///
     /// # Parameters
     ///
@@ -207,9 +209,30 @@ impl<'c> Connection<'c> {
         execute_with_parameters_polling(lazy_statement, Some(&query), params, sleep).await
     }
 
-    /// In some use cases there you only execute a single statement, or the time to open a
-    /// connection does not matter users may wish to choose to not keep a connection alive seperatly
-    /// from the cursor, in order to have an easier time with the borrow checker.
+    /// Similar to [`Self::execute`], but takes ownership of the connection. This is useful if e.g.
+    /// youwant to open a connection and execute a query in a function and return a self containing
+    /// cursor.
+    /// 
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
+    /// * `params`: `?` may be used as a placeholder in the statement text. You can use `()` to
+    ///   represent no parameters. See the [`crate::parameter`] module level documentation for more
+    ///   information on how to pass parameters.
+    /// * `query_timeout_sec`: Use this to limit the time the query is allowed to take, before
+    ///   responding with data to the application. The driver may replace the number of seconds you
+    ///   provide with a minimum or maximum value.
+    ///
+    ///   For the timeout to work the driver must support this feature. E.g. PostgreSQL, and
+    ///   Microsoft SQL Server do, but SQLite or MariaDB do not.
+    ///
+    ///   You can specify ``0``, to deactivate the timeout, this is the default. So if you want no
+    ///   timeout, just leave it at `None`. Only reason to specify ``0`` is if for some reason your
+    ///   datasource does not have ``0`` as default.
+    ///
+    ///   This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
+    ///
+    ///   See: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
     ///
     /// ```no_run
     /// use odbc_api::{environment, Error, Cursor, ConnectionOptions};
@@ -227,9 +250,10 @@ impl<'c> Connection<'c> {
     ///         ConnectionOptions::default()
     ///     )?;
     ///
-    ///     // connect.execute(&query, ()) // Compiler error: Would return local ref to `conn`.
+    ///     // connect.execute(&query, (), None) // Compiler error: Would return local ref to
+    ///                                          // `conn`.
     ///
-    ///     let maybe_cursor = conn.into_cursor(&query, ())?;
+    ///     let maybe_cursor = conn.into_cursor(&query, (), None)?;
     ///     Ok(maybe_cursor)
     /// }
     /// ```
@@ -237,12 +261,13 @@ impl<'c> Connection<'c> {
         self,
         query: &str,
         params: impl ParameterCollectionRef,
+        query_timeout_sec: Option<usize>,
     ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, ConnectionAndError<'c>> {
         // With the current Rust version the borrow checker needs some convincing, so that it allows
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
         let mut cursor = None;
-        match self.execute(query, params, None) {
+        match self.execute(query, params, query_timeout_sec) {
             Ok(Some(c)) => cursor = Some(c),
             Ok(None) => return Ok(None),
             Err(e) => error = Some(e),

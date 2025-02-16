@@ -6,6 +6,7 @@ use crate::{
 };
 
 /// Statement handle which also takes ownership of Connection
+#[derive(Debug)]
 pub struct StatementConnection<'env> {
     handle: HStmt,
     _parent: Connection<'env>,

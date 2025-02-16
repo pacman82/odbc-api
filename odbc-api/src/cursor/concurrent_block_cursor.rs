@@ -29,9 +29,12 @@ use super::RowSetBuffer;
 ///     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;",
 ///     Default::default())?;
 ///
+/// let query = "SELECT * FROM very_big_table";
+/// let params = ();
+/// let timeout_sec = None;
 /// // We must use into_cursor to create a statement handle with static lifetime, which also owns
 /// // the connection. This way we can send it to another thread safely.
-/// let cursor = conn.into_cursor("SELECT * FROM very_big_table", ())?.unwrap();
+/// let cursor = conn.into_cursor(query, params, timeout_sec)?.unwrap();
 ///
 /// // Batch size and buffer description. Here we assume there is only one integer column
 /// let buffer_a = ColumnarAnyBuffer::from_descs(1000, [BufferDesc::I32 { nullable: false }]);
