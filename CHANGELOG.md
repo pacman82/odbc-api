@@ -1,5 +1,16 @@
 # Changelog
 
+## [11.1.0](https://github.com/pacman82/odbc-api/compare/v11.0.0...v11.1.0) - 2025-02-19
+
+### Added
+
+- Add conversion functions decimal_text_to_i64, decimal_text_to_i32
+
+### Other
+
+- *(deps)* bump tempfile from 3.17.0 to 3.17.1
+- *(deps)* bump tempfile from 3.16.0 to 3.17.0
+
 ## [11.0.0](https://github.com/pacman82/odbc-api/compare/v10.2.0...v11.0.0) - 2025-02-16
 
 ### Added
