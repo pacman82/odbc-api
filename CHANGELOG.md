@@ -1,5 +1,11 @@
 # Changelog
 
+## [11.1.1](https://github.com/pacman82/odbc-api/compare/v11.1.0...v11.1.1) - 2025-02-19
+
+### Fixed
+
+- Return type of decimal_text_to_i32 is now indeed i32 and no longer i64
+
 ## [11.1.0](https://github.com/pacman82/odbc-api/compare/v11.0.0...v11.1.0) - 2025-02-19
 
 ### Added
