@@ -47,7 +47,7 @@ impl ToDecimal for i64 {
 /// This method is robust against representation which do not have trailing zeroes as well as
 /// arbitrary radix character. If you do not write a generic application and now the specific way
 /// your database formats decimals you may come up with faster methods to parse decimals.
-pub fn decimal_text_to_i32(text: &[u8], scale: usize) -> i64 {
+pub fn decimal_text_to_i32(text: &[u8], scale: usize) -> i32 {
     decimal_text_to_integer(text, scale)
 }
 
