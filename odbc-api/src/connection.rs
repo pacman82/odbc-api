@@ -212,7 +212,7 @@ impl<'c> Connection<'c> {
     /// Similar to [`Self::execute`], but takes ownership of the connection. This is useful if e.g.
     /// youwant to open a connection and execute a query in a function and return a self containing
     /// cursor.
-    /// 
+    ///
     /// # Parameters
     ///
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".

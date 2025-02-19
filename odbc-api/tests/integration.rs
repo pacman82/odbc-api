@@ -557,7 +557,8 @@ fn nvarchar_to_text(profile: &Profile) {
         .unwrap();
     // Trade mark sign (`™`) is longer in utf-8 (3 Bytes) than in utf-16 (2 Bytes).
     let insert_sql = format!("INSERT INTO {} (a) VALUES (?);", table_name);
-    conn.execute(&insert_sql, &"™".into_parameter(), None).unwrap();
+    conn.execute(&insert_sql, &"™".into_parameter(), None)
+        .unwrap();
 
     let sql = format!("SELECT a FROM {};", table_name);
     let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
@@ -4402,7 +4403,8 @@ fn cursor_get_text_from_text_mssql(profile: &Profile) {
     // roundtrip, so we choose a text larger than 256 characters.
     let text = "€".repeat(300);
     let insert_sql = table.sql_insert();
-    conn.execute(&insert_sql, &text.into_parameter(), None).unwrap();
+    conn.execute(&insert_sql, &text.into_parameter(), None)
+        .unwrap();
 
     // When
     let mut cursor = conn
