@@ -71,7 +71,7 @@ fn sz_to_utf8(buffer: &[u8]) -> String {
     let end = buffer
         .iter()
         .enumerate()
-        .find(|(_index, &character)| character == b'\0')
+        .find(|&(_index, &character)| character == b'\0')
         .expect("Buffer must contain terminating zero.")
         .0;
     let c_str = unsafe { CStr::from_bytes_with_nul_unchecked(&buffer[..=end]) };
