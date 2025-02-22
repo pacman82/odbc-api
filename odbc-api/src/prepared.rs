@@ -1,8 +1,8 @@
 use crate::{
+    ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     execute::execute_with_parameters,
     handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
-    ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -91,8 +91,8 @@ where
         &mut self,
     ) -> Result<
         impl DoubleEndedIterator<Item = Result<ParameterDescription, Error>>
-            + ExactSizeIterator<Item = Result<ParameterDescription, Error>>
-            + '_,
+        + ExactSizeIterator<Item = Result<ParameterDescription, Error>>
+        + '_,
         Error,
     > {
         Ok((1..=self.num_params()?).map(|index| self.describe_param(index)))
@@ -114,7 +114,7 @@ where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        ColumnarBulkInserter::new(self.into_statement(), parameter_buffers)
+        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers) }
     }
 
     /// Use this to insert rows of string input into the database.

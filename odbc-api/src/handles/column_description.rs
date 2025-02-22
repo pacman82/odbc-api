@@ -1,6 +1,6 @@
 use super::{
     data_type::DataType,
-    sql_char::{slice_to_utf8, DecodingError, SqlChar},
+    sql_char::{DecodingError, SqlChar, slice_to_utf8},
 };
 
 /// Indication of whether a column is nullable or not.

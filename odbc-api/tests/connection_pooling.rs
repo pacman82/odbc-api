@@ -6,8 +6,7 @@ use odbc_sys::{AttrConnectionPooling, AttrCpMatch};
 use std::sync::OnceLock;
 use test_case::test_case;
 
-const MSSQL_CONNECTION: &str =
-    "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
+const MSSQL_CONNECTION: &str = "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
     TrustServerCertificate=yes;";
 
 #[cfg(target_os = "windows")]

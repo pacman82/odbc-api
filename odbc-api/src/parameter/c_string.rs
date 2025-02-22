@@ -1,16 +1,16 @@
 //! Module contains trait implementations for `CStr` and `CString`.
 
 use std::{
-    ffi::{c_void, CStr, CString},
+    ffi::{CStr, CString, c_void},
     num::NonZeroUsize,
 };
 
 use odbc_sys::{CDataType, NTS};
 
 use crate::{
+    DataType,
     handles::{CData, HasDataType},
     parameter::InputParameter,
-    DataType,
 };
 
 use super::CElement;

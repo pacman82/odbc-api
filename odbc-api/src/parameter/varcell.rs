@@ -11,9 +11,9 @@ use odbc_sys::{CDataType, NULL_DATA};
 use widestring::{U16Str, U16String};
 
 use crate::{
+    DataType, OutputParameter,
     buffers::{FetchRowMember, Indicator},
     handles::{CData, CDataMut, HasDataType},
-    DataType, OutputParameter,
 };
 
 use super::CElement;

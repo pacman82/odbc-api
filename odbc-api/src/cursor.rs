@@ -4,16 +4,16 @@ mod concurrent_block_cursor;
 use odbc_sys::HStmt;
 
 use crate::{
+    Error, ResultSetMetadata,
     buffers::Indicator,
     error::ExtendResult,
     handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
-    sleep::{wait_for, Sleep},
-    Error, ResultSetMetadata,
+    sleep::{Sleep, wait_for},
 };
 
 use std::{
-    mem::{size_of, MaybeUninit},
+    mem::{MaybeUninit, size_of},
     ptr,
     thread::panicking,
 };
@@ -451,7 +451,7 @@ unsafe impl<T: RowSetBuffer> RowSetBuffer for &mut T {
     }
 
     unsafe fn bind_colmuns_to_cursor(&mut self, cursor: StatementRef<'_>) -> Result<(), Error> {
-        (*self).bind_colmuns_to_cursor(cursor)
+        unsafe { (*self).bind_colmuns_to_cursor(cursor) }
     }
 
     fn find_truncation(&self) -> Option<TruncationInfo> {
@@ -590,25 +590,27 @@ unsafe fn bind_row_set_buffer_to_statement(
     mut stmt: StatementRef<'_>,
     row_set_buffer: &mut impl RowSetBuffer,
 ) -> Result<(), Error> {
-    stmt.set_row_bind_type(row_set_buffer.bind_type())
-        .into_result(&stmt)?;
-    let size = row_set_buffer.row_array_size();
-    stmt.set_row_array_size(size)
-        .into_result(&stmt)
-        // SAP anywhere has been seen to return with an "invalid attribute" error instead of
-        // a success with "option value changed" info. Let us map invalid attributes during
-        // setting row set array size to something more precise.
-        .provide_context_for_diagnostic(|record, function| {
-            if record.state == State::INVALID_ATTRIBUTE_VALUE {
-                Error::InvalidRowArraySize { record, size }
-            } else {
-                Error::Diagnostics { record, function }
-            }
-        })?;
-    stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())
-        .into_result(&stmt)?;
-    row_set_buffer.bind_colmuns_to_cursor(stmt)?;
-    Ok(())
+    unsafe {
+        stmt.set_row_bind_type(row_set_buffer.bind_type())
+            .into_result(&stmt)?;
+        let size = row_set_buffer.row_array_size();
+        stmt.set_row_array_size(size)
+            .into_result(&stmt)
+            // SAP anywhere has been seen to return with an "invalid attribute" error instead of
+            // a success with "option value changed" info. Let us map invalid attributes during
+            // setting row set array size to something more precise.
+            .provide_context_for_diagnostic(|record, function| {
+                if record.state == State::INVALID_ATTRIBUTE_VALUE {
+                    Error::InvalidRowArraySize { record, size }
+                } else {
+                    Error::Diagnostics { record, function }
+                }
+            })?;
+        stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())
+            .into_result(&stmt)?;
+        row_set_buffer.bind_colmuns_to_cursor(stmt)?;
+        Ok(())
+    }
 }
 
 /// Error handling for bulk fetching is shared between synchronous and asynchronous usecase.

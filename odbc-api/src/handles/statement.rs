@@ -1,4 +1,5 @@
 use super::{
+    CData, Descriptor, SqlChar, SqlResult, SqlText,
     as_handle::AsHandle,
     bind::{CDataMut, DelayedInput, HasDataType},
     buffer::{clamp_small_int, mut_buf_ptr},
@@ -7,14 +8,13 @@ use super::{
     drop_handle,
     sql_char::{binary_length, is_truncated_bin, resize_to_fit_without_tz},
     sql_result::ExtSqlReturn,
-    CData, Descriptor, SqlChar, SqlResult, SqlText,
 };
 use log::debug;
 use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, Len, ParamType, Pointer, SQLBindCol,
-    SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch, SQLFreeStmt,
-    SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData, SQLPutData,
-    SQLRowCount, SqlDataType, SqlReturn, StatementAttribute, IS_POINTER,
+    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, IS_POINTER, Len, ParamType, Pointer,
+    SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
+    SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
+    SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, num::NonZeroUsize, ptr::null_mut};
 
@@ -182,14 +182,16 @@ pub trait Statement: AsHandle {
     /// It is the callers responsibility to make sure the bound columns live until they are no
     /// longer bound.
     unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()> {
-        SQLBindCol(
-            self.as_sys(),
-            column_number,
-            target.cdata_type(),
-            target.mut_value_ptr(),
-            target.buffer_length(),
-            target.mut_indicator_ptr(),
-        )
+        unsafe {
+            SQLBindCol(
+                self.as_sys(),
+                column_number,
+                target.cdata_type(),
+                target.mut_value_ptr(),
+                target.buffer_length(),
+                target.mut_indicator_ptr(),
+            )
+        }
         .into_sql_result("SQLBindCol")
     }
 
@@ -205,7 +207,7 @@ pub trait Statement: AsHandle {
     ///
     /// Fetch dereferences bound column pointers.
     unsafe fn fetch(&mut self) -> SqlResult<()> {
-        SQLFetch(self.as_sys()).into_sql_result("SQLFetch")
+        unsafe { SQLFetch(self.as_sys()) }.into_sql_result("SQLFetch")
     }
 
     /// Retrieves data for a single column in the result set or for a single parameter.
@@ -236,12 +238,14 @@ pub trait Statement: AsHandle {
     /// `num_rows` must not be moved and remain valid, as long as it remains bound to the cursor.
     unsafe fn set_num_rows_fetched(&mut self, num_rows: &mut usize) -> SqlResult<()> {
         let value = num_rows as *mut usize as Pointer;
-        sql_set_stmt_attr(
-            self.as_sys(),
-            StatementAttribute::RowsFetchedPtr,
-            value,
-            IS_POINTER,
-        )
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::RowsFetchedPtr,
+                value,
+                IS_POINTER,
+            )
+        }
         .into_sql_result("SQLSetStmtAttr")
     }
 
@@ -370,11 +374,13 @@ pub trait Statement: AsHandle {
     /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
     ///   the data source.
     unsafe fn exec_direct(&mut self, statement: &SqlText) -> SqlResult<()> {
-        sql_exec_direc(
-            self.as_sys(),
-            statement.ptr(),
-            statement.len_char().try_into().unwrap(),
-        )
+        unsafe {
+            sql_exec_direc(
+                self.as_sys(),
+                statement.ptr(),
+                statement.len_char().try_into().unwrap(),
+            )
+        }
         .into_sql_result("SQLExecDirect")
     }
 
@@ -414,7 +420,7 @@ pub trait Statement: AsHandle {
     /// * [`SqlResult::NoData`] if a searched update or delete statement did not affect any rows at
     ///   the data source.
     unsafe fn execute(&mut self) -> SqlResult<()> {
-        SQLExecute(self.as_sys()).into_sql_result("SQLExecute")
+        unsafe { SQLExecute(self.as_sys()) }.into_sql_result("SQLExecute")
     }
 
     /// Number of columns in result set.
@@ -443,12 +449,14 @@ pub trait Statement: AsHandle {
     /// specified amount of rows.
     unsafe fn set_row_array_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
-        sql_set_stmt_attr(
-            self.as_sys(),
-            StatementAttribute::RowArraySize,
-            size as Pointer,
-            0,
-        )
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::RowArraySize,
+                size as Pointer,
+                0,
+            )
+        }
         .into_sql_result("SQLSetStmtAttr")
     }
 
@@ -462,12 +470,14 @@ pub trait Statement: AsHandle {
     /// statement is executed.
     unsafe fn set_paramset_size(&mut self, size: usize) -> SqlResult<()> {
         assert!(size > 0);
-        sql_set_stmt_attr(
-            self.as_sys(),
-            StatementAttribute::ParamsetSize,
-            size as Pointer,
-            0,
-        )
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::ParamsetSize,
+                size as Pointer,
+                0,
+            )
+        }
         .into_sql_result("SQLSetStmtAttr")
     }
 
@@ -481,12 +491,14 @@ pub trait Statement: AsHandle {
     /// It is the callers responsibility to ensure that the bound buffers match the memory layout
     /// specified by this function.
     unsafe fn set_row_bind_type(&mut self, row_size: usize) -> SqlResult<()> {
-        sql_set_stmt_attr(
-            self.as_sys(),
-            StatementAttribute::RowBindType,
-            row_size as Pointer,
-            0,
-        )
+        unsafe {
+            sql_set_stmt_attr(
+                self.as_sys(),
+                StatementAttribute::RowBindType,
+                row_size as Pointer,
+                0,
+            )
+        }
         .into_sql_result("SQLSetStmtAttr")
     }
 
@@ -540,23 +552,25 @@ pub trait Statement: AsHandle {
         parameter: &(impl HasDataType + CData + ?Sized),
     ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
-        SQLBindParameter(
-            self.as_sys(),
-            parameter_number,
-            ParamType::Input,
-            parameter.cdata_type(),
-            parameter_type.data_type(),
-            parameter_type
-                .column_size()
-                .map(NonZeroUsize::get)
-                .unwrap_or_default(),
-            parameter_type.decimal_digits(),
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.value_ptr() as *mut c_void,
-            parameter.buffer_length(),
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut isize,
-        )
+        unsafe {
+            SQLBindParameter(
+                self.as_sys(),
+                parameter_number,
+                ParamType::Input,
+                parameter.cdata_type(),
+                parameter_type.data_type(),
+                parameter_type
+                    .column_size()
+                    .map(NonZeroUsize::get)
+                    .unwrap_or_default(),
+                parameter_type.decimal_digits(),
+                // We cast const to mut here, but we specify the input_output_type as input.
+                parameter.value_ptr() as *mut c_void,
+                parameter.buffer_length(),
+                // We cast const to mut here, but we specify the input_output_type as input.
+                parameter.indicator_ptr() as *mut isize,
+            )
+        }
         .into_sql_result("SQLBindParameter")
     }
 
@@ -578,21 +592,23 @@ pub trait Statement: AsHandle {
         parameter: &mut (impl CDataMut + HasDataType),
     ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
-        SQLBindParameter(
-            self.as_sys(),
-            parameter_number,
-            input_output_type,
-            parameter.cdata_type(),
-            parameter_type.data_type(),
-            parameter_type
-                .column_size()
-                .map(NonZeroUsize::get)
-                .unwrap_or_default(),
-            parameter_type.decimal_digits(),
-            parameter.value_ptr() as *mut c_void,
-            parameter.buffer_length(),
-            parameter.mut_indicator_ptr(),
-        )
+        unsafe {
+            SQLBindParameter(
+                self.as_sys(),
+                parameter_number,
+                input_output_type,
+                parameter.cdata_type(),
+                parameter_type.data_type(),
+                parameter_type
+                    .column_size()
+                    .map(NonZeroUsize::get)
+                    .unwrap_or_default(),
+                parameter_type.decimal_digits(),
+                parameter.value_ptr() as *mut c_void,
+                parameter.buffer_length(),
+                parameter.mut_indicator_ptr(),
+            )
+        }
         .into_sql_result("SQLBindParameter")
     }
 
@@ -612,22 +628,24 @@ pub trait Statement: AsHandle {
         parameter: &mut (impl DelayedInput + HasDataType),
     ) -> SqlResult<()> {
         let paramater_type = parameter.data_type();
-        SQLBindParameter(
-            self.as_sys(),
-            parameter_number,
-            ParamType::Input,
-            parameter.cdata_type(),
-            paramater_type.data_type(),
-            paramater_type
-                .column_size()
-                .map(NonZeroUsize::get)
-                .unwrap_or_default(),
-            paramater_type.decimal_digits(),
-            parameter.stream_ptr(),
-            0,
-            // We cast const to mut here, but we specify the input_output_type as input.
-            parameter.indicator_ptr() as *mut isize,
-        )
+        unsafe {
+            SQLBindParameter(
+                self.as_sys(),
+                parameter_number,
+                ParamType::Input,
+                parameter.cdata_type(),
+                paramater_type.data_type(),
+                paramater_type
+                    .column_size()
+                    .map(NonZeroUsize::get)
+                    .unwrap_or_default(),
+                paramater_type.decimal_digits(),
+                parameter.stream_ptr(),
+                0,
+                // We cast const to mut here, but we specify the input_output_type as input.
+                parameter.indicator_ptr() as *mut isize,
+            )
+        }
         .into_sql_result("SQLBindParameter")
     }
 
@@ -758,15 +776,17 @@ pub trait Statement: AsHandle {
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
     unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
         let mut out: Len = 0;
-        sql_col_attribute(
-            self.as_sys(),
-            column_number,
-            attribute,
-            null_mut(),
-            0,
-            null_mut(),
-            &mut out as *mut Len,
-        )
+        unsafe {
+            sql_col_attribute(
+                self.as_sys(),
+                column_number,
+                attribute,
+                null_mut(),
+                0,
+                null_mut(),
+                &mut out as *mut Len,
+            )
+        }
         .into_sql_result("SQLColAttribute")
         .on_success(|| {
             debug!(

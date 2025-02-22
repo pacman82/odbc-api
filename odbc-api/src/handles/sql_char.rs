@@ -24,7 +24,7 @@ use std::{ffi::CStr, string::FromUtf8Error};
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
 use std::{
-    char::{decode_utf16, DecodeUtf16Error},
+    char::{DecodeUtf16Error, decode_utf16},
     marker::PhantomData,
 };
 

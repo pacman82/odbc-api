@@ -1,12 +1,12 @@
 use crate::{
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
     buffers::BufferDesc,
     execute::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
         execute_with_parameters_polling,
     },
-    handles::{self, slice_to_utf8, SqlText, State, Statement, StatementImpl},
+    handles::{self, SqlText, State, Statement, StatementImpl, slice_to_utf8},
     statement_connection::StatementConnection,
-    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
 };
 use log::error;
 use odbc_sys::HDbc;

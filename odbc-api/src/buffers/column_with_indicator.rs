@@ -2,7 +2,7 @@ use crate::{
     fixed_sized::{Bit, Pod},
     handles::{CData, CDataMut},
 };
-use odbc_sys::{Date, Time, Timestamp, NULL_DATA};
+use odbc_sys::{Date, NULL_DATA, Time, Timestamp};
 use std::{
     ffi::c_void,
     mem::size_of,

@@ -1,6 +1,6 @@
 use std::iter;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use odbc_api::buffers::{BufferDesc, ColumnarAnyBuffer};
 
 fn falliable_buffer_allocation(capacity: usize, max_str_len: usize) {

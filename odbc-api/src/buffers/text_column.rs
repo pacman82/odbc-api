@@ -1,8 +1,8 @@
 use crate::{
+    DataType, Error,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
-    DataType, Error,
 };
 
 use super::{ColumnBuffer, Indicator};

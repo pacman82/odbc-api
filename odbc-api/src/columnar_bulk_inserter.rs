@@ -1,8 +1,8 @@
 use crate::{
+    CursorImpl, Error,
     buffers::{ColumnBuffer, TextColumn},
     execute::execute,
     handles::{AsStatementRef, HasDataType, Statement, StatementRef},
-    CursorImpl, Error,
 };
 
 /// Can be used to execute a statement with bulk array paramters. Contrary to its name any statement
@@ -45,9 +45,8 @@ where
         let mut parameter_number = 1;
         // Bind buffers to statement.
         for column in &parameters {
-            if let Err(error) = stmt
-                .bind_input_parameter(parameter_number, column)
-                .into_result(&stmt)
+            if let Err(error) =
+                unsafe { stmt.bind_input_parameter(parameter_number, column) }.into_result(&stmt)
             {
                 // This early return using `?` is risky. We actually did bind some parameters
                 // already. We cannot guarantee that the bound pointers stay valid in case of an

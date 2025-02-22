@@ -1,11 +1,11 @@
 use crate::handles::slice_to_cow_utf8;
 
 use super::{
+    SqlChar,
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
-    SqlChar,
 };
-use odbc_sys::{SqlReturn, SQLSTATE_SIZE};
+use odbc_sys::{SQLSTATE_SIZE, SqlReturn};
 use std::fmt;
 
 // Starting with odbc 5 we may be able to specify utf8 encoding. Until then, we may need to fall

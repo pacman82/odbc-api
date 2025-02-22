@@ -2,7 +2,7 @@ use std::io;
 
 use thiserror::Error as ThisError;
 
-use crate::handles::{log_diagnostics, Diagnostics, Record as DiagnosticRecord, SqlResult};
+use crate::handles::{Diagnostics, Record as DiagnosticRecord, SqlResult, log_diagnostics};
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]

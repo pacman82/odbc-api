@@ -1,9 +1,9 @@
 use std::{mem, ops::Deref};
 
 use crate::{
+    Error, RowSetBuffer, TruncationInfo,
     buffers::Indicator,
     handles::{CDataMut, Statement, StatementRef},
-    Error, RowSetBuffer, TruncationInfo,
 };
 
 /// [`FetchRow`]s can be bound to a [`crate::Cursor`] to enable row wise (bulk) fetching of data as
@@ -138,7 +138,7 @@ where
             .rows
             .first_mut()
             .expect("rows in Row Wise buffers must not be empty.");
-        first.bind_columns_to_cursor(cursor)
+        unsafe { first.bind_columns_to_cursor(cursor) }
     }
 
     fn find_truncation(&self) -> Option<TruncationInfo> {
@@ -179,7 +179,7 @@ pub unsafe trait FetchRowMember: CDataMut + Copy {
         col_index: u16,
         cursor: &mut StatementRef<'_>,
     ) -> Result<(), Error> {
-        cursor.bind_col(col_index, self).into_result(cursor)
+        unsafe { cursor.bind_col(col_index, self).into_result(cursor) }
     }
 }
 
@@ -217,12 +217,15 @@ macro_rules! impl_fetch_row_for_tuple{
         unsafe impl<$($t:FetchRowMember,)*> FetchRow for ($($t,)*)
         {
             unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
-                let ($(ref mut $t,)*) = self;
-                impl_bind_columns_to_cursor!(1, cursor, $($t,)*)
+                let &mut ($(ref mut $t,)*) = self;
+                #[allow(unused_unsafe)] // We do not need the unsafe in case it would bind nothing.
+                unsafe {
+                    impl_bind_columns_to_cursor!(1, cursor, $($t,)*)
+                }
             }
 
             fn find_truncation(&self) -> Option<TruncationInfo> {
-                let ($(ref $t,)*) = self;
+                let &($(ref $t,)*) = self;
                 impl_find_truncation!(0, $($t,)*)
             }
         }

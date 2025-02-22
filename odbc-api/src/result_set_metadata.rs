@@ -3,8 +3,8 @@ use std::num::NonZeroUsize;
 use odbc_sys::SqlDataType;
 
 use crate::{
-    handles::{slice_to_utf8, AsStatementRef, SqlChar, Statement},
     ColumnDescription, DataType, Error,
+    handles::{AsStatementRef, SqlChar, Statement, slice_to_utf8},
 };
 
 /// Provides Metadata of the resulting the result set. Implemented by `Cursor` types and prepared

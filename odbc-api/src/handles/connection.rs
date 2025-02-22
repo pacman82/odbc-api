@@ -1,19 +1,19 @@
 use super::{
+    OutputStringBuffer, SqlResult,
     as_handle::AsHandle,
     buffer::mut_buf_ptr,
     drop_handle,
     sql_char::{
-        binary_length, is_truncated_bin, resize_to_fit_with_tz, resize_to_fit_without_tz, SqlChar,
-        SqlText,
+        SqlChar, SqlText, binary_length, is_truncated_bin, resize_to_fit_with_tz,
+        resize_to_fit_without_tz,
     },
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
-    OutputStringBuffer, SqlResult,
 };
 use log::debug;
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, IS_UINTEGER,
+    HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -157,17 +157,19 @@ impl Connection<'_> {
         completed_connection_string: &mut OutputStringBuffer,
         driver_completion: DriverConnectOption,
     ) -> SqlResult<()> {
-        sql_driver_connect(
-            self.handle,
-            parent_window,
-            connection_string.ptr(),
-            connection_string.len_char().try_into().unwrap(),
-            completed_connection_string.mut_buf_ptr(),
-            completed_connection_string.buf_len(),
-            completed_connection_string.mut_actual_len_ptr(),
-            driver_completion,
-        )
-        .into_sql_result("SQLDriverConnect")
+        unsafe {
+            sql_driver_connect(
+                self.handle,
+                parent_window,
+                connection_string.ptr(),
+                connection_string.len_char().try_into().unwrap(),
+                completed_connection_string.mut_buf_ptr(),
+                completed_connection_string.buf_len(),
+                completed_connection_string.mut_actual_len_ptr(),
+                driver_completion,
+            )
+            .into_sql_result("SQLDriverConnect")
+        }
     }
 
     /// Disconnect from an ODBC data source.
@@ -414,13 +416,15 @@ impl Connection<'_> {
     /// Caller must ensure connection attribute is numeric.
     unsafe fn attribute_u32(&self, attribute: ConnectionAttribute) -> SqlResult<u32> {
         let mut out: u32 = 0;
-        sql_get_connect_attr(
-            self.handle,
-            attribute,
-            &mut out as *mut u32 as *mut c_void,
-            IS_UINTEGER,
-            null_mut(),
-        )
+        unsafe {
+            sql_get_connect_attr(
+                self.handle,
+                attribute,
+                &mut out as *mut u32 as *mut c_void,
+                IS_UINTEGER,
+                null_mut(),
+            )
+        }
         .into_sql_result("SQLGetConnectAttr")
         .on_success(|| {
             let handle = self.handle;

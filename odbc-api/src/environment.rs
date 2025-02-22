@@ -6,13 +6,13 @@ use std::{
 };
 
 use crate::{
+    Connection, DriverCompleteOption, Error,
     connection::ConnectionOptions,
     error::ExtendResult,
     handles::{
-        self, log_diagnostics, slice_to_utf8, OutputStringBuffer, SqlChar, SqlResult, SqlText,
-        State, SzBuffer,
+        self, OutputStringBuffer, SqlChar, SqlResult, SqlText, State, SzBuffer, log_diagnostics,
+        slice_to_utf8,
     },
-    Connection, DriverCompleteOption, Error,
 };
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
@@ -108,7 +108,7 @@ impl Environment {
     pub unsafe fn set_connection_pooling(
         scheme: odbc_sys::AttrConnectionPooling,
     ) -> Result<(), Error> {
-        match handles::Environment::set_connection_pooling(scheme) {
+        match unsafe { handles::Environment::set_connection_pooling(scheme) } {
             SqlResult::Error { .. } => Err(Error::FailedSettingConnectionPooling),
             SqlResult::Success(()) | SqlResult::SuccessWithInfo(()) => Ok(()),
             other => {
@@ -440,14 +440,15 @@ impl Environment {
         let mut connection = self.allocate_connection()?;
         let connection_string = SqlText::new(connection_string);
 
-        let connection_string_is_complete = connection
-            .driver_connect(
+        let connection_string_is_complete = unsafe {
+            connection.driver_connect(
                 &connection_string,
                 parent_window,
                 completed_connection_string,
                 driver_completion.as_sys(),
             )
-            .into_result_bool(&connection)?;
+        }
+        .into_result_bool(&connection)?;
         if !connection_string_is_complete {
             return Err(Error::AbortedConnectionStringCompletion);
         }

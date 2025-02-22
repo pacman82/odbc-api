@@ -2,11 +2,11 @@ mod common;
 mod connection_strings;
 
 use stdext::function_name;
-use sys::{CDataType, Numeric, Pointer, SqlDataType, Timestamp, NULL_DATA};
+use sys::{CDataType, NULL_DATA, Numeric, Pointer, SqlDataType, Timestamp};
 use tempfile::NamedTempFile;
 use test_case::test_case;
 
-use common::{cursor_to_string, Given, Profile, SingleColumnRowSetBuffer};
+use common::{Given, Profile, SingleColumnRowSetBuffer, cursor_to_string};
 use connection_strings::{
     MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION, SQLITE_3_CONNECTION,
 };
@@ -14,6 +14,9 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
+    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType,
+    Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
+    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
@@ -27,9 +30,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
     },
-    sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor,
-    DataType, Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
+    sys,
 };
 
 use std::{

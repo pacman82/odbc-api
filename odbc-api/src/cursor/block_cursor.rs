@@ -1,11 +1,11 @@
 use std::{mem::MaybeUninit, ptr, thread::panicking};
 
 use crate::{
-    handles::{AsStatementRef, Statement as _},
     Error,
+    handles::{AsStatementRef, Statement as _},
 };
 
-use super::{error_handling_for_fetch, unbind_buffer_from_cursor, Cursor, RowSetBuffer};
+use super::{Cursor, RowSetBuffer, error_handling_for_fetch, unbind_buffer_from_cursor};
 
 /// In order to save on network overhead, it is recommended to use block cursors instead of fetching
 /// values individually. This can greatly reduce the time applications need to fetch data. You can

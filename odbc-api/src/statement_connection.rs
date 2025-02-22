@@ -1,8 +1,8 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
 use crate::{
-    handles::{drop_handle, AsHandle, AsStatementRef, Statement, StatementRef},
     Connection,
+    handles::{AsHandle, AsStatementRef, Statement, StatementRef, drop_handle},
 };
 
 /// Statement handle which also takes ownership of Connection

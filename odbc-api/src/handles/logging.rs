@@ -1,5 +1,5 @@
 use super::{Diagnostics, Record};
-use log::{warn, Level};
+use log::{Level, warn};
 
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
 /// is going to print placeholder characters, if it cannot convert the message to UTF-8.
@@ -30,9 +30,9 @@ pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
 mod tests {
     use std::{cell::RefCell, cmp::max};
 
-    use crate::handles::{diagnostics::DiagnosticResult, SqlChar, State};
+    use crate::handles::{SqlChar, State, diagnostics::DiagnosticResult};
 
-    use super::{log_diagnostics, Diagnostics};
+    use super::{Diagnostics, log_diagnostics};
 
     struct InfiniteDiagnostics {
         times_called: RefCell<usize>,

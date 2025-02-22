@@ -362,9 +362,9 @@ use std::ffi::c_void;
 use odbc_sys::CDataType;
 
 use crate::{
+    DataType,
     fixed_sized::Pod,
     handles::{CData, CDataMut, HasDataType},
-    DataType,
 };
 
 /// A CData representing a single value rather than an entire buffer of a range of values.

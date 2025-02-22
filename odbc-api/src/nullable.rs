@@ -3,11 +3,11 @@ use std::ffi::c_void;
 use odbc_sys::NULL_DATA;
 
 use crate::{
+    OutputParameter,
     buffers::{FetchRowMember, Indicator},
     fixed_sized::Pod,
     handles::{CData, CDataMut, HasDataType},
     parameter::CElement,
-    OutputParameter,
 };
 
 /// Wraps a type T together with an additional indicator. This way the type gains a Null

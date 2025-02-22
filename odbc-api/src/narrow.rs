@@ -1,6 +1,6 @@
 use crate::{
-    parameter::{VarCharBox, VarCharSlice},
     IntoParameter,
+    parameter::{VarCharBox, VarCharSlice},
 };
 
 /// Newtype wrapper intend to be used around `String`s or `str` slices to bind them always as narrow

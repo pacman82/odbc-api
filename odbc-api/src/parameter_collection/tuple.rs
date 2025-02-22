@@ -2,7 +2,7 @@
 //! trait.
 
 use super::ParameterCollectionRef;
-use crate::{handles::Statement, parameter::InputParameter, Error, InOut, Out, OutputParameter};
+use crate::{Error, InOut, Out, OutputParameter, handles::Statement, parameter::InputParameter};
 
 macro_rules! impl_bind_parameters {
     ($offset:expr, $stmt:ident) => (
@@ -29,7 +29,10 @@ macro_rules! impl_parameters_for_tuple{
 
             unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
                 let ($($t,)*) = self;
+                #[allow(unused_unsafe)]
+                unsafe {
                 impl_bind_parameters!(0, stmt $($t)*)
+                }
             }
         }
     );
@@ -96,8 +99,7 @@ where
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
         self.assert_completness();
-        stmt.bind_input_parameter(parameter_number, *self)
-            .into_result(stmt)
+        unsafe { stmt.bind_input_parameter(parameter_number, *self) }.into_result(stmt)
     }
 }
 
@@ -112,7 +114,7 @@ where
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
         self.0.assert_completness();
-        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0)
+        unsafe { stmt.bind_parameter(parameter_number, odbc_sys::ParamType::InputOutput, self.0) }
             .into_result(stmt)
     }
 }
@@ -127,7 +129,7 @@ where
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
-        stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0)
+        unsafe { stmt.bind_parameter(parameter_number, odbc_sys::ParamType::Output, self.0) }
             .into_result(stmt)
     }
 }

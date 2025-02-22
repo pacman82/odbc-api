@@ -1,9 +1,9 @@
 use super::{
+    Connection,
     as_handle::AsHandle,
     drop_handle,
     sql_char::SqlChar,
     sql_result::{ExtSqlReturn, SqlResult},
-    Connection,
 };
 use log::debug;
 use odbc_sys::{
@@ -70,12 +70,14 @@ impl Environment {
     /// > at any time and is able to connect on one thread, to use the connection on another thread,
     /// > and to disconnect on a third thread.
     pub unsafe fn set_connection_pooling(scheme: odbc_sys::AttrConnectionPooling) -> SqlResult<()> {
-        SQLSetEnvAttr(
-            null_mut(),
-            odbc_sys::EnvironmentAttribute::ConnectionPooling,
-            scheme.into(),
-            odbc_sys::IS_INTEGER,
-        )
+        unsafe {
+            SQLSetEnvAttr(
+                null_mut(),
+                odbc_sys::EnvironmentAttribute::ConnectionPooling,
+                scheme.into(),
+                odbc_sys::IS_INTEGER,
+            )
+        }
         .into_sql_result("SQLSetEnvAttr")
     }
 
@@ -174,16 +176,18 @@ impl Environment {
         buffer_description: &mut [SqlChar],
         buffer_attributes: &mut [SqlChar],
     ) -> SqlResult<()> {
-        sql_drivers(
-            self.handle,
-            direction,
-            buffer_description.as_mut_ptr(),
-            buffer_description.len().try_into().unwrap(),
-            null_mut(),
-            buffer_attributes.as_mut_ptr(),
-            buffer_attributes.len().try_into().unwrap(),
-            null_mut(),
-        )
+        unsafe {
+            sql_drivers(
+                self.handle,
+                direction,
+                buffer_description.as_mut_ptr(),
+                buffer_description.len().try_into().unwrap(),
+                null_mut(),
+                buffer_attributes.as_mut_ptr(),
+                buffer_attributes.len().try_into().unwrap(),
+                null_mut(),
+            )
+        }
         .into_sql_result("SQLDrivers")
     }
 
@@ -216,16 +220,18 @@ impl Environment {
         let mut length_description: i16 = 0;
         let mut length_attributes: i16 = 0;
         // Determine required buffer size
-        sql_drivers(
-            self.handle,
-            direction,
-            null_mut(),
-            0,
-            &mut length_description,
-            null_mut(),
-            0,
-            &mut length_attributes,
-        )
+        unsafe {
+            sql_drivers(
+                self.handle,
+                direction,
+                null_mut(),
+                0,
+                &mut length_description,
+                null_mut(),
+                0,
+                &mut length_attributes,
+            )
+        }
         .into_sql_result("SQLDrivers")
         .on_success(|| (length_description, length_attributes))
     }
@@ -258,16 +264,18 @@ impl Environment {
         let mut length_name: i16 = 0;
         let mut length_description: i16 = 0;
         // Determine required buffer size
-        sql_data_sources(
-            self.handle,
-            direction,
-            null_mut(),
-            0,
-            &mut length_name,
-            null_mut(),
-            0,
-            &mut length_description,
-        )
+        unsafe {
+            sql_data_sources(
+                self.handle,
+                direction,
+                null_mut(),
+                0,
+                &mut length_name,
+                null_mut(),
+                0,
+                &mut length_description,
+            )
+        }
         .into_sql_result("SQLDataSources")
         .on_success(|| (length_name, length_description))
     }
@@ -297,16 +305,18 @@ impl Environment {
         buffer_name: &mut [SqlChar],
         buffer_description: &mut [SqlChar],
     ) -> SqlResult<()> {
-        sql_data_sources(
-            self.handle,
-            direction,
-            buffer_name.as_mut_ptr(),
-            buffer_name.len().try_into().unwrap(),
-            null_mut(),
-            buffer_description.as_mut_ptr(),
-            buffer_description.len().try_into().unwrap(),
-            null_mut(),
-        )
+        unsafe {
+            sql_data_sources(
+                self.handle,
+                direction,
+                buffer_name.as_mut_ptr(),
+                buffer_name.len().try_into().unwrap(),
+                null_mut(),
+                buffer_description.as_mut_ptr(),
+                buffer_description.len().try_into().unwrap(),
+                null_mut(),
+            )
+        }
         .into_sql_result("SQLDataSources")
     }
 }

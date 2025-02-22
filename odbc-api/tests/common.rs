@@ -1,9 +1,9 @@
 use std::iter::repeat;
 
 use odbc_api::{
-    buffers, environment,
+    Connection, ConnectionOptions, Cursor, Error, RowSetBuffer, TruncationInfo, buffers,
+    environment,
     handles::{CDataMut, Statement, StatementRef},
-    Connection, ConnectionOptions, Cursor, Error, RowSetBuffer, TruncationInfo,
 };
 
 pub struct Given<'a> {
@@ -264,7 +264,7 @@ where
         &mut self,
         mut cursor: StatementRef<'_>,
     ) -> Result<(), odbc_api::Error> {
-        cursor.bind_col(1, &mut self.column).into_result(&cursor)?;
+        unsafe { cursor.bind_col(1, &mut self.column) }.into_result(&cursor)?;
         Ok(())
     }
 

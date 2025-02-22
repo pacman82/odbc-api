@@ -1,10 +1,10 @@
 use crate::{
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
     execute::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
         execute_with_parameters_polling,
     },
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
-    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See

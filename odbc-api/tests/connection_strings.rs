@@ -1,5 +1,4 @@
-pub const MSSQL_CONNECTION: &str =
-    "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
+pub const MSSQL_CONNECTION: &str = "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;\
     TrustServerCertificate=yes;";
 
 #[cfg(target_os = "windows")]

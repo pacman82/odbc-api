@@ -30,14 +30,14 @@ pub mod parameter;
 
 pub use self::{
     columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
-    connection::{escape_attribute_value, Connection, ConnectionOptions},
-    conversion::{decimal_text_to_i128, decimal_text_to_i32, decimal_text_to_i64},
+    connection::{Connection, ConnectionOptions, escape_attribute_value},
+    conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
         BlockCursor, BlockCursorPolling, ConcurrentBlockCursor, Cursor, CursorImpl, CursorPolling,
         CursorRow, RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
-    environment::{environment, DataSourceInfo, DriverInfo, Environment},
+    environment::{DataSourceInfo, DriverInfo, Environment, environment},
     error::{Error, TooLargeBufferSize},
     fixed_sized::Bit,
     handles::{ColumnDescription, DataType, Nullability},

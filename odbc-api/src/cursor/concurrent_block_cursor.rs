@@ -1,6 +1,6 @@
 use std::{
     mem::swap,
-    sync::mpsc::{sync_channel, Receiver, SyncSender},
+    sync::mpsc::{Receiver, SyncSender, sync_channel},
     thread::{self, JoinHandle},
 };
 

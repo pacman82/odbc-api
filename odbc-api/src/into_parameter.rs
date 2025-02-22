@@ -1,10 +1,10 @@
 use widestring::{U16Str, U16String};
 
 use crate::{
+    Nullable,
     buffers::Indicator,
     fixed_sized::Pod,
     parameter::{InputParameter, VarBinaryBox, VarBinarySlice, VarWCharBox, VarWCharSlice},
-    Nullable,
 };
 
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]

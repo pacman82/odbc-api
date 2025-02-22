@@ -1,17 +1,17 @@
 use std::{
     collections::HashSet,
     num::NonZeroUsize,
-    str::{from_utf8, Utf8Error},
+    str::{Utf8Error, from_utf8},
 };
 
 use crate::{
+    Error, ResultSetMetadata, RowSetBuffer,
     columnar_bulk_inserter::BoundInputSlice,
     cursor::TruncationInfo,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -99,8 +99,10 @@ where
     }
 
     unsafe fn bind_colmuns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
-        for (col_number, column) in &mut self.columns {
-            cursor.bind_col(*col_number, column).into_result(&cursor)?;
+        unsafe {
+            for (col_number, column) in &mut self.columns {
+                cursor.bind_col(*col_number, column).into_result(&cursor)?;
+            }
         }
         Ok(())
     }
@@ -304,7 +306,7 @@ where
         parameter_index: u16,
         stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
-        self.value.as_view_mut(parameter_index, stmt)
+        unsafe { self.value.as_view_mut(parameter_index, stmt) }
     }
 }
 

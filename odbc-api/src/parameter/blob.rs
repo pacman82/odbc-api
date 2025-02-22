@@ -1,8 +1,8 @@
-use odbc_sys::{len_data_at_exec, CDataType, DATA_AT_EXEC};
+use odbc_sys::{CDataType, DATA_AT_EXEC, len_data_at_exec};
 
 use crate::{
-    handles::{DelayedInput, HasDataType, Statement},
     DataType, Error, ParameterCollection, ParameterTupleElement,
+    handles::{DelayedInput, HasDataType, Statement},
 };
 use std::{
     ffi::c_void,
@@ -96,7 +96,7 @@ unsafe impl ParameterCollection for BlobParam<'_> {
     }
 
     unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
-        stmt.bind_delayed_input_parameter(1, self).into_result(stmt)
+        unsafe { stmt.bind_delayed_input_parameter(1, self) }.into_result(stmt)
     }
 }
 
@@ -106,8 +106,7 @@ unsafe impl ParameterTupleElement for &mut BlobParam<'_> {
         parameter_number: u16,
         stmt: &mut impl Statement,
     ) -> Result<(), Error> {
-        stmt.bind_delayed_input_parameter(parameter_number, *self)
-            .into_result(stmt)
+        unsafe { stmt.bind_delayed_input_parameter(parameter_number, *self) }.into_result(stmt)
     }
 }
 
@@ -368,11 +367,7 @@ where
     }
 
     fn size_hint(&self) -> Option<usize> {
-        if self.exact {
-            Some(self.size)
-        } else {
-            None
-        }
+        if self.exact { Some(self.size) } else { None }
     }
 
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>> {

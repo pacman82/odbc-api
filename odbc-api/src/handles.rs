@@ -29,7 +29,7 @@ pub use {
     diagnostics::{Diagnostics, Record, State},
     environment::Environment,
     logging::log_diagnostics,
-    sql_char::{slice_to_cow_utf8, slice_to_utf8, OutputStringBuffer, SqlChar, SqlText, SzBuffer},
+    sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
 };
@@ -45,7 +45,7 @@ use std::thread::panicking;
 ///
 /// `handle` Must be a valid ODBC handle and `handle_type` must match its type.
 pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
-    match SQLFreeHandle(handle_type, handle) {
+    match unsafe { SQLFreeHandle(handle_type, handle) } {
         SqlReturn::SUCCESS => {
             debug!("SQLFreeHandle dropped {handle:?} of type {handle_type:?}.");
         }
