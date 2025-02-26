@@ -1,5 +1,18 @@
 # Changelog
 
+## [12.0.0](https://github.com/pacman82/odbc-api/compare/v11.1.1...v12.0.0) - 2025-02-26
+
+### Fixed
+
+- build error for narrow feature
+
+### Other
+
+- lints doc comments
+- [**breaking**] Update to edition 2024
+- *(deps)* bump log from 0.4.25 to 0.4.26
+- *(deps)* bump anyhow from 1.0.95 to 1.0.96
+
 ## [11.1.1](https://github.com/pacman82/odbc-api/compare/v11.1.0...v11.1.1) - 2025-02-19
 
 ### Fixed
