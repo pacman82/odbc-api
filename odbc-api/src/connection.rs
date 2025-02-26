@@ -30,7 +30,7 @@ impl Drop for Connection<'_> {
                 if let Err(e) = self.rollback() {
                     // Connection might be in a suspended state. See documentation about suspended
                     // state here:
-                    // <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlendtran-function>
+                    // <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlendtran-function>
                     //
                     // See also issue:
                     // <https://github.com/pacman82/odbc-api/issues/574#issuecomment-2286449125>
@@ -116,7 +116,7 @@ impl<'c> Connection<'c> {
     ///
     ///   This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
-    ///   See: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    ///   See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     ///
     /// # Return
     ///
@@ -232,7 +232,7 @@ impl<'c> Connection<'c> {
     ///
     ///   This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
-    ///   See: https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    ///   See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     ///
     /// ```no_run
     /// use odbc_api::{environment, Error, Cursor, ConnectionOptions};

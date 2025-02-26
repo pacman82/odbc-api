@@ -244,7 +244,7 @@ where
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
-    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     pub fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> Result<(), Error> {
         let mut stmt = self.statement.as_stmt_ref();
         stmt.as_stmt_ref()
@@ -258,7 +258,7 @@ where
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
-    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
         let mut stmt = self.statement.as_stmt_ref();
         stmt.query_timeout_sec().into_result(&stmt)

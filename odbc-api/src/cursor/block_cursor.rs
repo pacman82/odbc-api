@@ -23,7 +23,8 @@ use super::{Cursor, RowSetBuffer, error_handling_for_fetch, unbind_buffer_from_c
 /// 2. Calculate the number of rows dynamically based on the maximum expected row size.
 ///    [`crate::buffers::BufferDesc::bytes_per_row`], can be helpful with this task.
 /// 3. Not use block cursors and fetch rows slowly with high IO overhead. Calling
-///    [`CursorRow::get_data`] and [`CursorRow::get_text`] to fetch large individual values.
+///    [`crate::CursorRow::get_data`] and [`crate::CursorRow::get_text`] to fetch large individual
+///    values.
 ///
 /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/block-cursors>
 pub struct BlockCursor<C: AsStatementRef, B> {

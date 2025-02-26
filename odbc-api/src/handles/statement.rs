@@ -258,7 +258,7 @@ pub trait Statement: AsHandle {
     /// This corresponds to `SQL_ATTR_QUERY_TIMEOUT` in the ODBC C API.
     ///
     /// See:
-    /// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> SqlResult<()> {
         let value = timeout_sec as *mut usize as Pointer;
         // This is safe, because `.as_sys`  returns a valid statement handle.
