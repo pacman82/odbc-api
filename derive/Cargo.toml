@@ -31,7 +31,7 @@ readme = "../Readme.md"
 proc-macro = true
 
 [dependencies]
-quote = "1.0.38"
+quote = "1.0.39"
 syn = "2.0.98"
 
 [dev-dependencies]
