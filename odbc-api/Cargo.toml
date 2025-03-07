@@ -83,7 +83,7 @@ default=["odbc_version_3_80"]
 # Low level bindings to ODBC API calls into libodbc.so
 odbc-sys = { version = "0.25", default-features = false }
 # Used to generate code for the error type
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 # Used as a log frontend to emit log messages for applications
 log = "0.4.26"
 # Interacting with UTF-16 texts for wide columns or wide function calls
