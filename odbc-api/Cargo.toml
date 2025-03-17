@@ -87,7 +87,7 @@ thiserror = "2.0.12"
 # Used as a log frontend to emit log messages for applications
 log = "0.4.26"
 # Interacting with UTF-16 texts for wide columns or wide function calls
-widestring = "1.1.0"
+widestring = "1.2.0"
 atoi = "2.0.0"
 odbc-api-derive ={ version = "10.0.0", path = "../derive", optional = true}
 
