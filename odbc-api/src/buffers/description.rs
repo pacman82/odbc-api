@@ -137,6 +137,7 @@ impl BufferDesc {
             // Currently no special buffers for fixed lengths text implemented.
             | DataType::WChar {length }
             | DataType::Char { length }
+            | DataType::WLongVarchar { length }
             | DataType::LongVarchar { length } => {
                 length.map(|length| BufferDesc::Text { max_str_len : length.get() } )?
             },

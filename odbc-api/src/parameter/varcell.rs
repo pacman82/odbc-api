@@ -76,8 +76,16 @@ unsafe impl VarKind for WideText {
     fn relational_type(length: usize) -> DataType {
         // Since we might use as an input buffer, we report the full buffer length in the type and
         // do not deduct 1 for the terminating zero.
-        DataType::WVarchar {
-            length: NonZeroUsize::new(length),
+        // Also some depending on the datasource Varchar may have a length limit. We decide here to
+        // use LongVarchar above the cutoff of 4000.
+        if length <= 4000 {
+            DataType::WVarchar {
+                length: NonZeroUsize::new(length),
+            }
+        } else {
+            DataType::WLongVarchar {
+                length: NonZeroUsize::new(length),
+            }
         }
     }
 }

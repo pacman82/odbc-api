@@ -83,6 +83,13 @@ pub enum DataType {
         /// depends on the capabilities of the driver and datasource. E.g. its 2^31 - 1 for MSSQL.
         length: Option<NonZeroUsize>,
     },
+    /// `NVARCHAR(MAX)`. Variable length characeter string for long text objects. Indicates the use
+    /// of wide character strings and the use of UCS2 encoding on the side of the database.
+    WLongVarchar {
+        /// Maximum length of the character string (excluding terminating zero). Maximum size
+        /// depends on the capabilities of the driver and datasource. E.g. its 2^31 - 1 for MSSQL.
+        length: Option<NonZeroUsize>,
+    },
     /// `BLOB`. Variable length data for long binary objects.
     LongVarbinary {
         /// Maximum length of the binary data. Maximum size depends on the capabilities of the
@@ -215,6 +222,7 @@ impl DataType {
             DataType::Double => SqlDataType::DOUBLE,
             DataType::Varchar { .. } => SqlDataType::VARCHAR,
             DataType::LongVarchar { .. } => SqlDataType::EXT_LONG_VARCHAR,
+            DataType::WLongVarchar { .. } => SqlDataType::EXT_W_LONG_VARCHAR,
             DataType::Date => SqlDataType::DATE,
             DataType::Time { .. } => SqlDataType::TIME,
             DataType::Timestamp { .. } => SqlDataType::TIMESTAMP,
@@ -250,6 +258,7 @@ impl DataType {
             | DataType::Binary { length }
             | DataType::WChar { length }
             | DataType::WVarchar { length }
+            | DataType::WLongVarchar { length }
             | DataType::LongVarchar { length } => *length,
             DataType::Float { precision, .. }
             | DataType::Numeric { precision, .. }
@@ -274,6 +283,7 @@ impl DataType {
             | DataType::Varbinary { .. }
             | DataType::LongVarbinary { .. }
             | DataType::Binary { .. }
+            | DataType::WLongVarchar { .. }
             | DataType::LongVarchar { .. }
             | DataType::Date
             | DataType::BigInt
@@ -308,6 +318,7 @@ impl DataType {
             | DataType::WVarchar { length }
             | DataType::WChar { length }
             | DataType::Char { length }
+            | DataType::WLongVarchar { length }
             | DataType::LongVarchar { length } => *length,
             // The precision of the column plus 2 (a sign, precision digits, and a decimal point).
             // For example, the display size of a column defined as NUMERIC(10,3) is 12.

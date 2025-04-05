@@ -664,6 +664,28 @@ fn bind_numeric_to_i64(profile: &Profile) {
     assert_eq!(1234567890, actual[0]);
 }
 
+/// If inserting text with more than 4000 characters, under windows we bind it as WVARCHAR, which
+/// may be limited to 4000 characters or something similar.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn instert_text_with_more_than_4000_characters(profile: &Profile) {
+    // Given a text with more than 4000 characters and an VARCHAR(MAX) column
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(5000)"])
+        .build(profile)
+        .unwrap();
+    let text = "a".repeat(5000);
+
+    // When we insert the text as a parameter
+    let result = conn.execute(&table.sql_insert(), &text.into_parameter(), None);
+
+    // Then we expect the insert to succeed
+    assert!(result.is_ok());
+}
+
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // Convert syntax is different
