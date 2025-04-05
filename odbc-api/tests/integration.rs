@@ -32,6 +32,7 @@ use odbc_api::{
     },
     sys,
 };
+use widestring::Utf16String;
 
 use std::{
     ffi::CString,
@@ -670,7 +671,7 @@ fn bind_numeric_to_i64(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn instert_text_with_more_than_4000_characters(profile: &Profile) {
+fn bulk_insert_long_strings(profile: &Profile) {
     // Given a text with more than 4000 characters and an VARCHAR(MAX) column
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -684,6 +685,34 @@ fn instert_text_with_more_than_4000_characters(profile: &Profile) {
 
     // Then we expect the insert to succeed
     assert!(result.is_ok());
+    assert_eq!("a".repeat(5000), table.content_as_string(&conn));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_insert_long_strings_as_wchar(profile: &Profile) {
+    // Given a text with more than 4000 characters and an VARCHAR(MAX) column
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(5000)"])
+        .build(profile)
+        .unwrap();
+    let text = Utf16String::from_str(&"a".repeat(5000));
+
+    // When we "bulk" insert the text as a parameter
+    let mut inserter = conn
+        .prepare(&table.sql_insert())
+        .unwrap()
+        .into_column_inserter(1, [BufferDesc::WText { max_str_len: 5000 }]).unwrap();
+    inserter.column_mut(0).as_w_text_view().unwrap().set_cell(0, Some(text.as_slice()));
+    inserter.set_num_rows(1);
+    inserter.execute().unwrap();
+
+    // Then we expect the insert to succeed
+    // assert!(result.is_ok());
+    assert_eq!("a".repeat(5000), table.content_as_string(&conn));
 }
 
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.

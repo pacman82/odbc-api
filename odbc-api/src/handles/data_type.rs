@@ -2,6 +2,10 @@ use std::num::NonZeroUsize;
 
 use odbc_sys::SqlDataType;
 
+/// For Microsoft SQL Server, but also for Oracle there exists a maximum string length of 4000 for
+/// `NVARCHAR` SQL type. 
+pub (crate) const ASSUMED_MAX_LENGTH_OF_W_VARCHAR: usize = 4000;
+
 /// The relational type of the column. Think of it as the type used in the `CREATE TABLE` statement
 /// then creating the database.
 ///

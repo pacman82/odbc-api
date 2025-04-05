@@ -11,9 +11,7 @@ use odbc_sys::{CDataType, NULL_DATA};
 use widestring::{U16Str, U16String};
 
 use crate::{
-    DataType, OutputParameter,
-    buffers::{FetchRowMember, Indicator},
-    handles::{CData, CDataMut, HasDataType},
+    buffers::{FetchRowMember, Indicator}, handles::{CData, CDataMut, HasDataType, ASSUMED_MAX_LENGTH_OF_W_VARCHAR}, DataType, OutputParameter
 };
 
 use super::CElement;
@@ -55,6 +53,10 @@ unsafe impl VarKind for Text {
     fn relational_type(length: usize) -> DataType {
         // Since we might use as an input buffer, we report the full buffer length in the type and
         // do not deduct 1 for the terminating zero.
+
+        // For some reason (unknown to me) there has been no need to switch the LongVarchar type in
+        // order to support larger strings (so far).
+
         DataType::Varchar {
             length: NonZeroUsize::new(length),
         }
@@ -78,7 +80,7 @@ unsafe impl VarKind for WideText {
         // do not deduct 1 for the terminating zero.
         // Also some depending on the datasource Varchar may have a length limit. We decide here to
         // use LongVarchar above the cutoff of 4000.
-        if length <= 4000 {
+        if length <= ASSUMED_MAX_LENGTH_OF_W_VARCHAR {
             DataType::WVarchar {
                 length: NonZeroUsize::new(length),
             }
