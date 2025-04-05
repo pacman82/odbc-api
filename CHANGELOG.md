@@ -1,5 +1,36 @@
 # Changelog
 
+## [12.0.0](https://github.com/pacman82/odbc-api/compare/v11.1.1...v12.0.0) - 2025-04-05
+
+### Added
+
+- Bulk inserting WChar now automatically uses 'DataType::WLongVarchar' for long strings
+- [**breaking**] Using strings longer than 4000 characters as parameters with MSSQL.
+
+### Fixed
+
+- build error for narrow feature
+
+### Other
+
+- *(deps)* bump log from 0.4.26 to 0.4.27
+- *(deps)* bump tempfile from 3.19.0 to 3.19.1
+- *(deps)* bump widestring from 1.1.0 to 1.2.0
+- *(deps)* bump tempfile from 3.18.0 to 3.19.0
+- *(deps)* bump tokio from 1.44.0 to 1.44.1
+- *(deps)* bump tokio from 1.43.0 to 1.44.0
+- *(deps)* bump thiserror from 2.0.11 to 2.0.12
+- *(deps)* bump tempfile from 3.17.1 to 3.18.0
+- *(deps)* bump anyhow from 1.0.96 to 1.0.97
+- lints doc comments
+- [**breaking**] Update to edition 2024
+- *(deps)* bump log from 0.4.25 to 0.4.26
+- *(deps)* bump anyhow from 1.0.95 to 1.0.96
+- *(deps)* bump quote from 1.0.39 to 1.0.40
+- *(deps)* bump syn from 2.0.99 to 2.0.100
+- *(deps)* bump syn from 2.0.98 to 2.0.99
+- *(deps)* bump quote from 1.0.38 to 1.0.39
+
 ## [11.1.1](https://github.com/pacman82/odbc-api/compare/v11.1.0...v11.1.1) - 2025-02-19
 
 ### Fixed
