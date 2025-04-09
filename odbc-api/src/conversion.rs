@@ -77,16 +77,34 @@ where
     } else {
         high + low
     };
-    // We would be done now, if every database would include trailing zeroes, but they might choose
-    // to omit those. Therfore we see if we need to leftshift n further in order to meet scale.
-    for _ in 0..(scale - num_digits_low) {
-        n *= I::TEN;
+
+    match num_digits_low.cmp(&scale) {
+        // If the number of digits in low is less than scale, we need to left shift n
+        std::cmp::Ordering::Less => {
+            // We need to left shift n to meet scale
+            for _ in 0..(scale - num_digits_low) {
+                n *= I::TEN;
+            }
+        }
+        // If the number of digits in low is greater than scale, we need to right shift n
+        std::cmp::Ordering::Greater => {
+            // We need to right shift n to meet scale (truncate)
+            for _ in 0..(num_digits_low - scale) {
+                // Use integer division for truncation
+                n = n / I::TEN;
+            }
+        }
+        // If num_digits_low == scale, we do nothing
+        std::cmp::Ordering::Equal => {}
     }
+
     n
 }
 
 trait ToDecimal:
-    FromRadix10 + FromRadix10Signed + Add<Output = Self> + Sub<Output = Self> + MulAssign + Ord
+    FromRadix10 + FromRadix10Signed + Add<Output = Self> + Sub<Output = Self> + MulAssign + std::ops::Div<Output = Self> // Add Div requirement for right-shifting
+     + Ord
+     + Copy // Add Copy requirement for division
 {
     const ZERO: Self;
     const TEN: Self;
@@ -172,5 +190,29 @@ mod tests {
     fn negative_decimal_small_i32() {
         let actual = decimal_text_to_i32(b"-0.1", 5);
         assert_eq!(-10000, actual);
+    }
+
+    #[test]
+
+    fn decimal_with_too_much_scale() {
+        let actual = decimal_text_to_i128(b"10.000000", 5);
+
+        assert_eq!(1_000_000, actual);
+    }
+
+    #[test]
+
+    fn decimal_with_too_much_scale_negative() {
+        let actual = decimal_text_to_i128(b"-10.123456", 5);
+
+        assert_eq!(-1_012_345, actual);
+    }
+
+    #[test]
+
+    fn decimal_with_too_much_scale_small_negative() {
+        let actual = decimal_text_to_i128(b"-0.123456", 5);
+
+        assert_eq!(-12345, actual);
     }
 }
