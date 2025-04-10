@@ -1,4 +1,4 @@
-use std::ops::{Add, MulAssign, Sub};
+use std::ops::{Add, DivAssign, MulAssign, Sub};
 
 use atoi::{FromRadix10, FromRadix10Signed};
 
@@ -91,7 +91,7 @@ where
             // We need to right shift n to meet scale (truncate)
             for _ in 0..(num_digits_low - scale) {
                 // Use integer division for truncation
-                n = n / I::TEN;
+                n /= I::TEN;
             }
         }
         // If num_digits_low == scale, we do nothing
@@ -102,9 +102,13 @@ where
 }
 
 trait ToDecimal:
-    FromRadix10 + FromRadix10Signed + Add<Output = Self> + Sub<Output = Self> + MulAssign + std::ops::Div<Output = Self> // Add Div requirement for right-shifting
-     + Ord
-     + Copy // Add Copy requirement for division
+    FromRadix10
+    + FromRadix10Signed
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + MulAssign
+    + DivAssign
+    + Ord
 {
     const ZERO: Self;
     const TEN: Self;
