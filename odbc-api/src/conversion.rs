@@ -193,7 +193,6 @@ mod tests {
     }
 
     #[test]
-
     fn decimal_with_too_much_scale() {
         let actual = decimal_text_to_i128(b"10.000000", 5);
 
@@ -201,7 +200,6 @@ mod tests {
     }
 
     #[test]
-
     fn decimal_with_too_much_scale_negative() {
         let actual = decimal_text_to_i128(b"-10.123456", 5);
 
@@ -209,7 +207,6 @@ mod tests {
     }
 
     #[test]
-
     fn decimal_with_too_much_scale_small_negative() {
         let actual = decimal_text_to_i128(b"-0.123456", 5);
 
