@@ -1,5 +1,17 @@
 # Changelog
 
+## [12.0.1](https://github.com/pacman82/odbc-api/compare/v12.0.0...v12.0.1) - 2025-04-10
+
+### Fixed
+
+- `decimal_text_to_i*Bits*` Avoid panics in cases the scale in the text representation exceeds the passed scale
+- Decimal conversion with not enough low digits
+
+### Other
+
+- Test formatting
+- *(deps)* bump tokio from 1.44.1 to 1.44.2
+
 ## [12.0.0](https://github.com/pacman82/odbc-api/compare/v11.1.1...v12.0.0) - 2025-04-05
 
 ### Added
