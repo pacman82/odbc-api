@@ -5,7 +5,6 @@
 ### Fixed
 
 - `decimal_text_to_i*Bits*` Avoid panics in cases the scale in the text representation exceeds the passed scale
-- Decimal conversion with not enough low digits
 
 ### Other
 
