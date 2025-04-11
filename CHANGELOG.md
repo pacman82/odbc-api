@@ -1,5 +1,11 @@
 # Changelog
 
+## [12.0.2](https://github.com/pacman82/odbc-api/compare/v12.0.1...v12.0.2) - 2025-04-11
+
+### Other
+
+- Added MacPorts
+
 ## [12.0.1](https://github.com/pacman82/odbc-api/compare/v12.0.0...v12.0.1) - 2025-04-10
 
 ### Fixed
