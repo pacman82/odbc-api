@@ -41,12 +41,20 @@ Nothing to do. ODBC driver manager is preinstalled.
 sudo apt-get install unixodbc-dev
 ```
 
-### MAC-OS
+### macOS
 
-You can use homebrew to install UnixODBC
+You can use homebrew to install unixODBC
 
 ```shell
-brew install unixodbc
+sudo brew install unixodbc
+```
+
+**or**
+
+You can use MacPorts to install it
+
+```shell
+sudo port install unixodbc
 ```
 
 **or**
@@ -58,7 +66,7 @@ You can also install unixODBC from source:
 3. tar xvf unixODBC*.tar
 4. `./configure`
 5. `make`
-6. `make install`
+6. `sudo make install`
 
 ### Linux / OS-X via Nix Flakes
 
