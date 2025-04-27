@@ -705,8 +705,13 @@ fn bulk_insert_long_strings_as_wchar(profile: &Profile) {
     let mut inserter = conn
         .prepare(&table.sql_insert())
         .unwrap()
-        .into_column_inserter(1, [BufferDesc::WText { max_str_len: 5000 }]).unwrap();
-    inserter.column_mut(0).as_w_text_view().unwrap().set_cell(0, Some(text.as_slice()));
+        .into_column_inserter(1, [BufferDesc::WText { max_str_len: 5000 }])
+        .unwrap();
+    inserter
+        .column_mut(0)
+        .as_w_text_view()
+        .unwrap()
+        .set_cell(0, Some(text.as_slice()));
     inserter.set_num_rows(1);
     inserter.execute().unwrap();
 
@@ -2032,6 +2037,57 @@ fn describe_parameters_of_prepared_statement(
 
     assert_eq!(expected.as_slice(), parameter_descriptions);
     assert_eq!(2, prepared.num_params().unwrap());
+}
+
+// At a length of 1000, the type reported by the driver for `VARCHAR` relational type is sometimes
+// a `LONG VARCHAR` variant.
+#[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
+#[test_case(MARIADB, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Maria DB")]
+#[test_case(SQLITE_3, DataType::WChar { length: NonZeroUsize::new(1000) }; "SQLite 3")]
+#[test_case(POSTGRES, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "PostgreSQL")]
+fn data_types_for_varchar_1000_from_concise_type(profile: &Profile, expected_data_type: DataType) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(1000)"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let data_type_from_conscise_type = cursor.col_data_type(1).unwrap();
+
+    // Then
+    assert_eq!(expected_data_type, data_type_from_conscise_type);
+}
+
+// Remarkabely the data types reported may differ if the source is a column description
+#[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
+#[test_case(MARIADB, DataType::WVarchar { length: NonZeroUsize::new(1000) }; "Maria DB")]
+#[test_case(SQLITE_3, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "SQLite 3")]
+#[test_case(POSTGRES, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "PostgreSQL")]
+fn data_types_for_varchar_1000_from_description(profile: &Profile, expected_data_type: DataType) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(1000)"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let mut column_description = ColumnDescription::default();
+    cursor.describe_col(1, &mut column_description).unwrap();
+    let data_type_from_desc = column_description.data_type;
+
+    // Then
+    assert_eq!(expected_data_type, data_type_from_desc);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -5214,6 +5270,8 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
     // Then
     assert_eq!(42, batch[0].0);
 }
+
+// Learning tests ----------------------------------------------------------------------------------
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]

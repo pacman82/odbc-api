@@ -118,6 +118,10 @@ pub trait ResultSetMetadata: AsStatementRef {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_data_type(&mut self, column_number: u16) -> Result<DataType, Error> {
+
+        // There is some repetition of knowledge here, about how SqlDataType maps to DataType.
+        // Maybe we can unify this with [`DataType::new`].
+
         let stmt = self.as_stmt_ref();
         let kind = stmt.col_concise_type(column_number).into_result(&stmt)?;
         let dt = match kind {
@@ -138,6 +142,9 @@ pub trait ResultSetMetadata: AsStatementRef {
                 length: self.col_display_size(column_number)?,
             },
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
+                length: self.col_display_size(column_number)?,
+            },
+            SqlDataType::EXT_W_LONG_VARCHAR => DataType::WLongVarchar {
                 length: self.col_display_size(column_number)?,
             },
             SqlDataType::CHAR => DataType::Char {
