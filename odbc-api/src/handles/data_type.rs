@@ -155,6 +155,9 @@ impl DataType {
             SqlDataType::EXT_LONG_VARCHAR => DataType::LongVarchar {
                 length: NonZeroUsize::new(column_size),
             },
+            SqlDataType::EXT_W_LONG_VARCHAR => DataType::WLongVarchar {
+                length: NonZeroUsize::new(column_size),
+            },
             SqlDataType::EXT_BINARY => DataType::Binary {
                 length: NonZeroUsize::new(column_size),
             },
