@@ -1,5 +1,19 @@
 # Changelog
 
+## [12.0.2](https://github.com/pacman82/odbc-api/compare/v12.0.1...v12.0.2) - 2025-04-27
+
+### Fixed
+
+- `DataType::utf8_len` and `DataType::utf16_len` now also account for special characters if `DataType` is `LongVarchar` or `WLongVarchar`
+- EXT_W_LONG_VARCHAR to DataType::WLongVarchar
+
+### Other
+
+- Fix test assertions for non-windows platforms
+- Import transmute from mem rather than intrinsic namespace
+- *(deps)* bump anyhow from 1.0.97 to 1.0.98
+- Added MacPorts
+
 ## [12.0.1](https://github.com/pacman82/odbc-api/compare/v12.0.0...v12.0.1) - 2025-04-10
 
 ### Fixed
