@@ -1,4 +1,4 @@
-use std::intrinsics::transmute;
+use std::mem::transmute;
 
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
