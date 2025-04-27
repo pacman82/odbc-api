@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- EXT_W_LONG_VARCHAR to DataType::WLongVarchar
+- EXT_W_LONG_VARCHAR had been mapped to `DataType::Other` rather than `DataType::WLongVarchar`. In downstream libraries like `arrow-odbc` this could lead to not recognizing that this column may contain special characters and too small value buffers may have been allocated.
 
 ### Other
 
