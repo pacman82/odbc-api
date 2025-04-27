@@ -138,10 +138,11 @@ pub enum DataType {
     Other {
         /// Type of the column
         data_type: SqlDataType,
-        /// Size of column element
+        /// Size of column element. This is the size used to bind the data type as a paramater.
         column_size: Option<NonZeroUsize>,
         /// Decimal digits returned for the column element. Exact meaning if any depends on the
-        /// `data_type` field.
+        /// `data_type` field. Like `column_size` this is used then using the [`DataType`] to bind
+        /// data as a parameter.
         decimal_digits: i16,
     },
 }
