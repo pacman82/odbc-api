@@ -5,7 +5,9 @@
 ### Fixed
 
 - `DataType::utf8_len` and `DataType::utf16_len` now also account for special characters if `DataType` is `LongVarchar` or `WLongVarchar`
-- EXT_W_LONG_VARCHAR to DataType::WLongVarchar
+- `SqlDataType::EXT_W_LONG_VARCHAR` is now mapped to `DataType::WLongVarchar` rather than `DataType::Other`.
+
+Together these fixes should enable downstream crates like `arrow-odbc` to allocate large enough buffers for fetching strings with special characters even large relational types like `VACHAR(1000)` are used with PostgreSQL.
 
 ### Other
 
