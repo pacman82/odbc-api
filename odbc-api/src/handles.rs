@@ -34,7 +34,7 @@ pub use {
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
 };
 
-pub (crate) use data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
+pub(crate) use data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
 
 use log::debug;
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

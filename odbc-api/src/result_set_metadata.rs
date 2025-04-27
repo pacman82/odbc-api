@@ -118,7 +118,6 @@ pub trait ResultSetMetadata: AsStatementRef {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_data_type(&mut self, column_number: u16) -> Result<DataType, Error> {
-
         // There is some repetition of knowledge here, about how SqlDataType maps to DataType.
         // Maybe we can unify this with [`DataType::new`].
 

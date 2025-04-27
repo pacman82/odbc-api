@@ -254,6 +254,26 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(kind, cursor.col_data_type(11).unwrap());
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn conscise_data_type_reported_for_timestamp(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["DATETIME2"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+
+    // Then
+    assert_eq!(DataType::Timestamp { precision: 7 }, data_type);
+}
+
 /// Fetch text from data source using the TextBuffer type
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
@@ -2042,27 +2062,39 @@ fn describe_parameters_of_prepared_statement(
 // Windows and non-windows versions of drivers may report different data types
 const fn native_varchar_data_type(length: usize) -> DataType {
     if cfg!(target_os = "windows") {
-        DataType::WVarchar { length: NonZeroUsize::new(length) }
+        DataType::WVarchar {
+            length: NonZeroUsize::new(length),
+        }
     } else {
-        DataType::Varchar { length: NonZeroUsize::new(length) }
+        DataType::Varchar {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 
 // Windows and non-windows versions of drivers may report different data types
 const fn native_long_varchar_data_type(length: usize) -> DataType {
     if cfg!(target_os = "windows") {
-        DataType::WLongVarchar { length: NonZeroUsize::new(length) }
+        DataType::WLongVarchar {
+            length: NonZeroUsize::new(length),
+        }
     } else {
-        DataType::LongVarchar { length: NonZeroUsize::new(length) }
+        DataType::LongVarchar {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 
 // Windows and non-windows versions of drivers may report different data types
 const fn native_char_data_type(length: usize) -> DataType {
     if cfg!(target_os = "windows") {
-        DataType::WChar { length: NonZeroUsize::new(length) }
+        DataType::WChar {
+            length: NonZeroUsize::new(length),
+        }
     } else {
-        DataType::Char { length: NonZeroUsize::new(length) }
+        DataType::Char {
+            length: NonZeroUsize::new(length),
+        }
     }
 }
 

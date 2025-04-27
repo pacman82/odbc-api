@@ -1,5 +1,10 @@
 use crate::{
-    columnar_bulk_inserter::BoundInputSlice, error::TooLargeBufferSize, handles::{CData, CDataMut, HasDataType, Statement, StatementRef, ASSUMED_MAX_LENGTH_OF_W_VARCHAR}, DataType, Error
+    DataType, Error,
+    columnar_bulk_inserter::BoundInputSlice,
+    error::TooLargeBufferSize,
+    handles::{
+        ASSUMED_MAX_LENGTH_OF_W_VARCHAR, CData, CDataMut, HasDataType, Statement, StatementRef,
+    },
 };
 
 use super::{ColumnBuffer, Indicator};
@@ -633,7 +638,6 @@ unsafe impl CDataMut for WCharColumn {
 
 impl HasDataType for WCharColumn {
     fn data_type(&self) -> DataType {
-
         if self.max_str_len <= ASSUMED_MAX_LENGTH_OF_W_VARCHAR {
             DataType::WVarchar {
                 length: NonZeroUsize::new(self.max_str_len),

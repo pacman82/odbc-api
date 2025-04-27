@@ -3,8 +3,8 @@ use std::num::NonZeroUsize;
 use odbc_sys::SqlDataType;
 
 /// For Microsoft SQL Server, but also for Oracle there exists a maximum string length of 4000 for
-/// `NVARCHAR` SQL type. 
-pub (crate) const ASSUMED_MAX_LENGTH_OF_W_VARCHAR: usize = 4000;
+/// `NVARCHAR` SQL type.
+pub(crate) const ASSUMED_MAX_LENGTH_OF_W_VARCHAR: usize = 4000;
 
 /// The relational type of the column. Think of it as the type used in the `CREATE TABLE` statement
 /// then creating the database.
@@ -213,7 +213,7 @@ impl DataType {
         }
     }
 
-    /// The associated `data_type` discriminator for this variant.
+    /// The associated consicse SQL `data_type` discriminator for this variant.
     pub fn data_type(&self) -> SqlDataType {
         match self {
             DataType::Unknown => SqlDataType::UNKNOWN_TYPE,
@@ -401,7 +401,9 @@ impl DataType {
             | DataType::Char { length }
             | DataType::WChar { length }
             | DataType::LongVarchar { length }
-            | DataType::WLongVarchar { length } => length.map(|l| l.get() * 4).and_then(NonZeroUsize::new),
+            | DataType::WLongVarchar { length } => {
+                length.map(|l| l.get() * 4).and_then(NonZeroUsize::new)
+            }
             other => other.display_size(),
         }
     }
@@ -433,7 +435,9 @@ impl DataType {
             | DataType::WChar { length }
             | DataType::Char { length }
             | DataType::LongVarchar { length }
-            | DataType::WLongVarchar { length } => length.map(|l| l.get() * 2).and_then(NonZeroUsize::new),
+            | DataType::WLongVarchar { length } => {
+                length.map(|l| l.get() * 2).and_then(NonZeroUsize::new)
+            }
             other => other.display_size(),
         }
     }

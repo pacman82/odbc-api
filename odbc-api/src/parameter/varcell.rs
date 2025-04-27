@@ -11,7 +11,9 @@ use odbc_sys::{CDataType, NULL_DATA};
 use widestring::{U16Str, U16String};
 
 use crate::{
-    buffers::{FetchRowMember, Indicator}, handles::{CData, CDataMut, HasDataType, ASSUMED_MAX_LENGTH_OF_W_VARCHAR}, DataType, OutputParameter
+    DataType, OutputParameter,
+    buffers::{FetchRowMember, Indicator},
+    handles::{ASSUMED_MAX_LENGTH_OF_W_VARCHAR, CData, CDataMut, HasDataType},
 };
 
 use super::CElement;
