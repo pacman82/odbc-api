@@ -386,6 +386,8 @@ impl DataType {
     /// assert_eq!(DataType::Char { length: nz(10) }.utf8_len(), nz(40));
     /// assert_eq!(DataType::WVarchar { length: nz(10) }.utf8_len(), nz(40));
     /// assert_eq!(DataType::WChar { length: nz(10) }.utf8_len(), nz(40));
+    /// assert_eq!(DataType::LongVarchar { length: nz(10) }.utf8_len(), nz(40));
+    /// assert_eq!(DataType::WLongVarchar { length: nz(10) }.utf8_len(), nz(40));
     /// // For other types return value is identical to display size as they are assumed to be
     /// // entirely representable with ASCII characters.
     /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf8_len(), nz(10 + 2));
@@ -395,8 +397,10 @@ impl DataType {
             // One character may need up to four bytes to be represented in utf-8.
             DataType::Varchar { length }
             | DataType::WVarchar { length }
+            | DataType::Char { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => length.map(|l| l.get() * 4).and_then(NonZeroUsize::new),
+            | DataType::LongVarchar { length }
+            | DataType::WLongVarchar { length } => length.map(|l| l.get() * 4).and_then(NonZeroUsize::new),
             other => other.display_size(),
         }
     }
@@ -414,6 +418,8 @@ impl DataType {
     /// assert_eq!(DataType::Char { length: nz(10) }.utf16_len(), nz(20));
     /// assert_eq!(DataType::WVarchar { length: nz(10) }.utf16_len(), nz(20));
     /// assert_eq!(DataType::WChar { length: nz(10) }.utf16_len(), nz(20));
+    /// assert_eq!(DataType::LongVarchar { length: nz(10) }.utf16_len(), nz(20));
+    /// assert_eq!(DataType::WLongVarchar { length: nz(10) }.utf16_len(), nz(20));
     /// // For other types return value is identical to display size as they are assumed to be
     /// // entirely representable with ASCII characters.
     /// assert_eq!(DataType::Numeric { precision: 10, scale: 3}.utf16_len(), nz(10 + 2));
@@ -424,7 +430,9 @@ impl DataType {
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             | DataType::WChar { length }
-            | DataType::Char { length } => length.map(|l| l.get() * 2).and_then(NonZeroUsize::new),
+            | DataType::Char { length }
+            | DataType::LongVarchar { length }
+            | DataType::WLongVarchar { length } => length.map(|l| l.get() * 2).and_then(NonZeroUsize::new),
             other => other.display_size(),
         }
     }
