@@ -2039,12 +2039,39 @@ fn describe_parameters_of_prepared_statement(
     assert_eq!(2, prepared.num_params().unwrap());
 }
 
+// Windows and non-windows versions of drivers may report different data types
+const fn native_varchar_data_type(length: usize) -> DataType {
+    if cfg!(target_os = "windows") {
+        DataType::WVarchar { length: NonZeroUsize::new(length) }
+    } else {
+        DataType::Varchar { length: NonZeroUsize::new(length) }
+    }
+}
+
+// Windows and non-windows versions of drivers may report different data types
+const fn native_long_varchar_data_type(length: usize) -> DataType {
+    if cfg!(target_os = "windows") {
+        DataType::WLongVarchar { length: NonZeroUsize::new(length) }
+    } else {
+        DataType::LongVarchar { length: NonZeroUsize::new(length) }
+    }
+}
+
+// Windows and non-windows versions of drivers may report different data types
+const fn native_char_data_type(length: usize) -> DataType {
+    if cfg!(target_os = "windows") {
+        DataType::WChar { length: NonZeroUsize::new(length) }
+    } else {
+        DataType::Char { length: NonZeroUsize::new(length) }
+    }
+}
+
 // At a length of 1000, the type reported by the driver for `VARCHAR` relational type is sometimes
 // a `LONG VARCHAR` variant.
 #[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
 #[test_case(MARIADB, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Maria DB")]
-#[test_case(SQLITE_3, DataType::WChar { length: NonZeroUsize::new(1000) }; "SQLite 3")]
-#[test_case(POSTGRES, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "PostgreSQL")]
+#[test_case(SQLITE_3, native_char_data_type(1000); "SQLite 3")]
+#[test_case(POSTGRES, native_long_varchar_data_type(1000); "PostgreSQL")]
 fn data_types_for_varchar_1000_from_concise_type(profile: &Profile, expected_data_type: DataType) {
     // Given
     let table_name = table_name!();
@@ -2066,9 +2093,9 @@ fn data_types_for_varchar_1000_from_concise_type(profile: &Profile, expected_dat
 
 // Remarkabely the data types reported may differ if the source is a column description
 #[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
-#[test_case(MARIADB, DataType::WVarchar { length: NonZeroUsize::new(1000) }; "Maria DB")]
-#[test_case(SQLITE_3, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "SQLite 3")]
-#[test_case(POSTGRES, DataType::WLongVarchar { length: NonZeroUsize::new(1000) }; "PostgreSQL")]
+#[test_case(MARIADB, native_varchar_data_type(1000); "Maria DB")]
+#[test_case(SQLITE_3, native_long_varchar_data_type(1000); "SQLite 3")]
+#[test_case(POSTGRES, native_long_varchar_data_type(1000); "PostgreSQL")]
 fn data_types_for_varchar_1000_from_description(profile: &Profile, expected_data_type: DataType) {
     // Given
     let table_name = table_name!();
