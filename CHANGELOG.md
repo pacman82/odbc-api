@@ -1,5 +1,11 @@
 # Changelog
 
+## [12.2.0](https://github.com/pacman82/odbc-api/compare/v12.1.0...v12.2.0) - 2025-05-01
+
+### Added
+
+- Adds `Nullability::could_be_nullable`
+
 ## [12.1.0](https://github.com/pacman82/odbc-api/compare/v12.0.2...v12.1.0) - 2025-05-01
 
 ### Added
