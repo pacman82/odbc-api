@@ -1,5 +1,19 @@
 # Changelog
 
+## [12.1.0](https://github.com/pacman82/odbc-api/compare/v12.0.2...v12.1.0) - 2025-05-01
+
+### Added
+
+- `ResultSetMetadata::col_nullability` can now be used to fetch information about the nullability of a result set column.
+
+### Other
+
+- Conscise data types for timestamps of all tested DBMs
+- *(deps)* bump winit from 0.30.9 to 0.30.10
+- learning test for concise type of Datetime2
+- Update comments on DataType Other
+- *(deps)* bump syn from 2.0.100 to 2.0.101
+
 ## [12.0.2](https://github.com/pacman82/odbc-api/compare/v12.0.1...v12.0.2) - 2025-04-27
 
 ### Fixed
