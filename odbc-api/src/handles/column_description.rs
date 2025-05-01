@@ -33,6 +33,15 @@ impl Nullability {
             other => panic!("ODBC returned invalid value for Nullable: {}", other.0),
         }
     }
+
+    /// `true` if the column is `Nullable` or it is not know whether the column is nullable. `false`
+    /// if and only if the column is `NoNulls`.
+    pub fn could_be_nullable(&self) -> bool {
+        match self {
+            Nullability::Nullable | Nullability::Unknown => true,
+            Nullability::NoNulls => false,
+        }
+    }
 }
 
 /// Describes the type and attributes of a column.
@@ -78,10 +87,7 @@ impl ColumnDescription {
     /// `true` if the column is `Nullable` or it is not know whether the column is nullable. `false`
     /// if and only if the column is `NoNulls`.
     pub fn could_be_nullable(&self) -> bool {
-        match self.nullability {
-            Nullability::Nullable | Nullability::Unknown => true,
-            Nullability::NoNulls => false,
-        }
+        self.nullability.could_be_nullable()
     }
 }
 
