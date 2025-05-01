@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use odbc_sys::SqlDataType;
 
 use crate::{
-    ColumnDescription, DataType, Error,
+    ColumnDescription, DataType, Error, Nullability,
     handles::{AsStatementRef, SqlChar, Statement, slice_to_utf8},
 };
 
@@ -96,6 +96,17 @@ pub trait ResultSetMetadata: AsStatementRef {
     fn col_scale(&mut self, column_number: u16) -> Result<isize, Error> {
         let stmt = self.as_stmt_ref();
         stmt.col_scale(column_number).into_result(&stmt)
+    }
+
+    /// Nullability of the column.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// See `SQL_DESC_NULLABLE ` in the ODBC reference:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function>
+    fn col_nullability(&mut self, column_number: u16) -> Result<Nullability, Error> {
+        let stmt = self.as_stmt_ref();
+        stmt.col_nullability(column_number).into_result(&stmt)
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is

@@ -718,8 +718,19 @@ pub trait Statement: AsHandle {
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    fn col_scale(&self, column_number: u16) -> SqlResult<Len> {
+    fn col_scale(&self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
+    }
+
+    /// Nullability of the column.
+    ///
+    /// `column_number`: Index of the column, starting at 1.
+    ///
+    /// See `SQL_DESC_NULLABLE ` in the ODBC reference:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function>
+    fn col_nullability(&self, column_number: u16) -> SqlResult<Nullability> {
+        unsafe { self.numeric_col_attribute(Desc::Nullable, column_number) }
+            .map(|nullability| Nullability::new(odbc_sys::Nullability(nullability as i16)))
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is

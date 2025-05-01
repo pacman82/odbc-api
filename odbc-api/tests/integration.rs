@@ -258,7 +258,11 @@ fn describe_columns(profile: &Profile) {
 #[test_case(MARIADB, "TIMESTAMP", DataType::Timestamp { precision: 0 }; "Maria DB")]
 #[test_case(SQLITE_3, "DATETIME2", DataType::Timestamp { precision: 3 }; "SQLite 3")]
 #[test_case(POSTGRES, "TIMESTAMP", DataType::Timestamp { precision: 6 }; "PostgreSQL")]
-fn conscise_data_type_reported_for_timestamp(profile: &Profile, relational_type: &str, expected: DataType) {
+fn conscise_data_type_reported_for_timestamp(
+    profile: &Profile,
+    relational_type: &str,
+    expected: DataType,
+) {
     // Given
     let table_name = table_name!();
     let (conn, _table) = Given::new(&table_name)
@@ -275,6 +279,31 @@ fn conscise_data_type_reported_for_timestamp(profile: &Profile, relational_type:
 
     // Then
     assert_eq!(expected, data_type);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn col_nullability(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["INT NOT NULL", "INT"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a, b FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let nullability_a = cursor.col_nullability(1).unwrap();
+    let nullability_b = cursor.col_nullability(2).unwrap();
+
+    // Then
+    assert_eq!(Nullability::NoNulls, nullability_a);
+    assert_eq!(Nullability::Nullable, nullability_b);
 }
 
 /// Fetch text from data source using the TextBuffer type
