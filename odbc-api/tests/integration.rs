@@ -254,12 +254,15 @@ fn describe_columns(profile: &Profile) {
     assert_eq!(kind, cursor.col_data_type(11).unwrap());
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-fn conscise_data_type_reported_for_timestamp(profile: &Profile) {
+#[test_case(MSSQL, "DATETIME2", DataType::Timestamp { precision: 7 }; "Microsoft SQL Server")]
+#[test_case(MARIADB, "TIMESTAMP", DataType::Timestamp { precision: 0 }; "Maria DB")]
+#[test_case(SQLITE_3, "DATETIME2", DataType::Timestamp { precision: 3 }; "SQLite 3")]
+#[test_case(POSTGRES, "TIMESTAMP", DataType::Timestamp { precision: 6 }; "PostgreSQL")]
+fn conscise_data_type_reported_for_timestamp(profile: &Profile, relational_type: &str, expected: DataType) {
     // Given
     let table_name = table_name!();
     let (conn, _table) = Given::new(&table_name)
-        .column_types(&["DATETIME2"])
+        .column_types(&[relational_type])
         .build(profile)
         .unwrap();
 
@@ -271,7 +274,7 @@ fn conscise_data_type_reported_for_timestamp(profile: &Profile) {
     let data_type = cursor.col_data_type(1).unwrap();
 
     // Then
-    assert_eq!(DataType::Timestamp { precision: 7 }, data_type);
+    assert_eq!(expected, data_type);
 }
 
 /// Fetch text from data source using the TextBuffer type
