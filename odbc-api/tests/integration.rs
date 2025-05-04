@@ -501,6 +501,30 @@ fn column_name(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn umlaut_in_column_name(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_names(&["hällo"])
+        .column_types(&["INT"])
+        .build(profile)
+        .unwrap();
+
+    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), (), None).unwrap().unwrap();
+
+    let name = cursor.col_name(1).unwrap();
+    assert_eq!("hällo", name);
+
+    // Test the same using column descriptions
+    let mut desc = ColumnDescription::default();
+
+    cursor.describe_col(1, &mut desc).unwrap();
+    assert_eq!("hällo", desc.name_to_string().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn bind_wide_column_to_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
