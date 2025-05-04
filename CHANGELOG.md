@@ -1,5 +1,14 @@
 # Changelog
 
+## [12.2.1](https://github.com/pacman82/odbc-api/compare/v12.2.0...v12.2.1) - 2025-05-04
+
+### Other
+
+- Add 2Byte Character in UTF16 to umlaut test
+- umlaut in column name
+- fix test Column Description for date
+- Column Description for date
+
 ## [12.2.0](https://github.com/pacman82/odbc-api/compare/v12.1.0...v12.2.0) - 2025-05-01
 
 ### Added
