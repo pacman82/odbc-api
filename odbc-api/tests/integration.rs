@@ -166,7 +166,7 @@ fn describe_columns(profile: &Profile) {
     let sql = table.sql_all_ordered_by_id();
     let mut cursor = conn.execute(&sql, (), None).unwrap().unwrap();
 
-    assert_eq!(cursor.num_result_cols().unwrap(), 11);
+    assert_eq!(cursor.num_result_cols().unwrap(), 12);
     let mut actual = ColumnDescription::default();
 
     let kind = DataType::Varchar {
@@ -256,7 +256,7 @@ fn describe_columns(profile: &Profile) {
 
     let kind = DataType::Date;
     let expected = ColumnDescription::new("l", kind, Nullability::Nullable);
-    cursor.describe_col(11, &mut actual).unwrap();
+    cursor.describe_col(12, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(12).unwrap());
 }
