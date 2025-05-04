@@ -158,6 +158,7 @@ fn describe_columns(profile: &Profile) {
             "text",
             "Image",
             "DOUBLE PRECISION",
+            "DATE",
         ])
         .build(profile)
         .unwrap();
@@ -252,6 +253,12 @@ fn describe_columns(profile: &Profile) {
     cursor.describe_col(11, &mut actual).unwrap();
     assert_eq!(expected, actual);
     assert_eq!(kind, cursor.col_data_type(11).unwrap());
+
+    let kind = DataType::Date;
+    let expected = ColumnDescription::new("l", kind, Nullability::Nullable);
+    cursor.describe_col(11, &mut actual).unwrap();
+    assert_eq!(expected, actual);
+    assert_eq!(kind, cursor.col_data_type(12).unwrap());
 }
 
 #[test_case(MSSQL, "DATETIME2", DataType::Timestamp { precision: 7 }; "Microsoft SQL Server")]
@@ -259,6 +266,33 @@ fn describe_columns(profile: &Profile) {
 #[test_case(SQLITE_3, "DATETIME2", DataType::Timestamp { precision: 3 }; "SQLite 3")]
 #[test_case(POSTGRES, "TIMESTAMP", DataType::Timestamp { precision: 6 }; "PostgreSQL")]
 fn conscise_data_type_reported_for_timestamp(
+    profile: &Profile,
+    relational_type: &str,
+    expected: DataType,
+) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&[relational_type])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+
+    // Then
+    assert_eq!(expected, data_type);
+}
+
+#[test_case(MSSQL, "DATE", DataType::Date; "Microsoft SQL Server")]
+#[test_case(MARIADB, "DATE", DataType::Date; "Maria DB")]
+#[test_case(SQLITE_3, "DATE", DataType::Date; "SQLite 3")]
+#[test_case(POSTGRES, "DATE", DataType::Date; "PostgreSQL")]
+fn conscise_data_type_reported_for_date(
     profile: &Profile,
     relational_type: &str,
     expected: DataType,
@@ -2187,14 +2221,16 @@ fn data_types_for_varchar_1000_from_description(profile: &Profile, expected_data
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_text_buffer(profile: &Profile) {
     // Given
-    let conn = profile
-        .setup_empty_table("BulkInsertWithTextBuffer", &["VARCHAR(50)"])
-        .unwrap();
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .build(profile).unwrap();
+    let insert_sql = table.sql_insert();
 
     // When
     // Fill a text buffer with three rows, and insert them into the database.
     let prepared = conn
-        .prepare("INSERT INTO BulkInsertWithTextBuffer (a) Values (?)")
+        .prepare(&insert_sql)
         .unwrap();
     let mut prebound = prepared
         .into_text_inserter(5, [50].iter().copied())
@@ -2213,15 +2249,7 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     // Then
     // Assert that the table contains the rows that have just been inserted.
     let expected = "England\nFrance\nGermany";
-    let cursor = conn
-        .execute(
-            "SELECT a FROM BulkInsertWithTextBuffer ORDER BY id;",
-            (),
-            None,
-        )
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table.content_as_string(&conn);
     assert_eq!(expected, actual);
 }
 
@@ -2230,13 +2258,15 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_insert_with_columnar_buffer(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("BulkInsertWithColumnarBuffer", &["VARCHAR(50)", "INTEGER"])
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)", "INTEGER"])
+        .build(profile)
         .unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
     let prepared = conn
-        .prepare("INSERT INTO BulkInsertWithColumnarBuffer (a,b) Values (?,?)")
+        .prepare(&table.sql_insert())
         .unwrap();
     let description = [
         BufferDesc::Text { max_str_len: 50 },
@@ -2261,16 +2291,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 
     // Assert that the table contains the rows that have just been inserted.
     let expected = "England,1\nFrance,2\nGermany,3";
-
-    let cursor = conn
-        .execute(
-            "SELECT a,b FROM BulkInsertWithColumnarBuffer ORDER BY id;",
-            (),
-            None,
-        )
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table.content_as_string(&conn);
 
     assert_eq!(expected, actual);
 }
@@ -2282,8 +2303,9 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // Given
     let table_name = table_name!();
-    let conn = profile
-        .setup_empty_table(&table_name, &["VARCHAR(50)", "INTEGER"])
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)", "INTEGER"])
+        .build(profile)
         .unwrap();
 
     // When
@@ -2292,7 +2314,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 
     // Fill a buffer with three rows, and insert them into the database.
     let prepared = conn
-        .prepare(&format!("INSERT INTO {table_name} (a,b) Values (?,?)"))
+        .prepare(&table.sql_insert())
         .unwrap();
     let description = [
         BufferDesc::Text { max_str_len: 50 },
@@ -2332,16 +2354,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 
     // Assert that the table contains the rows that have just been inserted.
     let expected = "England,1\nFrance,2\nGermany,3\nSpain,4";
-
-    let cursor = conn
-        .execute(
-            &format!("SELECT a,b FROM {table_name} ORDER BY id;"),
-            (),
-            None,
-        )
-        .unwrap()
-        .unwrap();
-    let actual = cursor_to_string(cursor);
+    let actual = table.content_as_string(&conn);
 
     assert_eq!(expected, actual);
 }

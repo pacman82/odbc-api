@@ -19,7 +19,7 @@ impl<'a> Given<'a> {
         Given {
             table_name,
             column_types: &[],
-            column_names: &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+            column_names: &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"],
             values: &[],
         }
     }
@@ -99,7 +99,7 @@ impl Profile {
         let (conn, _table) = self.create_table(
             table_name,
             column_types,
-            &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+            &["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"],
         )?;
         Ok(conn)
     }
