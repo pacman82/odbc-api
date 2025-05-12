@@ -17,7 +17,7 @@ use crate::{
 use log::debug;
 use odbc_sys::{AttrCpMatch, AttrOdbcVersion, FetchOrientation, HWnd};
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", feature = "prompt"))]
 // Currently only windows driver manager supports prompt.
 use winit::{
     application::ApplicationHandler,
@@ -403,7 +403,7 @@ impl Environment {
 
         match driver_completion {
             DriverCompleteOption::NoPrompt => (),
-            #[cfg(target_os = "windows")]
+            #[cfg(all(target_os = "windows", feature = "prompt"))]
             _ => {
                 // We need a parent window, let's provide a message only window.
                 let mut window_app = MessageOnlyWindowEventHandler {
@@ -414,8 +414,6 @@ impl Environment {
                 event_loop.run_app_on_demand(&mut window_app).unwrap();
                 return window_app.result.unwrap();
             }
-            #[cfg(not(target_os = "windows"))]
-            _ => panic!("Prompt is not supported for non-windows systems."),
         };
         let hwnd = null_mut();
         driver_connect(hwnd)
@@ -694,13 +692,13 @@ pub struct DataSourceInfo {
 }
 
 /// Message loop for prompt dialog. Used by [`Environment::driver_connect`].
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", feature = "prompt"))]
 struct MessageOnlyWindowEventHandler<'a, F> {
     run_prompt_dialog: Option<F>,
     result: Option<Result<Connection<'a>, Error>>,
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", feature = "prompt"))]
 impl<'a, F> ApplicationHandler for MessageOnlyWindowEventHandler<'a, F>
 where
     F: FnOnce(HWnd) -> Result<Connection<'a>, Error>,
