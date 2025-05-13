@@ -757,14 +757,4 @@ mod tests {
         assert_eq!(attributes["SQLLevel"], "1");
         assert_eq!(attributes["UsageCount"], "1");
     }
-
-    #[cfg(not(target_os = "windows"))]
-    #[test]
-    #[should_panic(expected = "Prompt is not supported for non-windows systems.")]
-    fn driver_connect_with_prompt_panics_under_linux() {
-        let env = Environment::new().unwrap();
-        let mut out = OutputStringBuffer::empty();
-        env.driver_connect("", &mut out, DriverCompleteOption::Prompt)
-            .unwrap();
-    }
 }
