@@ -328,7 +328,10 @@ impl Environment {
     /// let connection = env.driver_connect(
     ///     "",
     ///     &mut output_buffer,
+    ///     #[cfg(target_os = "windows")]
     ///     DriverCompleteOption::Prompt,
+    ///     #[cfg(not(target_os = "windows"))]
+    ///     DriverCompleteOption::NoPrompt,
     /// )?;
     ///
     /// // Check that the output buffer has been large enough to hold the entire connection string.
