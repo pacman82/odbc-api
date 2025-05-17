@@ -77,7 +77,9 @@ iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
 # Allows deriving custom implementations of `FetchRow` for row wise bulk fetching.
 derive = ["dep:odbc-api-derive"]
 
-default=["odbc_version_3_80"]
+default=["odbc_version_3_80", "prompt"]
+
+prompt=["dep:winit"]
 
 [dependencies]
 # Low level bindings to ODBC API calls into libodbc.so
@@ -95,7 +97,7 @@ odbc-api-derive ={ version = "11.0.2", path = "../derive", optional = true}
 # We use winit to display dialogs prompting for connection strings. We can deactivate default
 # features since it can work only on windows and therfore we do not need any dependencies
 # associated with various window managers.
-winit = { version = "0.30.10", default-features = false, features = ["rwh_06"]}
+winit = { version = "0.30.10", default-features = false, features = ["rwh_06"], optional = true}
 
 [dev-dependencies]
 env_logger = "0.11.6"
