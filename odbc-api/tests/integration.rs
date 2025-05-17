@@ -315,6 +315,34 @@ fn conscise_data_type_reported_for_date(
     assert_eq!(expected, data_type);
 }
 
+#[test_case(MSSQL, "TIME", DataType::Other {data_type: SqlDataType(-154),
+    column_size: NonZeroUsize::new(16), decimal_digits: 7 }; "Microsoft SQL Server")]
+#[test_case(MARIADB, "TIME", DataType::Time { precision: 0 }; "Maria DB")]
+#[test_case(SQLITE_3, "TIME", DataType::Time { precision: 0 }; "SQLite 3")]
+#[test_case(POSTGRES, "TIME", DataType::Time { precision: 6 }; "PostgreSQL")]
+fn conscise_data_type_reported_for_time(
+    profile: &Profile,
+    relational_type: &str,
+    expected: DataType,
+) {
+    // Given
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&[relational_type])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name}"), (), None)
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+
+    // Then
+    assert_eq!(expected, data_type);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
