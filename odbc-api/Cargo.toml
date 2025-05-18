@@ -79,6 +79,14 @@ derive = ["dep:odbc-api-derive"]
 
 default=["odbc_version_3_80", "prompt"]
 
+# ODBC offers an interface to prompt the user for a connection string. This requires passing a
+# window handle to the ODBC driver manager. AFAIK this is currently only supported by the driver
+# manager on windows. To use this feature you need to enable the `prompt` feature (default) and be
+# on a windows platform. Introducing this as a feature allows users of `odbc-api` to opt out of the
+# winit dependency on windows systems.
+#
+# Concretely by activating this feature `DriverCompleteOption` will have more variants on a windows
+# platform.
 prompt=["dep:winit"]
 
 [dependencies]
