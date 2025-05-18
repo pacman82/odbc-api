@@ -1,5 +1,21 @@
 # Changelog
 
+## [13.0.0](https://github.com/pacman82/odbc-api/compare/v12.2.0...v13.0.0) - 2025-05-18
+
+### Added
+
+- [**breaking**] Move prompting for connection string to "prompt" feature ([#720](https://github.com/pacman82/odbc-api/pull/720))
+
+### Other
+
+- Explaining the `prompt` feature.
+- learning test for concise type reported for time
+- *(deps)* bump tokio from 1.44.2 to 1.45.0
+- Add 2Byte Character in UTF16 to umlaut test
+- umlaut in column name
+- fix test Column Description for date
+- Column Description for date
+
 ## [12.2.0](https://github.com/pacman82/odbc-api/compare/v12.1.0...v12.2.0) - 2025-05-01
 
 ### Added
