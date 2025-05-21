@@ -1,5 +1,14 @@
 # Changelog
 
+## [13.0.1](https://github.com/pacman82/odbc-api/compare/v13.0.0...v13.0.1) - 2025-05-21
+
+### Other
+
+- document how to fetch nullable values with get_data
+- *(deps)* bump winit from 0.30.10 to 0.30.11
+- *(deps)* bump tempfile from 3.19.1 to 3.20.0
+- *(deps)* bump criterion from 0.5.1 to 0.6.0
+
 ## [13.0.0](https://github.com/pacman82/odbc-api/compare/v12.2.0...v13.0.0) - 2025-05-18
 
 ### Added
