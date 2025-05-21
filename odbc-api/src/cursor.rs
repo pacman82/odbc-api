@@ -111,6 +111,31 @@ impl CursorRow<'_> {
     /// method drains the data from the field. It can be called repeatedly to if not all the data
     /// fit in the output buffer at once. It should not called repeatedly to fetch the same value
     /// twice. Column index starts at `1`.
+    /// 
+    /// You can use [`crate::Nullable`] to fetch nullable values.
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// # use odbc_api::{Cursor, Error, Nullable};
+    /// # fn fetch_values_example(cursor: &mut impl Cursor) -> Result<(), Error> {
+    /// // Declare nullable value to fetch value into. ODBC values layout is different from Rusts
+    /// // option. We can not use `Option<i32>` directly.
+    /// let mut field = Nullable::<i32>::null();
+    /// // Move cursor to next row
+    /// let mut row = cursor.next_row()?.unwrap();
+    /// // Fetch first column into field 
+    /// row.get_data(1, &mut field)?;
+    /// // Convert nullable value to Option for convinience
+    /// let field = field.into_opt();
+    /// if let Some(value) = field {
+    ///     println!("Value: {}", value);
+    /// } else {
+    ///     println!("Value is NULL");
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn get_data(
         &mut self,
         col_or_param_num: u16,
