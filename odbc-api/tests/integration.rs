@@ -1,7 +1,7 @@
 mod common;
 mod connection_strings;
 
-use odbc_sys::Time;
+use odbc_sys::{Date, Time};
 use stdext::function_name;
 use sys::{CDataType, NULL_DATA, Numeric, Pointer, SqlDataType, Timestamp};
 use tempfile::NamedTempFile;
@@ -466,6 +466,73 @@ fn bulk_fetch_nullable_time(profile: &Profile) {
             hour: 12,
             minute: 34,
             second: 56
+        }),
+        column.get(0)
+    );
+    assert_eq!(None, column.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_fetch_date(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DATE"])
+        .values_by_column(&[&[Some("2025-05-23")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Date { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_slice::<Date>().unwrap();
+    assert_eq!(
+        Date {
+            year: 2025,
+            month: 5,
+            day: 23
+        },
+        column[0]
+    );
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_fetch_nullable_date(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DATE"])
+        .values_by_column(&[&[Some("2025-05-23"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_nullable_slice::<Date>().unwrap();
+    assert_eq!(
+        Some(&Date {
+            year: 2025,
+            month: 5,
+            day: 23
         }),
         column.get(0)
     );
