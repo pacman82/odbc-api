@@ -1,5 +1,16 @@
 # Changelog
 
+## [13.1.0](https://github.com/pacman82/odbc-api/compare/v13.0.1...v13.1.0) - 2025-05-23
+
+### Added
+
+- Add `NullableSlice::get` to access n-th element without iterating
+
+### Other
+
+- bulk fetch dates
+- use non-deprecated black box from standard library
+
 ## [13.0.1](https://github.com/pacman82/odbc-api/compare/v13.0.0...v13.0.1) - 2025-05-21
 
 ### Other
