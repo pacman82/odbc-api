@@ -122,6 +122,15 @@ impl<'a, T> NullableSlice<'a, T> {
     pub fn raw_values(&self) -> (&'a [T], &'a [isize]) {
         (self.values, self.indicators)
     }
+
+    /// Access the n-th element. `None` if the indicater is `NULL_DATA`.
+    pub fn get(&self, index: usize) -> Option<&'a T> {
+        if self.indicators[index] == NULL_DATA {
+            None
+        } else {
+            Some(&self.values[index])
+        }
+    }
 }
 
 impl<'a, T> Iterator for NullableSlice<'a, T> {

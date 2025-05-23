@@ -1,6 +1,7 @@
 mod common;
 mod connection_strings;
 
+use odbc_sys::Time;
 use stdext::function_name;
 use sys::{CDataType, NULL_DATA, Numeric, Pointer, SqlDataType, Timestamp};
 use tempfile::NamedTempFile;
@@ -402,6 +403,73 @@ fn bulk_fetch_text(profile: &Profile) {
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_fetch_time(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TIME"])
+        .values_by_column(&[&[Some("12:34:56")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Time { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_slice::<Time>().unwrap();
+    assert_eq!(
+        Time {
+            hour: 12,
+            minute: 34,
+            second: 56
+        },
+        column[0]
+    );
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_fetch_nullable_time(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TIME"])
+        .values_by_column(&[&[Some("12:34:56"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Time { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_nullable_slice::<Time>().unwrap();
+    assert_eq!(
+        Some(&Time {
+            hour: 12,
+            minute: 34,
+            second: 56
+        }),
+        column.get(0)
+    );
+    assert_eq!(None, column.get(1));
 }
 
 /// Into cursor should enable users to open a connection within a function and return a cursor.
@@ -2252,14 +2320,13 @@ fn bulk_insert_with_text_buffer(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["VARCHAR(50)"])
-        .build(profile).unwrap();
+        .build(profile)
+        .unwrap();
     let insert_sql = table.sql_insert();
 
     // When
     // Fill a text buffer with three rows, and insert them into the database.
-    let prepared = conn
-        .prepare(&insert_sql)
-        .unwrap();
+    let prepared = conn.prepare(&insert_sql).unwrap();
     let mut prebound = prepared
         .into_text_inserter(5, [50].iter().copied())
         .unwrap();
@@ -2293,9 +2360,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
         .unwrap();
 
     // Fill a text buffer with three rows, and insert them into the database.
-    let prepared = conn
-        .prepare(&table.sql_insert())
-        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let description = [
         BufferDesc::Text { max_str_len: 50 },
         BufferDesc::I32 { nullable: true },
@@ -2341,9 +2406,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // First batch
 
     // Fill a buffer with three rows, and insert them into the database.
-    let prepared = conn
-        .prepare(&table.sql_insert())
-        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let description = [
         BufferDesc::Text { max_str_len: 50 },
         BufferDesc::I32 { nullable: true },
@@ -4463,7 +4526,10 @@ fn umlaut_in_column_name(profile: &Profile) {
         .build(profile)
         .unwrap();
 
-    let mut cursor = conn.execute(&table.sql_all_ordered_by_id(), (), None).unwrap().unwrap();
+    let mut cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
 
     let name = cursor.col_name(1).unwrap();
     assert_eq!("hällo𐐏", name);

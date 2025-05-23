@@ -1,4 +1,4 @@
-use std::{iter, hint::black_box};
+use std::{hint::black_box, iter};
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use odbc_api::buffers::{BufferDesc, ColumnarAnyBuffer};
