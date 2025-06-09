@@ -1024,6 +1024,7 @@ name = "odbc-api-derive"
 version = "11.0.2"
 dependencies = [
  "odbc-api",
+ "proc-macro2",
  "quote",
  "syn",
 ]
@@ -1135,9 +1136,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.92"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
+checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
