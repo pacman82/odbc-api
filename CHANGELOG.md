@@ -1,5 +1,19 @@
 # Changelog
 
+## [13.1.0](https://github.com/pacman82/odbc-api/compare/v13.0.1...v13.1.0) - 2025-06-09
+
+### Added
+
+- Add `NullableSlice::get` to access n-th element without iterating
+
+### Other
+
+- Explain why Connection is not `Sync`
+- *(deps)* bump tokio from 1.45.0 to 1.45.1
+- bulk fetch dates
+- use non-deprecated black box from standard library
+- unit test expansion of derive Fetch macro
+
 ## [13.0.1](https://github.com/pacman82/odbc-api/compare/v13.0.0...v13.0.1) - 2025-05-21
 
 ### Other
