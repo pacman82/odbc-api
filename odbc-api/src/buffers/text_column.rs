@@ -373,7 +373,9 @@ impl<'c, C> TextColumnView<'c, C> {
         self.num_rows == 0
     }
 
-    /// Slice of text at the specified row index without terminating zero.
+    /// Slice of text at the specified row index without terminating zero. `None` if the value is
+    /// `NULL`. This method will panic if the index is larger than the number of valid rows in the
+    /// view as returned by [`Self::len`].
     pub fn get(&self, index: usize) -> Option<&'c [C]> {
         self.col.value_at(index)
     }
