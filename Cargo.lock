@@ -1018,7 +1018,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "13.0.1"
+version = "13.1.0"
 dependencies = [
  "anyhow",
  "atoi",
@@ -1039,7 +1039,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api-derive"
-version = "11.0.2"
+version = "11.0.3"
 dependencies = [
  "odbc-api",
  "proc-macro2",
