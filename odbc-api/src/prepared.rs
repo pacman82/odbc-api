@@ -249,6 +249,9 @@ where
             .into_iter()
             .map(|desc| AnyBuffer::from_desc(capacity, desc))
             .collect();
+        // Safe: We know that the statement is a prepared statement, and we just created the buffers
+        // to be bound and know them to be empty. => Therfore they are valid and do not contain any
+        // indicator values which would could trigger out of bounds in the database drivers.
         unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers, InOrder) }
     }
 
