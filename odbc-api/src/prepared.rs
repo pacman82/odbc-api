@@ -99,7 +99,7 @@ where
     }
 
     /// Unless you want to roll your own column buffer implementation users are encouraged to use
-    /// [`Self::into_text_inserter`] instead.
+    /// [`Self::into_text_inserter`] or [`Self::into_column_inserter`] instead.
     ///
     /// # Safety
     ///
