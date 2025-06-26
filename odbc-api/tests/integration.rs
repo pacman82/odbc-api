@@ -15,23 +15,16 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
-    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType,
-    Error, InOut, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
-    },
-    decimal_text_to_i128, environment,
-    handles::{
+    }, decimal_text_to_i128, environment, handles::{
         AsStatementRef, CData, CDataMut, OutputStringBuffer, ParameterDescription, SqlResult,
         Statement,
-    },
-    parameter::{
+    }, parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
-    },
-    sys,
+    }, sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType, Error, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String
 };
 use widestring::Utf16String;
 
@@ -4370,6 +4363,53 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
         .unwrap();
     let actual = cursor_to_string(cursor);
     assert_eq!("1", actual);
+}
+
+/// A combination of the column_inserter which borrows the prepared statement and the ability to
+/// have arbitrary input mappings. `column_inserter` has been introduced to allow for dynamic
+/// rebinding in case the input buffers were to small. Arbitrary input mappings have been introduced
+/// to be memory efficient if using the same values for multiple placeholders.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn column_inserter_one_buffer_for_two_placeholders(profile: &Profile) {
+    // Given a prepared insert statement with two placeholders
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER", "INTEGER"])
+        .unwrap();
+    let mut prepared = conn
+        .into_prepared(&format!("INSERT INTO {table_name} (a,b) VALUES (?, ?)"))
+        .unwrap();
+
+    // When we fill both columns from one input buffer
+    let desc = BufferDesc::I32 { nullable: false };
+    struct MyMapping;
+    impl InputParameterMapping for MyMapping {
+        fn parameter_index_to_column_index(&self, _parameter_index: u16) -> usize {
+            // We always map to the one buffer we have.
+            0
+        }
+        fn num_parameters(&self) -> usize {
+            2 // We have only one input buffer, but we have two placeholders in our statement.
+        }
+    }
+    // Insert a batch
+    let mut prebound = prepared.column_inserter_with_mapping(1, [desc], MyMapping).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+
+    // Then both columns are filled
+    let conn = profile.connection().unwrap();
+    let cursor = conn
+        .execute(&format!("SELECT a, b FROM {table_name} ORDER BY id"), (), None)
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1,1", actual);
 }
 
 /// Fire an insert statement adding two rows and verify that the count of changed rows is 2.

@@ -1,5 +1,3 @@
-use std::iter;
-
 use crate::{
     CursorImpl, Error,
     buffers::{ColumnBuffer, TextColumn},
@@ -49,15 +47,11 @@ where
         let mut stmt = statement.as_stmt_ref();
         stmt.reset_parameters();
         // Bind buffers to statement.
-        for (parameter_index, column_buffer) in parameters
-            .iter()
-            .enumerate()
-            // Map column indices to all the parameter indices it is used for.
-            .flat_map(|(column_index, column_buffer)| {
-                let parameter_indices = mapping.column_index_to_parameter_indices(column_index);
-                parameter_indices.map(move |parameter_index| (parameter_index, column_buffer))
-            })
+        let parameter_indices = 1..(mapping.num_parameters() as u16 + 1);
+        for parameter_index in parameter_indices
         {
+            let column_index = mapping.parameter_index_to_column_index(parameter_index);
+            let column_buffer = &parameters[column_index];
             if let Err(error) = unsafe { stmt.bind_input_parameter(parameter_index, column_buffer) }
                 .into_result(&stmt)
             {
@@ -288,18 +282,37 @@ impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
 /// that more complex mappings can emerge if the same input buffer should be reused to fill in for
 /// multiple placeholders. In case the same value would appear in the query twice.
 pub trait InputParameterMapping {
-    fn column_index_to_parameter_indices(&self, olumn_index: usize) -> impl Iterator<Item = u16>;
+    fn parameter_index_to_column_index(&self, paramteter_index: u16) -> usize;
+    fn num_parameters(&self) -> usize;
 }
 
 /// An implementation of [`InputParameterMapping`] that should be used if the order of the column
 /// buffers for the array input parameters matches the order of the placeholders in the SQL
 /// Statement.
-pub struct InOrder;
+pub struct InOrder {
+    /// Corresponds to the number of placeholders in the SQL statement.
+    number_of_parameters: usize,
+}
+
+impl InOrder {
+    /// Creates a new [`InOrder`] mapping for the given number of parameters. The number of
+    /// paremeters is the number of placeholders (`?`) in the SQL statement.
+    pub fn new(number_of_parameters: usize) -> Self {
+        Self {
+            number_of_parameters,
+        }
+    }
+}
 
 impl InputParameterMapping for InOrder {
-    fn column_index_to_parameter_indices(&self, column_index: usize) -> impl Iterator<Item = u16> {
-        // Each column matches exactly one parameter. Also the column index is zero based, but
+    fn parameter_index_to_column_index(&self, paramteter_index: u16) -> usize {
+        debug_assert_ne!(0, paramteter_index, "Parameter index must be one based.");
+        // Each parameter matches exactly one column. Also the column index is zero based, but
         // parameter indices are one based.
-        iter::once((column_index + 1) as u16)
+        (paramteter_index - 1) as usize
+    }
+
+    fn num_parameters(&self) -> usize {
+        self.number_of_parameters
     }
 }

@@ -1,9 +1,5 @@
 use crate::{
-    ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
-    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
-    columnar_bulk_inserter::InOrder,
-    execute::execute_with_parameters,
-    handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
+    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn}, columnar_bulk_inserter::InOrder, execute::execute_with_parameters, handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef}, ColumnarBulkInserter, CursorImpl, Error, InputParameterMapping, ParameterCollectionRef, ResultSetMetadata
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -115,7 +111,8 @@ where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, InOrder) }
+        let index_mapping = InOrder::new(parameter_buffers.len());
+        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, index_mapping) }
     }
 
     /// Use this to insert rows of string input into the database.
@@ -245,14 +242,38 @@ where
     ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
         let stmt = self.statement.as_stmt_ref();
 
-        let parameter_buffers = descriptions
+        let parameter_buffers: Vec<_> = descriptions
             .into_iter()
             .map(|desc| AnyBuffer::from_desc(capacity, desc))
             .collect();
+
+        let index_mapping = InOrder::new(parameter_buffers.len());
         // Safe: We know that the statement is a prepared statement, and we just created the buffers
         // to be bound and know them to be empty. => Therfore they are valid and do not contain any
         // indicator values which would could trigger out of bounds in the database drivers.
-        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers, InOrder) }
+        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers, index_mapping) }
+    }
+
+    /// Similar to [`Self::column_inserter`], but allows to specify a custom mapping between columns
+    /// and parameters. This is useful if e.g. the same values a bound to multiple parameter
+    /// placeholders.
+    pub fn column_inserter_with_mapping(
+        &mut self,
+        capacity: usize,
+        descriptions: impl IntoIterator<Item = BufferDesc>,
+        index_mapping: impl InputParameterMapping,
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
+        let stmt = self.statement.as_stmt_ref();
+
+        let parameter_buffers: Vec<_> = descriptions
+            .into_iter()
+            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .collect();
+
+        // Safe: We know that the statement is a prepared statement, and we just created the buffers
+        // to be bound and know them to be empty. => Therfore they are valid and do not contain any
+        // indicator values which would could trigger out of bounds in the database drivers.
+        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers, index_mapping) }
     }
 
     /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statement. May return

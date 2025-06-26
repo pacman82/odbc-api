@@ -29,7 +29,7 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
-    columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter},
+    columnar_bulk_inserter::{BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping},
     connection::{Connection, ConnectionOptions, escape_attribute_value},
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
