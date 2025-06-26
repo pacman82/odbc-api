@@ -48,8 +48,7 @@ where
         stmt.reset_parameters();
         // Bind buffers to statement.
         let parameter_indices = 1..(mapping.num_parameters() as u16 + 1);
-        for parameter_index in parameter_indices
-        {
+        for parameter_index in parameter_indices {
             let column_index = mapping.parameter_index_to_column_index(parameter_index);
             let column_buffer = &parameters[column_index];
             if let Err(error) = unsafe { stmt.bind_input_parameter(parameter_index, column_buffer) }

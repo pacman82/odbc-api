@@ -1,5 +1,10 @@
 use crate::{
-    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn}, columnar_bulk_inserter::InOrder, execute::execute_with_parameters, handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef}, ColumnarBulkInserter, CursorImpl, Error, InputParameterMapping, ParameterCollectionRef, ResultSetMetadata
+    ColumnarBulkInserter, CursorImpl, Error, InputParameterMapping, ParameterCollectionRef,
+    ResultSetMetadata,
+    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
+    columnar_bulk_inserter::InOrder,
+    execute::execute_with_parameters,
+    handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -112,7 +117,9 @@ where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, index_mapping) }
+        unsafe {
+            ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, index_mapping)
+        }
     }
 
     /// Use this to insert rows of string input into the database.
@@ -228,6 +235,28 @@ where
             .map(|desc| AnyBuffer::from_desc(capacity, desc))
             .collect();
         let index_mapping = InOrder::new(parameter_buffers.len());
+        // Safe: We know this to be a valid prepared statement. Also we just created the buffers
+        // to be bound and know them to be empty. => Therfore they are valid and do not contain any
+        // indicator values which would could trigger out of bounds in the database drivers.
+        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping) }
+    }
+
+    /// Similar to [`Self::into_column_inserter`], but allows to specify a custom mapping between
+    /// columns and parameters. This is useful if e.g. the same values a bound to multiple
+    /// parameter placeholders.
+    pub fn into_column_inserter_with_mapping(
+        self,
+        capacity: usize,
+        descriptions: impl IntoIterator<Item = BufferDesc>,
+        index_mapping: impl InputParameterMapping,
+    ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
+        let parameter_buffers: Vec<_> = descriptions
+            .into_iter()
+            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .collect();
+        // Safe: We know this to be a valid prepared statement. Also we just created the buffers
+        // to be bound and know them to be empty. => Therfore they are valid and do not contain any
+        // indicator values which would could trigger out of bounds in the database drivers.
         unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping) }
     }
 

@@ -2459,6 +2459,54 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
     assert_eq!(expected, actual);
 }
 
+/// Use into_column_inserter to insert values into multiple columns from a single buffer. This
+/// usecase appeard during implementing the `exec` subcommand of `odbc2parquet`. If we want to be
+/// mindful of the memory usage in case the same parquet column file maps to multiple placeholders.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_insert_two_columns_from_one_buffer(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER"])
+        .build(profile)
+        .unwrap();
+
+    // Fill a text buffer with three rows, and insert them into the database.
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    let description = [BufferDesc::I32 { nullable: false }];
+
+    struct MyMapping;
+    impl InputParameterMapping for MyMapping {
+        fn parameter_index_to_column_index(&self, _paramteter_index: u16) -> usize {
+            0
+        }
+        fn num_parameters(&self) -> usize {
+            2
+        }
+    }
+
+    let mut prebound = prepared
+        .into_column_inserter_with_mapping(5, description, MyMapping)
+        .unwrap();
+
+    prebound.set_num_rows(3);
+    // Fill ther column with integers
+    let col_view = prebound.column_mut(0).as_slice().unwrap();
+    col_view[0] = 42;
+    col_view[1] = 5;
+    col_view[2] = 7;
+
+    prebound.execute().unwrap();
+
+    // Assert that each column now contains the data we just inserted.
+    let expected = "42,42\n5,5\n7,7";
+    let actual = table.content_as_string(&conn);
+
+    assert_eq!(expected, actual);
+}
+
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
