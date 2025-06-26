@@ -5,7 +5,6 @@ use syn::{DeriveInput, parse_macro_input};
 
 use crate::expand::expand;
 
-
 /// Use this to derive the trait `FetchRow` for structs defined in the application logic.
 ///
 /// # Example

@@ -66,7 +66,7 @@ impl Drop for Connection<'_> {
 ///
 /// If you want to enable the connection pooling support build into the ODBC driver manager have a
 /// look at [`crate::Environment::set_connection_pooling`].
-/// 
+///
 /// In order to create multiple statements with the same connection and for other use cases,
 /// operations like [`Self::execute`] or [`Self::prepare`] are taking a shared reference of `self`
 /// rather than `&mut self`. However, since error handling is done through state changes of the

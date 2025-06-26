@@ -68,14 +68,13 @@ pub fn expand(input: DeriveInput) -> TokenStream {
 mod tests {
     use proc_macro2::TokenStream;
     use quote::quote;
-    use syn::{parse2, DeriveInput};
+    use syn::{DeriveInput, parse2};
 
     use super::expand;
 
-
     #[test]
     fn derive_fetch_for_row() {
-        let input = given(quote!{
+        let input = given(quote! {
             struct MyRow {
                 a: i64,
                 b: VarCharArray<50>,

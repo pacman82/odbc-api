@@ -1,6 +1,7 @@
 use crate::{
     ColumnarBulkInserter, CursorImpl, Error, ParameterCollectionRef, ResultSetMetadata,
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
+    columnar_bulk_inserter::InOrder,
     execute::execute_with_parameters,
     handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
 };
@@ -114,7 +115,7 @@ where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers) }
+        unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, InOrder) }
     }
 
     /// Use this to insert rows of string input into the database.
@@ -248,7 +249,7 @@ where
             .into_iter()
             .map(|desc| AnyBuffer::from_desc(capacity, desc))
             .collect();
-        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers) }
+        unsafe { ColumnarBulkInserter::new(stmt, parameter_buffers, InOrder) }
     }
 
     /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statement. May return

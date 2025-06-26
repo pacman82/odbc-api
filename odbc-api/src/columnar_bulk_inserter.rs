@@ -1,3 +1,5 @@
+use std::iter;
+
 use crate::{
     CursorImpl, Error,
     buffers::{ColumnBuffer, TextColumn},
@@ -36,17 +38,28 @@ where
     /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
     ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
     ///   can happen after when truncation occurs then writing into a buffer.
-    pub unsafe fn new(mut statement: S, parameters: Vec<C>) -> Result<Self, Error>
+    pub unsafe fn new(
+        mut statement: S,
+        parameters: Vec<C>,
+        mapping: impl InputParameterMapping,
+    ) -> Result<Self, Error>
     where
         C: ColumnBuffer + HasDataType,
     {
         let mut stmt = statement.as_stmt_ref();
         stmt.reset_parameters();
-        let mut parameter_number = 1;
         // Bind buffers to statement.
-        for column in &parameters {
-            if let Err(error) =
-                unsafe { stmt.bind_input_parameter(parameter_number, column) }.into_result(&stmt)
+        for (parameter_index, column_buffer) in parameters
+            .iter()
+            .enumerate()
+            // Map column indices to all the parameter indices it is used for.
+            .flat_map(|(column_index, column_buffer)| {
+                let parameter_indices = mapping.column_index_to_parameter_indices(column_index);
+                parameter_indices.map(move |parameter_index| (parameter_index, column_buffer))
+            })
+        {
+            if let Err(error) = unsafe { stmt.bind_input_parameter(parameter_index, column_buffer) }
+                .into_result(&stmt)
             {
                 // This early return using `?` is risky. We actually did bind some parameters
                 // already. We cannot guarantee that the bound pointers stay valid in case of an
@@ -57,7 +70,6 @@ where
                 stmt.reset_parameters();
                 return Err(error);
             }
-            parameter_number += 1;
         }
         let capacity = parameters
             .iter()
@@ -263,5 +275,31 @@ impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
         self.parameter_set_size += 1;
 
         Ok(())
+    }
+}
+
+/// Governs how indices of bound buffers map to the indices of the parameters. If the order of the
+/// input buffers matches the order of the placeholders in the SQL statement, then you can just use
+/// [`InOrder`] as the mapping.
+///
+/// Then using array input parameters to determine the values of placeholders in an SQL statement to
+/// be executed the indices of the placeholders and the column buffers may differ. For starters the
+/// column buffer indices are zero based, thereas the parameter indices are one based. On top of
+/// that more complex mappings can emerge if the same input buffer should be reused to fill in for
+/// multiple placeholders. In case the same value would appear in the query twice.
+pub trait InputParameterMapping {
+    fn column_index_to_parameter_indices(&self, olumn_index: usize) -> impl Iterator<Item = u16>;
+}
+
+/// An implementation of [`InputParameterMapping`] that should be used if the order of the column
+/// buffers for the array input parameters matches the order of the placeholders in the SQL
+/// Statement.
+pub struct InOrder;
+
+impl InputParameterMapping for InOrder {
+    fn column_index_to_parameter_indices(&self, column_index: usize) -> impl Iterator<Item = u16> {
+        // Each column matches exactly one parameter. Also the column index is zero based, but
+        // parameter indices are one based.
+        iter::once((column_index + 1) as u16)
     }
 }
