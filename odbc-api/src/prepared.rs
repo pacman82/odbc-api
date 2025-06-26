@@ -106,12 +106,12 @@ where
     pub unsafe fn unchecked_bind_columnar_array_parameters<C>(
         self,
         parameter_buffers: Vec<C>,
+        index_mapping: impl InputParameterMapping,
     ) -> Result<ColumnarBulkInserter<S, C>, Error>
     where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        let index_mapping = InOrder::new(parameter_buffers.len());
         unsafe { ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, index_mapping) }
     }
 
@@ -160,11 +160,12 @@ where
         max_str_len: impl IntoIterator<Item = usize>,
     ) -> Result<ColumnarBulkInserter<S, TextColumn<u8>>, Error> {
         let max_str_len = max_str_len.into_iter();
-        let parameter_buffers = max_str_len
+        let parameter_buffers: Vec<_> = max_str_len
             .map(|max_str_len| TextColumn::new(capacity, max_str_len))
             .collect();
+        let index_mapping = InOrder::new(parameter_buffers.len());
         // Text Columns are created with NULL as default, which is valid for insertion.
-        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
+        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping) }
     }
 
     /// A [`crate::ColumnarBulkInserter`] which takes ownership of both the statement and the bound
@@ -222,11 +223,12 @@ where
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDesc>,
     ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
-        let parameter_buffers = descriptions
+        let parameter_buffers: Vec<_> = descriptions
             .into_iter()
             .map(|desc| AnyBuffer::from_desc(capacity, desc))
             .collect();
-        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers) }
+        let index_mapping = InOrder::new(parameter_buffers.len());
+        unsafe { self.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping) }
     }
 
     /// A [`crate::ColumnarBulkInserter`] which has ownership of the bound array parameter buffers
@@ -240,6 +242,9 @@ where
         capacity: usize,
         descriptions: impl IntoIterator<Item = BufferDesc>,
     ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
+        // Remark: We repeat the implementation here. It is hard to reuse the
+        // `column_inserter_with_mapping` function, because we need to know the number of parameters
+        // to create the `InOrder` mapping.
         let stmt = self.statement.as_stmt_ref();
 
         let parameter_buffers: Vec<_> = descriptions

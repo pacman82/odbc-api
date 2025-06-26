@@ -15,16 +15,23 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
+    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType,
+    Error, InOrder, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable,
+    Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
-    }, decimal_text_to_i128, environment, handles::{
+    },
+    decimal_text_to_i128, environment,
+    handles::{
         AsStatementRef, CData, CDataMut, OutputStringBuffer, ParameterDescription, SqlResult,
         Statement,
-    }, parameter::{
+    },
+    parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
-    }, sys, Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType, Error, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String
+    },
+    sys,
 };
 use widestring::Utf16String;
 
@@ -1426,8 +1433,11 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
         data_type: DataType::Integer,
     }];
     // Safety: all values in the buffer are safe for insertion
-    let mut prebound =
-        unsafe { prepared.unchecked_bind_columnar_array_parameters(parameter_buffers) }.unwrap();
+    let index_mapping = InOrder::new(parameter_buffers.len());
+    let mut prebound = unsafe {
+        prepared.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping)
+    }
+    .unwrap();
     prebound.set_num_rows(4);
     let mut writer = prebound.column_mut(0);
     writer.set_cell(0, Some("1".as_bytes()));
@@ -4396,7 +4406,9 @@ fn column_inserter_one_buffer_for_two_placeholders(profile: &Profile) {
         }
     }
     // Insert a batch
-    let mut prebound = prepared.column_inserter_with_mapping(1, [desc], MyMapping).unwrap();
+    let mut prebound = prepared
+        .column_inserter_with_mapping(1, [desc], MyMapping)
+        .unwrap();
     prebound.set_num_rows(1);
     let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
     col[0] = 1;
@@ -4405,7 +4417,11 @@ fn column_inserter_one_buffer_for_two_placeholders(profile: &Profile) {
     // Then both columns are filled
     let conn = profile.connection().unwrap();
     let cursor = conn
-        .execute(&format!("SELECT a, b FROM {table_name} ORDER BY id"), (), None)
+        .execute(
+            &format!("SELECT a, b FROM {table_name} ORDER BY id"),
+            (),
+            None,
+        )
         .unwrap()
         .unwrap();
     let actual = cursor_to_string(cursor);
