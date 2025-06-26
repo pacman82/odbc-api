@@ -1,5 +1,19 @@
 # Changelog
 
+## [14.0.0](https://github.com/pacman82/odbc-api/compare/v13.1.0...v14.0.0) - 2025-06-26
+
+### Added
+
+- Add into_columnar_inserter_with_mapping
+- [**breaking**] Introduce column_inserter_with_mapping
+- [**breaking**] Support for reusing columnar buffers for input parameters in unsafe code.
+
+### Other
+
+- [**breaking**] unchecked_bind_columnar_array_parameters now takes an explicit mapping
+- Comment safety on unsafe black
+- Mention into_column_inserter on unchecked_bind_columnar_array_parameters  docstring
+
 ## [13.1.0](https://github.com/pacman82/odbc-api/compare/v13.0.1...v13.1.0) - 2025-06-25
 
 ### Added
