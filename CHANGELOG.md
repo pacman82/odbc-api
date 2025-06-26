@@ -4,15 +4,12 @@
 
 ### Added
 
-- Add into_columnar_inserter_with_mapping
-- [**breaking**] Introduce column_inserter_with_mapping
-- [**breaking**] Support for reusing columnar buffers for input parameters in unsafe code.
+- Support for saving memory through binding one input parameter two multiple placeholders, in cases there these placeholders are supposed to be replaced withe the same values. In order to achieve this the methods `Prepared::into_columnar_inserter_with_mapping` and `Prepared::column_inserter_with_mapping` hane been added.
 
 ### Other
 
-- [**breaking**] unchecked_bind_columnar_array_parameters now takes an explicit mapping
-- Comment safety on unsafe black
-- Mention into_column_inserter on unchecked_bind_columnar_array_parameters  docstring
+- [**breaking**] `Prepared::unchecked_bind_columnar_array_parameters` now takes an explicit mapping
+- [**breaking**] `ColumnarBulkInserter::new` now takes an explicit mapping
 
 ## [13.1.0](https://github.com/pacman82/odbc-api/compare/v13.0.1...v13.1.0) - 2025-06-25
 
