@@ -10,7 +10,6 @@ use odbc_sys::{CDataType, NTS};
 use crate::{
     DataType,
     handles::{CData, HasDataType},
-    parameter::InputParameter,
 };
 
 use super::CElement;
@@ -45,7 +44,6 @@ unsafe impl CElement for CStr {
     /// is always complete.
     fn assert_completness(&self) {}
 }
-impl InputParameter for CStr {}
 
 unsafe impl CData for CString {
     fn cdata_type(&self) -> CDataType {

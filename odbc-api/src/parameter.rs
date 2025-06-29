@@ -396,7 +396,7 @@ pub unsafe trait CElement: CData {
 /// statement.
 pub trait InputParameter: HasDataType + CElement {}
 
-impl<T> InputParameter for T where T: CElement + HasDataType {}
+impl<T> InputParameter for T where T: CElement + HasDataType + ?Sized {}
 
 /// # Safety
 ///
