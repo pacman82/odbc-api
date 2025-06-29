@@ -1,5 +1,12 @@
 # Changelog
 
+## [14.0.1](https://github.com/pacman82/odbc-api/compare/v14.0.0...v14.0.1) - 2025-06-29
+
+### Other
+
+- Improved discoverability of supported input parameters
+- All types which are CElement and HasDataType are now InputParameter
+
 ## [14.0.0](https://github.com/pacman82/odbc-api/compare/v13.1.0...v14.0.0) - 2025-06-26
 
 ### Added
