@@ -1,5 +1,11 @@
 # Changelog
 
+## [14.0.2](https://github.com/pacman82/odbc-api/compare/v14.0.1...v14.0.2) - 2025-06-29
+
+### Other
+
+- Link `InputParameter` documentation to parameter module level documentation.
+
 ## [14.0.1](https://github.com/pacman82/odbc-api/compare/v14.0.0...v14.0.1) - 2025-06-29
 
 ### Other
