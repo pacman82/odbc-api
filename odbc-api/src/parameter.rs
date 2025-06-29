@@ -36,7 +36,8 @@
 //! # Ok::<(), odbc_api::Error>(())
 //! ```
 //!
-//! All types implementing the `Parameter` trait can be used.
+//! Please see the documentation of [`InputParameter`] for a list of types that can be bound to a
+//! placeholder.
 //!
 //! ## Annotating a parameter with an explicit SQL DataType
 //!
