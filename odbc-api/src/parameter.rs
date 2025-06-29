@@ -394,6 +394,53 @@ pub unsafe trait CElement: CData {
 
 /// Can be used to fill in a field value indicated by a placeholder (`?`) then executing an SQL
 /// statement.
+/// 
+/// # Supported input parameters
+/// 
+/// To bind a parameter its memory layout must be known to the ODBC driver. For some C-Types this is
+/// defined in the ODBC standard. Their rust equivalents are:
+/// 
+/// - f32
+/// - f64
+/// - i8
+/// - i16
+/// - i32
+/// - i64
+/// - u8
+/// - u16
+/// - u32
+/// - u64
+/// - Box<dyn InputParameter>
+/// - CString
+/// - CStr
+/// - [`Date`](crate::sys::Date)
+/// - [`VarCharSlice`]
+/// - [`VarCharSliceMut`]
+/// - [`VarCharArray`]
+/// - [`VarCharBox`]
+/// - [`VarWCharSlice`]
+/// - [`VarWCharSliceMut`]
+/// - [`VarWCharBox`]
+/// - [`VarBinarySlice`]
+/// - [`VarBinarySliceMut`]
+/// - [`VarBinaryArray`]
+/// - [`VarBinaryBox`]
+/// 
+/// Some types have a memory layout known to the ODBC driver, but additional type information is
+/// required to bind them as parameters. You can use these together with [`WithDataType`]:
+/// 
+/// - [`Timestamp`](crate::sys::Timestamp)
+/// - [`Time`](crate::sys::Time)
+/// - [`Numeric`](crate::sys::Numeric)*
+/// 
+/// * Note that the you may need to set the desired precision in the ADR record of the statement
+///   using a descriptor handle in order to bind a `Numeric` value which does not have scale `0`.
+///   This is currently not supported in safe code. Consider binding large numeric values as Text.
+/// 
+/// # Support for idiomatic Rust types
+/// 
+/// Idomatic Rust types are supported through the [`IntoParameter`](crate::IntoParameter) trait.
+/// This trait can also be implemented for custom types in safe code.
 pub trait InputParameter: HasDataType + CElement {}
 
 impl<T> InputParameter for T where T: CElement + HasDataType + ?Sized {}
