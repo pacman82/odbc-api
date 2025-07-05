@@ -158,7 +158,7 @@
 //! ## Output and Input/Output parameters
 //!
 //! Mutable references are treated as input/output parameters. To use a parameter purely as an
-//! output parameter you may wrapt it into out. Consider a Mircosoft SQL Server with the following
+//! output parameter you may wrap it into out. Consider a Mircosoft SQL Server with the following
 //! stored procedure:
 //!
 //! ```mssql
