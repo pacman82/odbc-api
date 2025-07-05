@@ -1,5 +1,15 @@
 # Changelog
 
+## [14.0.3](https://github.com/pacman82/odbc-api/compare/v14.0.2...v14.0.3) - 2025-07-05
+
+### Fixed
+
+- Typo in parameter module documentation
+
+### Other
+
+- *(deps)* bump tokio from 1.45.1 to 1.46.0
+
 ## [14.0.2](https://github.com/pacman82/odbc-api/compare/v14.0.1...v14.0.2) - 2025-06-29
 
 ### Other
