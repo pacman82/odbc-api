@@ -651,9 +651,9 @@ impl HasDataType for WCharColumn {
     }
 }
 
-impl Resize for TextColumn<u8> {
+impl<C> Resize for TextColumn<C> where C: Clone + Default{
     fn resize(&mut self, new_capacity: usize) {
-        self.values.resize((self.max_str_len + 1) * new_capacity, 0);
+        self.values.resize((self.max_str_len + 1) * new_capacity, C::default());
         self.indicators.resize(new_capacity, NULL_DATA);
     }
 }
