@@ -1,10 +1,7 @@
 use crate::{
-    DataType, Error,
-    columnar_bulk_inserter::BoundInputSlice,
-    error::TooLargeBufferSize,
-    handles::{
-        ASSUMED_MAX_LENGTH_OF_W_VARCHAR, CData, CDataMut, HasDataType, Statement, StatementRef,
-    },
+    buffers::Resize, columnar_bulk_inserter::BoundInputSlice, error::TooLargeBufferSize, handles::{
+        CData, CDataMut, HasDataType, Statement, StatementRef, ASSUMED_MAX_LENGTH_OF_W_VARCHAR
+    }, DataType, Error
 };
 
 use super::{ColumnBuffer, Indicator};
@@ -34,6 +31,8 @@ pub type WCharColumn = TextColumn<u16>;
 pub struct TextColumn<C> {
     /// Maximum text length without terminating zero.
     max_str_len: usize,
+    /// All the characters of all the elements in the buffer. The first character of the n-th
+    /// element is at index `n * (max_str_len + 1)`.
     values: Vec<C>,
     /// Elements in this buffer are either `NULL_DATA` or hold the length of the element in value
     /// with the same index. Please note that this value may be larger than `max_str_len` if the
@@ -649,5 +648,34 @@ impl HasDataType for WCharColumn {
                 length: NonZeroUsize::new(self.max_str_len),
             }
         }
+    }
+}
+
+impl Resize for TextColumn<u8> {
+    fn resize(&mut self, new_capacity: usize) {
+        self.values.resize((self.max_str_len + 1) * new_capacity, 0);
+        self.indicators.resize(new_capacity, NULL_DATA);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::buffers::{Resize, TextColumn};
+
+
+    #[test]
+    fn resize_text_column_buffer() {
+        // Given a text column buffer with two elements
+        let mut col = TextColumn::<u8>::new(2, 10);
+        col.set_value(0, Some(b"Hello"));
+        col.set_value(1, Some(b"World"));
+
+        // When we resize it to hold 3 elements
+        col.resize(3);
+
+        // Then the first two elements are still there, and the third is None
+        assert_eq!(col.value_at(0), Some(b"Hello".as_ref()));
+        assert_eq!(col.value_at(1), Some(b"World".as_ref()));
+        assert_eq!(col.value_at(2), None);
     }
 }

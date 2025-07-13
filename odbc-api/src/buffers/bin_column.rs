@@ -1,9 +1,5 @@
 use crate::{
-    DataType, Error,
-    buffers::Indicator,
-    columnar_bulk_inserter::BoundInputSlice,
-    error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
+    buffers::{columnar::Resize, Indicator}, columnar_bulk_inserter::BoundInputSlice, error::TooLargeBufferSize, handles::{CData, CDataMut, HasDataType, Statement, StatementRef}, DataType, Error
 };
 
 use log::debug;
@@ -18,6 +14,8 @@ use std::{cmp::min, ffi::c_void, num::NonZeroUsize};
 pub struct BinColumn {
     /// Maximum element length.
     max_len: usize,
+    /// Consequitive bytes for all the elements in the buffer. We can find the first byte of the
+    /// n-th elment at `n * max_len`.
     values: Vec<u8>,
     /// Elements in this buffer are either `NULL_DATA` or hold the length of the element in value
     /// with the same index. Please note that this value may be larger than `max_len` if the value
@@ -429,9 +427,16 @@ unsafe impl CDataMut for BinColumn {
     }
 }
 
+impl Resize for BinColumn {
+    fn resize(&mut self, new_capacity: usize) {
+        self.values.resize(new_capacity * self.max_len, 0);
+        self.indicators.resize(new_capacity, NULL_DATA);
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::error::TooLargeBufferSize;
+    use crate::{buffers::columnar::Resize, error::TooLargeBufferSize};
 
     use super::BinColumn;
 
@@ -447,5 +452,25 @@ mod test {
                 element_size: 2_147_483_648
             }
         ))
+    }
+
+    #[test]
+    fn resize_binary_column_buffer() {
+        // Given a binary column with 2 elements
+        let mut column = BinColumn::new(2, 10);
+        column.set_value(0, Some(b"Hello"));
+        column.set_value(1, Some(b"World"));
+
+        // When resizing the column to 3 elements
+        column.resize(3);
+
+        // Then
+        // the max element size is unchanged
+        assert_eq!(column.max_len(), 10);
+        // the values are still there
+        assert_eq!(column.value_at(0), Some(b"Hello".as_slice()));
+        assert_eq!(column.value_at(1), Some(b"World".as_slice()));
+        // the third element is None
+        assert_eq!(column.value_at(2), None);
     }
 }

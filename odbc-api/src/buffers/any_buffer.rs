@@ -4,6 +4,7 @@ use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
     Bit, DataType, Error,
+    buffers::columnar::Resize,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
@@ -662,6 +663,39 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 }
+
+// impl Resize for AnyBuffer {
+//     fn resize(&mut self, new_capacity: usize) {
+//         match self {
+//             AnyBuffer::Binary(col) => col.resize(new_capacity),
+//             AnyBuffer::Text(col) => col.resize(new_capacity),
+//             AnyBuffer::WText(col) => col.resize(new_capacity),
+//             AnyBuffer::Date(col) => col.resize(new_capacity),
+//             AnyBuffer::Time(col) => col.resize(new_capacity),
+//             AnyBuffer::Timestamp(col) => col.resize(new_capacity),
+//             AnyBuffer::F64(col) => col.resize(new_capacity),
+//             AnyBuffer::F32(col) => col.resize(new_capacity),
+//             AnyBuffer::I8(col) => col.resize(new_capacity),
+//             AnyBuffer::I16(col) => col.resize(new_capacity),
+//             AnyBuffer::I32(col) => col.resize(new_capacity),
+//             AnyBuffer::I64(col) => col.resize(new_capacity),
+//             AnyBuffer::U8(col) => col.resize(new_capacity),
+//             AnyBuffer::Bit(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableDate(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableTime(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableTimestamp(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableF64(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableF32(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableI8(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableI16(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableI32(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableI64(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableU8(col) => col.resize(new_capacity),
+//             AnyBuffer::NullableBit(col) => col.resize(new_capacity),
+//             _ => todo!(),
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
