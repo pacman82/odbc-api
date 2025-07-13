@@ -547,6 +547,21 @@ where
     }
 }
 
+/// A column buffer which can be resized.
+/// 
+/// Resizing is useful if a column buffer is used for inserting parameters, rather than fetching.
+/// Imagine an application which inserts data from a stream with row groups of varying size. If it
+/// encounters a row group with a new maximum size, it may want to resize the parameter buffers to
+/// send the entire row group in one go.
+pub trait Resize {
+    /// Resize the buffer to the given capacity.
+    ///
+    /// # Parameters
+    ///
+    /// * `new_capacity`: The new capacity of the buffer.
+    fn resize(&mut self, new_capacity: usize);
+}
+
 #[cfg(test)]
 mod tests {
 
