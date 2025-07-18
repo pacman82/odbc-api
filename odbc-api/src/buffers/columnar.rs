@@ -562,9 +562,16 @@ pub trait Resize {
     fn resize(&mut self, new_capacity: usize);
 }
 
+impl<T> Resize for Vec<T> where T: Default + Clone{
+    fn resize(&mut self, new_capacity: usize) {
+        Vec::resize(self, new_capacity, T::default());
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
+    use super::Resize;
     use crate::buffers::{BufferDesc, ColumnarAnyBuffer};
 
     #[test]
@@ -572,5 +579,20 @@ mod tests {
     fn assert_unique_column_indices() {
         let bd = BufferDesc::I32 { nullable: false };
         ColumnarAnyBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
+    }
+
+    /// Vec's can resize just fine without this library, yet it is important that they implement the
+    /// `Resize` trait, so that other generic types know about it.
+    #[test]
+    fn vec_is_resize() {
+
+        let mut my_int_column_buffer = vec![1, 2];
+
+        Resize::resize(&mut my_int_column_buffer, 4);
+
+        assert_eq!(my_int_column_buffer[0], 1);
+        assert_eq!(my_int_column_buffer[1], 2);
+        assert_eq!(my_int_column_buffer[2], 0);
+        assert_eq!(my_int_column_buffer[3], 0);
     }
 }
