@@ -160,7 +160,7 @@ impl AnyBuffer {
         }
     }
 
-    fn inner_cdata(&self) -> &dyn CData {
+    fn inner(&self) -> &dyn CData {
         match self {
             AnyBuffer::Binary(col) => col,
             AnyBuffer::Text(col) => col,
@@ -190,7 +190,7 @@ impl AnyBuffer {
         }
     }
 
-    fn inner_cdata_mut(&mut self) -> &mut dyn CDataMut {
+    fn inner_mut(&mut self) -> &mut dyn AnyBufferVariantMut {
         match self {
             AnyBuffer::Binary(col) => col,
             AnyBuffer::Text(col) => col,
@@ -221,31 +221,38 @@ impl AnyBuffer {
     }
 }
 
+/// A trait implemented by all variants of [`AnyBuffer`]. This allows us to reduce the number of
+/// match statements for methods mutating [`AnyBuffer`], as we only need to implement
+/// [`AnyBuffer::inner_mut`].
+trait AnyBufferVariantMut: CDataMut + Resize {}
+
+impl<T> AnyBufferVariantMut for T where T: CDataMut + Resize {}
+
 unsafe impl CData for AnyBuffer {
     fn cdata_type(&self) -> CDataType {
-        self.inner_cdata().cdata_type()
+        self.inner().cdata_type()
     }
 
     fn indicator_ptr(&self) -> *const isize {
-        self.inner_cdata().indicator_ptr()
+        self.inner().indicator_ptr()
     }
 
     fn value_ptr(&self) -> *const c_void {
-        self.inner_cdata().value_ptr()
+        self.inner().value_ptr()
     }
 
     fn buffer_length(&self) -> isize {
-        self.inner_cdata().buffer_length()
+        self.inner().buffer_length()
     }
 }
 
 unsafe impl CDataMut for AnyBuffer {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
-        self.inner_cdata_mut().mut_indicator_ptr()
+        self.inner_mut().mut_indicator_ptr()
     }
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
-        self.inner_cdata_mut().mut_value_ptr()
+        self.inner_mut().mut_value_ptr()
     }
 }
 
@@ -664,44 +671,32 @@ unsafe impl ColumnBuffer for AnyBuffer {
     }
 }
 
-// impl Resize for AnyBuffer {
-//     fn resize(&mut self, new_capacity: usize) {
-//         match self {
-//             AnyBuffer::Binary(col) => col.resize(new_capacity),
-//             AnyBuffer::Text(col) => col.resize(new_capacity),
-//             AnyBuffer::WText(col) => col.resize(new_capacity),
-//             AnyBuffer::Date(col) => col.resize(new_capacity),
-//             AnyBuffer::Time(col) => col.resize(new_capacity),
-//             AnyBuffer::Timestamp(col) => col.resize(new_capacity),
-//             AnyBuffer::F64(col) => col.resize(new_capacity),
-//             AnyBuffer::F32(col) => col.resize(new_capacity),
-//             AnyBuffer::I8(col) => col.resize(new_capacity),
-//             AnyBuffer::I16(col) => col.resize(new_capacity),
-//             AnyBuffer::I32(col) => col.resize(new_capacity),
-//             AnyBuffer::I64(col) => col.resize(new_capacity),
-//             AnyBuffer::U8(col) => col.resize(new_capacity),
-//             AnyBuffer::Bit(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableDate(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableTime(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableTimestamp(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableF64(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableF32(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableI8(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableI16(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableI32(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableI64(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableU8(col) => col.resize(new_capacity),
-//             AnyBuffer::NullableBit(col) => col.resize(new_capacity),
-//             _ => todo!(),
-//         }
-//     }
-// }
+impl Resize for AnyBuffer {
+    fn resize(&mut self, new_capacity: usize) {
+        self.inner_mut().resize(new_capacity);
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use crate::buffers::{AnySlice, AnySliceMut, ColumnBuffer};
+    use crate::buffers::{AnySlice, AnySliceMut, ColumnBuffer, Resize};
 
     use super::AnyBuffer;
+
+    #[test]
+    fn any_buffer_is_resize() {
+        // Given an `AnyBuffer` with a capacity of 2 and values [1, 2]
+        let mut buffer = AnyBuffer::I32(vec![1, 2]);
+
+        // When we resize it to a capacity of 4
+        buffer.resize(4);
+
+        // Then the buffer should still have the same values in the first two positions and the
+        // remaining positions should be filled with default values (0 for i32)
+        assert_eq!(buffer.view(4).as_slice(), Some([1i32, 2, 0, 0].as_slice()));
+        // And the capacity should be 4
+        assert_eq!(buffer.capacity(), 4);
+    }
 
     #[test]
     fn slice_should_only_contain_part_of_the_buffer() {
