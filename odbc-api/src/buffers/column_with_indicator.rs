@@ -1,4 +1,5 @@
 use crate::{
+    buffers::Resize,
     fixed_sized::{Bit, Pod},
     handles::{CData, CDataMut},
 };
@@ -292,5 +293,40 @@ impl<T> NullableSliceMut<'_, T> {
         for (index, item) in it.enumerate().take(self.values.len()) {
             self.set_cell(index, item)
         }
+    }
+}
+
+impl<T> Resize for ColumnWithIndicator<T>
+where
+    T: Default + Clone,
+{
+    fn resize(&mut self, new_size: usize) {
+        self.values.resize(new_size, T::default());
+        self.indicators.resize(new_size, NULL_DATA);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::buffers::Resize;
+
+    use super::ColumnWithIndicator;
+
+    #[test]
+    fn column_with_indicator_is_resize() {
+        // Given a column with indicator with two elements `1` and `2`
+        let mut column = ColumnWithIndicator::<i32>::new(2);
+        let mut writer = column.writer_n(2);
+        writer.set_cell(0, Some(1));
+        writer.set_cell(1, Some(2));
+
+        // When we resize it to 3 elements
+        column.resize(3);
+
+        // Then the first two elements are still `1` and `2`, and the third is NULL
+        let reader = column.iter(3);
+        assert_eq!(reader.get(0), Some(&1));
+        assert_eq!(reader.get(1), Some(&2));
+        assert_eq!(reader.get(2), None);
     }
 }
