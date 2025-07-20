@@ -1,5 +1,25 @@
 # Changelog
 
+## [14.1.0](https://github.com/pacman82/odbc-api/compare/v14.0.2...v14.1.0) - 2025-07-20
+
+### Added
+
+- Add resize for ColumnarBulkInserter
+- AnyBuffer is resize
+- ColumnWithIndicator is Resize
+- implement Resize for Vec
+- Implement resize for wide text column buffers
+- Implement Resize for Text and Binary column buffers
+
+### Fixed
+
+- Typo in parameter module documentation
+
+### Other
+
+- *(deps)* bump tokio from 1.46.0 to 1.46.1
+- *(deps)* bump tokio from 1.45.1 to 1.46.0
+
 ## [14.0.2](https://github.com/pacman82/odbc-api/compare/v14.0.1...v14.0.2) - 2025-06-29
 
 ### Other
