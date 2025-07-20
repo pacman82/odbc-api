@@ -70,7 +70,9 @@ pub unsafe trait FetchRow: Copy {
 /// ```
 ///
 /// To fetch rows with this buffer type `R` must implement [`FetchRow`]. This is currently
-/// implemented for tuple types. Each element of these tuples must implement [`FetchRowMember`].
+/// implemented for tuple types. Each element of these tuples must implement [`FetchRowMember`]. You
+/// can also derive [`FetchRow`] for structs with the `Fetch` derive macro if the feature is
+/// enabled.
 ///
 /// Currently supported are: `f64`, `f32`, [`odbc_sys::Date`], [`odbc_sys::Timestamp`],
 /// [`odbc_sys::Time`], `i16`, `u36`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64` and
