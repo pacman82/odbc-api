@@ -1659,6 +1659,38 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn columnar_insert_with_varying_buffer_sizes(profile: &Profile) {
+    // Given a table with an INTEGER column `a`` and a prepared statement to insert into it.
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+
+    // When we create a columnar inserter with a batch size of 1 and insert a single value.
+    let mut inserter = prepared.into_column_inserter(1, [BufferDesc::I32 { nullable: false }]).unwrap();
+    inserter.set_num_rows(1);
+    inserter.column_mut(0).as_slice::<i32>().unwrap()[0] = 1;
+    inserter.execute().unwrap();
+    // And we resize the buffer to two size and insert two more values.
+    let mapping = InOrder::new(1);
+    let mut inserter = inserter.resize(2, mapping).unwrap();
+    inserter.set_num_rows(2);
+    inserter.column_mut(0).as_slice::<i32>().unwrap()[0] = 2;
+    inserter.column_mut(0).as_slice::<i32>().unwrap()[1] = 3;
+    inserter.execute().unwrap();
+
+    // Then we expect the table to contain the values 1, 2, and 3.
+    let actual = table.content_as_string(&conn);
+    let expected = "1\n2\n3";
+    assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
 // #[test_case(POSTGRES; "PostgreSQL")] Type NVARCHAR does not exist
 fn columnar_insert_wide_varchar(profile: &Profile) {
     let table_name = table_name!();

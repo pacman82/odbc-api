@@ -1,6 +1,8 @@
+use std::cmp::min;
+
 use crate::{
     CursorImpl, Error,
-    buffers::{ColumnBuffer, TextColumn},
+    buffers::{ColumnBuffer, Resize, TextColumn},
     execute::execute,
     handles::{AsStatementRef, HasDataType, Statement, StatementRef},
 };
@@ -18,9 +20,17 @@ pub struct ColumnarBulkInserter<S, C> {
     // We maintain the invariant that the parameters are bound to the statement that parameter set
     // size reflects the number of valid rows in the batch.
     statement: S,
+    /// The number of values within the buffers that should be inserted in the next roundtrip. The
+    /// capacity of the buffers must be equal or larger than this value. The individual buffers
+    /// just hold values. They have no concept of how much values they hold within their capacity.
+    /// We maintain only this one value here for all the column buffers.
     parameter_set_size: usize,
     capacity: usize,
-    /// We maintain the invariant that none of these buffers is truncated.
+    /// We maintain the invariant that none of these buffers is truncated. I.e. indicator values in
+    /// these buffers do not specify values that are larger than the maximum element length of the
+    /// buffer. Some drivers have safeguards against this, but others would just take the length of
+    /// the indicator value to read the value. This would mean reading "random" memory and
+    /// interpreting it as the value. So the kind of thing we try to avoid in a safe abstraction.
     parameters: Vec<C>,
 }
 
@@ -44,26 +54,8 @@ where
     where
         C: ColumnBuffer + HasDataType,
     {
-        let mut stmt = statement.as_stmt_ref();
-        stmt.reset_parameters();
-        // Bind buffers to statement.
-        let parameter_indices = 1..(mapping.num_parameters() as u16 + 1);
-        for parameter_index in parameter_indices {
-            let column_index = mapping.parameter_index_to_column_index(parameter_index);
-            let column_buffer = &parameters[column_index];
-            if let Err(error) = unsafe { stmt.bind_input_parameter(parameter_index, column_buffer) }
-                .into_result(&stmt)
-            {
-                // This early return using `?` is risky. We actually did bind some parameters
-                // already. We cannot guarantee that the bound pointers stay valid in case of an
-                // error since `Self` is never constructed. We would away with this, if we took
-                // ownership of the statement and it is destroyed should the constructor not
-                // succeed. However columnar bulk inserter can also be instantiated with borrowed
-                // statements. This is why we reset the parameters on error.
-                stmt.reset_parameters();
-                return Err(error);
-            }
-        }
+        let stmt = statement.as_stmt_ref();
+        bind_parameter_buffers_to_statement(&parameters, mapping, stmt)?;
         let capacity = parameters
             .iter()
             .map(|col| col.capacity())
@@ -198,6 +190,77 @@ where
     pub fn capacity(&self) -> usize {
         self.capacity
     }
+
+    /// Resize the buffers to the new capacity. It would be hard to maintain the invariants in case
+    /// of an error, so this is why this method is destroying self in case something goes wrong.
+    /// 
+    /// Valid rows in the buffer will be preserved. If the new capacity is smaller than the the
+    /// parameter set size (the number of valid rows in the buffer), then these values will be
+    /// dropped.
+    /// 
+    /// You may want to make use of this method in case your program flow reads from a data source
+    /// with varying batch sizes and you want to insert each batch in one roundtrip. If you do not
+    /// know the maximum batch size in advance, you may need to resize the buffers on the fly.
+    /// 
+    /// # Parameters
+    /// 
+    /// * `new_capacity`: The new capacity of the buffers. Must be at least `1`. May be smaller or
+    ///   larger than the current capacity.
+    /// * `mapping`: The mapping of the input parameters to the column buffers. This should be equal
+    ///   to the mapping used to create the `ColumnarBulkInserter` in the first place. If a mapping
+    ///   has not been specified, explicitly you can use the [`InOrder`] mapping.
+    pub fn resize(
+        mut self,
+        new_capacity: usize,
+        mapping: impl InputParameterMapping,
+    ) -> Result<Self, Error>
+    where
+        C: ColumnBuffer + HasDataType + Resize,
+    {
+        assert!(new_capacity > 0, "New capacity must be at least 1.");
+        // Resize the buffers
+        for column in &mut self.parameters {
+            column.resize(new_capacity);
+        }
+        self.capacity = new_capacity;
+        self.parameter_set_size = min(self.parameter_set_size, new_capacity);
+        // Now the pointers bound to the statement may be invalid, so we need to rebind them.
+        let stmt = self.statement.as_stmt_ref();
+        bind_parameter_buffers_to_statement(&self.parameters, mapping, stmt)?;
+        Ok(self)
+    }
+}
+
+/// Binds the column buffers to the statement, based on the mapping provided. It ensures that only
+/// the provided parameter buffers are bound to the statement. Any previously bound buffers will be
+/// no longer bound. In case of an error no buffers will be bound to the statement.
+fn bind_parameter_buffers_to_statement<C>(
+    parameters: &[C],
+    mapping: impl InputParameterMapping,
+    mut stmt: StatementRef<'_>,
+) -> Result<(), Error>
+where
+    C: ColumnBuffer + HasDataType,
+{
+    stmt.reset_parameters();
+    let parameter_indices = 1..(mapping.num_parameters() as u16 + 1);
+    for parameter_index in parameter_indices {
+        let column_index = mapping.parameter_index_to_column_index(parameter_index);
+        let column_buffer = &parameters[column_index];
+        if let Err(error) =
+            unsafe { stmt.bind_input_parameter(parameter_index, column_buffer) }.into_result(&stmt)
+        {
+            // This early return using `?` is risky. We actually did bind some parameters
+            // already. We cannot guarantee that the bound pointers stay valid in case of an
+            // error since `Self` is never constructed. We would away with this, if we took
+            // ownership of the statement and it is destroyed should the constructor not
+            // succeed. However columnar bulk inserter can also be instantiated with borrowed
+            // statements. This is why we reset the parameters on error.
+            stmt.reset_parameters();
+            return Err(error);
+        }
+    }
+    Ok(())
 }
 
 /// You can obtain a mutable slice of a column buffer which allows you to change its contents.
