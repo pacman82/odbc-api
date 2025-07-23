@@ -1,5 +1,16 @@
 # Changelog
 
+## [14.2.0](https://github.com/pacman82/odbc-api/compare/v14.1.0...v14.2.0) - 2025-07-23
+
+### Added
+
+- Fetch row_array_size from statement handle
+
+### Other
+
+- formatting (mostly)
+- Mention Fetch derive macro in RowVec doc comment
+
 ## [14.1.0](https://github.com/pacman82/odbc-api/compare/v14.0.2...v14.1.0) - 2025-07-20
 
 ### Added
