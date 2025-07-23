@@ -5693,6 +5693,27 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
     assert_eq!(42, batch[0].0);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn get_row_array_size_from_statement(profile: &Profile) {
+    // Given a statement
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name).column_types(&["INTEGER"]).build(profile).unwrap();
+    let mut statement = conn.prepare(&table.sql_all_ordered_by_id()).unwrap();
+
+    // When setting the row array size to 10 and fetching it
+    let mut stmt = statement.as_stmt_ref();
+    let row_array_size = unsafe {
+        stmt.set_row_array_size(10).unwrap();
+        stmt.row_array_size().unwrap()
+    };
+
+    // Then the fetched row array size is 10
+    assert_eq!(10, row_array_size);
+}
+
 // Learning tests ----------------------------------------------------------------------------------
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
