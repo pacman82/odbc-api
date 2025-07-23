@@ -193,17 +193,17 @@ where
 
     /// Resize the buffers to the new capacity. It would be hard to maintain the invariants in case
     /// of an error, so this is why this method is destroying self in case something goes wrong.
-    /// 
+    ///
     /// Valid rows in the buffer will be preserved. If the new capacity is smaller than the the
     /// parameter set size (the number of valid rows in the buffer), then these values will be
     /// dropped.
-    /// 
+    ///
     /// You may want to make use of this method in case your program flow reads from a data source
     /// with varying batch sizes and you want to insert each batch in one roundtrip. If you do not
     /// know the maximum batch size in advance, you may need to resize the buffers on the fly.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// * `new_capacity`: The new capacity of the buffers. Must be at least `1`. May be smaller or
     ///   larger than the current capacity.
     /// * `mapping`: The mapping of the input parameters to the column buffers. This should be equal

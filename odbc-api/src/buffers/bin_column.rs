@@ -1,5 +1,9 @@
 use crate::{
-    buffers::{columnar::Resize, Indicator}, columnar_bulk_inserter::BoundInputSlice, error::TooLargeBufferSize, handles::{CData, CDataMut, HasDataType, Statement, StatementRef}, DataType, Error
+    DataType, Error,
+    buffers::{Indicator, columnar::Resize},
+    columnar_bulk_inserter::BoundInputSlice,
+    error::TooLargeBufferSize,
+    handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
 };
 
 use log::debug;

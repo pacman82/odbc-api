@@ -1,7 +1,11 @@
 use crate::{
-    buffers::Resize, columnar_bulk_inserter::BoundInputSlice, error::TooLargeBufferSize, handles::{
-        CData, CDataMut, HasDataType, Statement, StatementRef, ASSUMED_MAX_LENGTH_OF_W_VARCHAR
-    }, DataType, Error
+    DataType, Error,
+    buffers::Resize,
+    columnar_bulk_inserter::BoundInputSlice,
+    error::TooLargeBufferSize,
+    handles::{
+        ASSUMED_MAX_LENGTH_OF_W_VARCHAR, CData, CDataMut, HasDataType, Statement, StatementRef,
+    },
 };
 
 use super::{ColumnBuffer, Indicator};
@@ -651,9 +655,13 @@ impl HasDataType for WCharColumn {
     }
 }
 
-impl<C> Resize for TextColumn<C> where C: Clone + Default{
+impl<C> Resize for TextColumn<C>
+where
+    C: Clone + Default,
+{
     fn resize(&mut self, new_capacity: usize) {
-        self.values.resize((self.max_str_len + 1) * new_capacity, C::default());
+        self.values
+            .resize((self.max_str_len + 1) * new_capacity, C::default());
         self.indicators.resize(new_capacity, NULL_DATA);
     }
 }
@@ -661,7 +669,6 @@ impl<C> Resize for TextColumn<C> where C: Clone + Default{
 #[cfg(test)]
 mod test {
     use crate::buffers::{Resize, TextColumn};
-
 
     #[test]
     fn resize_text_column_buffer() {

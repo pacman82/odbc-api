@@ -1670,7 +1670,9 @@ fn columnar_insert_with_varying_buffer_sizes(profile: &Profile) {
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
 
     // When we create a columnar inserter with a batch size of 1 and insert a single value.
-    let mut inserter = prepared.into_column_inserter(1, [BufferDesc::I32 { nullable: false }]).unwrap();
+    let mut inserter = prepared
+        .into_column_inserter(1, [BufferDesc::I32 { nullable: false }])
+        .unwrap();
     inserter.set_num_rows(1);
     inserter.column_mut(0).as_slice::<i32>().unwrap()[0] = 1;
     inserter.execute().unwrap();
@@ -5672,9 +5674,8 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42")]])
         .build(profile)
-        .unwrap();
-    conn.execute(&table.sql_insert(), &42.into_parameter(), None)
         .unwrap();
     let cursor = conn
         .execute(&table.sql_all_ordered_by_id(), (), None)

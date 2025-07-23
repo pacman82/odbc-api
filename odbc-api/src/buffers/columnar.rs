@@ -548,7 +548,7 @@ where
 }
 
 /// A column buffer which can be resized.
-/// 
+///
 /// Resizing is useful if a column buffer is used for inserting parameters, rather than fetching.
 /// Imagine an application which inserts data from a stream with row groups of varying size. If it
 /// encounters a row group with a new maximum size, it may want to resize the parameter buffers to
@@ -562,7 +562,10 @@ pub trait Resize {
     fn resize(&mut self, new_capacity: usize);
 }
 
-impl<T> Resize for Vec<T> where T: Default + Clone{
+impl<T> Resize for Vec<T>
+where
+    T: Default + Clone,
+{
     fn resize(&mut self, new_capacity: usize) {
         Vec::resize(self, new_capacity, T::default());
     }
@@ -585,7 +588,6 @@ mod tests {
     /// `Resize` trait, so that other generic types know about it.
     #[test]
     fn vec_is_resize() {
-
         let mut my_int_column_buffer = vec![1, 2];
 
         Resize::resize(&mut my_int_column_buffer, 4);
