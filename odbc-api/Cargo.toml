@@ -7,6 +7,10 @@ license = "MIT"
 repository = "https://github.com/pacman82/odbc-api"
 documentation = "https://docs.rs/odbc-api/"
 
+# We want the documenation of the derive crate rendered on docs.rs
+[package.metadata.docs.rs]
+features = ["derive", "odbc_version_3_80"]
+
 # A short blurb about the package. This is not rendered in any format when
 # uploaded to crates.io (aka this is not markdown).
 description = "Write ODBC Applications in (mostly) safe Rust."
@@ -49,14 +53,14 @@ readme = "../Readme.md"
 # Note that this is the encoding used for statement text and other string arguments, yet not for the
 # payload of VARCHAR columns, or other column types in the result set. This can be choosen at
 # runtime by the application.
-narrow=[]
+narrow = []
 
 # Use wide function calls.
 #
 # See the documentation of `narrow` feature above for more information. Enabling this feature will
 # trigger the use of `wide` function calls, even on "non-windows" platforms. If both `narrow` and
 # `wide` are enabled, `wide` takes precedence.
-wide=[]
+wide = []
 
 # `odbc-api` uses ODBC 3.80 by default, which is well supported both in windows and on linux through
 # `UnixODBC`. Yet iodbc, for now does only support ODBC 3.5, so you can set this flag in order to
@@ -77,7 +81,7 @@ iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
 # Allows deriving custom implementations of `FetchRow` for row wise bulk fetching.
 derive = ["dep:odbc-api-derive"]
 
-default=["odbc_version_3_80", "prompt"]
+default = ["odbc_version_3_80", "prompt"]
 
 # ODBC offers an interface to prompt the user for a connection string. This requires passing a
 # window handle to the ODBC driver manager. AFAIK this is currently only supported by the driver
@@ -87,7 +91,7 @@ default=["odbc_version_3_80", "prompt"]
 #
 # Concretely by activating this feature `DriverCompleteOption` will have more variants on a windows
 # platform.
-prompt=["dep:winit"]
+prompt = ["dep:winit"]
 
 [dependencies]
 # Low level bindings to ODBC API calls into libodbc.so
@@ -99,13 +103,15 @@ log = "0.4.27"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.2.0"
 atoi = "2.0.0"
-odbc-api-derive ={ version = "12.0.0", path = "../derive", optional = true}
+odbc-api-derive = { version = "12.0.0", path = "../derive", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default
 # features since it can work only on windows and therfore we do not need any dependencies
 # associated with various window managers.
-winit = { version = "0.30.12", default-features = false, features = ["rwh_06"], optional = true}
+winit = { version = "0.30.12", default-features = false, features = [
+    "rwh_06",
+], optional = true }
 
 [dev-dependencies]
 env_logger = "0.11.8"
@@ -115,7 +121,7 @@ test-case = "3.3.1"
 tempfile = "3.20.0"
 criterion = { version = "0.7.0", features = ["html_reports"] }
 tokio = { version = "1.47.0", features = ["rt", "macros", "time"] }
-stdext = "0.3.3" # Used for function_name macro to generate unique table names for tests
+stdext = "0.3.3"                                                    # Used for function_name macro to generate unique table names for tests
 
 
 [[bench]]
