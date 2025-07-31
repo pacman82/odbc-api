@@ -1,5 +1,22 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [14.2.1](https://github.com/pacman82/odbc-api/compare/v14.2.0...v14.2.1) - 2025-07-31
+
+### Other
+
+- Render documentation of derive feature on docs.rs
+- *(deps)* bump winit from 0.30.11 to 0.30.12
+- *(deps)* bump tokio from 1.46.1 to 1.47.0
+- *(deps)* bump criterion from 0.6.0 to 0.7.0
+# Changelog
+
 ## [14.2.0](https://github.com/pacman82/odbc-api/compare/v14.1.0...v14.2.0) - 2025-07-23
 
 ### Added
