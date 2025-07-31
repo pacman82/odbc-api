@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "14.2.0"
+version = "14.2.1"
 dependencies = [
  "anyhow",
  "atoi",
