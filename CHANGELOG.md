@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [14.2.2](https://github.com/pacman82/odbc-api/compare/v14.2.1...v14.2.2) - 2025-08-01
+
+### Other
+
+- Revert version change
+- reset version to 14.2.0 so release-plz, picks it up again
+
 ## [14.2.1](https://github.com/pacman82/odbc-api/compare/v14.2.0...v14.2.1) - 2025-07-31
 
 ### Other
