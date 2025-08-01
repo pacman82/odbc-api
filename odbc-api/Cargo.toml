@@ -7,10 +7,6 @@ license = "MIT"
 repository = "https://github.com/pacman82/odbc-api"
 documentation = "https://docs.rs/odbc-api/"
 
-# We want the documenation of the derive crate rendered on docs.rs
-[package.metadata.docs.rs]
-features = ["derive", "odbc_version_3_80"]
-
 # A short blurb about the package. This is not rendered in any format when
 # uploaded to crates.io (aka this is not markdown).
 description = "Write ODBC Applications in (mostly) safe Rust."
@@ -30,7 +26,9 @@ categories = ["api-bindings", "database"]
 # crates.io will render this file and place the result on the crate's page.
 readme = "../Readme.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# We want the documenation of the derive crate rendered on docs.rs
+[package.metadata.docs.rs]
+features = ["derive", "odbc_version_3_80"]
 
 [features]
 # Use narrow function calls.
@@ -127,3 +125,5 @@ stdext = "0.3.3"                                                    # Used for f
 [[bench]]
 name = "benches"
 harness = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
