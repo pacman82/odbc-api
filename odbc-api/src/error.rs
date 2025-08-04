@@ -181,23 +181,31 @@ impl SqlResult<()> {
 // Define that here rather than in `sql_result` mod to keep the `handles` module entirely agnostic
 // about the top level `Error` type.
 impl<T> SqlResult<T> {
+    /// `true` for [`Self::SuccessWithInfo`] and [`Self::Error`]. If `true` one might expect
+    /// diagnostic records to be present. If `false` it would indicate their absense.
+    pub fn has_diganostics(&self) -> bool {
+        match self {
+            SqlResult::SuccessWithInfo(_) | SqlResult::Error { function: _ } => true,
+            _ => false,
+        }
+    }
+
     /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. In case of
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
     /// Other states [`Self::NoData]` and [`Self::NeedData`] would lead to a panic. Most ODBC
     /// functions are not suppossed to return these status codes.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
+        if self.has_diganostics() {
+            log_diagnostics(handle);
+        }
         match self {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(value) => Ok(value),
             // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(value) => {
-                log_diagnostics(handle);
-                Ok(value)
-            }
+            SqlResult::SuccessWithInfo(value) => Ok(value),
             SqlResult::Error { function } => {
                 let mut record = DiagnosticRecord::with_capacity(512);
                 if record.fill_from(handle, 1) {
-                    log_diagnostics(handle);
                     Err(Error::Diagnostics { record, function })
                 } else {
                     // Anecdotal ways to reach this code paths:
