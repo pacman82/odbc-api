@@ -225,9 +225,9 @@ impl<T> SqlResult<T> {
         }
     }
 
-    /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
-    /// is mapped to `Some`.
-    pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
-        self.map(Some).on_no_data(|| None).into_result(handle)
+    /// Maps [`SqlResult::Success`] and [`SqlResult::SuccessWithInfo`] to `Some`. Maps
+    /// [`SqlResult::NoData`] to [`SqlResult::Success`] with `None`.
+    pub fn or_no_data(self) -> SqlResult<Option<T>> {
+        self.map(Some).on_no_data(|| None)
     }
 }

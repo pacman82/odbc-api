@@ -498,7 +498,8 @@ impl Environment {
             while let Some((candidate_desc_len, candidate_attr_len)) = self
                 .environment
                 .drivers_buffer_len(FetchOrientation::Next)
-                .into_result_option(&self.environment)?
+                .or_no_data()
+                .into_result(&self.environment)?
             {
                 desc_len = max(candidate_desc_len, desc_len);
                 attr_len = max(candidate_attr_len, attr_len);
@@ -597,7 +598,8 @@ impl Environment {
             let (mut server_name_len, mut driver_len) = if let Some(res) = self
                 .environment
                 .data_source_buffer_len(direction)
-                .into_result_option(&self.environment)?
+                .or_no_data()
+                .into_result(&self.environment)?
             {
                 res
             } else {
@@ -609,7 +611,8 @@ impl Environment {
             while let Some((candidate_name_len, candidate_decs_len)) = self
                 .environment
                 .drivers_buffer_len(FetchOrientation::Next)
-                .into_result_option(&self.environment)?
+                .or_no_data()
+                .into_result(&self.environment)?
             {
                 server_name_len = max(candidate_name_len, server_name_len);
                 driver_len = max(candidate_decs_len, driver_len);
