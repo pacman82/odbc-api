@@ -173,7 +173,8 @@ impl SqlResult<()> {
     /// `Ok(true)`.
     pub fn into_result_bool(self, handle: &impl Diagnostics) -> Result<bool, Error> {
         self.on_success(|| true)
-            .into_result_with(handle, Some(false), None)
+            .on_no_data(|| false)
+            .into_result(handle)
     }
 }
 
@@ -182,37 +183,9 @@ impl SqlResult<()> {
 impl<T> SqlResult<T> {
     /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. In case of
     /// [`Self::SuccessWithInfo`] any diagnostics are logged. [`Self::Error`] is mapped to error.
+    /// Other states [`Self::NoData]` and [`Self::NeedData`] would lead to a panic. Most ODBC
+    /// functions are not suppossed to return these status codes.
     pub fn into_result(self, handle: &impl Diagnostics) -> Result<T, Error> {
-        self.into_result_with(handle, None, None)
-    }
-
-    /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
-    /// is mapped to `Some`.
-    pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
-        self.map(Some).into_result_with(handle, Some(None), None)
-    }
-
-    /// Most flexible way of converting an `SqlResult` to an idiomatic `Result`.
-    ///
-    /// # Parameters
-    ///
-    /// * `handle`: This handle is used to extract diagnostics in case `self` is
-    ///   [`SqlResult::SuccessWithInfo`] or [`SqlResult::Error`].
-    /// * `error_for_truncation`: Intended to be used to be used after bulk fetching into a buffer.
-    ///   If `error_for_truncation` is `true` any diagnostics are inspected for truncation. If any
-    ///   truncation is found an error is returned.
-    /// * `no_data`: Controls the behaviour for [`SqlResult::NoData`]. `None` indicates that the
-    ///   result is never expected to be [`SqlResult::NoData`] and would panic in that case.
-    ///   `Some(value)` would cause [`SqlResult::NoData`] to be mapped to `Ok(value)`.
-    /// * `need_data`: Controls the behaviour for [`SqlResult::NeedData`]. `None` indicates that the
-    ///   result is never expected to be [`SqlResult::NeedData`] and would panic in that case.
-    ///   `Some(value)` would cause [`SqlResult::NeedData`] to be mapped to `Ok(value)`.
-    pub fn into_result_with(
-        self,
-        handle: &impl Diagnostics,
-        no_data: Option<T>,
-        need_data: Option<T>,
-    ) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(value) => Ok(value),
@@ -235,14 +208,26 @@ impl<T> SqlResult<T> {
                 }
             }
             SqlResult::NoData => {
-                Ok(no_data.expect("Unexepcted SQL_NO_DATA returned by ODBC function"))
+                panic!(
+                    "Unexepcted SQL_NO_DATA returned by ODBC function. Use `SqlResult::on_no_data` \
+                    to handle it."
+                )
             }
             SqlResult::NeedData => {
-                Ok(need_data.expect("Unexepcted SQL_NEED_DATA returned by ODBC function"))
+                panic!(
+                    "Unexpected SQL_NEED_DATA returned by ODBC function. Use \
+                    `SqlResult::on_need_data` to handle it."
+                )
             }
             SqlResult::StillExecuting => panic!(
                 "SqlResult must not be converted to result while the function is still executing."
             ),
         }
+    }
+
+    /// Like [`Self::into_result`], but [`SqlResult::NoData`] is mapped to `None`, and any success
+    /// is mapped to `Some`.
+    pub fn into_result_option(self, handle: &impl Diagnostics) -> Result<Option<T>, Error> {
+        self.map(Some).on_no_data(|| None).into_result(handle)
     }
 }

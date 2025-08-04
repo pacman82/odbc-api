@@ -105,10 +105,11 @@ where
 
         // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
         // execute.
-        let need_data =
-            result
-                .on_success(|| false)
-                .into_result_with(&stmt, Some(false), Some(true))?;
+        let need_data = result
+            .on_success(|| false)
+            .on_no_data(|| false)
+            .on_need_data(|| true)
+            .into_result(&stmt)?;
 
         if need_data {
             // Check if any delayed parameters have been bound which stream data to the database at
@@ -160,10 +161,11 @@ where
 
         // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
         // execute.
-        let need_data =
-            result
-                .on_success(|| false)
-                .into_result_with(&stmt, Some(false), Some(true))?;
+        let need_data = result
+            .on_success(|| false)
+            .on_no_data(|| false)
+            .on_need_data(|| true)
+            .into_result(&stmt)?;
 
         if need_data {
             // Check if any delayed parameters have been bound which stream data to the database at

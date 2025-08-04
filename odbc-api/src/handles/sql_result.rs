@@ -56,6 +56,30 @@ impl<T> SqlResult<T> {
         }
     }
 
+    /// Maps [`Self::NoData`] to [`Self::Success`] with the given value. This makes it easy to chain
+    /// calls of to [`SqlResult::on_no_data`] after calls to [`SqlResult::on_success`].
+    pub fn on_no_data<F>(self, f: F) -> SqlResult<T>
+    where
+        F: FnOnce() -> T,
+    {
+        match self {
+            Self::NoData => SqlResult::Success(f()),
+            other => other,
+        }
+    }
+
+    /// Maps [`Self::NeedData`] to [`Self::Success`] with the given value. This makes it easy to
+    /// chain calls of to [`SqlResult::on_need_data`] after calls to [`SqlResult::on_success`].
+    pub fn on_need_data<F>(self, f: F) -> SqlResult<T>
+    where
+        F: FnOnce() -> T,
+    {
+        match self {
+            Self::NeedData => SqlResult::Success(f()),
+            other => other,
+        }
+    }
+
     pub fn unwrap(self) -> T {
         match self {
             SqlResult::Success(v) | SqlResult::SuccessWithInfo(v) => v,

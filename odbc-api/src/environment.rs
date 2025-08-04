@@ -484,7 +484,9 @@ impl Environment {
                 .environment
                 // Start with first so we are independent of state
                 .drivers_buffer_len(FetchOrientation::First)
-                .into_result_option(&self.environment)?
+                .map(Some)
+                .on_no_data(|| None)
+                .into_result(&self.environment)?
             {
                 res
             } else {
