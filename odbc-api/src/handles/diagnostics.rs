@@ -301,6 +301,8 @@ where
         }
     }
 
+    // We can not implement iterator, since we return a borrowed member in the result.
+    #[allow(clippy::should_implement_trait)]
     /// The next diagnostic record. `None` if all records are exhausted.
     pub fn next(&mut self) -> Option<&Record> {
         if self.record_number == i16::MAX {

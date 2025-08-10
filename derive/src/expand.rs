@@ -61,7 +61,7 @@ pub fn expand(input: DeriveInput) -> TokenStream {
         }
     };
 
-    expanded.into()
+    expanded
 }
 
 #[cfg(test)]

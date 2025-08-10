@@ -184,10 +184,10 @@ impl<T> SqlResult<T> {
     /// `true` for [`Self::SuccessWithInfo`] and [`Self::Error`]. If `true` one might expect
     /// diagnostic records to be present. If `false` it would indicate their absense.
     pub fn has_diganostics(&self) -> bool {
-        match self {
-            SqlResult::SuccessWithInfo(_) | SqlResult::Error { function: _ } => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            SqlResult::SuccessWithInfo(_) | SqlResult::Error { function: _ }
+        )
     }
 
     /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. In case of
