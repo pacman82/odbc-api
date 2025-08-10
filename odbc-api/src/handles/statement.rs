@@ -460,13 +460,8 @@ pub trait Statement: AsHandle {
         .into_sql_result("SQLSetStmtAttr")
     }
 
-    /// Sets the batch size for bulk cursors, if retrieving many rows at once.
-    ///
-    /// # Safety
-    ///
-    /// It is the callers responsibility to ensure that buffers bound using `bind_col` can hold the
-    /// specified amount of rows.
-    unsafe fn row_array_size(&mut self) -> SqlResult<usize> {
+    /// Gets the batch size for bulk cursors, if retrieving many rows at once.
+    fn row_array_size(&mut self) -> SqlResult<usize> {
         let mut out: usize = 0;
         let value = &mut out as *mut usize as Pointer;
         unsafe {

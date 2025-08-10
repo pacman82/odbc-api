@@ -1,13 +1,16 @@
 mod block_cursor;
 mod concurrent_block_cursor;
 
+use log::warn;
 use odbc_sys::HStmt;
 
 use crate::{
     Error, ResultSetMetadata,
     buffers::Indicator,
     error::ExtendResult,
-    handles::{AsStatementRef, CDataMut, SqlResult, State, Statement, StatementRef},
+    handles::{
+        AsStatementRef, CDataMut, DiagnosticStream, SqlResult, State, Statement, StatementRef,
+    },
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
     sleep::{Sleep, wait_for},
 };
@@ -619,8 +622,43 @@ unsafe fn bind_row_set_buffer_to_statement(
         stmt.set_row_bind_type(row_set_buffer.bind_type())
             .into_result(&stmt)?;
         let size = row_set_buffer.row_array_size();
-        stmt.set_row_array_size(size)
-            .into_result(&stmt)
+        let sql_result = stmt.set_row_array_size(size);
+
+        // Search for "option value changed". A QODBC driver reported "option value changed", yet
+        // set the value to `723477590136`. We want to panic if something like this happens.
+        //
+        // See: <https://github.com/pacman82/odbc-api/discussions/742#discussioncomment-13887516>
+        let mut diagnostic_stream = DiagnosticStream::new(&stmt);
+        // We just rememeber that we have seen "option value changed", before asking for the array
+        // size, in order to not mess with other diagnostic records.
+        let mut option_value_changed = false;
+        while let Some(record) = diagnostic_stream.next() {
+            warn!("{record}");
+            if record.state == State::OPTION_VALUE_CHANGED {
+                option_value_changed = true;
+            }
+        }
+        if option_value_changed {
+            // Now rejecting a too large buffer size is save, but not if the value is something
+            // even larger after. Zero is also suspicious.
+            let actual_size = stmt.row_array_size().into_result(&stmt)?;
+            warn!(
+                "Row array size set by the driver to: {actual_size}. Desired size had been: {size}"
+            );
+            if actual_size > size || actual_size == 0 {
+                panic!(
+                    "Your ODBC buffer changed the array size for bulk fetchin in an unsound way. \
+                    To prevent undefined behavior the application must panic. You can try \
+                    different batch sizes for bulk fetching, or report a bug with your ODBC driver \
+                    provider. This behavior has been observed with QODBC drivers. If you are using \
+                    one try fetching row by row rather than the faster bulk fetch."
+                )
+            }
+        }
+
+        sql_result
+            // We already logged diagnostic records then we were looking for Option value changed
+            .into_result_without_logging(&stmt)
             // SAP anywhere has been seen to return with an "invalid attribute" error instead of
             // a success with "option value changed" info. Let us map invalid attributes during
             // setting row set array size to something more precise.
