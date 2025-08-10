@@ -198,11 +198,19 @@ impl<T> SqlResult<T> {
         if self.has_diganostics() {
             log_diagnostics(handle);
         }
+        self.into_result_without_logging(handle)
+    }
+
+    /// [`Self::Success`] and [`Self::SuccessWithInfo`] are mapped to Ok. [`Self::Error`] is mapped
+    /// to error. Other states [`Self::NoData]` and [`Self::NeedData`] would lead to a panic. Most
+    /// ODBC functions are not suppossed to return these status codes.
+    ///
+    /// In case of [`Self::Error`] or [`Self::SuccessWithInfo`] no logging of diagnostic records is
+    /// performed by this method. You may want to use [Self::into_result`] instead.
+    pub fn into_result_without_logging(self, handle: &impl Diagnostics) -> Result<T, Error> {
         match self {
             // The function has been executed successfully. Holds result.
-            SqlResult::Success(value) => Ok(value),
-            // The function has been executed successfully. There have been warnings. Holds result.
-            SqlResult::SuccessWithInfo(value) => Ok(value),
+            SqlResult::Success(value) | SqlResult::SuccessWithInfo(value) => Ok(value),
             SqlResult::Error { function } => {
                 let mut record = DiagnosticRecord::with_capacity(512);
                 if record.fill_from(handle, 1) {
