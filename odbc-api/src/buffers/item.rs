@@ -52,7 +52,7 @@ pub trait Item: Sized + Copy {
     /// Extract the array type from an [`AnySlice`].
     fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]>;
     /// Extract the typed nullable buffer from an [`AnySlice`].
-    fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<Self>>;
+    fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<'_, Self>>;
 
     /// Extract the array type from an [`AnySliceMut`].
     fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]>;
@@ -75,7 +75,7 @@ macro_rules! impl_item {
                 }
             }
 
-            fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<Self>> {
+            fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<'_, Self>> {
                 match variant {
                     AnySlice::$null(vals) => Some(vals),
                     _ => None,

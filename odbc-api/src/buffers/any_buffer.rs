@@ -600,7 +600,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 
-    fn view(&self, valid_rows: usize) -> AnySlice {
+    fn view(&self, valid_rows: usize) -> AnySlice<'_> {
         match self {
             AnyBuffer::Binary(col) => AnySlice::Binary(col.view(valid_rows)),
             AnyBuffer::Text(col) => AnySlice::Text(col.view(valid_rows)),

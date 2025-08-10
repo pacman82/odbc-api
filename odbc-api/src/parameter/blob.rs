@@ -36,7 +36,7 @@ pub unsafe trait Blob: HasDataType {
     fn next_batch(&mut self) -> io::Result<Option<&[u8]>>;
 
     /// Convinience function. Same as calling [`self::BlobParam::new`].
-    fn as_blob_param(&mut self) -> BlobParam
+    fn as_blob_param(&mut self) -> BlobParam<'_>
     where
         Self: Sized,
     {

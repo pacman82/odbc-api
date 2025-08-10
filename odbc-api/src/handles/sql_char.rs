@@ -55,7 +55,7 @@ pub fn slice_to_cow_utf8(text: &[u8]) -> Cow<str> {
     String::from_utf8_lossy(text)
 }
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
-pub fn slice_to_cow_utf8(text: &[u16]) -> Cow<str> {
+pub fn slice_to_cow_utf8(text: &[u16]) -> Cow<'_, str> {
     let text: Result<String, _> = decode_utf16(text.iter().copied()).collect();
     text.unwrap().into()
 }

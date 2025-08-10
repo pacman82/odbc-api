@@ -648,7 +648,7 @@ impl Environment {
         Ok(data_source_info)
     }
 
-    fn allocate_connection(&self) -> Result<handles::Connection, Error> {
+    fn allocate_connection(&self) -> Result<handles::Connection<'_>, Error> {
         // Hold lock diagnostics errors are consumed in this thread.
         let _lock = self.internal_state.lock().unwrap();
         self.environment
