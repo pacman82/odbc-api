@@ -5,6 +5,7 @@ use super::{
     as_handle::AsHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
 };
+use log::warn;
 use odbc_sys::{SQLSTATE_SIZE, SqlReturn};
 use std::fmt;
 
@@ -273,10 +274,57 @@ impl fmt::Debug for Record {
     }
 }
 
+/// Used to iterate over all the diagnostics after a call to an ODBC function.
+///
+/// Fills the same [`Record`] with all the diagnostic records associated with the handle.
+pub struct DiagnosticStream<'d, D: ?Sized> {
+    /// We use this to store the contents of the current diagnostic record.
+    record: Record,
+    /// One based index of the current diagnostic record
+    record_number: i16,
+    /// A borrowed handle to the diagnostics. Used to access n-th diagnostic record.
+    diagnostics: &'d D,
+}
+
+impl<'d, D> DiagnosticStream<'d, D>
+where
+    D: Diagnostics + ?Sized,
+{
+    pub fn new(diagnostics: &'d D) -> Self {
+        Self {
+            record: Record::with_capacity(512),
+            record_number: 0,
+            diagnostics,
+        }
+    }
+
+    /// The next diagnostic record. `None` if all records are exhausted.
+    pub fn next(&mut self) -> Option<&Record> {
+        if self.record_number == i16::MAX {
+            // Prevent overflow. This is not that unlikely to happen, since some `execute` or
+            // `fetch` calls can cause diagnostic messages for each row
+            warn!(
+                "Too many diagnostic records were generated. Ignoring the remaining to prevent \
+                overflowing the 16Bit integer counting them."
+            );
+            return None;
+        }
+        self.record_number += 1;
+        self.record
+            .fill_from(self.diagnostics, self.record_number)
+            .then_some(&self.record)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
-    use crate::handles::diagnostics::State;
+    use std::cell::RefCell;
+
+    use crate::handles::{
+        DiagnosticStream, Diagnostics, SqlChar,
+        diagnostics::{DiagnosticResult, State},
+    };
 
     use super::Record;
 
@@ -306,5 +354,48 @@ mod tests {
             "State: HY010, Native error: 0, Message: [Microsoft][ODBC Driver Manager] \
              Function sequence error"
         );
+    }
+
+    struct InfiniteDiagnostics {
+        times_called: RefCell<usize>,
+    }
+
+    impl InfiniteDiagnostics {
+        fn new() -> InfiniteDiagnostics {
+            Self {
+                times_called: RefCell::new(0),
+            }
+        }
+
+        fn num_calls(&self) -> usize {
+            *self.times_called.borrow()
+        }
+    }
+
+    impl Diagnostics for InfiniteDiagnostics {
+        fn diagnostic_record(
+            &self,
+            _rec_number: i16,
+            _message_text: &mut [SqlChar],
+        ) -> Option<DiagnosticResult> {
+            *self.times_called.borrow_mut() += 1;
+            Some(DiagnosticResult {
+                state: State([0, 0, 0, 0, 0]),
+                native_error: 0,
+                text_length: 0,
+            })
+        }
+    }
+
+    /// This test is inspired by a bug caused from a fetch statement generating a lot of diagnostic
+    /// messages.
+    #[test]
+    fn more_than_i16_max_diagnostic_records() {
+        let diagnostics = InfiniteDiagnostics::new();
+
+        let mut stream = DiagnosticStream::new(&diagnostics);
+        while let Some(_rec) = stream.next() {}
+
+        assert_eq!(diagnostics.num_calls(), i16::MAX as usize)
     }
 }
