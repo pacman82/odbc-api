@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [14.3.0](https://github.com/pacman82/odbc-api/compare/v14.2.1...v14.3.0) - 2025-08-10
+
+### Added
+
+- Check for option value changed during bulk fetch
+- Add SqlResult::into_result_without_logging
+- Introduce DiagnosticStream
+- Introduce `SqlResult::has_diagnostics`
+
+### Other
+
+- fix mismatched lifetime elision syntax
+- fix clippy lints
+- [**breaking**] Replace `SqlResult::into_result_option` with
+- [**breaking**] Replaced SqlResult::into_result_with with
+- *(deps)* bump tokio from 1.47.0 to 1.47.1
+- Revert version change
+- reset version to 14.2.0 so release-plz, picks it up again
+
 ## [14.2.1](https://github.com/pacman82/odbc-api/compare/v14.2.0...v14.2.1) - 2025-07-31
 
 ### Other
