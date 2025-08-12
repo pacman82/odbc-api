@@ -57,7 +57,7 @@ where
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
     pub fn describe_param(&mut self, parameter_number: u16) -> Result<ParameterDescription, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
 
         stmt.describe_param(parameter_number).into_result(&stmt)
     }
@@ -66,7 +66,7 @@ where
     /// this statement. This is equivalent to the number of placeholders used in the SQL string
     /// used to prepare the statement.
     pub fn num_params(&mut self) -> Result<u16, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.num_params().into_result(&stmt)
     }
 

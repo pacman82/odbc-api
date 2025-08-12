@@ -312,7 +312,7 @@ pub trait Statement: AsHandle {
     ///   not provide strong exception safety as the value of this argument is undefined in case of
     ///   an error.
     fn describe_col(
-        &self,
+        &mut self,
         column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> SqlResult<()> {
@@ -434,7 +434,7 @@ pub trait Statement: AsHandle {
     }
 
     /// Number of placeholders of a prepared query.
-    fn num_params(&self) -> SqlResult<u16> {
+    fn num_params(&mut self) -> SqlResult<u16> {
         let mut out: i16 = 0;
         unsafe { SQLNumParams(self.as_sys(), &mut out) }
             .into_sql_result("SQLNumParams")
@@ -670,7 +670,7 @@ pub trait Statement: AsHandle {
     /// otherwise.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn is_unsigned_column(&self, column_number: u16) -> SqlResult<bool> {
+    fn is_unsigned_column(&mut self, column_number: u16) -> SqlResult<bool> {
         unsafe { self.numeric_col_attribute(Desc::Unsigned, column_number) }.map(|out| match out {
             0 => false,
             1 => true,
@@ -681,7 +681,7 @@ pub trait Statement: AsHandle {
     /// Returns a number identifying the SQL type of the column in the result set.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+    fn col_type(&mut self, column_number: u16) -> SqlResult<SqlDataType> {
         unsafe { self.numeric_col_attribute(Desc::Type, column_number) }.map(|ret| {
             SqlDataType(ret.try_into().expect(
                 "Failed to retrieve data type from ODBC driver. The SQLLEN could not be converted to
@@ -697,7 +697,7 @@ pub trait Statement: AsHandle {
     /// concise data type; for example, `TIME` or `INTERVAL_YEAR`.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_concise_type(&self, column_number: u16) -> SqlResult<SqlDataType> {
+    fn col_concise_type(&mut self, column_number: u16) -> SqlResult<SqlDataType> {
         unsafe { self.numeric_col_attribute(Desc::ConciseType, column_number) }.map(|ret| {
             SqlDataType(ret.try_into().expect(
                 "Failed to retrieve data type from ODBC driver. The SQLLEN could not be \
@@ -713,14 +713,14 @@ pub trait Statement: AsHandle {
     /// returned, excluding a terminating zero.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_octet_length(&self, column_number: u16) -> SqlResult<isize> {
+    fn col_octet_length(&mut self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::OctetLength, column_number) }
     }
 
     /// Maximum number of characters required to display data from the column.
     ///
     /// `column_number`: Index of the column, starting at 1.
-    fn col_display_size(&self, column_number: u16) -> SqlResult<isize> {
+    fn col_display_size(&mut self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::DisplaySize, column_number) }
     }
 
@@ -729,13 +729,13 @@ pub trait Statement: AsHandle {
     /// Denotes the applicable precision. For data types SQL_TYPE_TIME, SQL_TYPE_TIMESTAMP, and all
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
-    fn col_precision(&self, column_number: u16) -> SqlResult<isize> {
+    fn col_precision(&mut self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::Precision, column_number) }
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
-    fn col_scale(&self, column_number: u16) -> SqlResult<isize> {
+    fn col_scale(&mut self, column_number: u16) -> SqlResult<isize> {
         unsafe { self.numeric_col_attribute(Desc::Scale, column_number) }
     }
 
@@ -745,14 +745,14 @@ pub trait Statement: AsHandle {
     ///
     /// See `SQL_DESC_NULLABLE ` in the ODBC reference:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function>
-    fn col_nullability(&self, column_number: u16) -> SqlResult<Nullability> {
+    fn col_nullability(&mut self, column_number: u16) -> SqlResult<Nullability> {
         unsafe { self.numeric_col_attribute(Desc::Nullable, column_number) }
             .map(|nullability| Nullability::new(odbc_sys::Nullability(nullability as i16)))
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
-    fn col_name(&self, column_number: u16, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
+    fn col_name(&mut self, column_number: u16, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
         // Let's utilize all of `buf`s capacity.
@@ -802,7 +802,7 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
-    unsafe fn numeric_col_attribute(&self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
+    unsafe fn numeric_col_attribute(&mut self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
         let mut out: Len = 0;
         unsafe {
             sql_col_attribute(
@@ -839,7 +839,7 @@ pub trait Statement: AsHandle {
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
-    fn describe_param(&self, parameter_number: u16) -> SqlResult<ParameterDescription> {
+    fn describe_param(&mut self, parameter_number: u16) -> SqlResult<ParameterDescription> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut parameter_size = 0;
         let mut decimal_digits = 0;

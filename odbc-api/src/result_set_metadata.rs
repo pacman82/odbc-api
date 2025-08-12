@@ -28,7 +28,7 @@ pub trait ResultSetMetadata: AsStatementRef {
         column_number: u16,
         column_description: &mut ColumnDescription,
     ) -> Result<(), Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.describe_col(column_number, column_description)
             .into_result(&stmt)
     }
@@ -49,7 +49,7 @@ pub trait ResultSetMetadata: AsStatementRef {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn column_is_unsigned(&mut self, column_number: u16) -> Result<bool, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.is_unsigned_column(column_number).into_result(&stmt)
     }
 
@@ -58,7 +58,7 @@ pub trait ResultSetMetadata: AsStatementRef {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_octet_length(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.col_octet_length(column_number)
             .into_result(&stmt)
             .map(|signed| NonZeroUsize::new(signed.max(0) as usize))
@@ -69,7 +69,7 @@ pub trait ResultSetMetadata: AsStatementRef {
     ///
     /// `column_number`: Index of the column, starting at 1.
     fn col_display_size(&mut self, column_number: u16) -> Result<Option<NonZeroUsize>, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.col_display_size(column_number)
             .into_result(&stmt)
             // Map negative values to `0`. `0` is used by MSSQL to indicate a missing upper bound
@@ -87,14 +87,14 @@ pub trait ResultSetMetadata: AsStatementRef {
     /// the interval data types that represent a time interval, its value is the applicable
     /// precision of the fractional seconds component.
     fn col_precision(&mut self, column_number: u16) -> Result<isize, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.col_precision(column_number).into_result(&stmt)
     }
 
     /// The applicable scale for a numeric data type. For DECIMAL and NUMERIC data types, this is
     /// the defined scale. It is undefined for all other data types.
     fn col_scale(&mut self, column_number: u16) -> Result<isize, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.col_scale(column_number).into_result(&stmt)
     }
 
@@ -105,14 +105,14 @@ pub trait ResultSetMetadata: AsStatementRef {
     /// See `SQL_DESC_NULLABLE ` in the ODBC reference:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolattribute-function>
     fn col_nullability(&mut self, column_number: u16) -> Result<Nullability, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.col_nullability(column_number).into_result(&stmt)
     }
 
     /// The column alias, if it applies. If the column alias does not apply, the column name is
     /// returned. If there is no column name or a column alias, an empty string is returned.
     fn col_name(&mut self, column_number: u16) -> Result<String, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         let mut buf = vec![0; 1024];
         stmt.col_name(column_number, &mut buf).into_result(&stmt)?;
         Ok(slice_to_utf8(&buf).unwrap())
@@ -132,7 +132,7 @@ pub trait ResultSetMetadata: AsStatementRef {
         // There is some repetition of knowledge here, about how SqlDataType maps to DataType.
         // Maybe we can unify this with [`DataType::new`].
 
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         let kind = stmt.col_concise_type(column_number).into_result(&stmt)?;
         let dt = match kind {
             SqlDataType::UNKNOWN_TYPE => DataType::Unknown,
@@ -262,7 +262,7 @@ where
         if self.column <= self.num_cols {
             // stmt instead of cursor.col_name, so we can efficently reuse the buffer and avoid
             // extra allocations.
-            let stmt = self.cursor.as_stmt_ref();
+            let mut stmt = self.cursor.as_stmt_ref();
 
             let result = stmt
                 .col_name(self.column, &mut self.buffer)
