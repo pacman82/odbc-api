@@ -7,12 +7,12 @@ use crate::{
 
 /// Statement handle which also takes ownership of Connection
 #[derive(Debug)]
-pub struct StatementConnection<'env> {
+pub struct StatementConnection<C> {
     handle: HStmt,
-    _parent: Connection<'env>,
+    _parent: C,
 }
 
-impl<'env> StatementConnection<'env> {
+impl<'env> StatementConnection<Connection<'env>> {
     pub(crate) unsafe fn new(handle: HStmt, parent: Connection<'env>) -> Self {
         Self {
             _parent: parent,
@@ -25,7 +25,7 @@ impl<'env> StatementConnection<'env> {
     }
 }
 
-impl Drop for StatementConnection<'_> {
+impl<C> Drop for StatementConnection<C> {
     fn drop(&mut self) {
         unsafe {
             drop_handle(self.handle as Handle, HandleType::Stmt);
@@ -54,9 +54,9 @@ impl Drop for StatementConnection<'_> {
 /// `StatementConnection` however also owns the connection exclusively. Since connections are `Send`
 /// it is reasonable to assume this would work even if implementers of the ODBC driver do not care
 /// in particular about thread safety.
-unsafe impl Send for StatementConnection<'_> {}
+unsafe impl Send for StatementConnection<Connection<'_>> {}
 
-unsafe impl AsHandle for StatementConnection<'_> {
+unsafe impl AsHandle for StatementConnection<Connection<'_>> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -66,13 +66,13 @@ unsafe impl AsHandle for StatementConnection<'_> {
     }
 }
 
-impl Statement for StatementConnection<'_> {
+impl Statement for StatementConnection<Connection<'_>> {
     fn as_sys(&self) -> HStmt {
         self.handle
     }
 }
 
-impl AsStatementRef for StatementConnection<'_> {
+impl AsStatementRef for StatementConnection<Connection<'_>> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.as_stmt_ref()
     }

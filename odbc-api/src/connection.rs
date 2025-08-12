@@ -149,7 +149,7 @@ impl<'c> Connection<'c> {
     ///     query_params,
     ///     timeout_sec)?
     /// {
-    ///     // Use cursor to process query results.  
+    ///     // Use cursor to process query results.
     /// }
     /// # Ok::<(), odbc_api::Error>(())
     /// ```
@@ -268,7 +268,8 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<'c>>>, ConnectionAndError<'c>> {
+    ) -> Result<Option<CursorImpl<StatementConnection<Connection<'c>>>>, ConnectionAndError<'c>>
+    {
         // With the current Rust version the borrow checker needs some convincing, so that it allows
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
@@ -355,7 +356,7 @@ impl<'c> Connection<'c> {
     /// ```no_run
     /// use odbc_api::{
     ///     environment, Error, ColumnarBulkInserter, StatementConnection,
-    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions
+    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions, Connection
     /// };
     ///
     /// const CONNECTION_STRING: &str =
@@ -365,7 +366,7 @@ impl<'c> Connection<'c> {
     ///
     /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
     /// /// takes ownership of a connection created using an environment with static lifetime.
-    /// type Inserter = ColumnarBulkInserter<StatementConnection<'static>, AnyBuffer>;
+    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
@@ -383,7 +384,10 @@ impl<'c> Connection<'c> {
     ///     prepared.into_column_inserter(capacity, buffers)
     /// }
     /// ```
-    pub fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<'c>>, Error> {
+    pub fn into_prepared(
+        self,
+        query: &str,
+    ) -> Result<Prepared<StatementConnection<Connection<'c>>>, Error> {
         let query = SqlText::new(query);
         let mut stmt = self.allocate_statement()?;
         stmt.prepare(&query).into_result(&stmt)?;
@@ -429,7 +433,9 @@ impl<'c> Connection<'c> {
 
     /// Creates a preallocated statement handle like [`Self::preallocate`]. Yet the statement handle
     /// also takes ownership of the connection.
-    pub fn into_preallocated(self) -> Result<Preallocated<StatementConnection<'c>>, Error> {
+    pub fn into_preallocated(
+        self,
+    ) -> Result<Preallocated<StatementConnection<Connection<'c>>>, Error> {
         let stmt = self.allocate_statement()?;
         // Safe: We know `stmt` is a valid statement handle and self is the connection which has
         // been used to allocate it.
