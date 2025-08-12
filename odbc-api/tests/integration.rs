@@ -5700,7 +5700,10 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
 fn get_row_array_size_from_statement(profile: &Profile) {
     // Given a statement
     let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name).column_types(&["INTEGER"]).build(profile).unwrap();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
     let mut statement = conn.prepare(&table.sql_all_ordered_by_id()).unwrap();
 
     // When setting the row array size to 10 and fetching it
