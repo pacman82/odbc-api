@@ -41,7 +41,9 @@ use std::{
     iter,
     num::NonZeroUsize,
     ptr::null_mut,
-    str, thread,
+    str,
+    sync::Arc,
+    thread,
     time::{Duration, Instant},
 };
 
@@ -569,6 +571,37 @@ fn into_cursor(profile: &Profile) {
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
+}
+
+/// We want to be able to create multiple statements with the utilizing the same connection, yet we
+/// in some cases it might be hard to keep track of the ownership of the connection separately. So
+/// essentially we want our statements to be owning an `Arc` to connection.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn shared_ownership_of_connections_by_statement(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let conn = Arc::new(conn);
+    let cursor = conn
+        .clone()
+        .execute_arc(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+    // We can drop the connection, even though, the cursor still exists.
+    drop(conn);
+
+    // Then
+    let expected = "42";
+    assert_eq!(expected, cursor_to_string(cursor));
 }
 
 /// Strong exception safety for `into_cursor`. Our first query will fail, because it will query a
@@ -1483,8 +1516,8 @@ fn var_char_slice_mut_as_input_output_parameter(profile: &Profile) {
     let conn = profile.connection().unwrap();
     conn.execute(
         r#"
-        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestInOutText')  
-        DROP PROCEDURE TestInOutText  
+        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestInOutText')
+        DROP PROCEDURE TestInOutText
         "#,
         (),
         None,
@@ -1492,11 +1525,11 @@ fn var_char_slice_mut_as_input_output_parameter(profile: &Profile) {
     .unwrap();
 
     conn.execute(
-        r#"CREATE PROCEDURE TestInOutText   
-        @OutParm VARCHAR(15) OUTPUT   
+        r#"CREATE PROCEDURE TestInOutText
+        @OutParm VARCHAR(15) OUTPUT
         AS
-        SELECT @OutParm = 'Hello, World!'  
-        RETURN 99  
+        SELECT @OutParm = 'Hello, World!'
+        RETURN 99
         "#,
         (),
         None,
@@ -2822,8 +2855,8 @@ fn output_parameter(profile: &Profile) {
     let conn = profile.connection().unwrap();
     conn.execute(
         r#"
-        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestOutputParam')  
-        DROP PROCEDURE TestOutputParam  
+        IF EXISTS (SELECT name FROM sysobjects WHERE name = 'TestOutputParam')
+        DROP PROCEDURE TestOutputParam
         "#,
         (),
         None,
@@ -2831,11 +2864,11 @@ fn output_parameter(profile: &Profile) {
     .unwrap();
 
     conn.execute(
-        r#"CREATE PROCEDURE TestOutputParam   
-        @OutParm int OUTPUT   
+        r#"CREATE PROCEDURE TestOutputParam
+        @OutParm int OUTPUT
         AS
-        SELECT @OutParm = @OutParm + 5  
-        RETURN 99  
+        SELECT @OutParm = @OutParm + 5
+        RETURN 99
         "#,
         (),
         None,

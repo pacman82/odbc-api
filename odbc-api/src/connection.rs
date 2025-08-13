@@ -11,6 +11,7 @@ use std::{
     fmt::{self, Debug, Display},
     mem::ManuallyDrop,
     str,
+    sync::Arc,
     thread::panicking,
 };
 
@@ -281,6 +282,38 @@ impl<'c> Connection<'c> {
                 error: e,
                 connection: self,
             });
+        }
+        let cursor = cursor.unwrap();
+        // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
+        // resulting cursor would depend on the lifetime of `params`.
+        let mut cursor = ManuallyDrop::new(cursor);
+        let handle = cursor.as_sys();
+        // Safe: `handle` is a valid statement, and we are giving up ownership of `self`.
+        let statement = unsafe { StatementConnection::new(handle, self) };
+        // Safe: `statement is in the cursor state`.
+        let cursor = unsafe { CursorImpl::new(statement) };
+        Ok(Some(cursor))
+    }
+
+    /// Like [`Connection::execute`], but takes ownership of an `Arc<Self>`.
+    pub fn execute_arc(
+        self: Arc<Self>,
+        query: &str,
+        params: impl ParameterCollectionRef,
+        query_timeout_sec: Option<usize>,
+    ) -> Result<Option<CursorImpl<StatementConnection<Arc<Connection<'c>>>>>, Error>  {
+        // With the current Rust version the borrow checker needs some convincing, so that it allows
+        // us to return the Connection, even though the Result of execute borrows it.
+        let mut error = None;
+        let mut cursor = None;
+        match self.execute(query, params, query_timeout_sec) {
+            Ok(Some(c)) => cursor = Some(c),
+            Ok(None) => return Ok(None),
+            Err(e) => error = Some(e),
+        };
+        if let Some(e) = error {
+            drop(cursor);
+            return Err(e);
         }
         let cursor = cursor.unwrap();
         // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
@@ -759,13 +792,23 @@ impl Debug for Connection<'_> {
     }
 }
 
-/// We need to implement ConnectionOwner in order to be able to use Connection together with
-/// [`StatementConnection`].
+/// We need to implement ConnectionOwner for [`Connection`] in order to express ownership of a
+/// connection for a statement handle. This is e.g. needed for [`Connection::into_cursor`].
 ///
 /// # Safety:
 /// 
 /// Connection wraps an open Connection. It keeps the handle alive and valid during its lifetime.
 unsafe impl ConnectionOwner for Connection<'_> {}
+
+/// We need to implement ConnectionOwner for `Arc<Connection>` in order to be able to express
+/// ownership of a shared connection from a statement handle. This is e.g. needed for
+/// [`Connection::execute_arc`].
+///
+/// # Safety:
+/// 
+/// Arc<Connection> wraps an open Connection. It keeps the handle alive and valid during its
+/// lifetime.
+unsafe impl ConnectionOwner for Arc<Connection<'_>> {}
 
 /// Options to be passed then opening a connection to a datasource.
 #[derive(Default, Clone, Copy)]
