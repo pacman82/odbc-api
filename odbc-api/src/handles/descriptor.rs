@@ -4,7 +4,7 @@ use odbc_sys::{
     CDataType, Desc, HDesc, HStmt, Handle, HandleType, IS_POINTER, IS_SMALLINT, Pointer,
 };
 
-use super::{AsHandle, SqlResult, sql_result::ExtSqlReturn};
+use super::{AnyHandle, SqlResult, sql_result::ExtSqlReturn};
 
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::SQLSetDescField as sql_set_desc_field;
@@ -113,7 +113,7 @@ impl Descriptor<'_> {
     }
 }
 
-unsafe impl AsHandle for Descriptor<'_> {
+unsafe impl AnyHandle for Descriptor<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }

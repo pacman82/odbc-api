@@ -2,7 +2,7 @@ use crate::handles::slice_to_cow_utf8;
 
 use super::{
     SqlChar,
-    as_handle::AsHandle,
+    any_handle::AnyHandle,
     buffer::{clamp_small_int, mut_buf_ptr},
 };
 use log::warn;
@@ -172,7 +172,7 @@ pub trait Diagnostics {
     }
 }
 
-impl<T: AsHandle + ?Sized> Diagnostics for T {
+impl<T: AnyHandle + ?Sized> Diagnostics for T {
     fn diagnostic_record(
         &self,
         rec_number: i16,

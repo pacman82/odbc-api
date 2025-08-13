@@ -1,6 +1,6 @@
 use super::{
     Connection,
-    as_handle::AsHandle,
+    any_handle::AnyHandle,
     drop_handle,
     sql_char::SqlChar,
     sql_result::{ExtSqlReturn, SqlResult},
@@ -38,7 +38,7 @@ unsafe impl Send for Environment {}
 // We are not declaring Environment as Sync due to its interior mutability with regards to iterator
 // state and error handilng
 
-unsafe impl AsHandle for Environment {
+unsafe impl AnyHandle for Environment {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }

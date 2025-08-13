@@ -1,6 +1,6 @@
 use super::{
     OutputStringBuffer, SqlResult,
-    as_handle::AsHandle,
+    any_handle::AnyHandle,
     buffer::mut_buf_ptr,
     drop_handle,
     sql_char::{
@@ -42,7 +42,7 @@ pub struct Connection<'c> {
     handle: HDbc,
 }
 
-unsafe impl AsHandle for Connection<'_> {
+unsafe impl AnyHandle for Connection<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }

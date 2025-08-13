@@ -2,7 +2,7 @@ use odbc_sys::{HStmt, Handle, HandleType};
 
 use crate::{
     Connection,
-    handles::{AsHandle, AsStatementRef, Statement, StatementRef, drop_handle},
+    handles::{AnyHandle, AsStatementRef, Statement, StatementRef, drop_handle},
 };
 
 /// Statement handle which also takes ownership of Connection
@@ -56,7 +56,7 @@ impl<C> Drop for StatementConnection<C> {
 /// in particular about thread safety.
 unsafe impl Send for StatementConnection<Connection<'_>> {}
 
-unsafe impl AsHandle for StatementConnection<Connection<'_>> {
+unsafe impl AnyHandle for StatementConnection<Connection<'_>> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }

@@ -1,6 +1,6 @@
 use super::{
     CData, Descriptor, SqlChar, SqlResult, SqlText,
-    as_handle::AsHandle,
+    any_handle::AnyHandle,
     bind::{CDataMut, DelayedInput, HasDataType},
     buffer::{clamp_small_int, mut_buf_ptr},
     column_description::{ColumnDescription, Nullability},
@@ -44,7 +44,7 @@ pub struct StatementImpl<'s> {
     handle: HStmt,
 }
 
-unsafe impl AsHandle for StatementImpl<'_> {
+unsafe impl AnyHandle for StatementImpl<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -115,7 +115,7 @@ impl Statement for StatementRef<'_> {
     }
 }
 
-unsafe impl AsHandle for StatementRef<'_> {
+unsafe impl AnyHandle for StatementRef<'_> {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -159,7 +159,7 @@ impl AsStatementRef for StatementRef<'_> {
 /// The trait allows us to reason about statements without taking the lifetime of their connection
 /// into account. It also allows for the trait to be implemented by a handle taking ownership of
 /// both, the statement and the connection.
-pub trait Statement: AsHandle {
+pub trait Statement: AnyHandle {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt;
 
@@ -802,7 +802,11 @@ pub trait Statement: AsHandle {
     /// # Safety
     ///
     /// It is the callers responsibility to ensure that `attribute` refers to a numeric attribute.
-    unsafe fn numeric_col_attribute(&mut self, attribute: Desc, column_number: u16) -> SqlResult<Len> {
+    unsafe fn numeric_col_attribute(
+        &mut self,
+        attribute: Desc,
+        column_number: u16,
+    ) -> SqlResult<Len> {
         let mut out: Len = 0;
         unsafe {
             sql_col_attribute(

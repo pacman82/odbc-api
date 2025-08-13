@@ -5,7 +5,7 @@
 //! * Treat warnings by logging them with `log`.
 //! * Use the Unicode (wide) variants of the ODBC API.
 
-mod as_handle;
+mod any_handle;
 mod bind;
 mod buffer;
 mod column_description;
@@ -20,7 +20,7 @@ mod sql_result;
 mod statement;
 
 pub use {
-    as_handle::AsHandle,
+    any_handle::AnyHandle,
     bind::{CData, CDataMut, DelayedInput, HasDataType},
     column_description::{ColumnDescription, Nullability},
     connection::Connection,
