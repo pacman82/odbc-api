@@ -21,7 +21,6 @@ mod preallocated;
 mod prepared;
 mod result_set_metadata;
 mod sleep;
-mod statement_connection;
 
 pub mod buffers;
 pub mod guide;
@@ -52,7 +51,6 @@ pub use self::{
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     sleep::Sleep,
-    statement_connection::StatementConnection,
 };
 
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this

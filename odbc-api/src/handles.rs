@@ -18,6 +18,7 @@ mod logging;
 mod sql_char;
 mod sql_result;
 mod statement;
+mod statement_connection;
 
 pub use {
     any_handle::AnyHandle,
@@ -32,6 +33,7 @@ pub use {
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
+    statement_connection::StatementConnection,
 };
 
 pub(crate) use data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;

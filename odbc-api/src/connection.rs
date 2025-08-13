@@ -5,8 +5,7 @@ use crate::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
         execute_with_parameters_polling,
     },
-    handles::{self, SqlText, State, Statement, StatementImpl, slice_to_utf8},
-    statement_connection::StatementConnection,
+    handles::{self, SqlText, State, Statement, StatementConnection, StatementImpl, slice_to_utf8},
 };
 use log::error;
 use odbc_sys::HDbc;

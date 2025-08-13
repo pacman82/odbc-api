@@ -37,7 +37,12 @@ use odbc_sys::{
     SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
-/// An owned valid (i.e. successfully allocated) ODBC statement handle.
+/// An owned valid (i.e. successfully allocated) ODBC statement handle. [`StatementImpl`] borrows
+/// the parent connection used to create the handle in order to ensure the Parent is alive and valid
+/// during the lifetime of the statement.
+///
+/// If you want a handle to the statement that instead of borrowing the parent connection does own
+/// it, you should use [`super::StatementConnection`] instead.
 #[derive(Debug)]
 pub struct StatementImpl<'s> {
     parent: PhantomData<&'s HDbc>,
