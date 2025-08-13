@@ -20,7 +20,7 @@ mod sql_result;
 mod statement;
 mod statement_connection;
 
-pub use {
+pub use self::{
     any_handle::AnyHandle,
     bind::{CData, CDataMut, DelayedInput, HasDataType},
     column_description::{ColumnDescription, Nullability},
@@ -33,10 +33,10 @@ pub use {
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
-    statement_connection::StatementConnection,
+    statement_connection::{ConnectionOwner, StatementConnection},
 };
 
-pub(crate) use data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
+pub(crate) use self::data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
 
 use log::debug;
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};

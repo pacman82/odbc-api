@@ -1,19 +1,20 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
-use crate::{
-    Connection,
-    handles::{AnyHandle, AsStatementRef, Statement, StatementRef, drop_handle},
-};
+use crate::handles::{AnyHandle, AsStatementRef, Statement, StatementRef, drop_handle};
 
 /// Statement handle which also takes ownership of Connection
 #[derive(Debug)]
 pub struct StatementConnection<C> {
     handle: HStmt,
+    /// We do not do anything with the parent, besides keeping it alive.
     _parent: C,
 }
 
-impl<'env> StatementConnection<Connection<'env>> {
-    pub(crate) unsafe fn new(handle: HStmt, parent: Connection<'env>) -> Self {
+impl<C> StatementConnection<C>
+where
+    C: ConnectionOwner,
+{
+    pub(crate) unsafe fn new(handle: HStmt, parent: C) -> Self {
         Self {
             _parent: parent,
             handle,
@@ -32,6 +33,17 @@ impl<C> Drop for StatementConnection<C> {
         }
     }
 }
+
+/// Implementers of this trait are guaranteed to keep a connection alive and in connected state for
+/// the lifetime of the instance.
+///
+/// E.g. [`super::Connection`] is not a `ConnectionOwner`, since it is not guaranteed to keep the
+/// connection alive. Nor would it close the connection at the end of the lifetime on Drop.
+///
+/// # Safety
+///
+/// Instance must keep the connection it owns alive and open.
+pub unsafe trait ConnectionOwner {}
 
 /// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
@@ -54,9 +66,12 @@ impl<C> Drop for StatementConnection<C> {
 /// `StatementConnection` however also owns the connection exclusively. Since connections are `Send`
 /// it is reasonable to assume this would work even if implementers of the ODBC driver do not care
 /// in particular about thread safety.
-unsafe impl Send for StatementConnection<Connection<'_>> {}
+unsafe impl<C> Send for StatementConnection<C> where C: Send {}
 
-unsafe impl AnyHandle for StatementConnection<Connection<'_>> {
+unsafe impl<C> AnyHandle for StatementConnection<C>
+where
+    C: ConnectionOwner,
+{
     fn as_handle(&self) -> Handle {
         self.handle as Handle
     }
@@ -66,13 +81,19 @@ unsafe impl AnyHandle for StatementConnection<Connection<'_>> {
     }
 }
 
-impl Statement for StatementConnection<Connection<'_>> {
+impl<C> Statement for StatementConnection<C>
+where
+    C: ConnectionOwner,
+{
     fn as_sys(&self) -> HStmt {
         self.handle
     }
 }
 
-impl AsStatementRef for StatementConnection<Connection<'_>> {
+impl<C> AsStatementRef for StatementConnection<C>
+where
+    C: ConnectionOwner,
+{
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.as_stmt_ref()
     }
