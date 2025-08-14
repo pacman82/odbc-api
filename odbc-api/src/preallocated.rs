@@ -57,6 +57,9 @@ where
     /// Executes a statement. This is the fastest way to sequentially execute different SQL
     /// Statements.
     ///
+    /// This method produces a cursor which borrowes the statement handle. If you want to take
+    /// ownership you can use the sibling [`Self::into_cursor`].
+    ///
     /// # Parameters
     ///
     /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;".
@@ -99,9 +102,23 @@ where
         query: &str,
         params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
-        let stmt = self.statement.as_stmt_ref();
         let query = SqlText::new(query);
+        let stmt = self.statement.as_stmt_ref();
         execute_with_parameters(stmt, Some(&query), params)
+    }
+
+    /// Similar to [`Self::execute`], but transfers ownership of the statement handle to the
+    /// resulting cursor if any is created. This makes this method not suitable to repeatedly
+    /// execute statements. In most situations you may want to call [`crate::Connection::execute`]
+    /// instead of this method, yet this method is useful if you have some time in your application
+    /// until the query is known, and once you have it want to execute it as fast as possible.
+    pub fn into_cursor(
+        self,
+        query: &str,
+        params: impl ParameterCollectionRef,
+    ) -> Result<Option<CursorImpl<S>>, Error> {
+        let query = SqlText::new(query);
+        execute_with_parameters(self.statement, Some(&query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.

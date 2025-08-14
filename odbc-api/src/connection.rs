@@ -2,8 +2,7 @@ use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
     buffers::BufferDesc,
     execute::{
-        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
-        execute_with_parameters_polling,
+        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters_polling,
     },
     handles::{
         self, ConnectionOwner, SqlText, State, Statement, StatementConnection, StatementImpl,
@@ -166,14 +165,11 @@ impl<'c> Connection<'c> {
         if params.parameter_set_size() == 0 {
             return Ok(None);
         }
-        let query = SqlText::new(query);
-        let mut statement = self.allocate_statement()?;
-        if let Some(query_timeout_sec) = query_timeout_sec {
-            statement
-                .set_query_timeout_sec(query_timeout_sec)
-                .into_result(&statement)?;
+        let mut statement = self.preallocate()?;
+        if let Some(seconds) = query_timeout_sec {
+            statement.set_query_timeout_sec(seconds)?;
         }
-        execute_with_parameters(statement, Some(&query), params)
+        statement.into_cursor(query, params)
     }
 
     /// Asynchronous sibling of [`Self::execute`]. Uses polling mode to be asynchronous. `sleep`
@@ -815,7 +811,7 @@ unsafe impl ConnectionOwner for Connection<'_> {}
 ///
 /// # Safety:
 ///
-/// Arc<Connection> wraps an open Connection. It keeps the handle alive and valid during its
+/// `Arc<Connection>` wraps an open Connection. It keeps the handle alive and valid during its
 /// lifetime.
 unsafe impl ConnectionOwner for Arc<Connection<'_>> {}
 
