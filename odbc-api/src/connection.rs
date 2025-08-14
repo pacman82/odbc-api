@@ -1,8 +1,14 @@
 use crate::{
-    buffers::BufferDesc, execute::{
+    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
+    buffers::BufferDesc,
+    execute::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
         execute_with_parameters_polling,
-    }, handles::{self, slice_to_utf8, ConnectionOwner, SqlText, State, Statement, StatementConnection, StatementImpl}, CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep
+    },
+    handles::{
+        self, ConnectionOwner, SqlText, State, Statement, StatementConnection, StatementImpl,
+        slice_to_utf8,
+    },
 };
 use log::error;
 use odbc_sys::HDbc;
@@ -156,16 +162,18 @@ impl<'c> Connection<'c> {
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
     ) -> Result<Option<CursorImpl<StatementImpl<'_>>>, Error> {
+        // Only allocate the statement, if we know we are going to execute something.
+        if params.parameter_set_size() == 0 {
+            return Ok(None);
+        }
         let query = SqlText::new(query);
-        let lazy_statement = move || {
-            let mut stmt = self.allocate_statement()?;
-            if let Some(query_timeout_sec) = query_timeout_sec {
-                stmt.set_query_timeout_sec(query_timeout_sec)
-                    .into_result(&stmt)?;
-            }
-            Ok(stmt)
-        };
-        execute_with_parameters(lazy_statement, Some(&query), params)
+        let mut statement = self.allocate_statement()?;
+        if let Some(query_timeout_sec) = query_timeout_sec {
+            statement
+                .set_query_timeout_sec(query_timeout_sec)
+                .into_result(&statement)?;
+        }
+        execute_with_parameters(statement, Some(&query), params)
     }
 
     /// Asynchronous sibling of [`Self::execute`]. Uses polling mode to be asynchronous. `sleep`
@@ -203,13 +211,14 @@ impl<'c> Connection<'c> {
         params: impl ParameterCollectionRef,
         sleep: impl Sleep,
     ) -> Result<Option<CursorPolling<StatementImpl<'_>>>, Error> {
+        // Only allocate the statement, if we know we are going to execute something.
+        if params.parameter_set_size() == 0 {
+            return Ok(None);
+        }
         let query = SqlText::new(query);
-        let lazy_statement = move || {
-            let mut stmt = self.allocate_statement()?;
-            stmt.set_async_enable(true).into_result(&stmt)?;
-            Ok(stmt)
-        };
-        execute_with_parameters_polling(lazy_statement, Some(&query), params, sleep).await
+        let mut statement = self.allocate_statement()?;
+        statement.set_async_enable(true).into_result(&statement)?;
+        execute_with_parameters_polling(statement, Some(&query), params, sleep).await
     }
 
     /// Similar to [`Self::execute`], but takes ownership of the connection. This is useful if e.g.
@@ -301,7 +310,7 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Arc<Connection<'c>>>>>, Error>  {
+    ) -> Result<Option<CursorImpl<StatementConnection<Arc<Connection<'c>>>>>, Error> {
         // With the current Rust version the borrow checker needs some convincing, so that it allows
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
@@ -649,7 +658,7 @@ impl<'c> Connection<'c> {
         table_type: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let statement = self.allocate_statement()?;
-        
+
         execute_tables(
             statement,
             &SqlText::new(catalog_name),
@@ -658,7 +667,7 @@ impl<'c> Connection<'c> {
             &SqlText::new(table_type),
         )
     }
-    
+
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
     /// of foreign keys in other table that refer to the primary key of the specified table.
     ///
@@ -673,7 +682,7 @@ impl<'c> Connection<'c> {
         fk_table_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let statement = self.allocate_statement()?;
-        
+
         execute_foreign_keys(
             statement,
             &SqlText::new(pk_catalog_name),
@@ -684,7 +693,7 @@ impl<'c> Connection<'c> {
             &SqlText::new(fk_table_name),
         )
     }
-    
+
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the
     /// columns query (e.g. [`Connection::columns`]).
     ///
@@ -700,61 +709,61 @@ impl<'c> Connection<'c> {
         column_default_max_len: usize,
     ) -> Result<Vec<BufferDesc>, Error> {
         let null_i16 = BufferDesc::I16 { nullable: true };
-        
+
         let not_null_i16 = BufferDesc::I16 { nullable: false };
-        
+
         let null_i32 = BufferDesc::I32 { nullable: true };
-        
+
         // The definitions for these descriptions are taken from the documentation of `SQLColumns`
         // located at https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
         let catalog_name_desc = BufferDesc::Text {
             max_str_len: self.max_catalog_name_len()? as usize,
         };
-        
+
         let schema_name_desc = BufferDesc::Text {
             max_str_len: self.max_schema_name_len()? as usize,
         };
-        
+
         let table_name_desc = BufferDesc::Text {
             max_str_len: self.max_table_name_len()? as usize,
         };
-        
+
         let column_name_desc = BufferDesc::Text {
             max_str_len: self.max_column_name_len()? as usize,
         };
-        
+
         let data_type_desc = not_null_i16;
-        
+
         let type_name_desc = BufferDesc::Text {
             max_str_len: type_name_max_len,
         };
-        
+
         let column_size_desc = null_i32;
         let buffer_len_desc = null_i32;
         let decimal_digits_desc = null_i16;
         let precision_radix_desc = null_i16;
         let nullable_desc = not_null_i16;
-        
+
         let remarks_desc = BufferDesc::Text {
             max_str_len: remarks_max_len,
         };
-        
+
         let column_default_desc = BufferDesc::Text {
             max_str_len: column_default_max_len,
         };
-        
+
         let sql_data_type_desc = not_null_i16;
         let sql_datetime_sub_desc = null_i16;
         let char_octet_len_desc = null_i32;
         let ordinal_pos_desc = BufferDesc::I32 { nullable: false };
-        
+
         // We expect strings to be `YES`, `NO`, or a zero-length string, so `3` should be
         // sufficient.
         const IS_NULLABLE_LEN_MAX_LEN: usize = 3;
         let is_nullable_desc = BufferDesc::Text {
             max_str_len: IS_NULLABLE_LEN_MAX_LEN,
         };
-        
+
         Ok(vec![
             catalog_name_desc,
             schema_name_desc,
@@ -776,11 +785,11 @@ impl<'c> Connection<'c> {
             is_nullable_desc,
         ])
     }
-    
+
     fn allocate_statement(&self) -> Result<StatementImpl<'_>, Error> {
         self.connection
-        .allocate_statement()
-        .into_result(&self.connection)
+            .allocate_statement()
+            .into_result(&self.connection)
     }
 }
 
@@ -796,7 +805,7 @@ impl Debug for Connection<'_> {
 /// connection for a statement handle. This is e.g. needed for [`Connection::into_cursor`].
 ///
 /// # Safety:
-/// 
+///
 /// Connection wraps an open Connection. It keeps the handle alive and valid during its lifetime.
 unsafe impl ConnectionOwner for Connection<'_> {}
 
@@ -805,7 +814,7 @@ unsafe impl ConnectionOwner for Connection<'_> {}
 /// [`Connection::execute_arc`].
 ///
 /// # Safety:
-/// 
+///
 /// Arc<Connection> wraps an open Connection. It keeps the handle alive and valid during its
 /// lifetime.
 unsafe impl ConnectionOwner for Arc<Connection<'_>> {}

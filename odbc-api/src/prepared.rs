@@ -47,7 +47,7 @@ where
         params: impl ParameterCollectionRef,
     ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
         let stmt = self.statement.as_stmt_ref();
-        execute_with_parameters(move || Ok(stmt), None, params)
+        execute_with_parameters(stmt, None, params)
     }
 
     /// Describes parameter marker associated with a prepared SQL statement.
@@ -135,7 +135,7 @@ where
     ///     let prepared = connection.prepare("INSERT INTO NationalDrink (country, drink) VALUES (?, ?)")?;
     ///     // We assume both parameter inputs never exceed 50 bytes.
     ///     let mut prebound = prepared.into_text_inserter(3, [50, 50])?;
-    ///     
+    ///
     ///     // A cell is an option to byte. We could use `None` to represent NULL but we have no
     ///     // need to do that in this example.
     ///     let as_cell = |s: &'static str| { Some(s.as_bytes()) } ;

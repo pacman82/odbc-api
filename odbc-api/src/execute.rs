@@ -19,7 +19,7 @@ use crate::{
 ///   executed.
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
-    lazy_statement: impl FnOnce() -> Result<S, Error>,
+    statement: S,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
@@ -27,7 +27,7 @@ where
     S: AsStatementRef,
 {
     unsafe {
-        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+        if let Some(statement) = bind_parameters(statement, params)? {
             execute(statement, query)
         } else {
             Ok(None)
@@ -37,7 +37,7 @@ where
 
 /// Asynchronous sibiling of [`execute_with_parameters`]
 pub async fn execute_with_parameters_polling<S>(
-    lazy_statement: impl FnOnce() -> Result<S, Error>,
+    statement: S,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
     sleep: impl Sleep,
@@ -46,7 +46,7 @@ where
     S: AsStatementRef,
 {
     unsafe {
-        if let Some(statement) = bind_parameters(lazy_statement, params)? {
+        if let Some(statement) = bind_parameters(statement, params)? {
             execute_polling(statement, query, sleep).await
         } else {
             Ok(None)
@@ -55,7 +55,7 @@ where
 }
 
 unsafe fn bind_parameters<S>(
-    lazy_statement: impl FnOnce() -> Result<S, Error>,
+    mut statement: S,
     mut params: impl ParameterCollectionRef,
 ) -> Result<Option<S>, Error>
 where
@@ -63,12 +63,7 @@ where
 {
     unsafe {
         let parameter_set_size = params.parameter_set_size();
-        if parameter_set_size == 0 {
-            return Ok(None);
-        }
 
-        // Only allocate the statement, if we know we are going to execute something.
-        let mut statement = lazy_statement()?;
         let mut stmt = statement.as_stmt_ref();
         // Reset parameters so we do not dereference stale once by mistake if we call
         // `exec_direct`.

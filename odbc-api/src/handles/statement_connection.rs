@@ -15,7 +15,7 @@ where
     C: ConnectionOwner,
 {
     /// # Safety
-    /// 
+    ///
     /// Handle must be a valid statement handle and the parent connection must be valid for the
     /// lifetime of parent.
     pub(crate) unsafe fn new(handle: HStmt, parent: C) -> Self {

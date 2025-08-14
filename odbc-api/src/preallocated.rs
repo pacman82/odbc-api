@@ -101,7 +101,7 @@ where
     ) -> Result<Option<CursorImpl<StatementRef<'_>>>, Error> {
         let stmt = self.statement.as_stmt_ref();
         let query = SqlText::new(query);
-        execute_with_parameters(move || Ok(stmt), Some(&query), params)
+        execute_with_parameters(stmt, Some(&query), params)
     }
 
     /// Transfer ownership to the underlying statement handle.
@@ -347,7 +347,7 @@ where
     ) -> Result<Option<CursorPolling<StatementRef<'_>>>, Error> {
         let query = SqlText::new(query);
         let stmt = self.statement.as_stmt_ref();
-        execute_with_parameters_polling(move || Ok(stmt), Some(&query), params, sleep).await
+        execute_with_parameters_polling(stmt, Some(&query), params, sleep).await
     }
 }
 
