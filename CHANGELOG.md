@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [15.0.0](https://github.com/pacman82/odbc-api/compare/v14.3.0...v15.0.0) - 2025-08-14
+
+### Added
+
+- Cursors can now have shared ownership over `Connection`s using
+
+### Fixed
+
+- All of `Statement`s method now require `&mut self`
+
+### Other
+
+- [**breaking**] Preallocated::execute_into is now Preallocated::into_cursor
+- execute_with_parameters no takes a statement instead of a
+- [**breaking**] Introducing ConnectionOwner trait in order to decuple statement_connection from Connection
+- [**breaking**] move StatementConnection into handles submodule
+- [**breaking**] AsHandle is now named AnyHandle
+- *(deps)* bump anyhow from 1.0.98 to 1.0.99
+- *(deps)* bump thiserror from 2.0.12 to 2.0.14
+- StatementConnection takes Connection as generic argument,
+- formatting
+- *(deps)* bump syn from 2.0.104 to 2.0.105
+- *(deps)* bump proc-macro2 from 1.0.96 to 1.0.97
+- *(deps)* bump proc-macro2 from 1.0.95 to 1.0.96
+
 ## [14.3.0](https://github.com/pacman82/odbc-api/compare/v14.2.1...v14.3.0) - 2025-08-10
 
 ### Added
