@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Cursors can now have shared ownership over `Connection`s using
+- Cursors can now have shared ownership over `Connection`s using `execute_arc`.
 
 ### Fixed
 
@@ -19,8 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
-- [**breaking**] Preallocated::execute_into is now Preallocated::into_cursor
-- execute_with_parameters no takes a statement instead of a
+- execute_with_parameters now takes a statement instead of a lazy_statement
 - [**breaking**] Introducing ConnectionOwner trait in order to decuple statement_connection from Connection
 - [**breaking**] move StatementConnection into handles submodule
 - [**breaking**] AsHandle is now named AnyHandle
