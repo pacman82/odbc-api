@@ -63,12 +63,28 @@ impl Drop for Connection<'_> {
 /// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
 ///
+/// Operations to a connection imply that interior state of the connection might be mutated, yet we
+/// use a `&self` reference for most methods rather than `&mut self`. This means [`Connection`] must
+/// not be `Sync`. `Send` however is fine, due to the guarantees given by the ODBC interface.
+/// However, there might be a difference, between what ODBC demands from drivers and how they are
+/// actually implemented. However, even in practice the situation seems to have improved enuough to
+/// allow for [`Connection`]s to be regarded as `Send` without alerting the author of the ODBC
+/// application. If the driver has a bug, it is just that.
+///
 /// In addition to that, this has not caused trouble in a while. So we mark sending connections to
 /// other threads as safe. Reading through the documentation, one might get the impression that
 /// Connections are also `Sync`. This could be theoretically true on the level of the handle, but at
 /// the latest once the interior mutability due to error handling comes in to play, higher level
 /// abstraction have to content themselves with `Send`. This is currently how far my trust with most
 /// ODBC drivers.
+///
+/// Note to users of `unixodbc`: You may configure the threading level to make unixodbc
+/// synchronize access to the driver (and thereby making them thread safe if they are not thread
+/// safe by themself. This may however hurt your performance if the driver would actually be able to
+/// perform operations in parallel.
+///
+/// See:
+/// <https://stackoverflow.com/questions/4207458/using-unixodbc-in-a-multithreaded-concurrent-setting>
 unsafe impl Send for Connection<'_> {}
 
 impl Connection<'_> {
