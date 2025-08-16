@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [16.0.0](https://github.com/pacman82/odbc-api/compare/v15.0.0...v16.0.0) - 2025-08-16
+
+### Added
+
+- `shared_connection_into_cursor` allows cursors to share ownership
+- Add type alias SyncConnection
+
+### Other
+
+- Simplify `execute_arc`
+- [**breaking**] Rename `ConnectionOwner` to `StatementParent`.
+- Improved documentation around Send for Connections
+
 ## [15.0.0](https://github.com/pacman82/odbc-api/compare/v14.3.0...v15.0.0) - 2025-08-14
 
 ### Added
