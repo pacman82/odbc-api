@@ -33,7 +33,7 @@ pub use self::{
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ParameterDescription, Statement, StatementImpl, StatementRef},
-    statement_connection::{ConnectionOwner, StatementConnection},
+    statement_connection::{StatementParent, StatementConnection},
 };
 
 pub(crate) use self::data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
