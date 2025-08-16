@@ -5,7 +5,7 @@ use crate::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters_polling,
     },
     handles::{
-        self, ConnectionOwner, SqlText, State, Statement, StatementConnection, StatementImpl,
+        self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
         slice_to_utf8,
     },
 };
@@ -797,15 +797,15 @@ impl Debug for Connection<'_> {
     }
 }
 
-/// We need to implement ConnectionOwner for [`Connection`] in order to express ownership of a
+/// We need to implement [`StatementParent`] for [`Connection`] in order to express ownership of a
 /// connection for a statement handle. This is e.g. needed for [`Connection::into_cursor`].
 ///
 /// # Safety:
 ///
 /// Connection wraps an open Connection. It keeps the handle alive and valid during its lifetime.
-unsafe impl ConnectionOwner for Connection<'_> {}
+unsafe impl StatementParent for Connection<'_> {}
 
-/// We need to implement ConnectionOwner for `Arc<Connection>` in order to be able to express
+/// We need to implement [`StatementParent`] for `Arc<Connection>` in order to be able to express
 /// ownership of a shared connection from a statement handle. This is e.g. needed for
 /// [`Connection::execute_arc`].
 ///
@@ -813,7 +813,7 @@ unsafe impl ConnectionOwner for Connection<'_> {}
 ///
 /// `Arc<Connection>` wraps an open Connection. It keeps the handle alive and valid during its
 /// lifetime.
-unsafe impl ConnectionOwner for Arc<Connection<'_>> {}
+unsafe impl StatementParent for Arc<Connection<'_>> {}
 
 /// Options to be passed then opening a connection to a datasource.
 #[derive(Default, Clone, Copy)]

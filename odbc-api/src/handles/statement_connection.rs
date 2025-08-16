@@ -12,7 +12,7 @@ pub struct StatementConnection<C> {
 
 impl<C> StatementConnection<C>
 where
-    C: ConnectionOwner,
+    C: StatementParent,
 {
     /// # Safety
     ///
@@ -41,13 +41,13 @@ impl<C> Drop for StatementConnection<C> {
 /// Implementers of this trait are guaranteed to keep a connection alive and in connected state for
 /// the lifetime of the instance.
 ///
-/// E.g. [`super::Connection`] is not a `ConnectionOwner`, since it is not guaranteed to keep the
+/// E.g. [`super::Connection`] is not a [`StatementParent`], since it is not guaranteed to keep the
 /// connection alive. Nor would it close the connection at the end of the lifetime on Drop.
 ///
 /// # Safety
 ///
 /// Instance must keep the connection it owns alive and open.
-pub unsafe trait ConnectionOwner {}
+pub unsafe trait StatementParent {}
 
 /// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
@@ -55,11 +55,11 @@ pub unsafe trait ConnectionOwner {}
 /// Operations to a statement imply that interior state of the connection might be mutated,
 /// depending on the implementation detail of the ODBC driver. According to the ODBC documentation
 /// this could always be considered save.
-unsafe impl<C> Send for StatementConnection<C> where C: ConnectionOwner {}
+unsafe impl<C> Send for StatementConnection<C> where C: StatementParent {}
 
 unsafe impl<C> AnyHandle for StatementConnection<C>
 where
-    C: ConnectionOwner,
+    C: StatementParent,
 {
     fn as_handle(&self) -> Handle {
         self.handle as Handle
@@ -72,7 +72,7 @@ where
 
 impl<C> Statement for StatementConnection<C>
 where
-    C: ConnectionOwner,
+    C: StatementParent,
 {
     fn as_sys(&self) -> HStmt {
         self.handle
@@ -81,7 +81,7 @@ where
 
 impl<C> AsStatementRef for StatementConnection<C>
 where
-    C: ConnectionOwner,
+    C: StatementParent,
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.as_stmt_ref()
