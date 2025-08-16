@@ -31,7 +31,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
     },
-    sys,
+    shared_connection_into_cursor, sys,
 };
 use widestring::Utf16String;
 
@@ -42,7 +42,7 @@ use std::{
     num::NonZeroUsize,
     ptr::null_mut,
     str,
-    sync::Arc,
+    sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
 };
@@ -602,6 +602,42 @@ fn shared_ownership_of_connections_by_statement(profile: &Profile) {
     // Then
     let expected = "42";
     assert_eq!(expected, cursor_to_string(cursor));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn share_connections_with_statement_in_other_thread(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let conn = Arc::new(Mutex::new(conn));
+    let mut cursor =
+        shared_connection_into_cursor(conn.clone(), &table.sql_all_ordered_by_id(), (), None)
+            .unwrap()
+            .unwrap();
+    let other_thread = thread::spawn(move || {
+        let mut i = 0i32;
+        cursor
+            .next_row()
+            .unwrap()
+            .unwrap()
+            .get_data(1, &mut i)
+            .unwrap();
+        i
+    });
+    drop(conn);
+    let answer = other_thread.join().unwrap();
+
+    // Then
+    assert_eq!(42, answer);
 }
 
 /// Strong exception safety for `into_cursor`. Our first query will fail, because it will query a

@@ -311,8 +311,10 @@ impl<'c> Connection<'c> {
         let Some(cursor) = maybe_cursor else {
             return Ok(None);
         };
+        // Deconstrurt the cursor and construct which only borrows the connection and construct a new
+        // one which takes ownership of the instead.
         let stmt_ptr = cursor.into_stmt().into_sys();
-        // Safety: The connection is the parent of the statement referenced by `stmt_ptr`.
+        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, Arc::clone(&self)) };
         // Safe: `stmt` is valid and in cursor state.
         let cursor = unsafe { CursorImpl::new(stmt) };
