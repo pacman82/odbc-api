@@ -307,28 +307,15 @@ impl<'c> Connection<'c> {
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
     ) -> Result<Option<CursorImpl<StatementConnection<Arc<Connection<'c>>>>>, Error> {
-        // With the current Rust version the borrow checker needs some convincing, so that it allows
-        // us to return the Connection, even though the Result of execute borrows it.
-        let mut error = None;
-        let mut cursor = None;
-        match self.execute(query, params, query_timeout_sec) {
-            Ok(Some(c)) => cursor = Some(c),
-            Ok(None) => return Ok(None),
-            Err(e) => error = Some(e),
+        let maybe_cursor = self.execute(query, params, query_timeout_sec)?;
+        let Some(cursor) = maybe_cursor else {
+            return Ok(None);
         };
-        if let Some(e) = error {
-            drop(cursor);
-            return Err(e);
-        }
-        let cursor = cursor.unwrap();
-        // The rust compiler needs some help here. It assumes otherwise that the lifetime of the
-        // resulting cursor would depend on the lifetime of `params`.
-        let mut cursor = ManuallyDrop::new(cursor);
-        let handle = cursor.as_sys();
-        // Safe: `handle` is a valid statement, and we are giving up ownership of `self`.
-        let statement = unsafe { StatementConnection::new(handle, self) };
-        // Safe: `statement is in the cursor state`.
-        let cursor = unsafe { CursorImpl::new(statement) };
+        let stmt_ptr = cursor.into_stmt().into_sys();
+        // Safety: The connection is the parent of the statement referenced by `stmt_ptr`.
+        let stmt = unsafe { StatementConnection::new(stmt_ptr, Arc::clone(&self)) };
+        // Safe: `stmt` is valid and in cursor state.
+        let cursor = unsafe { CursorImpl::new(stmt) };
         Ok(Some(cursor))
     }
 
