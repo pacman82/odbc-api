@@ -52,7 +52,7 @@ pub use self::{
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     sleep::Sleep,
-    sync_connection::SharedConnection,
+    sync_connection::{SharedConnection, shared_connection_into_cursor},
 };
 
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this
