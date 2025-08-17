@@ -594,7 +594,7 @@ fn shared_ownership_of_connections_by_statement(profile: &Profile) {
     let conn = Arc::new(conn);
     let cursor = conn
         .clone()
-        .execute_arc(&table.sql_all_ordered_by_id(), (), None)
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
     // We can drop the connection, even though, the cursor still exists.

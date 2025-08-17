@@ -299,27 +299,6 @@ impl<'c> Connection<'c> {
         Ok(Some(cursor))
     }
 
-    /// Like [`Connection::execute`], but takes ownership of an `Arc<Self>`.
-    pub fn execute_arc(
-        self: Arc<Self>,
-        query: &str,
-        params: impl ParameterCollectionRef,
-        query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Arc<Connection<'c>>>>>, Error> {
-        let maybe_cursor = self.execute(query, params, query_timeout_sec)?;
-        let Some(cursor) = maybe_cursor else {
-            return Ok(None);
-        };
-        // Deconstrurt the cursor and construct which only borrows the connection and construct a new
-        // one which takes ownership of the instead.
-        let stmt_ptr = cursor.into_stmt().into_sys();
-        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
-        let stmt = unsafe { StatementConnection::new(stmt_ptr, Arc::clone(&self)) };
-        // Safe: `stmt` is valid and in cursor state.
-        let cursor = unsafe { CursorImpl::new(stmt) };
-        Ok(Some(cursor))
-    }
-
     /// Prepares an SQL statement. This is recommended for repeated execution of similar queries.
     ///
     /// Should your use case require you to execute the same query several times with different
@@ -795,7 +774,7 @@ unsafe impl StatementParent for Connection<'_> {}
 
 /// We need to implement [`StatementParent`] for `Arc<Connection>` in order to be able to express
 /// ownership of a shared connection from a statement handle. This is e.g. needed for
-/// [`Connection::execute_arc`].
+/// [`ConnectionTransition::into_cursor`].
 ///
 /// # Safety:
 ///
@@ -947,6 +926,11 @@ type ConnectionAndError<'conn> = FailedStateTransition<Connection<'conn>>;
 /// using an `Arc<Mutex<Connection>>` or `Arc<Connection>`. Or a still exclusive ownership using
 /// a plain [`Connection`].
 pub trait ConnectionsTransitions: Sized {
+    // Note to self. This might eveolve into a `Connection` trait. Which expresses ownership
+    // of a connection (shared or not). It could allow to get a dereferened borrowed conection
+    // which does not allow for state transtions as of now (like StatementRef). I may not want to
+    // rock the boat that much right now.
+
     /// Cursor type after transfering ownership of the connection.
     type Cursor;
     // /// Prepared statement type after transferring ownership of the connection.
@@ -1002,5 +986,40 @@ impl<'env> ConnectionsTransitions for Connection<'env> {
         query_timeout_sec: Option<usize>,
     ) -> Result<Option<Self::Cursor>, FailedStateTransition<Self>> {
         self.into_cursor(query, params, query_timeout_sec)
+    }
+}
+
+impl<'env> ConnectionsTransitions for Arc<Connection<'env>> {
+    type Cursor = CursorImpl<StatementConnection<Arc<Connection<'env>>>>;
+    // type Prepared = Prepared<StatementConnection<Arc<Connection<'_>>>>;
+    // type Preallocated = Preallocated<StatementConnection<Arc<Connection<'_>>>>;
+
+    fn into_cursor(
+        self,
+        query: &str,
+        params: impl ParameterCollectionRef,
+        query_timeout_sec: Option<usize>,
+    ) -> Result<Option<Self::Cursor>, FailedStateTransition<Self>> {
+        // Result borrows the connection. We convert the cursor into a raw pointer, to not confuse
+        // the borrow checker.
+        let result = self.execute(query, params, query_timeout_sec);
+        let maybe_stmt_ptr = result
+            .map(|opt| opt.map(|cursor| cursor.into_stmt().into_sys()))
+            .map_err(|error| {
+                // If the execute fails, we return a FailedStateTransition with the error and the
+                // connection.
+                FailedStateTransition {
+                    error,
+                    previous: Arc::clone(&self),
+                }
+            })?;
+        let Some(stmt_ptr) = maybe_stmt_ptr else {
+            return Ok(None);
+        };
+        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
+        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
+        // Safe: `stmt` is valid and in cursor state.
+        let cursor = unsafe { CursorImpl::new(stmt) };
+        Ok(Some(cursor))
     }
 }
