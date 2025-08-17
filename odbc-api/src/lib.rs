@@ -20,8 +20,8 @@ mod parameter_collection;
 mod preallocated;
 mod prepared;
 mod result_set_metadata;
+mod shared_connection;
 mod sleep;
-mod sync_connection;
 
 pub mod buffers;
 pub mod guide;
@@ -51,8 +51,8 @@ pub use self::{
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
+    shared_connection::{SharedConnection, shared_connection_into_cursor},
     sleep::Sleep,
-    sync_connection::{SharedConnection, shared_connection_into_cursor},
 };
 
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this
