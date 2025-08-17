@@ -51,6 +51,16 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
     }
 
     fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
-        todo!()
+        let guard = self
+            .lock()
+            .expect("Shared connection lock must not be poisoned");
+        let stmt = guard.prepare(query)?;
+        let stmt_ptr = stmt.into_statement().into_sys();
+        drop(guard);
+        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
+        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
+        // `stmt` is valid and in prepared state.
+        let prepared = Prepared::new(stmt);
+        Ok(prepared)
     }
 }

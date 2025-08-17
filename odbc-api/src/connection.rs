@@ -1071,48 +1071,6 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         Ok(Some(cursor))
     }
 
-    /// Prepares an SQL statement which takes ownership of the connection. The advantage over
-    /// [`Connection::prepare`] is, that you do not need to keep track of the lifetime of the
-    /// connection seperatly and can create types which do own the prepared query and only depend on
-    /// the lifetime of the environment.
-    ///
-    /// # Parameters
-    ///
-    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
-    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
-    ///   execution.
-    ///
-    /// ```no_run
-    /// use odbc_api::{
-    ///     environment, Error, ColumnarBulkInserter, handles::StatementConnection,
-    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions, Connection
-    /// };
-    ///
-    /// const CONNECTION_STRING: &str =
-    ///     "Driver={ODBC Driver 18 for SQL Server};\
-    ///     Server=localhost;UID=SA;\
-    ///     PWD=My@Test@Password1;";
-    ///
-    /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
-    /// /// takes ownership of a connection created using an environment with static lifetime.
-    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
-    ///
-    /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
-    /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
-    ///     let env = environment()?;
-    ///     let conn = env.connect_with_connection_string(
-    ///         CONNECTION_STRING,
-    ///         ConnectionOptions::default()
-    ///     )?;
-    ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
-    ///     let buffers = [
-    ///         BufferDesc::Text { max_str_len: 255},
-    ///         BufferDesc::I16 { nullable: false },
-    ///     ];
-    ///     let capacity = 400;
-    ///     prepared.into_column_inserter(capacity, buffers)
-    /// }
-    /// ```
     fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
         let stmt = self.prepare(query)?;
         let stmt_ptr = stmt.into_statement().into_sys();
