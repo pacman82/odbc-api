@@ -4528,6 +4528,72 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     assert_eq!("1", actual);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_inserter_owning_arc_connection(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
+
+    // When insert two batches with size one and two.
+    let mut prepared = Arc::new(conn)
+        .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let desc = BufferDesc::I32 { nullable: false };
+    // Insert a batch
+    let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+
+    // Then
+    let conn = profile.connection().unwrap();
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), (), None)
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_inserter_owning_shared_connection(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
+
+    // When insert two batches with size one and two.
+    let mut prepared = Arc::new(Mutex::new(conn))
+        .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let desc = BufferDesc::I32 { nullable: false };
+    // Insert a batch
+    let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+
+    // Then
+    let conn = profile.connection().unwrap();
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), (), None)
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1", actual);
+}
+
 /// A combination of the column_inserter which borrows the prepared statement and the ability to
 /// have arbitrary input mappings. `column_inserter` has been introduced to allow for dynamic
 /// rebinding in case the input buffers were to small. Arbitrary input mappings have been introduced
