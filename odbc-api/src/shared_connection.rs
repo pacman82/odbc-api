@@ -55,7 +55,7 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
             .lock()
             .expect("Shared connection lock must not be poisoned");
         let stmt = guard.prepare(query)?;
-        let stmt_ptr = stmt.into_statement().into_sys();
+        let stmt_ptr = stmt.into_handle().into_sys();
         drop(guard);
         // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };

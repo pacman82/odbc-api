@@ -1073,7 +1073,7 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
 
     fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
         let stmt = self.prepare(query)?;
-        let stmt_ptr = stmt.into_statement().into_sys();
+        let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
         // `stmt` is valid and in prepared state.

@@ -26,7 +26,7 @@ impl<S> Prepared<S> {
     /// [`crate::handles::StatementImpl::into_sys`] or [`crate::handles::Statement::as_sys`] this
     /// serves as an escape hatch to access the functionality provided by `crate::sys` not yet
     /// accessible through safe abstractions.
-    pub fn into_statement(self) -> S {
+    pub fn into_handle(self) -> S {
         self.statement
     }
 }
@@ -117,9 +117,7 @@ where
         C: ColumnBuffer + HasDataType,
     {
         // We know that statement is a prepared statement.
-        unsafe {
-            ColumnarBulkInserter::new(self.into_statement(), parameter_buffers, index_mapping)
-        }
+        unsafe { ColumnarBulkInserter::new(self.into_handle(), parameter_buffers, index_mapping) }
     }
 
     /// Use this to insert rows of string input into the database.
