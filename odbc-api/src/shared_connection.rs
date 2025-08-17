@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    Connection, CursorImpl, Error, ParameterCollectionRef, Prepared,
+    Connection, CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared,
     connection::{ConnectionTransitions, FailedStateTransition},
     handles::{StatementConnection, StatementParent},
 };
@@ -19,6 +19,7 @@ unsafe impl StatementParent for SharedConnection<'_> {}
 impl<'env> ConnectionTransitions for SharedConnection<'env> {
     type Cursor = CursorImpl<StatementConnection<Self>>;
     type Prepared = Prepared<StatementConnection<Self>>;
+    type Preallocated = Preallocated<StatementConnection<Self>>;
 
     fn into_cursor(
         self,
@@ -62,5 +63,19 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
         // `stmt` is valid and in prepared state.
         let prepared = Prepared::new(stmt);
         Ok(prepared)
+    }
+
+    fn into_preallocated(self) -> Result<Self::Preallocated, Error> {
+        let guard = self
+            .lock()
+            .expect("Shared connection lock must not be poisoned");
+        let stmt = guard.preallocate()?;
+        let stmt_ptr = stmt.into_handle().into_sys();
+        drop(guard);
+        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
+        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
+        // `stmt` is valid and in freshly allocated state.
+        let preallocated = unsafe { Preallocated::new(stmt) };
+        Ok(preallocated)
     }
 }

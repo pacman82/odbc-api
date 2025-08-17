@@ -935,9 +935,8 @@ pub trait ConnectionTransitions: Sized {
     type Cursor;
     /// Prepared statement type after transferring ownership of the connection.
     type Prepared;
-    // /// Preallocated statement type after transferring ownership of the connection.
-    // type Preallocated;
-    //
+    /// Preallocated statement type after transferring ownership of the connection.
+    type Preallocated;
 
     /// Similar to [`crate::Connection::into_cursor`], yet it operates on an `Arc<Mutex<Connection>>`.
     /// `Arc<Connection>` can be used if you want shared ownership of connections. However,
@@ -1016,12 +1015,16 @@ pub trait ConnectionTransitions: Sized {
     /// }
     /// ```
     fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error>;
+
+    /// Creates a preallocated statement handle like [`Connection::preallocate`]. Yet the statement
+    /// also takes ownership of the connection.
+    fn into_preallocated(self) -> Result<Self::Preallocated, Error>;
 }
 
 impl<'env> ConnectionTransitions for Connection<'env> {
     type Cursor = CursorImpl<StatementConnection<Connection<'env>>>;
     type Prepared = Prepared<StatementConnection<Connection<'env>>>;
-    // type Preallocated = Preallocated<StatementConnection<Connection<'_>>>;
+    type Preallocated = Preallocated<StatementConnection<Connection<'env>>>;
 
     fn into_cursor(
         self,
@@ -1035,12 +1038,16 @@ impl<'env> ConnectionTransitions for Connection<'env> {
     fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
         self.into_prepared(query)
     }
+
+    fn into_preallocated(self) -> Result<Self::Preallocated, Error> {
+        self.into_preallocated()
+    }
 }
 
 impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
     type Cursor = CursorImpl<StatementConnection<Arc<Connection<'env>>>>;
     type Prepared = Prepared<StatementConnection<Arc<Connection<'env>>>>;
-    // type Preallocated = Preallocated<StatementConnection<Arc<Connection<'_>>>>;
+    type Preallocated = Preallocated<StatementConnection<Arc<Connection<'env>>>>;
 
     fn into_cursor(
         self,
@@ -1079,5 +1086,15 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         // `stmt` is valid and in prepared state.
         let prepared = Prepared::new(stmt);
         Ok(prepared)
+    }
+
+    fn into_preallocated(self) -> Result<Self::Preallocated, Error> {
+        let stmt = self.preallocate()?;
+        let stmt_ptr = stmt.into_handle().into_sys();
+        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
+        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
+        // Safe: `stmt` is valid and its state is allocated.
+        let preallocated = unsafe { Preallocated::new(stmt) };
+        Ok(preallocated)
     }
 }

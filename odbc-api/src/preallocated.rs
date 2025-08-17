@@ -129,7 +129,7 @@ where
     /// [`crate::handles::StatementImpl::into_sys`] or [`crate::handles::Statement::as_sys`] this
     /// serves as an escape hatch to access the functionality provided by `crate::sys` not yet
     /// accessible through safe abstractions.
-    pub fn into_statement(self) -> S {
+    pub fn into_handle(self) -> S {
         self.statement
     }
 

@@ -1886,8 +1886,9 @@ fn prepared_statement(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn preallocated(profile: &Profile) {
-    // Prepare the statement once
-    let (conn, _table) = Given::new("Preallocated")
+    // Allocate the statement once
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
         .column_types(&["VARCHAR(10)"])
         .build(profile)
         .unwrap();
@@ -1896,14 +1897,14 @@ fn preallocated(profile: &Profile) {
     // Execute it two statements in a row. One INSERT, one SELECT.
     {
         let res = prealloc
-            .execute("INSERT INTO Preallocated (a) VALUES ('Hello')", ())
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
             .unwrap();
         assert!(res.is_none());
     }
 
     {
         let cursor = prealloc
-            .execute("SELECT a FROM Preallocated ORDER BY id", ())
+            .execute(&table.sql_all_ordered_by_id(), ())
             .unwrap()
             .unwrap();
         let actual = cursor_to_string(cursor);
@@ -1918,8 +1919,9 @@ fn preallocated(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn into_preallocated(profile: &Profile) {
-    // Prepare the statement once
-    let (conn, _table) = Given::new("Preallocated")
+    // Allocate the statement once
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
         .column_types(&["VARCHAR(10)"])
         .build(profile)
         .unwrap();
@@ -1928,14 +1930,80 @@ fn into_preallocated(profile: &Profile) {
     // Execute it two statements in a row. One INSERT, one SELECT.
     {
         let res = prealloc
-            .execute("INSERT INTO Preallocated (a) VALUES ('Hello')", ())
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
             .unwrap();
         assert!(res.is_none());
     }
 
     {
         let cursor = prealloc
-            .execute("SELECT a FROM Preallocated ORDER BY id", ())
+            .execute(&table.sql_all_ordered_by_id(), ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
+    }
+}
+
+/// Reuse a preallocated handle, two times in a row.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn into_preallocated_arc(profile: &Profile) {
+    // Allocate the statement once
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
+    let mut prealloc = Arc::new(conn).into_preallocated().unwrap();
+
+    // Execute it two statements in a row. One INSERT, one SELECT.
+    {
+        let res = prealloc
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute(&table.sql_all_ordered_by_id(), ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
+    }
+}
+
+/// Reuse a preallocated handle, two times in a row.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn into_preallocated_shared(profile: &Profile) {
+    // Allocate the statement once
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
+    let mut prealloc = Arc::new(Mutex::new(conn)).into_preallocated().unwrap();
+
+    // Execute it two statements in a row. One INSERT, one SELECT.
+    {
+        let res = prealloc
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute(&table.sql_all_ordered_by_id(), ())
             .unwrap()
             .unwrap();
         let actual = cursor_to_string(cursor);
@@ -3882,7 +3950,7 @@ fn escape_hatch(profile: &Profile) {
         .unwrap();
 
     let preallocated = conn.preallocate().unwrap();
-    let mut statement = preallocated.into_statement();
+    let mut statement = preallocated.into_handle();
 
     statement.reset_parameters().unwrap();
 
@@ -6017,7 +6085,7 @@ fn scroll_cursor(profile: &Profile) {
 
     // When
     let stmt = conn.preallocate().unwrap();
-    let stmt = stmt.into_statement();
+    let stmt = stmt.into_handle();
     let stmt_ptr = stmt.as_sys();
     let first;
     let second;
@@ -6092,7 +6160,7 @@ fn recover_from_truncation(profile: &Profile) {
 
     // When
     let stmt = conn.preallocate().unwrap();
-    let stmt = stmt.into_statement();
+    let stmt = stmt.into_handle();
     let stmt_ptr = stmt.as_sys();
     let untruncated;
     unsafe {
