@@ -15,9 +15,10 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
-    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions, Cursor, DataType,
-    Error, InOrder, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable,
-    Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
+    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions,
+    ConnectionsTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
+    IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata,
+    RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
@@ -31,7 +32,7 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
     },
-    shared_connection_into_cursor, sys,
+    sys,
 };
 use widestring::Utf16String;
 
@@ -619,10 +620,11 @@ fn share_connections_with_statement_in_other_thread(profile: &Profile) {
 
     // When
     let conn = Arc::new(Mutex::new(conn));
-    let mut cursor =
-        shared_connection_into_cursor(conn.clone(), &table.sql_all_ordered_by_id(), (), None)
-            .unwrap()
-            .unwrap();
+    let mut cursor = conn
+        .clone()
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
     let other_thread = thread::spawn(move || {
         let mut i = 0i32;
         cursor

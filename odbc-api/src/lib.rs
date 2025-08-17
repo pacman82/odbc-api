@@ -32,7 +32,7 @@ pub use self::{
     columnar_bulk_inserter::{
         BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping,
     },
-    connection::{Connection, ConnectionOptions, escape_attribute_value},
+    connection::{Connection, ConnectionOptions, ConnectionsTransitions, escape_attribute_value},
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
         BlockCursor, BlockCursorPolling, ConcurrentBlockCursor, Cursor, CursorImpl, CursorPolling,
@@ -51,7 +51,7 @@ pub use self::{
     preallocated::{Preallocated, PreallocatedPolling},
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
-    shared_connection::{SharedConnection, shared_connection_into_cursor},
+    shared_connection::SharedConnection,
     sleep::Sleep,
 };
 
