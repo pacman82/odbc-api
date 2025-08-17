@@ -668,7 +668,7 @@ fn into_cursor_reuse_connection_on_failure(profile: &Profile) {
 
     // Then we can extract a valid connection from the error type
     let error = result.map(|_| ()).unwrap_err();
-    let conn = error.connection;
+    let conn = error.previous;
     // Extra verification to prove connection is indeed valid
     let query = table.sql_all_ordered_by_id();
     let cursor = conn.into_cursor(&query, (), None).unwrap().unwrap();
@@ -689,7 +689,7 @@ fn connection_and_error_implements_std_error() {
     let connection_and_error = result.unwrap_err();
     let plain_error = connection_and_error.error;
     let result = connection_and_error
-        .connection
+        .previous
         .into_cursor("Non-existing-table", (), None)
         .map(|_| ());
     let std_error: Box<dyn std::error::Error> = Box::new(result.unwrap_err().error);

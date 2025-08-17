@@ -284,7 +284,7 @@ impl<'c> Connection<'c> {
             drop(cursor);
             return Err(ConnectionAndError {
                 error: e,
-                connection: self,
+                previous: self,
             });
         }
         let cursor = cursor.unwrap();
@@ -894,31 +894,45 @@ pub fn escape_attribute_value(unescaped: &str) -> Cow<'_, str> {
     }
 }
 
-/// An error type wrapping an [`Error`] and a [`Connection`]. It is used by
-/// [`Connection::into_cursor`], so that in case of failure the user can reuse the connection to try
-/// again. [`Connection::into_cursor`] could achieve the same by returning a tuple in case of an
-/// error, but this type causes less friction in most scenarios because [`Error`] implements
-/// [`From`] [`ConnectionAndError`] and it therfore works with the question mark operater (`?`).
+/// A pair of the error and the previous state, before the operation caused the error.
+///
+/// Some functions in this crate take a `self` and return another type in the result to express a
+/// state transitions in the underlying ODBC handle. In order to make such operations retryable, or
+/// offer other alternatives of recovery, they may return this error type instead of a plain
+/// [`Error`].
 #[derive(Debug)]
-pub struct ConnectionAndError<'conn> {
+pub struct FailedStateTransition<S> {
+    /// The ODBC error which caused the state transition to fail.
     pub error: Error,
-    pub connection: Connection<'conn>,
+    /// The state before the transition failed. This is useful to e.g. retry the operation, or
+    /// recover in another way.
+    pub previous: S,
 }
 
-impl From<ConnectionAndError<'_>> for Error {
-    fn from(value: ConnectionAndError) -> Self {
+impl<S> From<FailedStateTransition<S>> for Error {
+    fn from(value: FailedStateTransition<S>) -> Self {
         value.error
     }
 }
 
-impl Display for ConnectionAndError<'_> {
+impl<S> Display for FailedStateTransition<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.error)
     }
 }
 
-impl std::error::Error for ConnectionAndError<'_> {
+impl<S> std::error::Error for FailedStateTransition<S>
+where
+    S: Debug,
+{
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         self.error.source()
     }
 }
+
+/// An error type wrapping an [`Error`] and a [`Connection`]. It is used by
+/// [`Connection::into_cursor`], so that in case of failure the user can reuse the connection to try
+/// again. [`Connection::into_cursor`] could achieve the same by returning a tuple in case of an
+/// error, but this type causes less friction in most scenarios because [`Error`] implements
+/// [`From`] [`ConnectionAndError`] and it therfore works with the question mark operater (`?`).
+type ConnectionAndError<'conn> = FailedStateTransition<Connection<'conn>>;
