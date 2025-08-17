@@ -10,12 +10,11 @@ use crate::{
     },
 };
 use log::error;
-use odbc_sys::HDbc;
 use std::{
     borrow::Cow,
     fmt::{self, Debug, Display},
-    mem::ManuallyDrop,
-    str,
+    mem::{ManuallyDrop, MaybeUninit},
+    ptr, str,
     sync::Arc,
     thread::panicking,
 };
@@ -83,12 +82,6 @@ impl<'c> Connection<'c> {
         Self { connection }
     }
 
-    /// Transfers ownership of the handle to this open connection to the raw ODBC pointer.
-    pub fn into_sys(self) -> HDbc {
-        // We do not want to run the drop handler, but transfer ownership instead.
-        ManuallyDrop::new(self).connection.as_sys()
-    }
-
     /// Transfer ownership of this open connection to a wrapper around the raw ODBC pointer. The
     /// wrapper allows you to call ODBC functions on the handle, but doesn't care if the connection
     /// is in the right state.
@@ -97,7 +90,13 @@ impl<'c> Connection<'c> {
     /// but, in case it is not, this may help you to break out of the type structure which might be
     /// to rigid for you, while simultaneously abondoning its safeguards.
     pub fn into_handle(self) -> handles::Connection<'c> {
-        unsafe { handles::Connection::new(ManuallyDrop::new(self).connection.as_sys()) }
+        // We do not want the compiler to invoke `Drop`, since drop would disconnect, yet we want to
+        // transfer ownership to the connection handle.
+        let dont_drop_me = MaybeUninit::new(self);
+        let self_ptr = dont_drop_me.as_ptr();
+
+        // Safety: We know `dont_drop_me` is (still) valid at this point so reading the ptr is okay
+        unsafe { ptr::read(&(*self_ptr).connection) }
     }
 
     /// Executes an SQL statement. This is the fastest way to submit an SQL statement for one-time
