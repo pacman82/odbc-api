@@ -925,7 +925,7 @@ type ConnectionAndError<'conn> = FailedStateTransition<Connection<'conn>>;
 /// type of ownership we express. E.g. we can express shared ownership of a connection by
 /// using an `Arc<Mutex<Connection>>` or `Arc<Connection>`. Or a still exclusive ownership using
 /// a plain [`Connection`].
-pub trait ConnectionsTransitions: Sized {
+pub trait ConnectionTransitions: Sized {
     // Note to self. This might eveolve into a `Connection` trait. Which expresses ownership
     // of a connection (shared or not). It could allow to get a dereferened borrowed conection
     // which does not allow for state transtions as of now (like StatementRef). I may not want to
@@ -933,8 +933,8 @@ pub trait ConnectionsTransitions: Sized {
 
     /// Cursor type after transfering ownership of the connection.
     type Cursor;
-    // /// Prepared statement type after transferring ownership of the connection.
-    // type Prepared;
+    /// Prepared statement type after transferring ownership of the connection.
+    type Prepared;
     // /// Preallocated statement type after transferring ownership of the connection.
     // type Preallocated;
     //
@@ -972,11 +972,55 @@ pub trait ConnectionsTransitions: Sized {
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
     ) -> Result<Option<Self::Cursor>, FailedStateTransition<Self>>;
+
+    /// Prepares an SQL statement which takes ownership of the connection. The advantage over
+    /// [`Connection::prepare`] is, that you do not need to keep track of the lifetime of the
+    /// connection seperatly and can create types which do own the prepared query and only depend on
+    /// the lifetime of the environment.
+    ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
+    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
+    ///   execution.
+    ///
+    /// ```no_run
+    /// use odbc_api::{
+    ///     environment, Error, ColumnarBulkInserter, ConnectionTransitions, Connection,
+    ///     handles::StatementConnection, buffers::{BufferDesc, AnyBuffer}, ConnectionOptions,
+    /// };
+    ///
+    /// const CONNECTION_STRING: &str =
+    ///     "Driver={ODBC Driver 18 for SQL Server};\
+    ///     Server=localhost;UID=SA;\
+    ///     PWD=My@Test@Password1;";
+    ///
+    /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
+    /// /// takes ownership of a connection created using an environment with static lifetime.
+    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
+    ///
+    /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
+    /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
+    ///     let env = environment()?;
+    ///     let conn = env.connect_with_connection_string(
+    ///         CONNECTION_STRING,
+    ///         ConnectionOptions::default()
+    ///     )?;
+    ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
+    ///     let buffers = [
+    ///         BufferDesc::Text { max_str_len: 255},
+    ///         BufferDesc::I16 { nullable: false },
+    ///     ];
+    ///     let capacity = 400;
+    ///     prepared.into_column_inserter(capacity, buffers)
+    /// }
+    /// ```
+    fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error>;
 }
 
-impl<'env> ConnectionsTransitions for Connection<'env> {
+impl<'env> ConnectionTransitions for Connection<'env> {
     type Cursor = CursorImpl<StatementConnection<Connection<'env>>>;
-    // type Prepared = Prepared<StatementConnection<Connection<'_>>>;
+    type Prepared = Prepared<StatementConnection<Connection<'env>>>;
     // type Preallocated = Preallocated<StatementConnection<Connection<'_>>>;
 
     fn into_cursor(
@@ -987,11 +1031,15 @@ impl<'env> ConnectionsTransitions for Connection<'env> {
     ) -> Result<Option<Self::Cursor>, FailedStateTransition<Self>> {
         self.into_cursor(query, params, query_timeout_sec)
     }
+
+    fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
+        self.into_prepared(query)
+    }
 }
 
-impl<'env> ConnectionsTransitions for Arc<Connection<'env>> {
+impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
     type Cursor = CursorImpl<StatementConnection<Arc<Connection<'env>>>>;
-    // type Prepared = Prepared<StatementConnection<Arc<Connection<'_>>>>;
+    type Prepared = Prepared<StatementConnection<Arc<Connection<'env>>>>;
     // type Preallocated = Preallocated<StatementConnection<Arc<Connection<'_>>>>;
 
     fn into_cursor(
@@ -1021,5 +1069,51 @@ impl<'env> ConnectionsTransitions for Arc<Connection<'env>> {
         // Safe: `stmt` is valid and in cursor state.
         let cursor = unsafe { CursorImpl::new(stmt) };
         Ok(Some(cursor))
+    }
+
+    /// Prepares an SQL statement which takes ownership of the connection. The advantage over
+    /// [`Connection::prepare`] is, that you do not need to keep track of the lifetime of the
+    /// connection seperatly and can create types which do own the prepared query and only depend on
+    /// the lifetime of the environment.
+    ///
+    /// # Parameters
+    ///
+    /// * `query`: The text representation of the SQL statement. E.g. "SELECT * FROM my_table;". `?`
+    ///   may be used as a placeholder in the statement text, to be replaced with parameters during
+    ///   execution.
+    ///
+    /// ```no_run
+    /// use odbc_api::{
+    ///     environment, Error, ColumnarBulkInserter, handles::StatementConnection,
+    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions, Connection
+    /// };
+    ///
+    /// const CONNECTION_STRING: &str =
+    ///     "Driver={ODBC Driver 18 for SQL Server};\
+    ///     Server=localhost;UID=SA;\
+    ///     PWD=My@Test@Password1;";
+    ///
+    /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
+    /// /// takes ownership of a connection created using an environment with static lifetime.
+    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
+    ///
+    /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
+    /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
+    ///     let env = environment()?;
+    ///     let conn = env.connect_with_connection_string(
+    ///         CONNECTION_STRING,
+    ///         ConnectionOptions::default()
+    ///     )?;
+    ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
+    ///     let buffers = [
+    ///         BufferDesc::Text { max_str_len: 255},
+    ///         BufferDesc::I16 { nullable: false },
+    ///     ];
+    ///     let capacity = 400;
+    ///     prepared.into_column_inserter(capacity, buffers)
+    /// }
+    /// ```
+    fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
+        todo!()
     }
 }

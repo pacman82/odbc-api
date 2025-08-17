@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    Connection, CursorImpl, ParameterCollectionRef,
-    connection::{ConnectionsTransitions, FailedStateTransition},
+    Connection, CursorImpl, Error, ParameterCollectionRef, Prepared,
+    connection::{ConnectionTransitions, FailedStateTransition},
     handles::{StatementConnection, StatementParent},
 };
 
@@ -16,8 +16,9 @@ pub type SharedConnection<'env> = Arc<Mutex<Connection<'env>>>;
 /// [`SharedConnection`].
 unsafe impl StatementParent for SharedConnection<'_> {}
 
-impl<'env> ConnectionsTransitions for SharedConnection<'env> {
+impl<'env> ConnectionTransitions for SharedConnection<'env> {
     type Cursor = CursorImpl<StatementConnection<Self>>;
+    type Prepared = Prepared<StatementConnection<Self>>;
 
     fn into_cursor(
         self,
@@ -47,5 +48,9 @@ impl<'env> ConnectionsTransitions for SharedConnection<'env> {
         // Safe: `stmt` is valid and in cursor state.
         let cursor = unsafe { CursorImpl::new(stmt) };
         Ok(Some(cursor))
+    }
+
+    fn into_prepared(self, query: &str) -> Result<Self::Prepared, Error> {
+        todo!()
     }
 }

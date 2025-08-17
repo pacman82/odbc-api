@@ -16,7 +16,7 @@ use connection_strings::{
 use odbc_api::Fetch;
 use odbc_api::{
     Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions,
-    ConnectionsTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
+    ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
     IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata,
     RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
