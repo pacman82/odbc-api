@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [17.0.0](https://github.com/pacman82/odbc-api/compare/v16.0.0...v17.0.0) - 2025-08-18
+
+### Added
+
+- [**breaking**] ConnectionTransition::into_preallocated
+- into_prepared for `SharedConnection`
+- into_prepared for Arc<Connection>
+
+### Other
+
+- [**breaking**] Repalce `ConnectionTransition::Statement` with `ConnectionTransition::StatementParent`
+- ConnectionTransitions now only exposes one associated
+- [**breaking**] `Prepared::into_statement` is now named
+- [**breaking**] ConnectionsTransitions is now named ConnectionTransitions
+- `Connection::execute_arc` is replaced by
+- refactor! shared_connecion_into_curos has been replaced by
+- [**breaking**] `ConnectionAndError` is not a type alias to
+- [**breaking**] Removed `Connection::into_sys`
+- Module sync_connection is now named shared_connection
+
 ## [16.0.0](https://github.com/pacman82/odbc-api/compare/v15.0.0...v16.0.0) - 2025-08-16
 
 ### Added
