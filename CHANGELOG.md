@@ -11,21 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [**breaking**] ConnectionTransition::into_preallocated
-- into_prepared for `SharedConnection`
-- into_prepared for Arc<Connection>
+- ConnectionTransition::into_preallocated
+- It is now possible to create `Prepared` statements owning a `SharedConnection` due to `SharedConnection` implementing  `ConnectionTransition`
+- It is now possible to create `Prepared` statements owning a `Arc<Connection>` due to `Arc<Connection>` implementing  `ConnectionTransition`
 
 ### Other
 
-- [**breaking**] Repalce `ConnectionTransition::Statement` with `ConnectionTransition::StatementParent`
-- ConnectionTransitions now only exposes one associated
-- [**breaking**] `Prepared::into_statement` is now named
-- [**breaking**] ConnectionsTransitions is now named ConnectionTransitions
-- `Connection::execute_arc` is replaced by
-- refactor! shared_connecion_into_curos has been replaced by
-- [**breaking**] `ConnectionAndError` is not a type alias to
+- [**breaking**] Repalce `odbc_api::shared_connection_into_cursor` with `ConnectionTransition::into_cursor`
+- [**breaking**] `Prepared::into_statement` is now named `into_handle`.
+- `Connection::execute_arc` is replaced by `ConnectionTransition::into_cursor`
+- [**breaking**] `ConnectionAndError` is now a type alias to `FailedStateTransition`
 - [**breaking**] Removed `Connection::into_sys`
-- Module sync_connection is now named shared_connection
 
 ## [16.0.0](https://github.com/pacman82/odbc-api/compare/v15.0.0...v16.0.0) - 2025-08-16
 
