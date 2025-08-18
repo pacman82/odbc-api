@@ -17,7 +17,7 @@ pub type SharedConnection<'env> = Arc<Mutex<Connection<'env>>>;
 unsafe impl StatementParent for SharedConnection<'_> {}
 
 impl<'env> ConnectionTransitions for SharedConnection<'env> {
-    type Statement = StatementConnection<Self>;
+    type StatementParent = Self;
 
     fn into_cursor(
         self,
@@ -49,7 +49,7 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
         Ok(Some(cursor))
     }
 
-    fn into_prepared(self, query: &str) -> Result<Prepared<Self::Statement>, Error> {
+    fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<Self>>, Error> {
         let guard = self
             .lock()
             .expect("Shared connection lock must not be poisoned");
@@ -63,7 +63,7 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
         Ok(prepared)
     }
 
-    fn into_preallocated(self) -> Result<Preallocated<Self::Statement>, Error> {
+    fn into_preallocated(self) -> Result<Preallocated<StatementConnection<Self>>, Error> {
         let guard = self
             .lock()
             .expect("Shared connection lock must not be poisoned");
