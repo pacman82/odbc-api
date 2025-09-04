@@ -16,24 +16,22 @@ use super::RowSetBuffer;
 ///
 /// ```no_run
 /// use odbc_api::{
-///     Environment, buffers::{ColumnarAnyBuffer, BufferDesc}, Cursor, ConcurrentBlockCursor
+///     environment, buffers::{ColumnarAnyBuffer, BufferDesc}, Cursor, ConcurrentBlockCursor
 /// };
-/// use std::sync::OnceLock;
 ///
 /// // We want to use the ODBC environment from another system thread without scope => Therefore it
 /// // needs to be static.
-/// static ENV: OnceLock<Environment> = OnceLock::new();
-/// let env = Environment::new()?;
+/// let env = environment()?;
 ///
-/// let conn = ENV.get_or_init(|| env).connect_with_connection_string(
+/// let conn = env.connect_with_connection_string(
 ///     "Driver={ODBC Driver 18 for SQL Server};Server=localhost;UID=SA;PWD=My@Test@Password1;",
 ///     Default::default())?;
 ///
 /// let query = "SELECT * FROM very_big_table";
 /// let params = ();
 /// let timeout_sec = None;
-/// // We must use into_cursor to create a statement handle with static lifetime, which also owns
-/// // the connection. This way we can send it to another thread safely.
+/// // We use `into_cursor` to create a statement handle, which also owns the connection and has a
+/// // static lifetime. This way we can send it to another thread safely.
 /// let cursor = conn.into_cursor(query, params, timeout_sec)?.unwrap();
 ///
 /// // Batch size and buffer description. Here we assume there is only one integer column
