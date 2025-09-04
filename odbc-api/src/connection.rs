@@ -5,8 +5,8 @@ use crate::{
         execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters_polling,
     },
     handles::{
-        self, SqlText, State, Statement, StatementConnection, StatementImpl,
-        StatementParent, slice_to_utf8,
+        self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
+        slice_to_utf8,
     },
 };
 use log::error;
@@ -774,7 +774,7 @@ unsafe impl StatementParent for Connection<'_> {}
 
 /// We need to implement [`StatementParent`] for `Arc<Connection>` in order to be able to express
 /// ownership of a shared connection from a statement handle. This is e.g. needed for
-/// [`ConnectionTransition::into_cursor`].
+/// [`ConnectionTransitions::into_cursor`].
 ///
 /// # Safety:
 ///
@@ -967,7 +967,10 @@ pub trait ConnectionTransitions: Sized {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self::StatementParent>>>, FailedStateTransition<Self>>;
+    ) -> Result<
+        Option<CursorImpl<StatementConnection<Self::StatementParent>>>,
+        FailedStateTransition<Self>,
+    >;
 
     /// Prepares an SQL statement which takes ownership of the connection. The advantage over
     /// [`Connection::prepare`] is, that you do not need to keep track of the lifetime of the
@@ -1018,7 +1021,9 @@ pub trait ConnectionTransitions: Sized {
 
     /// Creates a preallocated statement handle like [`Connection::preallocate`]. Yet the statement
     /// also takes ownership of the connection.
-    fn into_preallocated(self) -> Result<Preallocated<StatementConnection<Self::StatementParent>>, Error>;
+    fn into_preallocated(
+        self,
+    ) -> Result<Preallocated<StatementConnection<Self::StatementParent>>, Error>;
 }
 
 impl<'env> ConnectionTransitions for Connection<'env> {
@@ -1029,15 +1034,11 @@ impl<'env> ConnectionTransitions for Connection<'env> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>>
-    {
+    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>> {
         self.into_cursor(query, params, query_timeout_sec)
     }
 
-    fn into_prepared(
-        self,
-        query: &str,
-    ) -> Result<Prepared<StatementConnection<Self>>, Error> {
+    fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<Self>>, Error> {
         self.into_prepared(query)
     }
 
@@ -1054,8 +1055,7 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>>
-    {
+    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>> {
         // Result borrows the connection. We convert the cursor into a raw pointer, to not confuse
         // the borrow checker.
         let result = self.execute(query, params, query_timeout_sec);
@@ -1079,10 +1079,7 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         Ok(Some(cursor))
     }
 
-    fn into_prepared(
-        self,
-        query: &str,
-    ) -> Result<Prepared<StatementConnection<Self>>, Error> {
+    fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<Self>>, Error> {
         let stmt = self.prepare(query)?;
         let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
