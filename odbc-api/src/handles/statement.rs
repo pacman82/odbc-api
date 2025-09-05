@@ -95,6 +95,15 @@ impl StatementImpl<'_> {
     }
 }
 
+/// According to the ODBC documentation this is safe. See:
+/// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
+///
+/// We maybe could consider a statement to be `Sync` as well, since all operations on it currently
+/// require `&mut self`. Yet maybe we get forced to allow some of these operations to take `&self`
+/// in the future, like we do for [`crate::Connection`] to allow for shared ownership of
+/// connections by multiple statements.
+unsafe impl Send for StatementImpl<'_> {}
+
 /// A borrowed valid (i.e. successfully allocated) ODBC statement handle. This can be used instead
 /// of a mutable reference to a [`StatementImpl`]. The main advantage here is that the lifetime
 /// paramater remains covariant, whereas if we would just take a mutable reference to an owned
@@ -129,6 +138,15 @@ unsafe impl AnyHandle for StatementRef<'_> {
         HandleType::Stmt
     }
 }
+
+/// According to the ODBC documentation this is safe. See:
+/// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
+///
+/// We maybe could consider a statement to be `Sync` as well, since all operations on it currently
+/// require `&mut self`. Yet maybe we get forced to allow some of these operations to take `&self`
+/// in the future, like we do for [`crate::Connection`] to allow for shared ownership of
+/// connections by multiple statements.
+unsafe impl Send for StatementRef<'_> {}
 
 /// Allows us to be generic over the ownership type (mutably borrowed or owned) of a statement
 pub trait AsStatementRef {
