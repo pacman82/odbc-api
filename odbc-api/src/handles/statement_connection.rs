@@ -33,7 +33,7 @@ where
 impl<C> Drop for StatementConnection<C> {
     fn drop(&mut self) {
         unsafe {
-            drop_handle(self.handle as Handle, HandleType::Stmt);
+            drop_handle(self.handle.as_handle(), HandleType::Stmt);
         }
     }
 }
@@ -62,7 +62,7 @@ where
     C: StatementParent,
 {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {

@@ -12,8 +12,8 @@ use super::{
 };
 use log::debug;
 use odbc_sys::{
-    CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HStmt, HWnd, Handle,
-    HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
+    CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
+    IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
 };
 use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -44,7 +44,7 @@ pub struct Connection<'c> {
 
 unsafe impl AnyHandle for Connection<'_> {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {
@@ -55,7 +55,7 @@ unsafe impl AnyHandle for Connection<'_> {
 impl Drop for Connection<'_> {
     fn drop(&mut self) {
         unsafe {
-            drop_handle(self.handle as Handle, HandleType::Dbc);
+            drop_handle(self.handle.as_handle(), HandleType::Dbc);
         }
     }
 }
@@ -195,11 +195,11 @@ impl Connection<'_> {
 
     /// Allocate a new statement handle. The `Statement` must not outlive the `Connection`.
     pub fn allocate_statement(&self) -> SqlResult<StatementImpl<'_>> {
-        let mut out = null_mut();
+        let mut out = Handle::null();
         unsafe {
             SQLAllocHandle(HandleType::Stmt, self.as_handle(), &mut out)
                 .into_sql_result("SQLAllocHandle")
-                .on_success(|| StatementImpl::new(out as HStmt))
+                .on_success(|| StatementImpl::new(out.as_hstmt()))
         }
     }
 

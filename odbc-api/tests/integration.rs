@@ -3969,7 +3969,7 @@ fn escape_hatch(profile: &Profile) {
     // If we use `.into_sys` we need to drop the handle manually
     let hstmt = statement.into_sys();
     unsafe {
-        let ret = sys::SQLFreeHandle(sys::HandleType::Stmt, hstmt as sys::Handle);
+        let ret = sys::SQLFreeHandle(sys::HandleType::Stmt, hstmt.as_handle());
         assert_eq!(ret, sys::SqlReturn::SUCCESS);
     }
 }

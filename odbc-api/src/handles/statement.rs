@@ -11,8 +11,8 @@ use super::{
 };
 use log::debug;
 use odbc_sys::{
-    Desc, FreeStmtOption, HDbc, HStmt, Handle, HandleType, IS_POINTER, Len, ParamType, Pointer,
-    SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
+    Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, IS_POINTER, Len, ParamType,
+    Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
     SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
     SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute,
 };
@@ -51,7 +51,7 @@ pub struct StatementImpl<'s> {
 
 unsafe impl AnyHandle for StatementImpl<'_> {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {
@@ -62,7 +62,7 @@ unsafe impl AnyHandle for StatementImpl<'_> {
 impl Drop for StatementImpl<'_> {
     fn drop(&mut self) {
         unsafe {
-            drop_handle(self.handle as Handle, HandleType::Stmt);
+            drop_handle(self.handle.as_handle(), HandleType::Stmt);
         }
     }
 }
@@ -122,7 +122,7 @@ impl Statement for StatementRef<'_> {
 
 unsafe impl AnyHandle for StatementRef<'_> {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {
@@ -1053,8 +1053,8 @@ pub trait Statement: AnyHandle {
     /// though.
     fn application_row_descriptor(&mut self) -> SqlResult<Descriptor<'_>> {
         unsafe {
-            let mut hdesc: odbc_sys::HDesc = null_mut();
-            let hdesc_out = &mut hdesc as *mut odbc_sys::HDesc as Pointer;
+            let mut hdesc = HDesc::null();
+            let hdesc_out = &mut hdesc as *mut HDesc as Pointer;
             odbc_sys::SQLGetStmtAttr(
                 self.as_sys(),
                 odbc_sys::StatementAttribute::AppRowDesc,

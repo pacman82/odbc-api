@@ -115,7 +115,7 @@ impl Descriptor<'_> {
 
 unsafe impl AnyHandle for Descriptor<'_> {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {

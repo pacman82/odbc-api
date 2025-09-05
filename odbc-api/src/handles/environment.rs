@@ -7,8 +7,8 @@ use super::{
 };
 use log::debug;
 use odbc_sys::{
-    AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HDbc, HEnv, Handle,
-    HandleType, SQLAllocHandle, SQLSetEnvAttr,
+    AttrCpMatch, AttrOdbcVersion, EnvironmentAttribute, FetchOrientation, HEnv, Handle, HandleType,
+    SQLAllocHandle, SQLSetEnvAttr,
 };
 use std::ptr::null_mut;
 
@@ -40,7 +40,7 @@ unsafe impl Send for Environment {}
 
 unsafe impl AnyHandle for Environment {
     fn as_handle(&self) -> Handle {
-        self.handle as Handle
+        self.handle.as_handle()
     }
 
     fn handle_type(&self) -> HandleType {
@@ -51,7 +51,7 @@ unsafe impl AnyHandle for Environment {
 impl Drop for Environment {
     fn drop(&mut self) {
         unsafe {
-            drop_handle(self.handle as Handle, HandleType::Env);
+            drop_handle(self.handle.as_handle(), HandleType::Env);
         }
     }
 }
@@ -72,7 +72,7 @@ impl Environment {
     pub unsafe fn set_connection_pooling(scheme: odbc_sys::AttrConnectionPooling) -> SqlResult<()> {
         unsafe {
             SQLSetEnvAttr(
-                null_mut(),
+                HEnv::null(),
                 odbc_sys::EnvironmentAttribute::ConnectionPooling,
                 scheme.into(),
                 odbc_sys::IS_INTEGER,
@@ -103,11 +103,12 @@ impl Environment {
         // however official sources imply it is ok for an application to have multiple environments
         // and I did not get it to race ever on my machine.
         unsafe {
-            let mut handle = null_mut();
-            let result: SqlResult<()> = SQLAllocHandle(HandleType::Env, null_mut(), &mut handle)
-                .into_sql_result("SQLAllocHandle");
+            let mut handle = Handle::null();
+            let result: SqlResult<()> =
+                SQLAllocHandle(HandleType::Env, Handle::null(), &mut handle)
+                    .into_sql_result("SQLAllocHandle");
             result.on_success(|| Environment {
-                handle: handle as HEnv,
+                handle: handle.as_henv(),
             })
         }
     }
@@ -128,12 +129,12 @@ impl Environment {
 
     /// Allocate a new connection handle. The `Connection` must not outlive the `Environment`.
     pub fn allocate_connection(&self) -> SqlResult<Connection<'_>> {
-        let mut handle = null_mut();
+        let mut handle = Handle::null();
         unsafe {
             SQLAllocHandle(HandleType::Dbc, self.as_handle(), &mut handle)
                 .into_sql_result("SQLAllocHandle")
                 .on_success(|| {
-                    let handle = handle as HDbc;
+                    let handle = handle.as_hdbc();
                     debug!("SQLAllocHandle allocated connection (Dbc) handle '{handle:?}'");
                     Connection::new(handle)
                 })
