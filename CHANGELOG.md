@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [17.1.0](https://github.com/pacman82/odbc-api/compare/v17.0.0...v17.1.0) - 2025-09-06
+
+### Added
+
+- `StatementImpl` and `StatementRef` are now `Send`
+
+### Other
+
+- Update to odbc-sys 26
+- Fix broken reference
+- Minor improvemnts to doc comments
+- *(deps)* bump log from 0.4.27 to 0.4.28
+- *(deps)* bump tempfile from 3.20.0 to 3.21.0
+- *(deps)* bump thiserror from 2.0.15 to 2.0.16
+- *(deps)* bump thiserror from 2.0.14 to 2.0.15
+- *(deps)* bump proc-macro2 from 1.0.97 to 1.0.101
+- *(deps)* bump syn from 2.0.105 to 2.0.106
+
 ## [17.0.0](https://github.com/pacman82/odbc-api/compare/v16.0.0...v17.0.0) - 2025-08-18
 
 ### Added
