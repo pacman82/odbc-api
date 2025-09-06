@@ -120,6 +120,8 @@ tempfile = "3.21.0"
 criterion = { version = "0.7.0", features = ["html_reports"] }
 tokio = { version = "1.47.1", features = ["rt", "macros", "time"] }
 stdext = "0.3.3"                                                    # Used for function_name macro to generate unique table names for tests
+tokio-stream = "0.1.17"
+async-stream = "0.3.6"
 
 
 [[bench]]

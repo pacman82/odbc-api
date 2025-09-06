@@ -244,7 +244,7 @@
 //! fn insert_image_to_db(
 //!     conn: &Connection<'_>,
 //!     id: &str,
-//!     image_data: impl BufRead) -> Result<(), Error>
+//!     image_data: impl BufRead + Send) -> Result<(), Error>
 //! {
 //!     const MAX_IMAGE_SIZE: usize = 4 * 1024 * 1024;
 //!     let mut blob = BlobRead::with_upper_bound(image_data, MAX_IMAGE_SIZE);

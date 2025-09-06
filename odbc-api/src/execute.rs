@@ -2,7 +2,7 @@ use std::mem::transmute;
 
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
-    handles::{AsStatementRef, SqlText, Statement},
+    handles::{AsStatementRef, SqlText, Statement, StatementRef},
     parameter::Blob,
     sleep::wait_for,
 };
@@ -165,10 +165,7 @@ where
         if need_data {
             // Check if any delayed parameters have been bound which stream data to the database at
             // statement execution time. Loops over each bound stream.
-            while let Some(blob_ptr) = stmt.param_data().into_result(&stmt)? {
-                // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
-                let blob_ptr: *mut &mut dyn Blob = transmute(blob_ptr);
-                let blob_ref = &mut *blob_ptr;
+            while let Some(blob_ref) = next_blob_param(&mut stmt)? {
                 // Loop over all batches within each blob
                 while let Some(batch) = blob_ref.next_batch().map_err(Error::FailedReadingInput)? {
                     let result = wait_for(|| stmt.put_binary_batch(batch), &mut sleep).await;
@@ -188,6 +185,20 @@ where
             let cursor = CursorPolling::new(statement);
             Ok(Some(cursor))
         }
+    }
+}
+
+unsafe fn next_blob_param<'a>(
+    stmt: &mut StatementRef<'a>,
+) -> Result<Option<&'a mut dyn Blob>, Error> {
+    let maybe_ptr = stmt.param_data().into_result(stmt)?;
+    if let Some(blob_ptr) = maybe_ptr {
+        // The safe interfaces currently exclusively bind pointers to `Blob` trait objects
+        let blob_ptr: *mut &mut dyn Blob = unsafe { std::mem::transmute(blob_ptr) };
+        let blob_ref = unsafe { &mut *blob_ptr };
+        Ok(Some(*blob_ref))
+    } else {
+        Ok(None)
     }
 }
 
