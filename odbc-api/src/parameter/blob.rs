@@ -12,14 +12,14 @@ use std::{
     path::Path,
 };
 
-/// A `Blob` can stream its contents to the database batch by batch and may therefore be used to
+/// A [`Blob`] can stream its contents to the database batch by batch and may therefore be used to
 /// transfer large amounts of data, exceeding the drivers capabilities for normal input parameters.
 ///
 /// # Safety
 ///
 /// If a hint is implemented for `blob_size` it must be accurate before the first call to
 /// `next_batch`.
-pub unsafe trait Blob: HasDataType {
+pub unsafe trait Blob: HasDataType + Send {
     /// CData type of the binary data returned in the batches. Likely to be either
     /// [`crate::sys::CDataType::Binary`], [`crate::sys::CDataType::Char`] or
     /// [`crate::sys::CDataType::WChar`].
@@ -266,7 +266,7 @@ impl<R> BlobRead<R> {
     /// fn insert_image_to_db(
     ///     conn: &Connection<'_>,
     ///     id: &str,
-    ///     image_data: impl BufRead) -> Result<(), Error>
+    ///     image_data: impl BufRead + Send) -> Result<(), Error>
     /// {
     ///     const MAX_IMAGE_SIZE: usize = 4 * 1024 * 1024;
     ///     let mut blob = BlobRead::with_upper_bound(image_data, MAX_IMAGE_SIZE);
@@ -360,7 +360,7 @@ where
 
 unsafe impl<R> Blob for BlobRead<R>
 where
-    R: BufRead,
+    R: BufRead + Send,
 {
     fn c_data_type(&self) -> CDataType {
         CDataType::Binary
