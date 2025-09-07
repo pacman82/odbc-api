@@ -40,7 +40,7 @@ pub trait ResultSetMetadata: AsStatementRef {
     /// See also:
     /// <https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlnumresultcols-function>
     fn num_result_cols(&mut self) -> Result<i16, Error> {
-        let stmt = self.as_stmt_ref();
+        let mut stmt = self.as_stmt_ref();
         stmt.num_result_cols().into_result(&stmt)
     }
 

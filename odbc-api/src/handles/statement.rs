@@ -449,7 +449,7 @@ pub trait Statement: AnyHandle {
     /// Number of columns in result set.
     ///
     /// Can also be used to check, whether or not a result set has been created at all.
-    fn num_result_cols(&self) -> SqlResult<i16> {
+    fn num_result_cols(&mut self) -> SqlResult<i16> {
         let mut out: i16 = 0;
         unsafe { SQLNumResultCols(self.as_sys(), &mut out) }
             .into_sql_result("SQLNumResultCols")
