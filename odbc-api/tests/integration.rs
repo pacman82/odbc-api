@@ -6082,7 +6082,7 @@ async fn async_stream_of_rows_from_other_thread(profile: &Profile) {
     fn stream_of_send_rows(
         connection: Connection<'static>,
         query: String,
-    ) -> impl Stream<Item = (i32,)> + Send {
+    ) -> impl Stream<Item = (i32,)> + Send + 'static {
         let stmt = connection.into_preallocated().unwrap();
         let mut stmt = stmt.into_polling().unwrap();
         stream! {
