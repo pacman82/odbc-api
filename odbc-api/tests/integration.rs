@@ -5924,6 +5924,39 @@ fn get_row_array_size_from_statement(profile: &Profile) {
     assert_eq!(10, row_array_size);
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+#[tokio::test]
+async fn async_stream_of_rows_from_other_thread(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+
+    // When
+    fn stream_of_send_rows(
+        connection: Connection<'static>,
+        query: String,
+    ) -> impl Stream<Item = (i32,)> + Send + 'static {
+        let stmt = connection.into_preallocated().unwrap();
+        let mut stmt = stmt.into_polling().unwrap();
+        stream! {
+            let sleep = || tokio::time::sleep(Duration::from_millis(10));
+            let _ = stmt.execute(&query, (), sleep).await;
+            yield (42, )
+        }
+    }
+
+    // Then
+    let stream = stream_of_send_rows(conn, table.sql_all_ordered_by_id());
+    let rows = stream.collect::<Vec<_>>().await;
+    assert_eq!([(42i32,)].as_slice(), rows)
+}
+
 // Learning tests ----------------------------------------------------------------------------------
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -6063,39 +6096,6 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     // Second character encodes '62' -> 2 + 16 * 6 = 98
     assert_eq!(98, target.val[1]);
     assert_eq!(0, target.val[2]);
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-#[tokio::test]
-async fn async_stream_of_rows_from_other_thread(profile: &Profile) {
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["INT"])
-        .values_by_column(&[&[Some("42")]])
-        .build(profile)
-        .unwrap();
-
-    // When
-    fn stream_of_send_rows(
-        connection: Connection<'static>,
-        query: String,
-    ) -> impl Stream<Item = (i32,)> + Send + 'static {
-        let stmt = connection.into_preallocated().unwrap();
-        let mut stmt = stmt.into_polling().unwrap();
-        stream! {
-            let sleep = || tokio::time::sleep(Duration::from_millis(10));
-            let _ = stmt.execute(&query, (), sleep).await;
-            yield (42, )
-        }
-    }
-
-    // Then
-    let stream = stream_of_send_rows(conn, table.sql_all_ordered_by_id());
-    let rows = stream.collect::<Vec<_>>().await;
-    assert_eq!([(42i32,)].as_slice(), rows)
 }
 
 /// Learning test to see how scrolling cursors behave
