@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [18.0.1](https://github.com/pacman82/odbc-api/compare/v18.0.0...v18.0.1) - 2025-09-08
+
+### Other
+
+- update to odbc-sys 0.27
+- use next_blob_param helper also in `execute`
+
 ## [18.0.0](https://github.com/pacman82/odbc-api/compare/v17.0.0...v18.0.0) - 2025-09-08
 
 ### Added
