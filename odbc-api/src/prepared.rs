@@ -114,7 +114,7 @@ where
         index_mapping: impl InputParameterMapping,
     ) -> Result<ColumnarBulkInserter<S, C>, Error>
     where
-        C: ColumnBuffer + HasDataType,
+        C: ColumnBuffer + HasDataType + Send,
     {
         // We know that statement is a prepared statement.
         unsafe { ColumnarBulkInserter::new(self.into_handle(), parameter_buffers, index_mapping) }

@@ -26,11 +26,11 @@ use super::CElement;
 ///   zeroes is expressed in `BufferElement`s.
 /// * [`Self::C_DATA_TYPE`] is used to bind parameters. Providing wrong values like e.g. a fixed length
 ///   types, would cause even a correctly implemented odbc driver to access invalid memory.
-pub unsafe trait VarKind {
+pub unsafe trait VarKind: Send {
     /// Either `u8` for binary and narrow text or `u16` for wide text. Wide text could also be
     /// represented as `u8`, after all everything is bytes. This makes it difficult though to create
     /// owned VarCell types from `u16` buffers.
-    type Element: Copy + Eq;
+    type Element: Copy + Eq + Send;
     /// Zero for buffer element.
     const ZERO: Self::Element;
     /// Number of terminating zeroes required for this kind of variadic buffer.

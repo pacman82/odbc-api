@@ -102,6 +102,12 @@ impl StatementImpl<'_> {
 /// require `&mut self`. Yet maybe we get forced to allow some of these operations to take `&self`
 /// in the future, like we do for [`crate::Connection`] to allow for shared ownership of
 /// connections by multiple statements.
+///
+/// A non obvious implication of implementing `Send` for `StatementImpl` is that we must demand all
+/// parameters bound to the statement are also `Send`. There might be room for a statement handle
+/// which is not `Send`, but could therefore bind also parameters which are not `Send`. So far it is
+/// not clear in what use-case we would need this. Yet there are  multithreaded programs out there
+/// which want to make use of ODBC.
 unsafe impl Send for StatementImpl<'_> {}
 
 /// A borrowed valid (i.e. successfully allocated) ODBC statement handle. This can be used instead
@@ -589,7 +595,7 @@ pub trait Statement: AnyHandle {
     unsafe fn bind_input_parameter(
         &mut self,
         parameter_number: u16,
-        parameter: &(impl HasDataType + CData + ?Sized),
+        parameter: &(impl HasDataType + CData + ?Sized + Send),
     ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
         unsafe {
@@ -629,7 +635,7 @@ pub trait Statement: AnyHandle {
         &mut self,
         parameter_number: u16,
         input_output_type: ParamType,
-        parameter: &mut (impl CDataMut + HasDataType),
+        parameter: &mut (impl CDataMut + HasDataType + Send),
     ) -> SqlResult<()> {
         let parameter_type = parameter.data_type();
         unsafe {

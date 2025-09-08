@@ -442,14 +442,14 @@ pub unsafe trait CElement: CData {
 ///
 /// Idomatic Rust types are supported through the [`IntoParameter`](crate::IntoParameter) trait.
 /// This trait can also be implemented for custom types in safe code.
-pub trait InputParameter: HasDataType + CElement {}
+pub trait InputParameter: HasDataType + CElement + Send {}
 
-impl<T> InputParameter for T where T: CElement + HasDataType + ?Sized {}
+impl<T> InputParameter for T where T: CElement + HasDataType + ?Sized + Send {}
 
 /// # Safety
 ///
 /// Guarantees that there is space in the output buffer for at least one element.
-pub unsafe trait OutputParameter: CDataMut + HasDataType {}
+pub unsafe trait OutputParameter: CDataMut + HasDataType + Send {}
 
 /// Wraps a mutable reference. Use this wrapper in order to indicate that a mutable reference should
 /// be bound as an input / output parameter.

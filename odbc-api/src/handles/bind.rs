@@ -54,7 +54,7 @@ pub unsafe trait CDataMut: CData {
 /// [`Self::stream_ptr`] must return a valid pointer to a reference of a dynamic Blob trait object
 /// `(*mut &mut dyn Blob)` which must at least be valid for the lifetime of the instance. The
 /// indicator pointer and C data type must describe that instance truthfully.
-pub unsafe trait DelayedInput {
+pub unsafe trait DelayedInput: Send {
     /// Then streaming data to the "data source" the driver converts the data from this type.
     fn cdata_type(&self) -> CDataType;
 

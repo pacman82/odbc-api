@@ -456,7 +456,7 @@ pub struct TextColumnSliceMut<'a, C> {
 
 impl<C> TextColumnSliceMut<'_, C>
 where
-    C: Default + Copy,
+    C: Default + Copy + Send,
 {
     /// Sets the value of the buffer at index at Null or the specified binary Text. This method will
     /// panic on out of bounds index, or if input holds a text which is larger than the maximum

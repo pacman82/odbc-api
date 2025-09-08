@@ -52,7 +52,7 @@ where
         mapping: impl InputParameterMapping,
     ) -> Result<Self, Error>
     where
-        C: ColumnBuffer + HasDataType,
+        C: ColumnBuffer + HasDataType + Send,
     {
         let stmt = statement.as_stmt_ref();
         bind_parameter_buffers_to_statement(&parameters, mapping, stmt)?;
@@ -215,7 +215,7 @@ where
         mapping: impl InputParameterMapping,
     ) -> Result<Self, Error>
     where
-        C: ColumnBuffer + HasDataType + Resize,
+        C: ColumnBuffer + HasDataType + Resize + Send,
     {
         assert!(new_capacity > 0, "New capacity must be at least 1.");
         // Resize the buffers
@@ -240,7 +240,7 @@ fn bind_parameter_buffers_to_statement<C>(
     mut stmt: StatementRef<'_>,
 ) -> Result<(), Error>
 where
-    C: ColumnBuffer + HasDataType,
+    C: ColumnBuffer + HasDataType + Send,
 {
     stmt.reset_parameters();
     let parameter_indices = 1..(mapping.num_parameters() as u16 + 1);
