@@ -171,10 +171,15 @@ impl<'c> Connection<'c> {
         statement.into_cursor(query, params)
     }
 
-    /// Asynchronous sibling of [`Self::execute`]. Uses polling mode to be asynchronous. `sleep`
-    /// does govern the behaviour of polling, by waiting for the future in between polling. Sleep
-    /// should not be implemented using a sleep which blocks the system thread, but rather utilize
-    /// the methods provided by your async runtime. E.g.:
+    /// Executes an SQL statement asynchronously using polling mode. ⚠️**Attention**⚠️: Please read
+    /// [Asynchronous execution using polling mode](crate::guide#asynchronous-execution-using-polling-mode)
+    /// before using this functions.
+    ///
+    /// Asynchronous sibling of [`Self::execute`]. Each time the driver returns control to your
+    /// application the future returned by `sleep` is awaited, before the driver is polled again.
+    /// This avoids a busy loop. `sleep` is a synchronous factor for a future which is awaited.
+    /// `sleep` should not be implemented using a sleep which blocks the system thread, but rather
+    /// use methods provided by your asynchronous runtime. E.g.:
     ///
     /// ```
     /// use odbc_api::{Connection, IntoParameter, Error};
@@ -200,6 +205,9 @@ impl<'c> Connection<'c> {
     /// PostgerSQL, SQLite and MariaDB this worked only with Microsoft SQL Server. For code generic
     /// over every driver you may still use this. The functions will return with the correct results
     /// just be aware that may block until they are finished.
+    ///
+    /// This uses the ODBC polling mode under the hood. See:
+    /// <https://learn.microsoft.com/sql/odbc/reference/develop-app/asynchronous-execution-polling-method>
     pub async fn execute_polling(
         &self,
         query: &str,

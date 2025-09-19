@@ -323,6 +323,35 @@ fn interactive(conn: &Connection) -> io::Result<()>{
 }
 ```
 
+### Asynchronous execution using polling mode
+
+ODBC supports asynchronous execution of queries. It offers two modes: Notification and Polling.
+Notification to the authors knowlegde is only supported by the Driver Manager shipping with
+Microsoft Windows. Polling mode is also supported by unixODBC. This crate only supports the Polling
+model.
+
+⚠️**Attention**⚠️: Your driver manager (e.g. UnixODBC) may support polling mode, your driver may not.
+The function call may succeed without an error, but actually block the thread during the entire
+operation. In a manual check performed by the author with the drivers of PostgreSQL, MariaDB, SQLite
+and Microsoft SQL Server on a windows machine only the Microsoft SQL Server driver actually returned
+control to the application during statement execution. It seems asynchrnous execution is not widely
+supported.
+
+Generic applications which want to support a wide array of drivers should use one or more system
+threads executing actors using the blocking ODBC api, and communicate the query results via channels
+to the rest of the async applications.
+
+This caveat aside, using the polling mode api is the only way to execute many statements at once
+with few system threads.
+
+Functions in this crate which support asynchronous execution using polling mode:
+
+* [`crate::Connection::execute_polling`]
+* [`crate::Preallocated::into_polling`]
+
+See also the ODBC reference on polling execution:
+<https://learn.microsoft.com/sql/odbc/reference/develop-app/asynchronous-execution-polling-method>
+
 ## Fetching results
 
 ODBC offers two ways of retrieving values from a cursor over a result set. Row by row fetching and

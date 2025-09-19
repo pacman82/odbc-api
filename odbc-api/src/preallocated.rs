@@ -281,7 +281,10 @@ where
         stmt.query_timeout_sec().into_result(&stmt)
     }
 
-    /// Call this method to enable asynchronous polling mode on the statement
+    /// Call this method to enable asynchronous polling mode on the statement.
+    ///
+    /// ⚠️**Attention**⚠️: Please read
+    /// [Asynchronous execution using polling mode](crate::guide#asynchronous-execution-using-polling-mode)
     pub fn into_polling(mut self) -> Result<PreallocatedPolling<S>, Error> {
         let mut stmt = self.statement.as_stmt_ref();
         stmt.set_async_enable(true).into_result(&stmt)?;
