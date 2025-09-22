@@ -1,17 +1,17 @@
 use std::{
     collections::HashSet,
     num::NonZeroUsize,
-    str::{Utf8Error, from_utf8},
+    str::{from_utf8, Utf8Error},
 };
 
 use crate::{
-    Error, ResultSetMetadata, RowSetBuffer,
     columnar_bulk_inserter::BoundInputSlice,
     cursor::TruncationInfo,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
+    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};
@@ -125,9 +125,9 @@ where
 /// A columnar buffer intended to be bound with [crate::Cursor::bind_buffer] in order to obtain
 /// results from a cursor.
 ///
-/// Binds to the result set column wise. This is usually helpful in dataengineering or data sciense
-/// tasks. This buffer type can be used in situations there the schema of the queried data is known
-/// at compile time, as well as for generic applications which do work with wide range of different
+/// Binds to the result set column-wise. This is usually helpful in data engineering or data science
+/// tasks. This buffer type can be used in situations where the schema of the queried data is known
+/// at compile time, as well as for generic applications which work with a wide range of different
 /// data.
 ///
 /// # Example: Fetching results column wise with `ColumnarBuffer`.
@@ -187,10 +187,10 @@ where
 /// # Ok::<(), odbc_api::Error>(())
 /// ```
 ///
-/// This second examples changes two things, we do not know the schema in advance and use the
-/// SQL DataType to determine the best fit for the buffers. Also we want to do everything in a
+/// This second example changes two things: we do not know the schema in advance and use the
+/// SQL DataType to determine the best fit for the buffers. Also, we want to do everything in a
 /// function and return a `Cursor` with an already bound buffer. This approach is best if you have
-/// few and very long query, so the overhead of allocating buffers is negligible and you want to
+/// few and very long queries, so the overhead of allocating buffers is negligible and you want to
 /// have an easier time with the borrow checker.
 ///
 /// ```no_run
@@ -241,7 +241,7 @@ pub struct ColumnarBuffer<C> {
 ///
 /// # Safety
 ///
-/// Views must not allow access to unintialized / invalid rows.
+/// Views must not allow access to uninitialized / invalid rows.
 pub unsafe trait ColumnBuffer: CDataMut {
     /// Immutable view on the column data. Used in safe abstractions. User must not be able to
     /// access uninitialized or invalid memory of the buffer through this interface.
@@ -316,7 +316,7 @@ where
 /// # Example
 ///
 /// ```no_run
-/// //! A program executing a query and printing the result as csv to standard out. Requires
+/// //! A program executing a query and printing the result as CSV to standard output. Requires
 /// //! `anyhow` and `csv` crate.
 ///
 /// use anyhow::Error;
@@ -355,7 +355,7 @@ where
 ///     match connection.execute(query, params, timeout_sec)? {
 ///         Some(mut cursor) => {
 ///             // Write the column names to stdout
-///             let mut headline : Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
+///             let mut headline: Vec<String> = cursor.column_names()?.collect::<Result<_,_>>()?;
 ///             writer.write_record(headline)?;
 ///
 ///             // Use schema in cursor to initialize a text buffer large enough to hold the largest
@@ -374,7 +374,7 @@ where
 ///                             .at(col_index, row_index)
 ///                             .unwrap_or(&[])
 ///                     });
-///                     // Writes row as csv
+///                     // Writes the row as CSV
 ///                     writer.write_record(record)?;
 ///                 }
 ///             }

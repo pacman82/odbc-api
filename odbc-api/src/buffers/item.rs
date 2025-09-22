@@ -4,7 +4,7 @@ use super::{AnySlice, AnySliceMut, BufferDesc, NullableSlice, NullableSliceMut};
 use crate::Bit;
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
-/// the user to avoid matching on all possibile variants of an [`AnySlice`] in case the
+/// the user to avoid matching on all possible variants of an [`AnySlice`] in case the
 /// buffered type is known at compile time.
 ///
 /// Usually used in generic code. E.g.:

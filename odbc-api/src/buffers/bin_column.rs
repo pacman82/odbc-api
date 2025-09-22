@@ -1,9 +1,9 @@
 use crate::{
-    DataType, Error,
-    buffers::{Indicator, columnar::Resize},
+    buffers::{columnar::Resize, Indicator},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
+    DataType, Error,
 };
 
 use log::debug;
@@ -13,7 +13,7 @@ use std::{cmp::min, ffi::c_void, num::NonZeroUsize};
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of bytes up to a maximum length. Since elements of this type have variable
 /// length an additional indicator buffer is also maintained, whether the column is nullable or not.
-/// Therefore this buffer type is used for variable sized binary data whether it is nullable or not.
+/// Therefore this buffer type is used for variable-sized binary data, whether it is nullable or not.
 #[derive(Debug)]
 pub struct BinColumn {
     /// Maximum element length.

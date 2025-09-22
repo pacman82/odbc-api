@@ -1,19 +1,19 @@
 use std::{mem, ops::Deref};
 
 use crate::{
-    Error, RowSetBuffer, TruncationInfo,
     buffers::Indicator,
     handles::{CDataMut, Statement, StatementRef},
+    Error, RowSetBuffer, TruncationInfo,
 };
 
-/// [`FetchRow`]s can be bound to a [`crate::Cursor`] to enable row wise (bulk) fetching of data as
-/// opposed to column wise fetching. Since all rows are bound to a C-API in a contigious block of
-/// memory the row itself should be representable as such. Concretly that means that types like
+/// [`FetchRow`]s can be bound to a [`crate::Cursor`] to enable row-wise (bulk) fetching of data as
+/// opposed to column-wise fetching. Since all rows are bound to a C-API in a contiguous block of
+/// memory the row itself should be representable as such. Concretely that means that types like
 /// `String` can not be supported directly by [`FetchRow`]s for efficient bulk fetching, due to the
 /// fact it points to data on the heap.
 ///
-/// This trait is implement by tuples of [`FetchRowMember`]. In addition it can also be derived
-/// for structs there all members implement [`FetchRowMember`] using the `Fetch` derive macro if the
+/// This trait is implemented by tuples of [`FetchRowMember`]. In addition it can also be derived
+/// for structs where all members implement [`FetchRowMember`] using the `Fetch` derive macro if the
 /// optional derive feature is activated.
 ///
 /// # Safety
@@ -21,7 +21,7 @@ use crate::{
 /// * All the bound buffers need to be valid for the lifetime of the row.
 /// * The offsets into the memory for the field representing a column, must be constant for all
 ///   types of the row. This is required to make the row suitable for fetching in bulk, as only the
-///   first row is bound explicitly, and the bindings for all consequitive rows is calculated by
+///   first row is bound explicitly, and the bindings for all consecutive rows is calculated by
 ///   taking the size of the row in bytes multiplied by buffer index.
 pub unsafe trait FetchRow: Copy {
     /// Binds the columns of the result set to members of the row.

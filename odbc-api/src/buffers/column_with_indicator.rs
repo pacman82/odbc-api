@@ -3,7 +3,7 @@ use crate::{
     fixed_sized::{Bit, Pod},
     handles::{CData, CDataMut},
 };
-use odbc_sys::{Date, NULL_DATA, Time, Timestamp};
+use odbc_sys::{Date, Time, Timestamp, NULL_DATA};
 use std::{
     ffi::c_void,
     mem::size_of,
@@ -22,7 +22,7 @@ pub type OptI64Column = ColumnWithIndicator<i64>;
 pub type OptU8Column = ColumnWithIndicator<u8>;
 pub type OptBitColumn = ColumnWithIndicator<Bit>;
 
-/// Column buffer for fixed sized type, also binding an indicator buffer to handle NULL.
+/// Column buffer for fixed-size type, also binding an indicator buffer to handle NULL.
 #[derive(Debug)]
 pub struct ColumnWithIndicator<T> {
     values: Vec<T>,

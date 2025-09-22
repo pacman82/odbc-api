@@ -6,11 +6,11 @@ use crate::{Bit, DataType};
 
 /// Describes a column of a [`crate::buffers::ColumnarBuffer`].
 ///
-/// While related to to the [`crate::DataType`] of the column this is bound to, the Buffer type is
+/// While related to the [`crate::DataType`] of the column this is bound to, the Buffer type is
 /// different as it does not describe the type of the data source but the format the data is going
-/// to be represented in memory. While the data source is often considered to choose the buffer type
+/// to be represented in memory. While the data source is often considered to choose the buffer type,
 /// the kind of processing which is supposed to be applied to the data may be even more important
-/// if choosing the a buffer for the cursor type. E.g. if you intend to print a date to standard out
+/// when choosing a buffer for the cursor type. E.g. if you intend to print a date to standard output,
 /// it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferDesc {
