@@ -7,13 +7,13 @@ use crate::{
     handles::{AsStatementRef, HasDataType, Statement, StatementRef},
 };
 
-/// Can be used to execute a statement with bulk array paramters. Contrary to its name any statement
-/// with parameters can be executed, not only `INSERT` however inserting large amounts of data in
+/// Can be used to execute a statement with bulk array parameters. Contrary to its name any statement
+/// with parameters can be executed, not only `INSERT`; however, inserting large amounts of data in
 /// batches is the primary intended use case.
 ///
 /// Binding new buffers is quite expensive in ODBC, so the parameter buffers are reused for each
-/// batch (so the pointers bound to the statment stay valid). So we copy each batch of data into the
-/// buffers already bound first rather than binding user defined buffer. Often the data might need
+/// batch (so the pointers bound to the statement stay valid). So we copy each batch of data into the
+/// buffers already bound first rather than binding user-defined buffers. Often the data might need
 /// to be transformed anyway, so the copy is no actual overhead. Once the buffers are filled with a
 /// batch, we send the data.
 pub struct ColumnarBulkInserter<S, C> {
@@ -340,7 +340,7 @@ impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
 ///
 /// Then using array input parameters to determine the values of placeholders in an SQL statement to
 /// be executed the indices of the placeholders and the column buffers may differ. For starters the
-/// column buffer indices are zero based, thereas the parameter indices are one based. On top of
+/// column buffer indices are zero based, whereas the parameter indices are one based. On top of
 /// that more complex mappings can emerge if the same input buffer should be reused to fill in for
 /// multiple placeholders. In case the same value would appear in the query twice.
 pub trait InputParameterMapping {

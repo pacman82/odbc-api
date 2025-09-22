@@ -75,8 +75,8 @@ pub unsafe trait FetchRow: Copy {
 /// enabled.
 ///
 /// Currently supported are: `f64`, `f32`, [`odbc_sys::Date`], [`odbc_sys::Timestamp`],
-/// [`odbc_sys::Time`], `i16`, `u36`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64` and
-/// [`crate::parameter::VarCharArray`]. Fixed sized types can be wrapped in [`crate::Nullable`].
+/// [`odbc_sys::Time`], `i16`, `u16`, `i32`, `u32`, `i8`, `u8`, `Bit`, `i64`, `u64` and
+/// [`crate::parameter::VarCharArray`]. Fixed-size types can be wrapped in [`crate::Nullable`].
 pub struct RowVec<R> {
     /// A mutable pointer to num_rows_fetched is passed to the C-API. It is used to write back the
     /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated,
@@ -155,8 +155,8 @@ where
 ///
 /// # Safety
 ///
-/// Must only be implemented for types completly representable by consequtive bytes. While members
-/// can bind to Variadic types the length of the type buffering them must be known at compile time.
+/// Must only be implemented for types completely representable by consecutive bytes. While members
+/// can bind to Variadic types, the length of the type used for buffering must be known at compile time.
 /// E.g. [`crate::parameter::VarCharArray`] can also bind to Variadic types but is fixed length at
 /// compile time.
 pub unsafe trait FetchRowMember: CDataMut + Copy {

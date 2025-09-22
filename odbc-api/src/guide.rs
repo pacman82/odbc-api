@@ -4,21 +4,13 @@
 
 ## About ODBC
 
-ODBC is an open standard which allows you to connect to various data sources. Mostly these data
-sources are databases, but ODBC drivers are also available for various file types like Excel or
-CSV.
+ODBC is an open standard which allows you to connect to various data sources. Most of these data sources are databases, but ODBC drivers are also available for various file types, such as Excel or CSV.
 
-Your application does not link against a driver, but will link against an ODBC driver manager
-which must be installed on the system you intend to run the application. On modern Windows
-Platforms ODBC is always installed, on OS-X or Linux distributions a driver manager like
-[unixODBC](http://www.unixodbc.org/) must be installed.
+Your application does not link against a driver, but instead links against an ODBC driver manager, which must be installed on the system where you intend to run the application. On modern Windows platforms, ODBC is always installed; on OS-X or Linux distributions, a driver manager like [unixODBC](http://www.unixodbc.org/) must be installed.
 
-To connect to a data source a driver for the specific data source in question must be installed.
-On windows you can type 'ODBC Data Sources' into the search box to start a little GUI which
-shows you the various drivers and preconfigured data sources on your system.
+To connect to a data source, a driver for the specific data source in question must be installed. On Windows, you can type 'ODBC Data Sources' into the search box to start a little GUI which shows you the various drivers and preconfigured data sources on your system.
 
-This however is not a guide on how to configure and setup ODBC. This is a guide on how to use
-the Rust bindings for applications which want to utilize ODBC data sources.
+However, this is not a guide on how to configure and set up ODBC. This is a guide on how to use the Rust bindings for applications that want to utilize ODBC data sources.
 
 ## Quickstart
 

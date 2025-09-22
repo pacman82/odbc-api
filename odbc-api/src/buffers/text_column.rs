@@ -19,16 +19,15 @@ use widestring::U16Str;
 pub type CharColumn = TextColumn<u8>;
 
 /// This buffer uses wide characters which implies UTF-16 encoding. UTF-8 encoding is preferable for
-/// most applications, but contrary to its sibling [`crate::buffers::CharColumn`] this buffer types
+/// most applications, but contrary to its sibling [`crate::buffers::CharColumn`] this buffer type's
 /// implied encoding does not depend on the system locale.
 pub type WCharColumn = TextColumn<u16>;
 
 /// A buffer intended to be bound to a column of a cursor. Elements of the buffer will contain a
 /// variable amount of characters up to a maximum string length. Since most SQL types have a string
 /// representation this buffer can be bound to a column of almost any type, ODBC driver and driver
-/// manager should take care of the conversion. Since elements of this type have variable length an
-/// indicator buffer needs to be bound, whether the column is nullable or not, and therefore does
-/// not matter for this buffer.
+/// manager should take care of the conversion. Since elements of this type have variable length, an
+/// indicator buffer needs to be bound, whether the column is nullable or not.
 ///
 /// Character type `C` is intended to be either `u8` or `u16`.
 #[derive(Debug)]
@@ -351,14 +350,14 @@ where
     }
 }
 
-/// Allows read only access to the valid part of a text column.
+/// Allows read-only access to the valid part of a text column.
 ///
 /// You may ask, why is this type required, should we not just be able to use `&TextColumn`? The
 /// problem with `TextColumn` is, that it is a buffer, but it has no idea how many of its members
-/// are actually valid, and have been returned with the last row group of the the result set. That
+/// are actually valid, and have been returned with the last row group of the result set. That
 /// number is maintained on the level of the entire column buffer. So a text column knows the number
 /// of valid rows, in addition to holding a reference to the buffer, in order to guarantee, that
-/// every element acccessed through it, is valid.
+/// every element accessed through it, is valid.
 #[derive(Debug, Clone, Copy)]
 pub struct TextColumnView<'c, C> {
     num_rows: usize,
