@@ -92,8 +92,8 @@ pub trait Diagnostics {
     ///
     /// # Result
     ///
-    /// * `Some(rec)` - The function successfully returned diagnostic information.
-    ///   message. No diagnostic records were generated.
+    /// * `Some(rec)` - The function successfully returned diagnostic information. message. No
+    ///   diagnostic records were generated.
     /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
     ///   the specified Handle. The function also returns `NoData` for any positive `rec_number` if
     ///   there are no diagnostic records available.
@@ -121,10 +121,10 @@ pub trait Diagnostics {
     ///
     /// # Result
     ///
-    /// * `Some(rec)` - The function successfully returned diagnostic information.
-    ///   message. No diagnostic records were generated. To determine that a truncation occurred,
-    ///   the application must compare the buffer length to the actual number of bytes available,
-    ///   which is found in [`self::DiagnosticResult::text_length]`.
+    /// * `Some(rec)` - The function successfully returned diagnostic information. message. No
+    ///   diagnostic records were generated. To determine that a truncation occurred, the
+    ///   application must compare the buffer length to the actual number of bytes available, which
+    ///   is found in [`self::DiagnosticResult::text_length]`.
     /// * `None` - `rec_number` was greater than the number of diagnostic records that existed for
     ///   the specified Handle. The function also returns `NoData` for any positive `rec_number` if
     ///   there are no diagnostic records available.
@@ -145,16 +145,17 @@ pub trait Diagnostics {
 
                 // Check if the buffer has been large enough to hold the message.
                 if text_length > message_text.len() {
-                    // The `message_text` buffer was too small to hold the requested diagnostic message.
-                    // No diagnostic records were generated. To determine that a truncation occurred,
-                    // the application must compare the buffer length to the actual number of bytes
+                    // The `message_text` buffer was too small to hold the requested diagnostic
+                    // message. No diagnostic records were generated. To
+                    // determine that a truncation occurred, the application
+                    // must compare the buffer length to the actual number of bytes
                     // available, which is found in `DiagnosticResult::text_length`.
 
                     // Resize with +1 to account for terminating zero
                     message_text.resize(text_length + 1, 0);
 
-                    // Call diagnostics again with the larger buffer. Should be a success this time if
-                    // driver isn't buggy.
+                    // Call diagnostics again with the larger buffer. Should be a success this time
+                    // if driver isn't buggy.
                     result = self.diagnostic_record(rec_number, message_text).unwrap();
                 }
                 // Now `message_text` has been large enough to hold the entire message.

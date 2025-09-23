@@ -3,27 +3,27 @@ use std::{collections::HashSet, ffi::c_void};
 use odbc_sys::{CDataType, Date, Time, Timestamp};
 
 use crate::{
+    Bit, DataType, Error,
     buffers::columnar::Resize,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
-    Bit, DataType, Error,
 };
 
 use super::{
+    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
+    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
     bin_column::BinColumnSliceMut,
     column_with_indicator::{
-        OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI16Column, OptI32Column,
-        OptI64Column, OptI8Column, OptTimeColumn, OptTimestampColumn, OptU8Column,
+        OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI8Column, OptI16Column,
+        OptI32Column, OptI64Column, OptTimeColumn, OptTimestampColumn, OptU8Column,
     },
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
-    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
-    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
 };
 
-/// Since buffer shapes are the same for all time/timestamp types independent of the precision and we do
-/// not know the precise SQL type. In order to still be able to bind time/timestamp buffers as
+/// Since buffer shapes are the same for all time/timestamp types independent of the precision and
+/// we do not know the precise SQL type. In order to still be able to bind time/timestamp buffers as
 /// input without requiring the user to separately specify the precision, we declare 100 nanosecond
 /// precision. This was the highest precision still supported by MSSQL in the tests.
 const DEFAULT_TIME_PRECISION: i16 = 7;

@@ -208,10 +208,10 @@ pub trait ResultSetMetadata: AsStatementRef {
 ///
 /// # Parameters
 ///
-/// * `metadata`: Used to query the display size for each column of the row set. For character
-///   data the length in characters is multiplied by 4 in order to have enough space for 4 byte
-///   utf-8 characters. This is a pessimization for some data sources (e.g. SQLite 3) which do
-///   interpret the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
+/// * `metadata`: Used to query the display size for each column of the row set. For character data
+///   the length in characters is multiplied by 4 in order to have enough space for 4 byte utf-8
+///   characters. This is a pessimization for some data sources (e.g. SQLite 3) which do interpret
+///   the size of a `VARCHAR(5)` column as 5 bytes rather than 5 characters.
 pub fn utf8_display_sizes(
     metadata: &mut impl ResultSetMetadata,
 ) -> Result<impl Iterator<Item = Result<Option<NonZeroUsize>, Error>> + '_, Error> {

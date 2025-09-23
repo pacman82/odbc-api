@@ -60,9 +60,9 @@ pub struct ConcurrentBlockCursor<C, B> {
     /// In this case either an error has been reported to the user, or the cursor is stored in
     /// `cursor`.
     fetch_thread: Option<JoinHandle<Result<C, Error>>>,
-    /// Only `Some`, if the cursor has been consumed succesfully and `fetch_thread` has been joined.
-    /// Can only be `Some` if `fetch_thread` is `None`. If both `fetch_thread` and `cursor` are
-    /// `None`, it is implied that `fetch_thread` returned an error joining.
+    /// Only `Some`, if the cursor has been consumed succesfully and `fetch_thread` has been
+    /// joined. Can only be `Some` if `fetch_thread` is `None`. If both `fetch_thread` and
+    /// `cursor` are `None`, it is implied that `fetch_thread` returned an error joining.
     cursor: Option<C>,
 }
 

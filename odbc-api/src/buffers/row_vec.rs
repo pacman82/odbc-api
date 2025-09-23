@@ -1,9 +1,9 @@
 use std::{mem, ops::Deref};
 
 use crate::{
+    Error, RowSetBuffer, TruncationInfo,
     buffers::Indicator,
     handles::{CDataMut, Statement, StatementRef},
-    Error, RowSetBuffer, TruncationInfo,
 };
 
 /// [`FetchRow`]s can be bound to a [`crate::Cursor`] to enable row-wise (bulk) fetching of data as
@@ -82,8 +82,8 @@ pub struct RowVec<R> {
     /// number of fetched rows. `num_rows` is heap allocated, so the pointer is not invalidated,
     /// even if the `ColumnarBuffer` instance is moved in memory.
     num_rows: Box<usize>,
-    /// Here we actually store the rows. The length of `rows` is the capacity of the `RowWiseBuffer`
-    /// instance. It must not be 0.
+    /// Here we actually store the rows. The length of `rows` is the capacity of the
+    /// `RowWiseBuffer` instance. It must not be 0.
     rows: Vec<R>,
 }
 
@@ -156,9 +156,9 @@ where
 /// # Safety
 ///
 /// Must only be implemented for types completely representable by consecutive bytes. While members
-/// can bind to Variadic types, the length of the type used for buffering must be known at compile time.
-/// E.g. [`crate::parameter::VarCharArray`] can also bind to Variadic types but is fixed length at
-/// compile time.
+/// can bind to Variadic types, the length of the type used for buffering must be known at compile
+/// time. E.g. [`crate::parameter::VarCharArray`] can also bind to Variadic types but is fixed
+/// length at compile time.
 pub unsafe trait FetchRowMember: CDataMut + Copy {
     /// `Some` if the indicator indicates truncation. Always `None` for fixed sized types.
     fn find_truncation(&self, buffer_index: usize) -> Option<TruncationInfo> {

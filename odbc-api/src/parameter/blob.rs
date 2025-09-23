@@ -239,9 +239,9 @@ unsafe impl Blob for BlobSlice<'_> {
 /// Buffer of the [`std::io::BufRead`] implementation, so the batch size is likely equal to that
 /// capacity.
 pub struct BlobRead<R> {
-    /// `true` if `size` is to interpreted as the exact ammount of bytes contained in the reader, at
-    /// the time of binding it as a parameter. `false` if `size` is to be interpreted as an upper
-    /// bound.
+    /// `true` if `size` is to interpreted as the exact ammount of bytes contained in the reader,
+    /// at the time of binding it as a parameter. `false` if `size` is to be interpreted as an
+    /// upper bound.
     exact: bool,
     size: usize,
     consume: usize,

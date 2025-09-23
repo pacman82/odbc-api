@@ -1,17 +1,17 @@
 use std::{
     collections::HashSet,
     num::NonZeroUsize,
-    str::{from_utf8, Utf8Error},
+    str::{Utf8Error, from_utf8},
 };
 
 use crate::{
+    Error, ResultSetMetadata, RowSetBuffer,
     columnar_bulk_inserter::BoundInputSlice,
     cursor::TruncationInfo,
     fixed_sized::Pod,
     handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
-    Error, ResultSetMetadata, RowSetBuffer,
 };
 
 use super::{Indicator, TextColumn};

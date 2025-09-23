@@ -5196,7 +5196,8 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
 
 /// Learning test what display size drivers report for JSON columns
 // #[test_case(MSSQL, "@json VARCHAR(max)", None; "Microsoft SQL Server")] // Unknown data type JSON
-// #[test_case(MARIADB, Some(1073741823); "Maria DB")] // Different size reported if MariaDB runs on windows
+// #[test_case(MARIADB, Some(1073741823); "Maria DB")] // Different size reported if MariaDB runs on
+// windows
 #[test_case(SQLITE_3, Some(255); "SQLite 3")]
 #[test_case(POSTGRES, Some(255); "PostgreSQL")]
 fn json_column_display_size(profile: &Profile, expected_display_size: Option<usize>) {

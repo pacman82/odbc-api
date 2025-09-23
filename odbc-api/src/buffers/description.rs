@@ -8,10 +8,10 @@ use crate::{Bit, DataType};
 ///
 /// While related to the [`crate::DataType`] of the column this is bound to, the Buffer type is
 /// different as it does not describe the type of the data source but the format the data is going
-/// to be represented in memory. While the data source is often considered to choose the buffer type,
-/// the kind of processing which is supposed to be applied to the data may be even more important
-/// when choosing a buffer for the cursor type. E.g. if you intend to print a date to standard output,
-/// it may be more reasonable to bind it as `Text` rather than `Date`.
+/// to be represented in memory. While the data source is often considered to choose the buffer
+/// type, the kind of processing which is supposed to be applied to the data may be even more
+/// important when choosing a buffer for the cursor type. E.g. if you intend to print a date to
+/// standard output, it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferDesc {
     /// Variable sized binary buffer, holding up to `length` bytes per value.
@@ -44,68 +44,68 @@ pub enum BufferDesc {
     },
     /// 64 bit floating point
     F64 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// 32 bit floating point
     F32 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Describes a buffer holding [`crate::sys::Date`] values.
     Date {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Describes a buffer holding [`crate::sys::Time`] values.
     Time {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Describes a buffer holding [`crate::sys::Timestamp`] values.
     Timestamp {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Signed 8 Bit integer
     I8 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Signed 16 Bit integer
     I16 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Signed 32 Bit integer
     I32 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Signed 64 Bit integer
     I64 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Unsigned 8 Bit integer
     U8 {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
     /// Can either be zero or one
     Bit {
-        /// This indicates whether or not the buffer will be able to represent NULL values. This will
-        /// cause an indicator buffer to be bound.
+        /// This indicates whether or not the buffer will be able to represent NULL values. This
+        /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
 }

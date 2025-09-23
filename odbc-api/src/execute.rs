@@ -12,9 +12,9 @@ use crate::{
 ///
 /// # Parameters
 ///
-/// * `lazy_statement`: Factory for statement handle used to execute the query. We pass the
-///   pass the statement lazily in order to avoid unnecessary allocating a statement handle in case
-///   the parameter set is empty.
+/// * `lazy_statement`: Factory for statement handle used to execute the query. We pass the pass the
+///   statement lazily in order to avoid unnecessary allocating a statement handle in case the
+///   parameter set is empty.
 /// * `query`: SQL query to be executed. If `None` it is a assumed a prepared query is to be
 ///   executed.
 /// * `params`: The parameters bound to the statement before query execution.
@@ -98,8 +98,8 @@ where
             stmt.execute()
         };
 
-        // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
-        // execute.
+        // If delayed parameters (e.g. input streams) are bound we might need to put data in order
+        // to execute.
         let need_data = result
             .on_success(|| false)
             .on_no_data(|| false)
@@ -151,8 +151,8 @@ where
             wait_for(|| stmt.execute(), &mut sleep).await
         };
 
-        // If delayed parameters (e.g. input streams) are bound we might need to put data in order to
-        // execute.
+        // If delayed parameters (e.g. input streams) are bound we might need to put data in order
+        // to execute.
         let need_data = result
             .on_success(|| false)
             .on_no_data(|| false)

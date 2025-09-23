@@ -105,9 +105,9 @@ where
     ///
     /// # Safety
     ///
-    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
-    ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
-    ///   can happen after when truncation occurs then writing into a buffer.
+    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be a
+    ///   text buffer with a cell those indiactor value exceeds the maximum element length. This can
+    ///   happen after when truncation occurs then writing into a buffer.
     pub unsafe fn unchecked_bind_columnar_array_parameters<C>(
         self,
         parameter_buffers: Vec<C>,

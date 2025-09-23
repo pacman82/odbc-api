@@ -115,8 +115,8 @@ pub fn resize_to_fit_without_tz(buffer: &mut Vec<SqlChar>, required_binary_lengt
 /// conversion to narrow method calls, or they are converted to UTF-16, before passed to the wide
 /// methods.
 pub struct SqlText<'a> {
-    /// In case we use wide methods we need to convert to UTF-16. We'll take ownership of the buffer
-    /// here.
+    /// In case we use wide methods we need to convert to UTF-16. We'll take ownership of the
+    /// buffer here.
     #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
     text: U16String,
     /// We include the lifetime in the declaration of the type still, so the borrow checker

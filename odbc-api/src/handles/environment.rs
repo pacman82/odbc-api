@@ -163,8 +163,8 @@ impl Environment {
     ///   ([`FetchOrientation::First`]).
     /// * `buffer_description`: In case `true` is returned this buffer is filled with the
     ///   description of the driver.
-    /// * `buffer_attributes`: In case `true` is returned this buffer is filled with a list of
-    ///   key value attributes. E.g.: `"key1=value1\0key2=value2\0\0"`.
+    /// * `buffer_attributes`: In case `true` is returned this buffer is filled with a list of key
+    ///   value attributes. E.g.: `"key1=value1\0key2=value2\0\0"`.
     ///
     ///  Use [`Environment::drivers_buffer_len`] to determine buffer lengths.
     ///

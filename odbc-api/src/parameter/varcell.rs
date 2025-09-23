@@ -24,8 +24,8 @@ use super::CElement;
 ///
 /// * [`Self::TERMINATING_ZEROES`] is used to calculate buffer offsets. The number of terminating
 ///   zeroes is expressed in `BufferElement`s.
-/// * [`Self::C_DATA_TYPE`] is used to bind parameters. Providing wrong values like e.g. a fixed length
-///   types, would cause even a correctly implemented odbc driver to access invalid memory.
+/// * [`Self::C_DATA_TYPE`] is used to bind parameters. Providing wrong values like e.g. a fixed
+///   length types, would cause even a correctly implemented odbc driver to access invalid memory.
 pub unsafe trait VarKind: Send {
     /// Either `u8` for binary and narrow text or `u16` for wide text. Wide text could also be
     /// represented as `u8`, after all everything is bytes. This makes it difficult though to create
@@ -261,7 +261,6 @@ where
     /// }
     ///
     /// fn process_text_slice(text: &[u8]) { /*...*/}
-    ///
     /// ```
     ///
     /// ```
@@ -282,7 +281,6 @@ where
     /// }
     ///
     /// fn process_slice(text: &[u8]) { /*...*/}
-    ///
     /// ```
     pub fn is_complete(&self) -> bool {
         let slice = self.buffer.borrow();

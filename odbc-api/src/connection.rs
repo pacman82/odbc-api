@@ -172,8 +172,9 @@ impl<'c> Connection<'c> {
     }
 
     /// Executes an SQL statement asynchronously using polling mode. ⚠️**Attention**⚠️: Please read
-    /// [Asynchronous execution using polling mode](crate::guide#asynchronous-execution-using-polling-mode)
-    /// before using this functions.
+    /// [Asynchronous execution using polling
+    /// mode](crate::guide#asynchronous-execution-using-polling-mode) before using this
+    /// functions.
     ///
     /// Asynchronous sibling of [`Self::execute`]. Each time the driver returns control to your
     /// application the future returned by `sleep` is awaited, before the driver is polled again.

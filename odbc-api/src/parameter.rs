@@ -105,7 +105,8 @@
 //! ## Passing an arbitrary number of parameters
 //!
 //! Not always do we know the number of required parameters at compile time. This might be the case
-//! if the query itself is generated from user input. Luckily slices of parameters are supported, too.
+//! if the query itself is generated from user input. Luckily slices of parameters are supported,
+//! too.
 //!
 //! ```no_run
 //! use odbc_api::{Environment, ConnectionOptions};
@@ -342,9 +343,9 @@
 //!
 //! Conversion for `&str` is not too expensive either. Just an integer more on the stack. Wait, the
 //! type you wanted to use, but that I have conveniently not chosen in this example still does not
-//! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can usually be
-//! implemented entirely in safe code, and is a suitable spot to enable support for your custom
-//! types.
+//! work? Well, in that case please open an issue or a pull request. [`crate::IntoParameter`] can
+//! usually be implemented entirely in safe code, and is a suitable spot to enable support for your
+//! custom types.
 mod blob;
 mod c_string;
 mod varcell;

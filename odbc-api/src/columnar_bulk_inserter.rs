@@ -7,15 +7,15 @@ use crate::{
     handles::{AsStatementRef, HasDataType, Statement, StatementRef},
 };
 
-/// Can be used to execute a statement with bulk array parameters. Contrary to its name any statement
-/// with parameters can be executed, not only `INSERT`; however, inserting large amounts of data in
-/// batches is the primary intended use case.
+/// Can be used to execute a statement with bulk array parameters. Contrary to its name any
+/// statement with parameters can be executed, not only `INSERT`; however, inserting large amounts
+/// of data in batches is the primary intended use case.
 ///
 /// Binding new buffers is quite expensive in ODBC, so the parameter buffers are reused for each
-/// batch (so the pointers bound to the statement stay valid). So we copy each batch of data into the
-/// buffers already bound first rather than binding user-defined buffers. Often the data might need
-/// to be transformed anyway, so the copy is no actual overhead. Once the buffers are filled with a
-/// batch, we send the data.
+/// batch (so the pointers bound to the statement stay valid). So we copy each batch of data into
+/// the buffers already bound first rather than binding user-defined buffers. Often the data might
+/// need to be transformed anyway, so the copy is no actual overhead. Once the buffers are filled
+/// with a batch, we send the data.
 pub struct ColumnarBulkInserter<S, C> {
     // We maintain the invariant that the parameters are bound to the statement that parameter set
     // size reflects the number of valid rows in the batch.
@@ -43,9 +43,9 @@ where
     /// # Safety
     ///
     /// * Statement is expected to be a perpared statement.
-    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be
-    ///   a text buffer with a cell those indiactor value exceeds the maximum element length. This
-    ///   can happen after when truncation occurs then writing into a buffer.
+    /// * Parameters must all be valid for insertion. An example for an invalid parameter would be a
+    ///   text buffer with a cell those indiactor value exceeds the maximum element length. This can
+    ///   happen after when truncation occurs then writing into a buffer.
     pub unsafe fn new(
         mut statement: S,
         parameters: Vec<C>,

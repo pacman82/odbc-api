@@ -50,8 +50,8 @@ pub struct Environment {
     /// ODBC environments use interior mutability to maintain iterator state then iterating over
     /// driver and / or data source information. The environment is otherwise protected by interior
     /// synchronization mechanism, yet in order to be able to access to iterate over information
-    /// using a shared reference we need to protect the interior iteration state with a mutex of its
-    /// own.
+    /// using a shared reference we need to protect the interior iteration state with a mutex of
+    /// its own.
     /// The environment is also mutable with regards to Errors, which are accessed over the handle.
     /// If multiple fallible operations are executed in parallel, we need the mutex to ensure the
     /// errors are fetched by the correct thread.
@@ -70,8 +70,8 @@ impl Environment {
     /// it in ODBC instead.
     /// Connection Pooling is governed by two attributes. The most important one is the connection
     /// pooling scheme which is `Off` by default. It must be set even before you create your ODBC
-    /// environment. It is global mutable state on the process level. Setting it in Rust is therefore
-    /// unsafe.
+    /// environment. It is global mutable state on the process level. Setting it in Rust is
+    /// therefore unsafe.
     ///
     /// The other one is changed via [`Self::set_connection_pooling_matching`]. It governs how a
     /// connection is choosen from the pool. It defaults to strict which means the `Connection` you
@@ -307,8 +307,8 @@ impl Environment {
     ///   time of this writing:
     ///   * Maria DB crashes with STATUS_TACK_BUFFER_OVERRUN
     ///   * SQLite does not change the output buffer at all and does not indicate truncation.
-    /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete
-    ///   the provided connection string. For arguments other than
+    /// * `driver_completion`: Specifies how and if the driver manager uses a prompt to complete the
+    ///   provided connection string. For arguments other than
     ///   [`crate::DriverCompleteOption::NoPrompt`] this method is going to create a message only
     ///   parent window for you on windows. On other platform this method is going to panic. In case
     ///   you want to provide your own parent window please use [`Self::driver_connect_with_hwnd`].

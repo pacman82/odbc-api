@@ -63,8 +63,9 @@ pub enum DataType {
     Double,
     /// `Varchar(n)`. Variable length character string.
     Varchar {
-        /// Maximum length of the character string (excluding terminating zero). Whether this length
-        /// is to be interpreted as bytes or Codepoints is ambigious and depends on the datasource.
+        /// Maximum length of the character string (excluding terminating zero). Whether this
+        /// length is to be interpreted as bytes or Codepoints is ambigious and depends on
+        /// the datasource.
         ///
         /// E.g. For Microsoft SQL Server this is the binary length, theras for a MariaDB this
         /// refers to codepoints in case of UTF-8 encoding. If you need the binary size query the
@@ -107,16 +108,16 @@ pub enum DataType {
     /// indicates the seconds precision.
     Time {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
-        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and Nanoseconds
-        /// by 9.
+        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and
+        /// Nanoseconds by 9.
         precision: i16,
     },
     /// `Timestamp`. Year, month, day, hour, minute, and second fields, with valid values as
     /// defined for the Date and Time variants.
     Timestamp {
         /// Number of radix ten digits used to represent the timestamp after the decimal points.
-        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and Nanoseconds
-        /// by 9.
+        /// E.g. Milliseconds would be represented by precision 3, Microseconds by 6 and
+        /// Nanoseconds by 9.
         precision: i16,
     },
     /// `BIGINT`. Exact numeric value with precision 19 (if signed) or 20 (if unsigned) and scale 0
