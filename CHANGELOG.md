@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [19.0.2](https://github.com/pacman82/odbc-api/compare/v19.0.1...v19.0.2) - 2025-09-23
+
+### Other
+
+- Fix mismatched lifetime syntaxes
+- formatting
+- Fix more typos and grammar issues
+- Fix typos and grammar issues
+- Fix typos in Readme.md
+- *(deps)* bump anyhow from 1.0.99 to 1.0.100
+
 ## [19.0.1](https://github.com/pacman82/odbc-api/compare/v19.0.0...v19.0.1) - 2025-09-19
 
 ### Other
