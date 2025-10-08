@@ -79,6 +79,14 @@ iodbc = ["odbc_version_3_5", "narrow", "odbc-sys/iodbc"]
 # Allows deriving custom implementations of `FetchRow` for row wise bulk fetching.
 derive = ["dep:odbc-api-derive"]
 
+# Use this to build unixODBC as a dependency of odbc-sys and link statically againts it. This can
+# make installation of your artifact easier, because users may not need to install a driver manager.
+# However, please note that unixODBC is published under an LGPL license, so by statically linking
+# you need to take the implications for your artifact into account. `odbc-api` itself is MIT
+# licensed. In order to build unixODBC it draws in an optional dependency containing the unixODBC
+# source code, which is licensed under the same terms as unixODBC itself.
+vendored-unix-odbc = ["odbc-sys/vendored-unix-odbc"]
+
 default = ["odbc_version_3_80", "prompt"]
 
 # ODBC offers an interface to prompt the user for a connection string. This requires passing a
@@ -93,7 +101,7 @@ prompt = ["dep:winit"]
 
 [dependencies]
 # Low level bindings to ODBC API calls into libodbc.so
-odbc-sys = { version = "0.27", default-features = false }
+odbc-sys = { version = "0.27.1", default-features = false }
 # Used to generate code for the error type
 thiserror = "2.0.17"
 # Used as a log frontend to emit log messages for applications

@@ -22,12 +22,12 @@ jobs:
       # Extract all files from installer
       - name: Install SQLite drivers
         run: |
-         Invoke-WebRequest http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe -OutFile C:\sqliteodbc.exe
-         7z x C:\sqliteodbc.exe -o"C:\Program Files\SQLite ODBC Driver for Win64"
-         REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" /v "SQLite3 ODBC Driver" /t REG_SZ /d Installed /f
-         REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Driver" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
-         REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Setup" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
-         REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "UsageCount" /t REG_DWORD /d 1
+          Invoke-WebRequest http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe -OutFile C:\sqliteodbc.exe
+          7z x C:\sqliteodbc.exe -o"C:\Program Files\SQLite ODBC Driver for Win64"
+          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" /v "SQLite3 ODBC Driver" /t REG_SZ /d Installed /f
+          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Driver" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
+          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Setup" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
+          REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "UsageCount" /t REG_DWORD /d 1
 
       # selecting a toolchain either by action or manual `rustup` calls should happen
       # before the plugin, as the cache uses the current rustc version as its cache key
@@ -117,10 +117,45 @@ jobs:
           cargo new test-compilation
           cd test-compilation
           cargo add odbc-api --path ../odbc-api/odbc-api --no-default-features --features odbc_version_3_5
-          cargo build 
+          cargo build
+
+  vendored_unix_odbc_linux:
+    name: Check build with vendored unixODBC on Linux
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: My@Test@Password1
+
+      postgres:
+        image: postgres:18
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install latests rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+      - name: test
+        run: |
+          cargo test --features vendored-unix-odbc -- --skip maria_db
 
   dependabot:
-    needs: [linux,win64,osx,win32]
+    needs: [linux, win64, osx, win32]
     permissions:
       pull-requests: write
       contents: write
