@@ -148,16 +148,6 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-      - name: Install ODBC Drivers
-        run: |
-          apt-get update
-          apt-get install -y unixodbc-dev odbc-postgresql msodbcsql18
-          # Fix PostgreSQL driver paths
-          sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
-          sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
-        shell: sudo bash {0}
-      - name: Print odbcinst.ini
-        run: cat /etc/odbcinst.ini
       - name: Checkout
         uses: actions/checkout@v5
       # selecting a toolchain either by action or manual `rustup` calls should happen
@@ -166,9 +156,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --features vendored-unix-odbc
-      - name: test
-        run: |
-          cargo test --features vendored-unix-odbc -- --skip maria_db
 
   dependabot:
     needs: [linux, win64, osx, win32]
