@@ -1102,9 +1102,9 @@ dependencies = [
 
 [[package]]
 name = "odbc-sys"
-version = "0.27.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a4b31e086f9f10770ac7c9f81f40d6101692163480dbfa4ee425ded91bdc89d"
+checksum = "c2127e7f596b99095fe8ebb03f9fd52e32fd01a28e66eac41c1e637f963d488e"
 
 [[package]]
 name = "once_cell"
