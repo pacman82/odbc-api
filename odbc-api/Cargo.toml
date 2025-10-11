@@ -1,6 +1,6 @@
 [package]
 name = "odbc-api"
-version = "19.0.2"
+version = "19.1.0"
 authors = ["Markus Klein"]
 edition = "2024"
 license = "MIT"
@@ -109,7 +109,7 @@ log = "0.4.28"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.2.1"
 atoi = "2.0.0"
-odbc-api-derive = { version = "12.0.4", path = "../derive", optional = true }
+odbc-api-derive = { version = "12.0.5", path = "../derive", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default
