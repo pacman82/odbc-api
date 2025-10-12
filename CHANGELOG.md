@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [19.1.0](https://github.com/pacman82/odbc-api/compare/v19.0.2...v19.1.0) - 2025-10-12
+
+### Added
+
+- Adds compile time feature `vendored-unix-odbc`
+
+### Other
+
+- *(deps)* bump widestring from 1.2.0 to 1.2.1
+- *(deps)* bump thiserror from 2.0.16 to 2.0.17
+- *(deps)* bump tempfile from 3.22.0 to 3.23.0
+- *(deps)* bump quote from 1.0.40 to 1.0.41
+
 ## [19.0.2](https://github.com/pacman82/odbc-api/compare/v19.0.1...v19.0.2) - 2025-09-23
 
 ### Other
