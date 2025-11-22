@@ -6114,15 +6114,7 @@ fn insert_numeric_struct(profile: &Profile) {
         sign: 1,
         val: 12345u128.to_le_bytes(),
     };
-    let input = WithDataType {
-        value: input,
-        data_type: DataType::Numeric {
-            precision: 5,
-            scale: 3,
-        },
-    };
-    conn.execute(&table.sql_insert(), &dbg!(input), None)
-        .unwrap();
+    conn.execute(&table.sql_insert(), &input, None).unwrap();
 
     // Then
     let content = table.content_as_string(&conn);

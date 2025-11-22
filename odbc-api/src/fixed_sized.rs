@@ -143,6 +143,16 @@ impl_input_fixed_sized!(i8, DataType::TinyInt);
 impl_input_fixed_sized!(Bit, DataType::Bit);
 impl_input_fixed_sized!(i64, DataType::BigInt);
 
+/// Numerics relational type takes precision and scale of the instance into account.
+impl HasDataType for Numeric {
+    fn data_type(&self) -> DataType {
+        DataType::Numeric {
+            precision: self.precision as usize,
+            scale: self.scale as i16,
+        }
+    }
+}
+
 // Support for fixed size types, which are not unsigned. Time, Date and timestamp types could be
 // supported, implementation DataType would need to take an instance into account.
 
