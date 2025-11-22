@@ -16,10 +16,10 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
-    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions,
-    ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
-    IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata,
-    RowSetBuffer, TruncationInfo, U16Str, U16String,
+    Bit, ColumnDescription, ColumnarBulkInserter, ConcurrentBlockCursor, Connection,
+    ConnectionOptions, ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut,
+    InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
+    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
         BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
         TextRowSet,
@@ -6115,6 +6115,50 @@ fn insert_numeric_struct(profile: &Profile) {
     // Then
     let content = table.content_as_string(&conn);
     assert_eq!("12.345", content);
+}
+
+// #[test_case(MSSQL; "Microsoft SQL Server")] Numeric value out of range
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_insert_numeric_struct(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
+    let stmt = conn.prepare(&table.sql_insert()).unwrap();
+
+    // When
+    let inputs = [12345u128, 23456, 34567]
+        .into_iter()
+        .map(|num| Numeric {
+            precision: 5,
+            scale: 3,
+            sign: 1,
+            val: num.to_le_bytes(),
+        })
+        .collect::<Vec<_>>();
+    let mut inserter = unsafe {
+        ColumnarBulkInserter::new(
+            stmt,
+            vec![WithDataType {
+                value: inputs,
+                data_type: DataType::Numeric {
+                    precision: 5,
+                    scale: 3,
+                },
+            }],
+            InOrder::new(1),
+        )
+        .unwrap()
+    };
+    inserter.set_num_rows(3);
+    inserter.execute().unwrap();
+
+    // Then
+    let content = table.content_as_string(&conn);
+    assert_eq!("12.345\n23.456\n34.567", content);
 }
 
 /// Learning test to see how scrolling cursors behave
