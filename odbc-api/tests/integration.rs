@@ -6091,12 +6091,42 @@ fn fetch_decimal_as_numeric_struct_using_bind_col(profile: &Profile) {
     assert_eq!(3, target.scale);
     // 1 is positive, 0 is negative
     assert_eq!(1, target.sign);
-    // Hex representation of 25212 is 627C
-    // First character contains '7C' -> C ~ 12, 7 ~ 7; 12 + 16 * 7 = 124
-    assert_eq!(124, target.val[0]);
-    // Second character encodes '62' -> 2 + 16 * 6 = 98
-    assert_eq!(98, target.val[1]);
-    assert_eq!(0, target.val[2]);
+    let val = u128::from_le_bytes(target.val);
+    assert_eq!(25212, val);
+}
+
+// #[test_case(MSSQL; "Microsoft SQL Server")] Numeric value out of range. Current working
+// hypothesis is that we need to set the scale in the APD, as it does work with scale set to `0`.
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
+#[test_case(POSTGRES; "PostgreSQL")]
+fn insert_numeric_struct(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let input = Numeric {
+        precision: 5,
+        scale: 3,
+        sign: 1,
+        val: 12345u128.to_le_bytes(),
+    };
+    let input = WithDataType {
+        value: input,
+        data_type: DataType::Numeric {
+            precision: 5,
+            scale: 3,
+        },
+    };
+    conn.execute(&table.sql_insert(), &dbg!(input), None)
+        .unwrap();
+
+    // Then
+    let content = table.content_as_string(&conn);
+    assert_eq!("12.345", content);
 }
 
 /// Learning test to see how scrolling cursors behave
