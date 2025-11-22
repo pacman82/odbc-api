@@ -6030,12 +6030,7 @@ fn fetch_decimal_as_numeric_struct_using_get_data(profile: &Profile) {
     assert_eq!(3, target.0.scale);
     // 1 is positive, 0 is negative
     assert_eq!(1, target.0.sign);
-    // Hex representation of 25212 is 627C
-    // First character contains '7C' -> C ~ 12, 7 ~ 7; 12 + 16 * 7 = 124
-    assert_eq!(124, target.0.val[0]);
-    // Second character encodes '62' -> 2 + 16 * 6 = 98
-    assert_eq!(98, target.0.val[1]);
-    assert_eq!(0, target.0.val[2]);
+    assert_eq!(25212, u128::from_le_bytes(target.0.val));
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -6106,6 +6101,7 @@ fn insert_numeric_struct(profile: &Profile) {
         .column_types(&["DECIMAL(5,3)"])
         .build(profile)
         .unwrap();
+    let mut stmt = conn.preallocate().unwrap();
 
     // When
     let input = Numeric {
@@ -6114,7 +6110,7 @@ fn insert_numeric_struct(profile: &Profile) {
         sign: 1,
         val: 12345u128.to_le_bytes(),
     };
-    conn.execute(&table.sql_insert(), &input, None).unwrap();
+    stmt.execute(&table.sql_insert(), &input).unwrap();
 
     // Then
     let content = table.content_as_string(&conn);
