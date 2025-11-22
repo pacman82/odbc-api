@@ -1501,10 +1501,10 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
         .unwrap();
 
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let parameter_buffers = vec![WithDataType {
-        value: TextColumn::try_new(4, 5).unwrap(),
-        data_type: DataType::Integer,
-    }];
+    let parameter_buffers = vec![WithDataType::new(
+        TextColumn::try_new(4, 5).unwrap(),
+        DataType::Integer,
+    )];
     // Safety: all values in the buffer are safe for insertion
     let index_mapping = InOrder::new(parameter_buffers.len());
     let mut prebound = unsafe {
@@ -1538,10 +1538,7 @@ fn insert_str_as_sql_integer(profile: &Profile) {
         .unwrap();
     let insert_sql = table.sql_insert();
 
-    let parameter = WithDataType {
-        value: "42".into_parameter(),
-        data_type: DataType::Integer,
-    };
+    let parameter = WithDataType::new("42".into_parameter(), DataType::Integer);
     conn.execute(&insert_sql, &parameter, None).unwrap();
 
     // Bind buffer and insert values.
@@ -6142,13 +6139,13 @@ fn bulk_insert_numeric_struct(profile: &Profile) {
     let mut inserter = unsafe {
         ColumnarBulkInserter::new(
             stmt,
-            vec![WithDataType {
-                value: inputs,
-                data_type: DataType::Numeric {
+            vec![WithDataType::new(
+                inputs,
+                DataType::Numeric {
                     precision: 5,
                     scale: 3,
                 },
-            }],
+            )],
             InOrder::new(1),
         )
         .unwrap()

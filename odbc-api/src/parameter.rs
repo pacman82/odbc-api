@@ -547,10 +547,8 @@ pub struct Out<'a, T>(pub &'a mut T);
 /// #    Connection, Cursor, DataType, parameter::WithDataType, IntoParameter, sys::Timestamp
 /// # };
 /// # fn given(cursor: &mut impl Cursor, connection: Connection<'_>) {
-/// let mut ts = WithDataType {
-///     value: Timestamp::default(),
-///     data_type: DataType::Timestamp { precision: 0 },
-/// };
+/// let mut ts = WithDataType::new(Timestamp::default(), DataType::Timestamp { precision: 0 });
+///
 /// connection.execute(
 ///     "INSERT INTO Posts (text, timestamps) VALUES (?,?)",
 ///     (&"Hello".into_parameter(), &ts.into_parameter()),
@@ -565,6 +563,14 @@ pub struct WithDataType<T> {
     /// The SQL type this value is supposed to map onto. What exactly happens with this information
     /// is up to the ODBC driver in use.
     pub data_type: DataType,
+}
+
+impl<T> WithDataType<T> {
+    /// Wrap `value` in `WithDataType` to either provide or override the relational type associated
+    /// with it.
+    pub fn new(value: T, data_type: DataType) -> Self {
+        Self { value, data_type }
+    }
 }
 
 unsafe impl<T> CData for WithDataType<T>
