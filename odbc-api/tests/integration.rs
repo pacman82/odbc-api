@@ -16,13 +16,13 @@ use connection_strings::{
 #[cfg(feature = "derive")]
 use odbc_api::Fetch;
 use odbc_api::{
-    Bit, ColumnDescription, ColumnarBulkInserter, ConcurrentBlockCursor, Connection,
-    ConnectionOptions, ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut,
-    InputParameterMapping, IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str, U16String,
+    Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions,
+    ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
+    IntoParameter, Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata,
+    RowSetBuffer, TruncationInfo, U16Str, U16String,
     buffers::{
-        BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
-        TextRowSet,
+        AnySlice, AnySliceMut, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item,
+        RowVec, TextColumn, TextRowSet,
     },
     decimal_text_to_i128, environment,
     handles::{
@@ -1240,6 +1240,68 @@ fn columnar_fetch_timestamp(profile: &Profile) {
     assert_eq!(None, col_it.next()); // Expecting iterator end.
 }
 
+// Maria DB and MSSQL will fetch this with scale 0 and precision 38.
+// #[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
+#[test_case(POSTGRES; "PostgreSQL")]
+fn columnar_fetch_numeric(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["NUMERIC(5,3) NOT NULL"])
+        .values_by_column(&[&[Some("12.345"), Some("23.456"), Some("34.567")]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+
+    // When
+    let buffer = ColumnarAnyBuffer::from_descs(
+        3,
+        [BufferDesc::Numeric {
+            precision: 5,
+            scale: 3,
+        }],
+    );
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+
+    // Then
+    let AnySlice::Numeric(numeric) = batch.column(0) else {
+        panic!("Expected numeric column");
+    };
+    assert_eq!(
+        Numeric {
+            precision: 5,
+            scale: 3,
+            sign: 1,
+            val: 12345u128.to_le_bytes()
+        },
+        numeric[0]
+    );
+    assert_eq!(
+        Numeric {
+            precision: 5,
+            scale: 3,
+            sign: 1,
+            val: 23456u128.to_le_bytes()
+        },
+        numeric[1]
+    );
+    assert_eq!(
+        Numeric {
+            precision: 5,
+            scale: 3,
+            sign: 1,
+            val: 34567u128.to_le_bytes()
+        },
+        numeric[2]
+    );
+}
+
 /// Insert values into a DATETIME2 column using a columnar buffer
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
@@ -1524,6 +1586,54 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
     let actual = table.content_as_string(&conn);
     let expected = "1\n2\nNULL\n4";
     assert_eq!(expected, actual);
+}
+
+// #[test_case(MSSQL; "Microsoft SQL Server")] Numeric value out of range. We would likely need to
+// edit the APD to support a scale different from zero.
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
+#[test_case(POSTGRES; "PostgreSQL")]
+fn columnar_insert_numeric(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
+    let stmt = conn.prepare(&table.sql_insert()).unwrap();
+
+    // When
+    let desc = BufferDesc::Numeric {
+        precision: 5,
+        scale: 3,
+    };
+    let mut inserter = stmt.into_column_inserter(3, [desc]).unwrap();
+    let AnySliceMut::Numeric(slice) = inserter.column_mut(0) else {
+        panic!("Expected numeric column");
+    };
+    slice[0] = Numeric {
+        precision: 5,
+        scale: 3,
+        sign: 1,
+        val: 12345u128.to_le_bytes(),
+    };
+    slice[1] = Numeric {
+        precision: 5,
+        scale: 3,
+        sign: 1,
+        val: 23456u128.to_le_bytes(),
+    };
+    slice[2] = Numeric {
+        precision: 5,
+        scale: 3,
+        sign: 1,
+        val: 34567u128.to_le_bytes(),
+    };
+    inserter.set_num_rows(3);
+    inserter.execute().unwrap();
+
+    // Then
+    let content = table.content_as_string(&conn);
+    assert_eq!("12.345\n23.456\n34.567", content);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -6112,50 +6222,6 @@ fn insert_numeric_struct(profile: &Profile) {
     // Then
     let content = table.content_as_string(&conn);
     assert_eq!("12.345", content);
-}
-
-// #[test_case(MSSQL; "Microsoft SQL Server")] Numeric value out of range
-#[test_case(MARIADB; "Maria DB")]
-// #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
-#[test_case(POSTGRES; "PostgreSQL")]
-fn bulk_insert_numeric_struct(profile: &Profile) {
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["DECIMAL(5,3)"])
-        .build(profile)
-        .unwrap();
-    let stmt = conn.prepare(&table.sql_insert()).unwrap();
-
-    // When
-    let inputs = [12345u128, 23456, 34567]
-        .into_iter()
-        .map(|num| Numeric {
-            precision: 5,
-            scale: 3,
-            sign: 1,
-            val: num.to_le_bytes(),
-        })
-        .collect::<Vec<_>>();
-    let mut inserter = unsafe {
-        ColumnarBulkInserter::new(
-            stmt,
-            vec![WithDataType::new(
-                inputs,
-                DataType::Numeric {
-                    precision: 5,
-                    scale: 3,
-                },
-            )],
-            InOrder::new(1),
-        )
-        .unwrap()
-    };
-    inserter.set_num_rows(3);
-    inserter.execute().unwrap();
-
-    // Then
-    let content = table.content_as_string(&conn);
-    assert_eq!("12.345\n23.456\n34.567", content);
 }
 
 /// Learning test to see how scrolling cursors behave
