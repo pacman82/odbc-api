@@ -1090,6 +1090,26 @@ pub trait Statement: AnyHandle {
             .on_success(|| Descriptor::new(hdesc))
         }
     }
+
+    /// Application Parameter Descriptor (APD) associated with the statement handle. Describes the
+    /// parameter buffers bound to an SQL statement. Usually there is no need for an application to
+    /// directly interact with the APD. It may be required though to set precision and scale for
+    /// numeric parameters.
+    fn application_parameter_descriptor(&mut self) -> SqlResult<Descriptor<'_>> {
+        unsafe {
+            let mut hdesc = HDesc::null();
+            let hdesc_out = &mut hdesc as *mut HDesc as Pointer;
+            odbc_sys::SQLGetStmtAttr(
+                self.as_sys(),
+                odbc_sys::StatementAttribute::AppParamDesc,
+                hdesc_out,
+                0,
+                null_mut(),
+            )
+            .into_sql_result("SQLGetStmtAttr")
+            .on_success(|| Descriptor::new(hdesc))
+        }
+    }
 }
 
 impl Statement for StatementImpl<'_> {

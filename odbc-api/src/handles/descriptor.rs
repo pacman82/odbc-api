@@ -17,9 +17,7 @@ use odbc_sys::SQLSetDescFieldW as sql_set_desc_field;
 /// associated with the statement. It could also represent an explicitly allocated one, but ony in
 /// the context there it is associated with a statement and currently borrowed from it.
 ///
-/// * IPD Implementation parameter descriptor
 /// * APD Application parameter descriptor
-/// * IRD Implemenation row descriptor
 /// * ARD Application row descriptor
 pub struct Descriptor<'stmt> {
     handle: HDesc,
