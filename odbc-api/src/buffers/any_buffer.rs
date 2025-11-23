@@ -159,13 +159,6 @@ impl AnyBuffer {
         Ok(buffer)
     }
 
-    fn fill_default_slice<T: Default + Copy>(col: &mut [T]) {
-        let element = T::default();
-        for item in col {
-            *item = element;
-        }
-    }
-
     fn inner(&self) -> &dyn CData {
         match self {
             AnyBuffer::Binary(col) => col,
@@ -642,38 +635,6 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::NullableI64(col) => AnySlice::NullableI64(col.iter(valid_rows)),
             AnyBuffer::NullableU8(col) => AnySlice::NullableU8(col.iter(valid_rows)),
             AnyBuffer::NullableBit(col) => AnySlice::NullableBit(col.iter(valid_rows)),
-        }
-    }
-
-    /// Fills the column with the default representation of values, between `from` and `to` index.
-    fn fill_default(&mut self, from: usize, to: usize) {
-        match self {
-            AnyBuffer::Binary(col) => col.fill_null(from, to),
-            AnyBuffer::Text(col) => col.fill_null(from, to),
-            AnyBuffer::WText(col) => col.fill_null(from, to),
-            AnyBuffer::Date(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::Time(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::Timestamp(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::F64(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::F32(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::I8(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::I16(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::I32(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::I64(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::U8(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::Bit(col) => Self::fill_default_slice(&mut col[from..to]),
-            AnyBuffer::Numeric(_) => todo!(),
-            AnyBuffer::NullableDate(col) => col.fill_null(from, to),
-            AnyBuffer::NullableTime(col) => col.fill_null(from, to),
-            AnyBuffer::NullableTimestamp(col) => col.fill_null(from, to),
-            AnyBuffer::NullableF64(col) => col.fill_null(from, to),
-            AnyBuffer::NullableF32(col) => col.fill_null(from, to),
-            AnyBuffer::NullableI8(col) => col.fill_null(from, to),
-            AnyBuffer::NullableI16(col) => col.fill_null(from, to),
-            AnyBuffer::NullableI32(col) => col.fill_null(from, to),
-            AnyBuffer::NullableI64(col) => col.fill_null(from, to),
-            AnyBuffer::NullableU8(col) => col.fill_null(from, to),
-            AnyBuffer::NullableBit(col) => col.fill_null(from, to),
         }
     }
 

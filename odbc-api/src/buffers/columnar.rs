@@ -255,8 +255,8 @@ pub unsafe trait ColumnBuffer: CDataMut {
     /// on accessing an undefined element.
     fn view(&self, valid_rows: usize) -> Self::View<'_>;
 
-    /// Fills the column with the default representation of values, between `from` and `to` index.
-    fn fill_default(&mut self, from: usize, to: usize);
+    // /// Fills the column with the default representation of values, between `from` and `to` index.
+    // fn fill_default(&mut self, from: usize, to: usize);
 
     /// Current capacity of the column
     fn capacity(&self) -> usize;
@@ -280,10 +280,6 @@ where
 
     fn view(&self, valid_rows: usize) -> T::View<'_> {
         self.value.view(valid_rows)
-    }
-
-    fn fill_default(&mut self, from: usize, to: usize) {
-        self.value.fill_default(from, to)
     }
 
     fn capacity(&self) -> usize {
@@ -530,12 +526,6 @@ where
 
     fn view(&self, valid_rows: usize) -> &[T] {
         &self[..valid_rows]
-    }
-
-    fn fill_default(&mut self, from: usize, to: usize) {
-        for item in &mut self[from..to] {
-            *item = Default::default();
-        }
     }
 
     fn capacity(&self) -> usize {

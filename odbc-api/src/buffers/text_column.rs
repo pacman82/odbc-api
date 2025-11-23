@@ -328,10 +328,6 @@ where
         }
     }
 
-    fn fill_default(&mut self, from: usize, to: usize) {
-        self.fill_null(from, to)
-    }
-
     /// Maximum number of text strings this column may hold.
     fn capacity(&self) -> usize {
         self.indicators.len()
