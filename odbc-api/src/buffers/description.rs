@@ -110,8 +110,16 @@ pub enum BufferDesc {
     },
     /// Use [`sys::Numeric`] to represent Numeric values. Note that not all driver support Numeric
     /// types. Even if they do, they may not respect the `scale` and `precision` values unless they
-    /// are explicit set in the Applicatior parameter descriptor. This currently would require
-    /// unsafe code. Using text buffers to insert or fetch Numeric values works more reliable.
+    /// are explicit set in the Applicatior Parameter Descriptor (APD) for inserting or the
+    /// Application Row Descriptor (ARD). This currently would require unsafe code. Using text
+    /// buffers to insert or fetch Numeric values works more reliable.
+    ///
+    /// In my tests so far using Numeric buffers with PostgreSQL works for both inserting and
+    /// fetching values. With Microsoft SQL Server, it defaults to scale `0` and can only be changed
+    /// by manipulating the ARD / APD via unsafe code.
+    ///
+    /// With MariaDB inserting works out of the box, yet fetching does default to scale `0` and
+    /// would require manipulating the ARD.
     Numeric {
         /// Total number of significant digits.
         precision: usize,
