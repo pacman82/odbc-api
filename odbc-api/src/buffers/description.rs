@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use odbc_sys::{Date, Time, Timestamp};
+use odbc_sys::{Date, Numeric, Time, Timestamp};
 
 use crate::{Bit, DataType};
 
@@ -108,6 +108,16 @@ pub enum BufferDesc {
         /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
+    /// Use [`sys::Numeric`] to represent Numeric values. Note that not all driver support Numeric
+    /// types. Even if they do, they may not respect the `scale` and `precision` values unless they
+    /// are explicit set in the Applicatior parameter descriptor. This currently would require
+    /// unsafe code. Using text buffers to insert or fetch Numeric values works more reliable.
+    Numeric {
+        /// Total number of significant digits.
+        precision: usize,
+        /// Number of digits to the right of the decimal point.
+        scale: i16,
+    },
 }
 
 impl BufferDesc {
@@ -171,6 +181,10 @@ impl BufferDesc {
             BufferDesc::I64 { nullable } => size_of::<i64>() + size_indicator(nullable),
             BufferDesc::U8 { nullable } => size_of::<u8>() + size_indicator(nullable),
             BufferDesc::Bit { nullable } => size_of::<Bit>() + size_indicator(nullable),
+            BufferDesc::Numeric {
+                precision: _,
+                scale: _,
+            } => size_of::<Numeric>(),
         }
     }
 }
@@ -207,5 +221,13 @@ mod tests {
         assert_eq!(4, BufferDesc::I32 { nullable: false }.bytes_per_row());
         assert_eq!(8, BufferDesc::I64 { nullable: false }.bytes_per_row());
         assert_eq!(1, BufferDesc::U8 { nullable: false }.bytes_per_row());
+        assert_eq!(
+            19,
+            BufferDesc::Numeric {
+                precision: 5,
+                scale: 3,
+            }
+            .bytes_per_row()
+        );
     }
 }

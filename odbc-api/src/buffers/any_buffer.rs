@@ -1,6 +1,6 @@
 use std::{collections::HashSet, ffi::c_void};
 
-use odbc_sys::{CDataType, Date, Time, Timestamp};
+use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 
 use crate::{
     Bit, DataType, Error,
@@ -8,6 +8,7 @@ use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, StatementRef},
+    parameter::WithDataType,
 };
 
 use super::{
@@ -49,6 +50,7 @@ pub enum AnyBuffer {
     I64(Vec<i64>),
     U8(Vec<u8>),
     Bit(Vec<Bit>),
+    Numeric(WithDataType<Vec<Numeric>>),
     NullableDate(OptDateColumn),
     NullableTime(OptTimeColumn),
     NullableTimestamp(OptTimestampColumn),
@@ -120,6 +122,10 @@ impl AnyBuffer {
             BufferDesc::I64 { nullable: false } => AnyBuffer::I64(vec![i64::default(); max_rows]),
             BufferDesc::U8 { nullable: false } => AnyBuffer::U8(vec![u8::default(); max_rows]),
             BufferDesc::Bit { nullable: false } => AnyBuffer::Bit(vec![Bit::default(); max_rows]),
+            BufferDesc::Numeric { precision, scale } => AnyBuffer::Numeric(WithDataType::new(
+                vec![Numeric::default(); max_rows],
+                DataType::Numeric { precision, scale },
+            )),
             BufferDesc::Date { nullable: true } => {
                 AnyBuffer::NullableDate(OptDateColumn::new(max_rows))
             }
@@ -176,6 +182,7 @@ impl AnyBuffer {
             AnyBuffer::I64(col) => col,
             AnyBuffer::Bit(col) => col,
             AnyBuffer::U8(col) => col,
+            AnyBuffer::Numeric(col) => col,
             AnyBuffer::NullableF64(col) => col,
             AnyBuffer::NullableF32(col) => col,
             AnyBuffer::NullableDate(col) => col,
@@ -206,6 +213,7 @@ impl AnyBuffer {
             AnyBuffer::I64(col) => col,
             AnyBuffer::Bit(col) => col,
             AnyBuffer::U8(col) => col,
+            AnyBuffer::Numeric(col) => &mut col.value,
             AnyBuffer::NullableF64(col) => col,
             AnyBuffer::NullableF32(col) => col,
             AnyBuffer::NullableDate(col) => col,
@@ -280,6 +288,7 @@ impl HasDataType for AnyBuffer {
             // default, just to be on the safe side.
             AnyBuffer::U8(_) | AnyBuffer::NullableU8(_) => DataType::SmallInt,
             AnyBuffer::Bit(_) | AnyBuffer::NullableBit(_) => DataType::Bit,
+            AnyBuffer::Numeric(col) => col.data_type(),
         }
     }
 }
@@ -374,6 +383,7 @@ pub enum AnySlice<'a> {
     I64(&'a [i64]),
     U8(&'a [u8]),
     Bit(&'a [Bit]),
+    Numeric(&'a [Numeric]),
     NullableDate(NullableSlice<'a, Date>),
     NullableTime(NullableSlice<'a, Time>),
     NullableTimestamp(NullableSlice<'a, Timestamp>),
@@ -385,6 +395,7 @@ pub enum AnySlice<'a> {
     NullableI64(NullableSlice<'a, i64>),
     NullableU8(NullableSlice<'a, u8>),
     NullableBit(NullableSlice<'a, Bit>),
+    NullableNumeric(NullableSlice<'a, Numeric>),
 }
 
 impl<'a> AnySlice<'a> {
@@ -460,6 +471,7 @@ unsafe impl<'a> BoundInputSlice<'a> for AnyBuffer {
                 AnyBuffer::I64(column) => AnySliceMut::I64(column),
                 AnyBuffer::U8(column) => AnySliceMut::U8(column),
                 AnyBuffer::Bit(column) => AnySliceMut::Bit(column),
+                AnyBuffer::Numeric(column) => AnySliceMut::Numeric(&mut column.value),
                 AnyBuffer::NullableDate(column) => {
                     AnySliceMut::NullableDate(column.writer_n(num_rows))
                 }
@@ -512,6 +524,7 @@ pub enum AnySliceMut<'a> {
     I64(&'a mut [i64]),
     U8(&'a mut [u8]),
     Bit(&'a mut [Bit]),
+    Numeric(&'a mut [Numeric]),
     NullableDate(NullableSliceMut<'a, Date>),
     NullableTime(NullableSliceMut<'a, Time>),
     NullableTimestamp(NullableSliceMut<'a, Timestamp>),
@@ -586,6 +599,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::I64(col) => col.capacity(),
             AnyBuffer::U8(col) => col.capacity(),
             AnyBuffer::Bit(col) => col.capacity(),
+            AnyBuffer::Numeric(col) => col.capacity(),
             AnyBuffer::NullableDate(col) => col.capacity(),
             AnyBuffer::NullableTime(col) => col.capacity(),
             AnyBuffer::NullableTimestamp(col) => col.capacity(),
@@ -616,6 +630,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::I64(col) => AnySlice::I64(&col[0..valid_rows]),
             AnyBuffer::U8(col) => AnySlice::U8(&col[0..valid_rows]),
             AnyBuffer::Bit(col) => AnySlice::Bit(&col[0..valid_rows]),
+            AnyBuffer::Numeric(col) => AnySlice::Numeric(&col.value[0..valid_rows]),
             AnyBuffer::NullableDate(col) => AnySlice::NullableDate(col.iter(valid_rows)),
             AnyBuffer::NullableTime(col) => AnySlice::NullableTime(col.iter(valid_rows)),
             AnyBuffer::NullableTimestamp(col) => AnySlice::NullableTimestamp(col.iter(valid_rows)),
@@ -647,6 +662,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::I64(col) => Self::fill_default_slice(&mut col[from..to]),
             AnyBuffer::U8(col) => Self::fill_default_slice(&mut col[from..to]),
             AnyBuffer::Bit(col) => Self::fill_default_slice(&mut col[from..to]),
+            AnyBuffer::Numeric(_) => todo!(),
             AnyBuffer::NullableDate(col) => col.fill_null(from, to),
             AnyBuffer::NullableTime(col) => col.fill_null(from, to),
             AnyBuffer::NullableTimestamp(col) => col.fill_null(from, to),
