@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.0.0](https://github.com/pacman82/odbc-api/compare/v19.1.0...v20.0.0) - 2025-11-23
+
+### Added
+
+- Fetch and Insert with numeric any buffer
+- Introduce WithDataType::new
+- Implement `HasDataType` for Numeric
+
+### Other
+
+- Highlight caveats for using Numeric in doc comments of Buffer
+- [**breaking**] Remove fill_default from ColumnBuffer trait
+- Bulk insert Numeric values into PostgreSQL and MariaDB
+- use stmt explicitly in insert numeric test rather than conn
+- Learning test for inserting numerics
+- *(deps)* bump odbc-sys from 0.27.3 to 0.27.4
+- *(deps)* bump csv from 1.3.1 to 1.4.0
+- *(deps)* bump tokio from 1.47.1 to 1.48.0
+- *(deps)* bump odbc-sys from 0.27.2 to 0.27.3
+- *(deps)* bump syn from 2.0.109 to 2.0.110
+- *(deps)* bump quote from 1.0.41 to 1.0.42
+- *(deps)* bump syn from 2.0.108 to 2.0.109
+- *(deps)* bump proc-macro2 from 1.0.102 to 1.0.103
+- *(deps)* bump proc-macro2 from 1.0.101 to 1.0.102
+- *(deps)* bump syn from 2.0.107 to 2.0.108
+- *(deps)* bump syn from 2.0.106 to 2.0.107
+
 ## [19.1.0](https://github.com/pacman82/odbc-api/compare/v19.0.2...v19.1.0) - 2025-10-12
 
 ### Added
