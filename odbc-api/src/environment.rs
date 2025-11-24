@@ -27,11 +27,14 @@ use winit::{
     window::{Window, WindowId},
 };
 
-#[cfg(not(feature = "odbc_version_3_5"))]
+#[cfg(feature = "odbc_version_3_80")]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3_80;
 
-#[cfg(feature = "odbc_version_3_5")]
+#[cfg(not(feature = "odbc_version_3_80"))]
 const ODBC_API_VERSION: AttrOdbcVersion = AttrOdbcVersion::Odbc3;
+
+#[cfg(all(feature = "odbc_version_3_80", feature = "odbc_version_3_5"))]
+compile_error!("odbc_version_3_80 and odbc_version_3_5 must not both be enabled at the same time.");
 
 /// An ODBC 3.8 environment.
 ///
