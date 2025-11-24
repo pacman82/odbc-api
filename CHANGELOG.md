@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.0](https://github.com/pacman82/odbc-api/compare/v20.0.0...v20.1.0) - 2025-11-24
+
+### Added
+
+- Compile with no features activated
+- add `application_parameter_descriptor` to `Statement`
+
+### Other
+
+- *(deps)* bump syn from 2.0.110 to 2.0.111
+
 ## [20.0.0](https://github.com/pacman82/odbc-api/compare/v19.1.0...v20.0.0) - 2025-11-23
 
 ### Added
