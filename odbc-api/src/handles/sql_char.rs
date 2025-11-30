@@ -98,7 +98,7 @@ pub fn is_truncated_bin(buffer: &[SqlChar], actual_length_bin: usize) -> bool {
 pub fn resize_to_fit_with_tz(buffer: &mut Vec<SqlChar>, required_binary_length: usize) {
     // In order to use only minimal memory for drivers which stick to the ODBC standard we would
     // use `+1` in the statement beneath. However it turns out the PostgreSQL driver will fill the
-    // last value with `0` instead of the last latter when used with a wide `SqlChar`. So we use
+    // last value with `0` instead of the last letter when used with a wide `SqlChar`. So we use
     // `+2` to make it work with PostgreSql on windows, too.
     buffer.resize((required_binary_length / size_of::<SqlChar>()) + 2, 0);
 }
