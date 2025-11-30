@@ -212,7 +212,7 @@ impl Connection<'_> {
         unsafe {
             sql_set_connect_attr(
                 self.handle,
-                ConnectionAttribute::AutoCommit,
+                ConnectionAttribute::AUTOCOMMIT,
                 val as Pointer,
                 0, // will be ignored according to ODBC spec
             )
@@ -235,7 +235,7 @@ impl Connection<'_> {
         unsafe {
             sql_set_connect_attr(
                 self.handle,
-                ConnectionAttribute::LoginTimeout,
+                ConnectionAttribute::LOGIN_TIMEOUT,
                 timeout as Pointer,
                 0,
             )
@@ -256,7 +256,7 @@ impl Connection<'_> {
         unsafe {
             sql_set_connect_attr(
                 self.handle,
-                ConnectionAttribute::PacketSize,
+                ConnectionAttribute::PACKET_SIZE,
                 packet_size as Pointer,
                 0,
             )
@@ -376,7 +376,7 @@ impl Connection<'_> {
         unsafe {
             let mut res = sql_get_connect_attr(
                 self.handle,
-                ConnectionAttribute::CurrentCatalog,
+                ConnectionAttribute::CURRENT_CATALOG,
                 mut_buf_ptr(buffer) as Pointer,
                 binary_length(buffer).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i32,
@@ -391,7 +391,7 @@ impl Connection<'_> {
                 resize_to_fit_with_tz(buffer, string_length_in_bytes.try_into().unwrap());
                 res = sql_get_connect_attr(
                     self.handle,
-                    ConnectionAttribute::CurrentCatalog,
+                    ConnectionAttribute::CURRENT_CATALOG,
                     mut_buf_ptr(buffer) as Pointer,
                     binary_length(buffer).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i32,
@@ -413,7 +413,7 @@ impl Connection<'_> {
     /// the connection is still active.
     pub fn is_dead(&self) -> SqlResult<bool> {
         unsafe {
-            self.attribute_u32(ConnectionAttribute::ConnectionDead)
+            self.attribute_u32(ConnectionAttribute::CONNECTION_DEAD)
                 .map(|v| match v {
                     0 => false,
                     1 => true,
@@ -424,7 +424,7 @@ impl Connection<'_> {
 
     /// Networ packet size in bytes.
     pub fn packet_size(&self) -> SqlResult<u32> {
-        unsafe { self.attribute_u32(ConnectionAttribute::PacketSize) }
+        unsafe { self.attribute_u32(ConnectionAttribute::PACKET_SIZE) }
     }
 
     /// # Safety
