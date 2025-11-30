@@ -232,15 +232,7 @@ impl Connection<'_> {
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
     pub fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
-        unsafe {
-            sql_set_connect_attr(
-                self.handle,
-                ConnectionAttribute::LOGIN_TIMEOUT,
-                timeout as Pointer,
-                0,
-            )
-            .into_sql_result("SQLSetConnectAttr")
-        }
+        unsafe { self.set_attribute(LoginTimeoutConnectionAttribute(timeout)) }
     }
 
     /// Specifying the network packet size in bytes. Note: Many data sources either do not support
@@ -253,15 +245,7 @@ impl Connection<'_> {
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
     pub fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
-        unsafe {
-            sql_set_connect_attr(
-                self.handle,
-                ConnectionAttribute::PACKET_SIZE,
-                packet_size as Pointer,
-                0,
-            )
-            .into_sql_result("SQLSetConnectAttr")
-        }
+        unsafe { self.set_attribute(PacketSizeConnectionAttribute(packet_size)) }
     }
 
     /// To commit a transaction in manual-commit mode.
@@ -427,6 +411,30 @@ impl Connection<'_> {
         unsafe { self.attribute_u32(ConnectionAttribute::PACKET_SIZE) }
     }
 
+    /// Sets a connection attribute.
+    ///
+    /// # Safety
+    ///
+    /// Connection attribute can control all kinds of behavior and change the nature of the
+    /// connection in a fundamental way. This includes wether calls are blocking or asynchronous,
+    /// wether transactions are explicit or auto-committed. On top of that, the ODBC standard allows
+    /// for drivers to specify their own connection attributes.
+    ///
+    /// The circumstances under which calling this function is safe depends on the attribute in
+    /// question. On top of that, callers must also ensure that the driver would know how to
+    /// interpret the attribute, in order for this call to be safe.
+    pub unsafe fn set_attribute(&self, attribute: impl SetConnectionAttribute) -> SqlResult<()> {
+        unsafe {
+            sql_set_connect_attr(
+                self.handle,
+                attribute.attribute(),
+                attribute.value(),
+                attribute.len(),
+            )
+            .into_sql_result("SQLSetConnectAttr")
+        }
+    }
+
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.
@@ -450,5 +458,72 @@ impl Connection<'_> {
             );
             out
         })
+    }
+}
+
+/// Indicates that the implementer is can be set as a Connection Attribute. This trait is
+/// implemented for both, attributes which are set after the connection is created, as well as
+/// attributes which are set before connecting.
+///
+/// Users of `odbc-api` usually would not want to implement this themselves and rather use safe
+/// abstractions around setting connection attributes. E.g. providing [`crate::ConnectionOptions`] on
+/// connecting.
+///
+/// A reason to implement this trait in your applicaction code however, could be that you want to
+/// set an attribute which is not part of the ODBC standard, but only supported by your specific
+/// driver, which you happen to know your application will use.
+///
+/// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/connection-attributes>
+///
+/// # Safety
+///
+/// Implementers must take care that the results of [`Self::value`] and [`Self::len`] match the
+/// expectations of the ODBC driver for the given `attribute`.
+pub unsafe trait SetConnectionAttribute {
+    /// The Connection Attribute to set.
+    fn attribute(&self) -> ConnectionAttribute;
+
+    /// The interpretation of the returned pointer depends on the value returned by `attribute`.
+    ///
+    /// The value to be set. Depending on `attribute` the pointer value might be directly
+    /// interpreted as an integer value without being dereferenced. If `attribute` is represented as
+    /// text then pointer points to a buffer containing the text.
+    fn value(&self) -> Pointer;
+
+    /// Implementers please see
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function> in
+    /// order to decide on the correct output for this function
+    fn len(&self) -> i32;
+}
+
+struct PacketSizeConnectionAttribute(pub u32);
+
+unsafe impl SetConnectionAttribute for PacketSizeConnectionAttribute {
+    fn attribute(&self) -> ConnectionAttribute {
+        ConnectionAttribute::PACKET_SIZE
+    }
+
+    fn value(&self) -> Pointer {
+        self.0 as Pointer
+    }
+
+    fn len(&self) -> i32 {
+        IS_UINTEGER // Ignored for integer attributes
+    }
+}
+
+struct LoginTimeoutConnectionAttribute(pub u32);
+
+unsafe impl SetConnectionAttribute for LoginTimeoutConnectionAttribute {
+    fn attribute(&self) -> ConnectionAttribute {
+        ConnectionAttribute::LOGIN_TIMEOUT
+    }
+
+    fn value(&self) -> Pointer {
+        self.0 as Pointer
+    }
+
+    fn len(&self) -> i32 {
+        IS_UINTEGER // Ignored for integer attributes
     }
 }
