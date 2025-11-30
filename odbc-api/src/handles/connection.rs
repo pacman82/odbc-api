@@ -208,16 +208,7 @@ impl Connection<'_> {
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
     /// the connection.
     pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
-        let val = enabled as u32;
-        unsafe {
-            sql_set_connect_attr(
-                self.handle,
-                ConnectionAttribute::AUTOCOMMIT,
-                val as Pointer,
-                0, // will be ignored according to ODBC spec
-            )
-            .into_sql_result("SQLSetConnectAttr")
-        }
+        unsafe { self.set_attribute(AutocommitConnectionAttribute(enabled)) }
     }
 
     /// Number of seconds to wait for a login request to complete before returning to the
@@ -521,6 +512,22 @@ unsafe impl SetConnectionAttribute for LoginTimeoutConnectionAttribute {
 
     fn value(&self) -> Pointer {
         self.0 as Pointer
+    }
+
+    fn len(&self) -> i32 {
+        IS_UINTEGER // Ignored for integer attributes
+    }
+}
+
+struct AutocommitConnectionAttribute(pub bool);
+
+unsafe impl SetConnectionAttribute for AutocommitConnectionAttribute {
+    fn attribute(&self) -> ConnectionAttribute {
+        ConnectionAttribute::AUTOCOMMIT
+    }
+
+    fn value(&self) -> Pointer {
+        (self.0 as u32) as Pointer
     }
 
     fn len(&self) -> i32 {
