@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.1](https://github.com/pacman82/odbc-api/compare/v20.1.0...v20.1.1) - 2025-11-30
+
+### Other
+
+- Introduce AutocommitConnectionAttribute
+- Introduce trait `SetConnectionAttribute`
+- fix typo
+- Update to odbc-sys 0.28
+
 ## [20.1.0](https://github.com/pacman82/odbc-api/compare/v20.0.0...v20.1.0) - 2025-11-24
 
 ### Added
