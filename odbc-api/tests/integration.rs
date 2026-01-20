@@ -1042,6 +1042,39 @@ fn bulk_insert_long_strings_as_wchar(profile: &Profile) {
     assert_eq!("a".repeat(5000), table.content_as_string(&conn));
 }
 
+/// SQL Server's VARCHAR is limited to 8000 bytes; VARCHAR(MAX) is used for values > 8000
+#[test_case(MSSQL, "VARCHAR(MAX)"; "Microsoft SQL Server")]
+#[test_case(MARIADB, "VARCHAR(8001)"; "Maria DB")]
+#[test_case(SQLITE_3, "VARCHAR(8001)"; "SQLite 3")]
+#[test_case(POSTGRES, "VARCHAR(8001)"; "PostgreSQL")]
+fn bulk_insert_long_strings_with_more_than_8000_bytes(profile: &Profile, column_type: &str) {
+    // Given a table with VARCHAR > 8000
+    let table_name = table_name!();
+    let column_types = [column_type];
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&column_types)
+        .build(profile)
+        .unwrap();
+    let text = "a".repeat(8001);
+
+    // When we bulk insert a string longer than 8000 bytes
+    let mut inserter = conn
+        .prepare(&table.sql_insert())
+        .unwrap()
+        .into_column_inserter(1, [BufferDesc::Text { max_str_len: 8001 }])
+        .unwrap();
+    inserter
+        .column_mut(0)
+        .as_text_view()
+        .unwrap()
+        .set_cell(0, Some(text.as_bytes()));
+    inserter.set_num_rows(1);
+    inserter.execute().unwrap();
+
+    // Then we expect the insert to succeed
+    assert_eq!(text, table.content_as_string(&conn));
+}
+
 /// Bind a columnar buffer to a VARBINARY(10) column and fetch data.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // Convert syntax is different

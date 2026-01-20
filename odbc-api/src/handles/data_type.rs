@@ -6,6 +6,10 @@ use odbc_sys::SqlDataType;
 /// `NVARCHAR` SQL type.
 pub(crate) const ASSUMED_MAX_LENGTH_OF_W_VARCHAR: usize = 4000;
 
+/// For Microsoft SQL Server there exists a maximum string length of 8000 for `VARCHAR` SQL type.
+/// Longer strings require `VARCHAR(MAX)` which maps to `LongVarchar`.
+pub(crate) const ASSUMED_MAX_LENGTH_OF_VARCHAR: usize = 8000;
+
 /// The relational type of the column. Think of it as the type used in the `CREATE TABLE` statement
 /// then creating the database.
 ///
