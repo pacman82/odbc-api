@@ -36,7 +36,7 @@ pub use self::{
     statement_connection::{StatementConnection, StatementParent},
 };
 
-pub(crate) use self::data_type::ASSUMED_MAX_LENGTH_OF_W_VARCHAR;
+pub(crate) use self::data_type::{ASSUMED_MAX_LENGTH_OF_VARCHAR, ASSUMED_MAX_LENGTH_OF_W_VARCHAR};
 
 use log::debug;
 use odbc_sys::{Handle, HandleType, SQLFreeHandle, SqlReturn};
