@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.1](https://github.com/pacman82/odbc-api/compare/v20.1.0...v20.1.1) - 2026-01-21
+
+### Fixed
+
+- Use LongVarchar for CharColumn when max_str_len > 8000
+
+### Other
+
+- *(deps)* bump thiserror from 2.0.17 to 2.0.18
+- *(deps)* bump tokio-stream from 0.1.17 to 0.1.18
+- *(deps)* bump tokio from 1.48.0 to 1.49.0
+- *(deps)* bump tempfile from 3.23.0 to 3.24.0
+- *(deps)* bump criterion from 0.8.0 to 0.8.1
+- *(deps)* bump log from 0.4.28 to 0.4.29
+- Introduce AutocommitConnectionAttribute
+- Introduce trait `SetConnectionAttribute`
+- fix typo
+- Update to odbc-sys 0.28
+- *(deps)* bump syn from 2.0.113 to 2.0.114
+- *(deps)* bump proc-macro2 from 1.0.104 to 1.0.105
+- *(deps)* bump quote from 1.0.42 to 1.0.43
+- *(deps)* bump syn from 2.0.112 to 2.0.113
+- *(deps)* bump syn from 2.0.111 to 2.0.112
+- *(deps)* bump proc-macro2 from 1.0.103 to 1.0.104
+
 ## [20.1.0](https://github.com/pacman82/odbc-api/compare/v20.0.0...v20.1.0) - 2025-11-24
 
 ### Added
