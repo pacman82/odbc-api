@@ -494,7 +494,7 @@ impl<'c> Connection<'c> {
 
     /// Get the name of the database management system used by the connection.
     pub fn database_management_system_name(&self) -> Result<String, Error> {
-        let mut buf = Vec::new();
+        let mut buf = Vec::with_capacity(64);
         self.connection
             .fetch_database_management_system_name(&mut buf)
             .into_result(&self.connection)?;
