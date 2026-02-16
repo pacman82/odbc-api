@@ -1,21 +1,7 @@
 mod common;
 mod connection_strings;
+mod derive;
 
-use async_stream::stream;
-use odbc_sys::{Date, Time};
-use stdext::function_name;
-use sys::{CDataType, NULL_DATA, Numeric, Pointer, SqlDataType, Timestamp};
-use tempfile::NamedTempFile;
-use test_case::test_case;
-
-use common::{Given, Profile, SingleColumnRowSetBuffer, cursor_to_string};
-use connection_strings::{
-    DUCKDB_CONNECTION, MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION,
-    SQLITE_3_CONNECTION,
-};
-
-#[cfg(feature = "derive")]
-use odbc_api::Fetch;
 use odbc_api::{
     Bit, ColumnDescription, ConcurrentBlockCursor, Connection, ConnectionOptions,
     ConnectionTransitions, Cursor, DataType, Error, InOrder, InOut, InputParameterMapping,
@@ -34,8 +20,17 @@ use odbc_api::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
         VarCharSliceMut, VarWCharArray, WithDataType,
     },
-    sys,
+    sys::{
+        CDataType, Date, FetchOrientation, HandleType, NULL_DATA, Numeric, Pointer, SQLFreeHandle,
+        SQLPrepareW, SqlDataType, SqlReturn, Time, Timestamp,
+    },
 };
+
+use async_stream::stream;
+use stdext::function_name;
+use tempfile::NamedTempFile;
+use test_case::test_case;
+
 use tokio_stream::{Stream, StreamExt as _};
 use widestring::Utf16String;
 
@@ -51,34 +46,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-const MSSQL: &Profile = &Profile {
-    connection_string: MSSQL_CONNECTION,
-    index_type: "int IDENTITY(1,1)",
-    blob_type: "Image",
-};
-
-const SQLITE_3: &Profile = &Profile {
-    connection_string: SQLITE_3_CONNECTION,
-    index_type: "int IDENTITY(1,1)",
-    blob_type: "BLOB",
-};
-
-const MARIADB: &Profile = &Profile {
-    connection_string: MARIADB_CONNECTION,
-    index_type: "INTEGER AUTO_INCREMENT PRIMARY KEY",
-    blob_type: "BLOB",
-};
-
-const POSTGRES: &Profile = &Profile {
-    connection_string: POSTGRES_CONNECTION,
-    index_type: "SERIAL PRIMARY KEY",
-    blob_type: "BYTEA",
-};
-
-const DUCKDB: &Profile = &Profile {
-    connection_string: DUCKDB_CONNECTION,
-    index_type: "", // DuckDB does not support auto-incrementing columns
-    blob_type: "BLOB",
+use self::common::{
+    DUCKDB, Given, MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, SingleColumnRowSetBuffer,
+    cursor_to_string,
 };
 
 macro_rules! table_name {
@@ -4107,19 +4077,19 @@ fn escape_hatch(profile: &Profile) {
         let select_utf8 = table.sql_all_ordered_by_id();
         // TableName does not exist, but we won't execute the query anyway
         let select = U16String::from_str(&select_utf8);
-        let ret = sys::SQLPrepareW(
+        let ret = SQLPrepareW(
             statement.as_sys(),
             select.as_ptr(),
             select.len().try_into().unwrap(),
         );
-        assert_eq!(ret, sys::SqlReturn::SUCCESS);
+        assert_eq!(ret, SqlReturn::SUCCESS);
     }
 
     // If we use `.into_sys` we need to drop the handle manually
     let hstmt = statement.into_sys();
     unsafe {
-        let ret = sys::SQLFreeHandle(sys::HandleType::Stmt, hstmt.as_handle());
-        assert_eq!(ret, sys::SqlReturn::SUCCESS);
+        let ret = SQLFreeHandle(HandleType::Stmt, hstmt.as_handle());
+        assert_eq!(ret, SqlReturn::SUCCESS);
     }
 }
 
@@ -4561,7 +4531,7 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
     // Create array of bools indicating null values.
     let nulls: Vec<bool> = indicators
         .iter()
-        .map(|&indicator| indicator == sys::NULL_DATA)
+        .map(|&indicator| indicator == NULL_DATA)
         .collect();
 
     // Then
@@ -5443,12 +5413,12 @@ fn concurrent_bulk_fetch_double_buffered(profile: &Profile) {
     let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     assert!(has_another_batch);
     assert_eq!(1, buffer_a.num_rows());
-    assert_eq!(1i32, buffer_a.column(0).as_slice().unwrap()[0]);
+    assert_eq!(1i32, buffer_a.column(0).as_slice::<i32>().unwrap()[0]);
 
     let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     assert!(has_another_batch);
     assert_eq!(1, buffer_a.num_rows());
-    assert_eq!(2i32, buffer_a.column(0).as_slice().unwrap()[0]);
+    assert_eq!(2i32, buffer_a.column(0).as_slice::<i32>().unwrap()[0]);
 
     let has_another_batch = concurrent_block_cursor.fetch_into(&mut buffer_a).unwrap();
     assert!(!has_another_batch);
@@ -5485,12 +5455,12 @@ fn concurrent_bulk_fetch_single_buffer(profile: &Profile) {
 
     let batch = concurrent_block_cursor.fetch().unwrap().unwrap();
     assert_eq!(1, batch.num_rows());
-    assert_eq!(1i32, batch.column(0).as_slice().unwrap()[0]);
+    assert_eq!(1i32, batch.column(0).as_slice::<i32>().unwrap()[0]);
     concurrent_block_cursor.fill(batch);
 
     let batch = concurrent_block_cursor.fetch().unwrap().unwrap();
     assert_eq!(1, batch.num_rows());
-    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+    assert_eq!(2i32, batch.column(0).as_slice::<i32>().unwrap()[0]);
     concurrent_block_cursor.fill(batch);
 
     let all_batches_consumed = concurrent_block_cursor.fetch().unwrap().is_none();
@@ -5599,7 +5569,7 @@ fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
     let batch = cursor.fetch().unwrap().unwrap();
 
     // Then
-    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+    assert_eq!(2i32, batch.column(0).as_slice::<i32>().unwrap()[0]);
 }
 
 /// This test covers a code path in which the thread dedicated to fething is not termintated by
@@ -5624,7 +5594,7 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
     let batch = cursor.fetch().unwrap().unwrap();
 
     // Then
-    assert_eq!(2i32, batch.column(0).as_slice().unwrap()[0]);
+    assert_eq!(2i32, batch.column(0).as_slice::<i32>().unwrap()[0]);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -5945,45 +5915,6 @@ fn row_wise_bulk_query_wide_text(profile: &Profile) {
         "Hello, World!",
         batch[0].0.as_utf16().unwrap().to_string().unwrap()
     );
-}
-
-#[cfg(feature = "derive")]
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn row_wise_bulk_query_using_custom_row(profile: &Profile) {
-    // Given a cursor
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["INTEGER", "VARCHAR(50)"])
-        .values_by_column(&[
-            &[Some("42"), Some("5")],
-            &[Some("Hello, World!"), Some("Hallo, Welt!")],
-        ])
-        .build(profile)
-        .unwrap();
-    let cursor = conn
-        .execute(&table.sql_all_ordered_by_id(), (), None)
-        .unwrap()
-        .unwrap();
-
-    // When
-    #[derive(Clone, Copy, Default, Fetch)]
-    struct MyRow {
-        a: i32,
-        b: VarCharArray<50>,
-    }
-    let row_set_buffer = RowVec::<MyRow>::new(10);
-    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
-    let batch = block_cursor.fetch().unwrap().unwrap();
-
-    // Then
-    assert_eq!(2, batch.num_rows());
-    assert_eq!(42, batch[0].a);
-    assert_eq!("Hello, World!", batch[0].b.as_str().unwrap().unwrap());
-    assert_eq!(5, batch[1].a);
-    assert_eq!("Hallo, Welt!", batch[1].b.as_str().unwrap().unwrap());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -6322,7 +6253,7 @@ fn scroll_cursor(profile: &Profile) {
             .unwrap()
             .unwrap()
             .to_owned();
-        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, sys::FetchOrientation::Absolute, 1);
+        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, FetchOrientation::Absolute, 1);
         third = block_cursor
             .fetch()
             .unwrap()
@@ -6385,7 +6316,7 @@ fn recover_from_truncation(profile: &Profile) {
         // In order to recover we set the position back and bind a large enough buffer.
 
         // Set position back
-        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, sys::FetchOrientation::Prior, 0);
+        let _ = odbc_sys::SQLFetchScroll(stmt_ptr, FetchOrientation::Prior, 0);
 
         // Bind large enough buffer
         let (cursor, _) = block_cursor.unbind().unwrap();
