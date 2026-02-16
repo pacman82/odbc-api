@@ -1,4 +1,14 @@
 //! Helpers shared by other submodules containing tests.
+
+macro_rules! table_name {
+    () => {
+        // Make function name a valid table name
+        function_name!()
+            .replace("::", "_")
+            .replace(r#"_{{closure}}"#, "")
+    };
+}
+
 use std::iter::repeat;
 
 use odbc_api::{

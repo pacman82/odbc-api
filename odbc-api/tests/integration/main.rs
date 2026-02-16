@@ -1,3 +1,4 @@
+#[macro_use]
 mod common;
 mod connection_strings;
 mod derive;
@@ -50,15 +51,6 @@ use self::common::{
     DUCKDB, Given, MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, SingleColumnRowSetBuffer,
     cursor_to_string,
 };
-
-macro_rules! table_name {
-    () => {
-        // Make function name a valid table name
-        function_name!()
-            .replace("::", "_")
-            .replace(r#"_{{closure}}"#, "")
-    };
-}
 
 #[test]
 fn bogus_connection_string() {
