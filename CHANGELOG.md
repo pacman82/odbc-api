@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.2](https://github.com/pacman82/odbc-api/compare/v20.1.1...v20.1.2) - 2026-02-16
+
+### Fixed
+
+- workaround bug in duckdb driver so database_management_system_name works
+
+### Other
+
+- Deactivate allocating_too_big_a_binary_column as it actually allocates insane amount of memory on WSL.
+- *(deps)* bump env_logger from 0.11.8 to 0.11.9
+- *(deps)* bump tempfile from 3.24.0 to 3.25.0
+- *(deps)* bump anyhow from 1.0.100 to 1.0.101
+- *(deps)* bump criterion from 0.8.1 to 0.8.2
+- *(deps)* bump syn from 2.0.114 to 2.0.115
+- *(deps)* bump quote from 1.0.43 to 1.0.44
+- *(deps)* bump proc-macro2 from 1.0.105 to 1.0.106
+
 ## [20.1.1](https://github.com/pacman82/odbc-api/compare/v20.1.0...v20.1.1) - 2026-01-21
 
 ### Fixed
