@@ -10,7 +10,8 @@ use test_case::test_case;
 
 use common::{Given, Profile, SingleColumnRowSetBuffer, cursor_to_string};
 use connection_strings::{
-    MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION, SQLITE_3_CONNECTION,
+    DUCKDB_CONNECTION, MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION,
+    SQLITE_3_CONNECTION,
 };
 
 #[cfg(feature = "derive")]
@@ -72,6 +73,12 @@ const POSTGRES: &Profile = &Profile {
     connection_string: POSTGRES_CONNECTION,
     index_type: "SERIAL PRIMARY KEY",
     blob_type: "BYTEA",
+};
+
+const DUCKDB: &Profile = &Profile {
+    connection_string: DUCKDB_CONNECTION,
+    index_type: "", // DuckDB does not support auto-incrementing columns
+    blob_type: "BLOB",
 };
 
 macro_rules! table_name {
@@ -4211,6 +4218,7 @@ fn driver_connect_with_empty_out_connection_sring(profile: &Profile) {
 #[test_case(MARIADB, "MariaDB"; "Maria DB")]
 #[test_case(SQLITE_3, "SQLite"; "SQLite 3")]
 #[test_case(POSTGRES, "PostgreSQL"; "PostgreSQL")]
+#[test_case(DUCKDB, "DuckDB"; "DuckDB")]
 fn database_management_system_name(profile: &Profile, expected_name: &'static str) {
     let conn = profile.connection().unwrap();
     let actual_name = conn.database_management_system_name().unwrap();

@@ -69,6 +69,13 @@ jobs:
           sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
           # apt-get install -y odbc-mariadb
         shell: sudo bash {0}
+      - name: Install DuckDB ODBC Driver
+        run: |
+          curl -L -o duckdb_odbc.zip https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0/duckdb_odbc-linux-amd64.zip
+          unzip duckdb_odbc.zip -d /opt/duckdb_odbc
+          rm duckdb_odbc.zip
+          printf "[DuckDB Driver]\nDriver = /opt/duckdb_odbc/libduckdb_odbc.so\n" | odbcinst -i -d -r
+        shell: sudo bash {0}
       # Maria DB test currently do not run due to a packaging error of their odbc driver
       - name: Generate coverage report
         run: | 

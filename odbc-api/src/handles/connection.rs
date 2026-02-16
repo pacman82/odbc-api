@@ -15,7 +15,7 @@ use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
     IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
 };
-use std::{ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
+use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 use odbc_sys::{
@@ -260,8 +260,21 @@ impl Connection<'_> {
     pub fn fetch_database_management_system_name(&self, buf: &mut Vec<SqlChar>) -> SqlResult<()> {
         // String length in bytes, not characters. Terminating zero is excluded.
         let mut string_length_in_bytes: i16 = 0;
-        // Let's utilize all of `buf`s capacity.
-        buf.resize(buf.capacity(), 0);
+
+        // We want to utilize the entire capacity of `buf` independent of its current size. There
+        // also has been an bud in the DuckDB driver not providing the length of the name if called
+        // with an empty buffer. See: <https://github.com/pacman82/odbc-api/pull/818>.
+        //
+        // Other drivers seem to only report the size correctly if the buffer is set to 0 or at
+        // already large enough to contain the entire name. These drivers then report the numbef of
+        // characters that have been returned instead of the number of characters which could have
+        // been returned. Therfore a truncation would not be detected. E.g. the linux drivers of
+        // Microsoft SQL Server and SQLite.
+        //
+        // Setting the buffer to a size large enough to likely hold the name sidesteps issues on
+        // these drivers. Mainly DuckDB though, as MSSQL and SQLite would work fine with `0`.
+        let buffer_size = max(buf.capacity(), 64);
+        buf.resize(buffer_size, 0);
 
         unsafe {
             let mut res = sql_get_info(

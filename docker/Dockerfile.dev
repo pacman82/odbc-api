@@ -27,7 +27,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	# odbc-mariadb/buster-backports \
 	sqlite3 \
 	libsqliteodbc \
-	odbc-postgresql
+	odbc-postgresql \
+	unzip
 
 # Fix SQLite driver paths
 RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
@@ -44,6 +45,12 @@ RUN tar -xf mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz
 RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmaodbc.so /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
 RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmariadb.so.3 /usr/lib/x86_64-linux-gnu/
 RUN odbcinst -i -d -f mariadb_odbc_template.ini
+
+# Install DuckDB ODBC driver
+RUN curl -L -o duckdb_odbc.zip https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0/duckdb_odbc-linux-amd64.zip \
+	&& unzip duckdb_odbc.zip -d /opt/duckdb_odbc \
+	&& rm duckdb_odbc.zip \
+	&& printf "[DuckDB Driver]\nDriver = /opt/duckdb_odbc/libduckdb_odbc.so\n" | odbcinst -i -d -r
 
 # Setup cargo and install cargo packages required for tests
 USER vscode
