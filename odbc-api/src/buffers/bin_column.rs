@@ -446,6 +446,8 @@ mod test {
     use super::BinColumn;
 
     #[test]
+    #[ignore = "On windows this tests does cause containerized linux and WSL to allocate all \
+        memory instead of triggering a failed allocation."]
     fn allocating_too_big_a_binary_column() {
         let two_gib = 2_147_483_648;
         let result = BinColumn::try_new(10_000, two_gib);
