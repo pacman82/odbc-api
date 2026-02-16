@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.3](https://github.com/pacman82/odbc-api/compare/v20.1.2...v20.1.3) - 2026-02-16
+
+### Other
+
+- Move table_name to common.rs
+- derive Fetch test in own module
+- common and connection string are now submodules of main.rs
+
 ## [20.1.2](https://github.com/pacman82/odbc-api/compare/v20.1.1...v20.1.2) - 2026-02-16
 
 ### Fixed
