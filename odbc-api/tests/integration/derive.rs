@@ -7,15 +7,6 @@ use odbc_api::{Cursor, Fetch, buffers::RowVec, parameter::VarCharArray};
 
 use crate::common::{Given, MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3};
 
-macro_rules! table_name {
-    () => {
-        // Make function name a valid table name
-        function_name!()
-            .replace("::", "_")
-            .replace(r#"_{{closure}}"#, "")
-    };
-}
-
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
