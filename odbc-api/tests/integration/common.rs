@@ -1,9 +1,45 @@
+//! Helpers shared by other submodules containing tests.
 use std::iter::repeat;
 
 use odbc_api::{
     Connection, ConnectionOptions, Cursor, Error, RowSetBuffer, TruncationInfo, buffers,
     environment,
     handles::{CDataMut, Statement, StatementRef},
+};
+
+use super::connection_strings::{
+    DUCKDB_CONNECTION, MARIADB_CONNECTION, MSSQL_CONNECTION, POSTGRES_CONNECTION,
+    SQLITE_3_CONNECTION,
+};
+
+pub const MSSQL: &Profile = &Profile {
+    connection_string: MSSQL_CONNECTION,
+    index_type: "int IDENTITY(1,1)",
+    blob_type: "Image",
+};
+
+pub const SQLITE_3: &Profile = &Profile {
+    connection_string: SQLITE_3_CONNECTION,
+    index_type: "int IDENTITY(1,1)",
+    blob_type: "BLOB",
+};
+
+pub const MARIADB: &Profile = &Profile {
+    connection_string: MARIADB_CONNECTION,
+    index_type: "INTEGER AUTO_INCREMENT PRIMARY KEY",
+    blob_type: "BLOB",
+};
+
+pub const POSTGRES: &Profile = &Profile {
+    connection_string: POSTGRES_CONNECTION,
+    index_type: "SERIAL PRIMARY KEY",
+    blob_type: "BYTEA",
+};
+
+pub const DUCKDB: &Profile = &Profile {
+    connection_string: DUCKDB_CONNECTION,
+    index_type: "", // DuckDB does not support auto-incrementing columns
+    blob_type: "BLOB",
 };
 
 pub struct Given<'a> {
