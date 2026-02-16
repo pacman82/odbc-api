@@ -28,3 +28,5 @@ pub const POSTGRES_CONNECTION: &str = "Driver={PostgreSQL UNICODE};\
     Database=test;\
     Uid=test;\
     Pwd=test;";
+
+pub const DUCKDB_CONNECTION: &str = "Driver={DuckDB Driver};Database=:memory:;";
