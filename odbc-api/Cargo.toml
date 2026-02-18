@@ -110,7 +110,7 @@ log = "0.4.29"
 # Interacting with UTF-16 texts for wide columns or wide function calls
 widestring = "1.2.1"
 atoi = "2.0.0"
-odbc-api-derive = { version = "12.0.9", path = "../derive", optional = true }
+odbc-api-derive = { version = "12.0.10", path = "../derive", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 # We use winit to display dialogs prompting for connection strings. We can deactivate default
