@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.1.4](https://github.com/pacman82/odbc-api/compare/v20.1.3...v20.1.4) - 2026-02-19
+
+### Other
+
+- release
+- *(deps)* bump syn from 2.0.115 to 2.0.116
+
 ## [20.1.3](https://github.com/pacman82/odbc-api/compare/v20.1.2...v20.1.3) - 2026-02-16
 
 ### Other
