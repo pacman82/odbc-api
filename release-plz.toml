@@ -16,3 +16,13 @@ name = "odbc-api-derive"
 changelog_update = false
 # We use the same tags as the main package
 git_tag_enable = false
+
+# Map conventional commit messages to sensible defaults for changelog groups
+[changelog]
+commit_parsers = [
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^perf", group = "Changed" },
+    { message = "^docs", group = "Changed" },
+    { message = ".*", skip = true },
+]
