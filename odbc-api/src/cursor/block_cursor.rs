@@ -12,7 +12,7 @@ use super::{Cursor, RowSetBuffer, error_handling_for_fetch, unbind_buffer_from_c
 /// create a block cursor by binding preallocated memory to a cursor using [`Cursor::bind_buffer`].
 /// A block cursor saves on a lot of IO overhead by fetching an entire set of rows (called *rowset*)
 /// at once into the buffer bound to it. Reusing the same buffer for each rowset also saves on
-/// allocations. A challange with using block cursors might be database schemas with columns there
+/// allocations. A challenge with using block cursors might be database schemas with columns there
 /// individual fields can be very large. In these cases developers can choose to:
 ///
 /// 1. Reserve less memory for each individual field than the schema indicates and deciding on a
