@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput};
+use syn::{Data, DeriveInput, Fields};
 
 pub fn expand(input: DeriveInput) -> TokenStream {
     let struct_name = input.ident;
@@ -9,13 +9,20 @@ pub fn expand(input: DeriveInput) -> TokenStream {
         return quote! { compile_error!("Fetch can only be derived for structs"); };
     };
 
-    let fields = struct_data.fields;
+    let Fields::Named(named_fields) = struct_data.fields else {
+        return quote! { compile_error!("Fetch can only be derived for structs with named fields"); };
+    };
+    let fields = named_fields.named;
 
-    let bindings = fields.iter().enumerate().map(|(index, field)| {
-        let field_name = field
-            .ident
-            .as_ref()
-            .expect("All struct members must be named");
+    let field_names = || {
+        fields.iter().map(|f| {
+            f.ident
+                .as_ref()
+                .expect("All fields in a struct with named fields must be named.")
+        })
+    };
+
+    let bindings = field_names().enumerate().map(|(index, field_name)| {
         let col_index = (index + 1) as u16;
         quote! {
             odbc_api::buffers::FetchRowMember::bind_to_col(
@@ -26,11 +33,7 @@ pub fn expand(input: DeriveInput) -> TokenStream {
         }
     });
 
-    let find_truncation = fields.iter().enumerate().map(|(index, field)| {
-        let field_name = field
-            .ident
-            .as_ref()
-            .expect("All struct members must be named");
+    let find_truncation = field_names().enumerate().map(|(index, field_name)| {
         quote! {
             let maybe_truncation = odbc_api::buffers::FetchRowMember::find_truncation(
                 &self.#field_name,
@@ -125,18 +128,29 @@ mod tests {
     }
 
     #[test]
-    fn compiler_error_for_enum() {
+    fn compiler_error_when_deriving_for_enum() {
         let input = given(quote! {
-            enum NotAStruct {
-                A,
-                B,
-            }
+            enum NotAStruct {}
         });
 
         let output = expand(input);
 
         let expected = quote! {
             compile_error!("Fetch can only be derived for structs");
+        };
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn compiler_error_when_deriving_for_tuple_struct() {
+        let input = given(quote! {
+            struct TupleStruct(i64, i64);
+        });
+
+        let output = expand(input);
+
+        let expected = quote! {
+            compile_error!("Fetch can only be derived for structs with named fields");
         };
         assert_eq!(expected.to_string(), output.to_string());
     }
