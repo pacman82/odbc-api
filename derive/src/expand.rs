@@ -7,7 +7,7 @@ pub fn expand(input: DeriveInput) -> TokenStream {
 
     let struct_data = match input.data {
         syn::Data::Struct(struct_data) => struct_data,
-        _ => panic!("Fetch can only be derived for structs"),
+        _ => return quote! { compile_error!("Fetch can only be derived for structs"); },
     };
 
     let fields = struct_data.fields;
@@ -121,6 +121,23 @@ mod tests {
                     None
                 }
             }
+        };
+        assert_eq!(expected.to_string(), output.to_string());
+    }
+
+    #[test]
+    fn compiler_error_for_enum() {
+        let input = given(quote! {
+            enum NotAStruct {
+                A,
+                B,
+            }
+        });
+
+        let output = expand(input);
+
+        let expected = quote! {
+            compile_error!("Fetch can only be derived for structs");
         };
         assert_eq!(expected.to_string(), output.to_string());
     }
