@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [20.2.0](https://github.com/pacman82/odbc-api/compare/v20.1.4...v20.2.0) - 2026-03-01
+
+### Added
+
+- Improved compiler error if deriving Fetch for tuple structs
+- Improved compiler error if attempting to derive Fetch for
+
 ## [20.1.3](https://github.com/pacman82/odbc-api/compare/v20.1.2...v20.1.3) - 2026-02-16
 
 ### Other
