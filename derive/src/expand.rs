@@ -1,13 +1,12 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::DeriveInput;
+use syn::{Data, DeriveInput};
 
 pub fn expand(input: DeriveInput) -> TokenStream {
     let struct_name = input.ident;
 
-    let struct_data = match input.data {
-        syn::Data::Struct(struct_data) => struct_data,
-        _ => return quote! { compile_error!("Fetch can only be derived for structs"); },
+    let Data::Struct(struct_data) = input.data else {
+        return quote! { compile_error!("Fetch can only be derived for structs"); };
     };
 
     let fields = struct_data.fields;
