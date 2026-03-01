@@ -27,7 +27,7 @@ pub use self::{
     connection::Connection,
     data_type::DataType,
     descriptor::Descriptor,
-    diagnostics::{DiagnosticStream, Diagnostics, Record, State},
+    diagnostics::{DiagnosticResult, DiagnosticStream, Diagnostics, Record, State},
     environment::Environment,
     logging::log_diagnostics,
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
