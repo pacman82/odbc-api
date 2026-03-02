@@ -2,11 +2,12 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
+    ColumnDescription, Cursor, CursorImpl, ResultSetMetadata,
     buffers::{BufferDesc, ColumnarAnyBuffer, Item, TextRowSet},
-    ColumnDescription, Cursor, ResultSetMetadata,
+    handles::{AsStatementRef, Statement},
 };
 
-use crate::common::{cursor_to_string, Profile, MARIADB, MSSQL, POSTGRES, SQLITE_3};
+use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, cursor_to_string};
 
 // Check the max name length for the catalogs, schemas, tables, and columns.
 #[test_case(MSSQL, 128, 128, 128, 128; "Microsoft SQL Server")]
@@ -271,4 +272,36 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     assert_eq!(retrieved_pk_table_name, pk_table_name);
     assert_eq!(retrieved_fk_table_name, fk_table_name);
     assert_eq!(batch.num_rows(), 1);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn list_private_keys(profile: &Profile) {
+    let table_name = table_name!();
+    // Given a table with a composite primary key (a,b) and a another column c
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
+        .unwrap();
+    let statement =
+        &format!("CREATE TABLE {table_name} (a INTEGER, b INTEGER, c INTEGER, PRIMARY KEY (a,b))");
+    conn.execute(&statement, (), None).unwrap();
+
+    // When we list the primary keys for that table
+    let mut stmt = conn.preallocate().unwrap();
+    let cursor = unsafe {
+        let _ = odbc_sys::SQLPrimaryKeys(
+            stmt.as_stmt_ref().as_sys(),
+            std::ptr::null(),
+            0,
+            std::ptr::null(),
+            0,
+            table_name.as_ptr(),
+            table_name.len() as i16,
+        );
+        CursorImpl::new(stmt)
+    };
+
+    let _output = cursor_to_string(cursor);
 }
