@@ -624,7 +624,7 @@ impl<'c> Connection<'c> {
         table_type: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let statement = self.preallocate()?;
-        statement.into_tables(catalog_name, schema_name, table_name, table_type)
+        statement.into_tables_cursor(catalog_name, schema_name, table_name, table_type)
     }
 
     /// Create a result set which contains the column names that make up the primary key for the
