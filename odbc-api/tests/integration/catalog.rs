@@ -114,7 +114,7 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
     let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
     let mut preallocated = conn.preallocate().unwrap();
 
-    let cursor = preallocated.tables("", "", table_name, "").unwrap();
+    let cursor = preallocated.tables_cursor("", "", table_name, "").unwrap();
     let actual = cursor_to_string(cursor).to_lowercase();
 
     assert_eq!(expected.to_lowercase(), actual);

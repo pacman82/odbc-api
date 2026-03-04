@@ -146,7 +146,7 @@ where
     /// * `table_type`: Filters results by table type. E.g: 'TABLE', 'VIEW'. This argument accepts a
     ///   comma separeted list of table types. Omit it to not filter the result by table type at
     ///   all.
-    pub fn tables(
+    pub fn tables_cursor(
         &mut self,
         catalog_name: &str,
         schema_name: &str,
@@ -157,8 +157,8 @@ where
         execute_tables(stmt, catalog_name, schema_name, table_name, table_type)
     }
 
-    /// Same as [`Self::tables`] but the cursor takes ownership of the statement handle.
-    pub fn into_tables(
+    /// Same as [`Self::tables_cursor`] but the cursor takes ownership of the statement handle.
+    pub fn into_tables_cursor(
         self,
         catalog_name: &str,
         schema_name: &str,
