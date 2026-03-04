@@ -57,13 +57,13 @@ impl State {
     }
 }
 
-/// Result of [`Diagnostic::diagnostic_record`].
+/// Result of [`Diagnostics::diagnostic_record`].
 #[derive(Debug, Clone, Copy)]
 pub struct DiagnosticResult {
     /// A five-character SQLSTATE code (and terminating NULL) for the diagnostic record
     /// `rec_number`. The first two characters indicate the class; the next three indicate the
-    /// subclass. For more information, see [SQLSTATE][1]s.
-    /// [1]: https://docs.microsoft.com/sql/odbc/reference/develop-app/sqlstates
+    /// subclass. For more information, see
+    /// [SQLSTATEs](https://docs.microsoft.com/sql/odbc/reference/develop-app/sqlstates).
     pub state: State,
     /// Native error code specific to the data source.
     pub native_error: i32,

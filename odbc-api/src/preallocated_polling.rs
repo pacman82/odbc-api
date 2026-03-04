@@ -4,8 +4,8 @@ use crate::{
     handles::{AsStatementRef, SqlText, StatementRef},
 };
 
-/// Asynchronous sibling of [`Preallocated`] using polling mode for execution. Can be obtained using
-/// [`Preallocated::into_polling`].
+/// Asynchronous sibling of [`crate::Preallocated`] using polling mode for execution. Can be
+/// obtained using [`crate::Preallocated::into_polling`].
 pub struct PreallocatedPolling<S> {
     /// A valid statement handle in polling mode
     statement: S,
