@@ -198,29 +198,3 @@ unsafe fn next_blob_param<'a>(
         Ok(None)
     }
 }
-
-/// Shared implementation for executing a tables query between [`crate::Connection`] and
-/// [`crate::Preallocated`].
-pub fn execute_tables<S>(
-    mut statement: S,
-    catalog_name: &SqlText,
-    schema_name: &SqlText,
-    table_name: &SqlText,
-    column_name: &SqlText,
-) -> Result<CursorImpl<S>, Error>
-where
-    S: AsStatementRef,
-{
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.tables(catalog_name, schema_name, table_name, column_name)
-        .into_result(&stmt)?;
-
-    // We assume tables always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
-
-    // Safe: `statement` is in Cursor state.
-    let cursor = unsafe { CursorImpl::new(statement) };
-
-    Ok(cursor)
-}

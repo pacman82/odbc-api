@@ -1,6 +1,6 @@
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
-    execute::{execute_tables, execute_with_parameters, execute_with_parameters_polling},
+    execute::{execute_with_parameters, execute_with_parameters_polling},
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
 };
 
@@ -151,12 +151,23 @@ where
         table_type: &str,
     ) -> Result<CursorImpl<StatementRef<'_>>, Error> {
         let stmt = self.statement.as_stmt_ref();
+        execute_tables(stmt, catalog_name, schema_name, table_name, table_type)
+    }
+
+    /// Same as [`Self::tables`] but the cursor takes ownership of the statement handle.
+    pub fn into_tables(
+        self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        table_type: &str,
+    ) -> Result<CursorImpl<S>, Error> {
         execute_tables(
-            stmt,
-            &SqlText::new(catalog_name),
-            &SqlText::new(schema_name),
-            &SqlText::new(table_name),
-            &SqlText::new(table_type),
+            self.statement,
+            catalog_name,
+            schema_name,
+            table_name,
+            table_type,
         )
     }
 
@@ -408,7 +419,7 @@ where
 
 /// Shared implementation for executing a columns query between [`crate::Preallocated::columns`] and
 /// [`crate::Preallocated::into_columns`].
-pub fn execute_columns<S>(
+fn execute_columns<S>(
     mut statement: S,
     catalog_name: &SqlText,
     schema_name: &SqlText,
@@ -454,7 +465,7 @@ where
 
 /// Shared implementation for executing a foreign keys query between [`Preallocated::foreign_keys`]
 /// and [`Preallocated::into_foreign_keys`].
-pub fn execute_foreign_keys<S>(
+fn execute_foreign_keys<S>(
     mut statement: S,
     pk_catalog_name: &str,
     pk_schema_name: &str,
@@ -479,6 +490,35 @@ where
     .into_result(&stmt)?;
 
     // We assume foreign keys always creates a result set, since it works like a SELECT statement.
+    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+
+    // Safe: `statement` is in Cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+
+    Ok(cursor)
+}
+
+fn execute_tables<S>(
+    mut statement: S,
+    catalog_name: &str,
+    schema_name: &str,
+    table_name: &str,
+    column_name: &str,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+
+    stmt.tables(
+        &SqlText::new(catalog_name),
+        &SqlText::new(schema_name),
+        &SqlText::new(table_name),
+        &SqlText::new(column_name),
+    )
+    .into_result(&stmt)?;
+
+    // We assume tables always creates a result set, since it works like a SELECT statement.
     debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
 
     // Safe: `statement` is in Cursor state.

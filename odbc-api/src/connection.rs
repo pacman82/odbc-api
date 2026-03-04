@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
     buffers::BufferDesc,
-    execute::{execute_tables, execute_with_parameters_polling},
+    execute::execute_with_parameters_polling,
     handles::{
         self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
         slice_to_utf8,
@@ -622,15 +622,8 @@ impl<'c> Connection<'c> {
         table_name: &str,
         table_type: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-        let statement = self.allocate_statement()?;
-
-        execute_tables(
-            statement,
-            &SqlText::new(catalog_name),
-            &SqlText::new(schema_name),
-            &SqlText::new(table_name),
-            &SqlText::new(table_type),
-        )
+        let statement = self.preallocate()?;
+        statement.into_tables(catalog_name, schema_name, table_name, table_type)
     }
 
     /// Create a result set which contains the column names that make up the primary key for the
