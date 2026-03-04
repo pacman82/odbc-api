@@ -189,6 +189,23 @@ where
         )
     }
 
+    /// Same as [`Self::columns`], but the cursor takes ownership of the statement handle.
+    pub fn into_columns(
+        self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<CursorImpl<S>, Error> {
+        execute_columns(
+            self.statement,
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(column_name),
+        )
+    }
+
     /// Create a result set which contains the column names that make up the primary key for the
     /// table. Same as [`Self::into_primary_keys`] but the cursor borrowes the statement handle
     /// instead of taking ownership of it. This allows you to reuse the statement handle for
@@ -237,77 +254,22 @@ where
         schema_name: Option<&str>,
         table_name: &str,
     ) -> Result<CursorImpl<StatementRef<'_>>, Error> {
-        self.execute_primary_keys(catalog_name, schema_name, table_name)?;
-        // SAFETY: primary_keys puts stmt into cursor state.
-        let cursor = unsafe { CursorImpl::new(self.statement.as_stmt_ref()) };
-        Ok(cursor)
+        execute_primary_keys(
+            self.statement.as_stmt_ref(),
+            catalog_name,
+            schema_name,
+            table_name,
+        )
     }
 
-    /// Create a result set which contains the column names that make up the primary key for the
-    /// table. Same as [`Self::primary_keys`] but the cursor takes ownership of the statement
-    /// handle.
-    ///
-    /// # Parameters
-    ///
-    /// * `catalog_name`: Catalog name. If a driver supports catalogs for some tables but not for
-    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
-    ///   denotes those tables that do not have catalogs. `catalog_name` must not contain a string
-    ///   search pattern.
-    /// * `schema_name`: Schema name. If a driver supports schemas for some tables but not for
-    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
-    ///   denotes those tables that do not have schemas. `schema_name` must not contain a string
-    ///   search pattern.
-    /// * `table_name`: Table name. `table_name` must not contain a string search pattern.
-    ///
-    /// The resulting result set contains the following columns:
-    ///
-    /// * `TABLE_CAT`: Primary key table catalog name. NULL if not applicable to the data source. If
-    ///   a driver supports catalogs for some tables but not for others, such as when the driver
-    ///   retrieves data from different DBMSs, it returns an empty string ("") for those tables that
-    ///   do not have catalogs. `VARCHAR`
-    /// * `TABLE_SCHEM`: Primary key table schema name; NULL if not applicable to the data source.
-    ///   If a driver supports schemas for some tables but not for others, such as when the driver
-    ///   retrieves data from different DBMSs, it returns an empty string ("") for those tables that
-    ///   do not have schemas. `VARCHAR`
-    /// * `TABLE_NAME`: Primary key table name. `VARCHAR NOT NULL`
-    /// * `COLUMN_NAME`: Primary key column name. The driver returns an empty string for a column
-    ///   that does not have a name. `VARCHAR NOT NULL`
-    /// * `KEY_SEQ`: Column sequence number in key (starting with 1). `SMALLINT NOT NULL`
-    /// * `PK_NAME`: Primary key name. NULL if not applicable to the data source. `VARCHAR`
-    ///
-    /// The maximum length of the VARCHAR columns is driver specific.
-    ///
-    /// If [`StatementAttribute::MetadataId`] statement attribute is set to true, catalog, schema
-    /// and table name parameters are treated as an identifiers and their case is not significant.
-    /// If it is false, they are ordinary arguments. As such they treated literally and their case
-    /// is significant.
-    ///
-    /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
+    /// Same as [`Self::primary_keys`] but the cursor takes ownership of the statement handle.
     pub fn into_primary_keys(
-        mut self,
+        self,
         catalog_name: Option<&str>,
         schema_name: Option<&str>,
         table_name: &str,
     ) -> Result<CursorImpl<S>, Error> {
-        self.execute_primary_keys(catalog_name, schema_name, table_name)?;
-        // SAFETY: primary_keys puts stmt into cursor state.
-        let cursor = unsafe { CursorImpl::new(self.statement) };
-        Ok(cursor)
-    }
-
-    fn execute_primary_keys(
-        &mut self,
-        catalog_name: Option<&str>,
-        schema_name: Option<&str>,
-        table_name: &str,
-    ) -> Result<(), Error> {
-        let mut stmt = self.statement.as_stmt_ref();
-        stmt.primary_keys(
-            catalog_name.map(SqlText::new).as_ref(),
-            schema_name.map(SqlText::new).as_ref(),
-            &SqlText::new(table_name),
-        )
-        .into_result(&stmt)
+        execute_primary_keys(self.statement, catalog_name, schema_name, table_name)
     }
 
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
@@ -423,6 +385,31 @@ where
     }
 }
 
+/// Shared implementation for executing a columns query between [`crate::Preallocated::columns`] and
+/// [`crate::Preallocated::into_columns`].
+pub fn execute_columns<S>(
+    mut statement: S,
+    catalog_name: &SqlText,
+    schema_name: &SqlText,
+    table_name: &SqlText,
+    column_name: &SqlText,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+
+    stmt.columns(catalog_name, schema_name, table_name, column_name)
+        .into_result(&stmt)?;
+
+    // We assume columns always creates a result set, since it works like a SELECT statement.
+    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+
+    // Safe: `statement` is in cursor state
+    let cursor = unsafe { CursorImpl::new(statement) };
+    Ok(cursor)
+}
+
 /// Asynchronous sibling of [`Preallocated`] using polling mode for execution. Can be obtained using
 /// [`Preallocated::into_polling`].
 pub struct PreallocatedPolling<S> {
@@ -500,4 +487,25 @@ where
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
+}
+
+fn execute_primary_keys<S>(
+    mut statement: S,
+    catalog_name: Option<&str>,
+    schema_name: Option<&str>,
+    table_name: &str,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+    stmt.primary_keys(
+        catalog_name.map(SqlText::new).as_ref(),
+        schema_name.map(SqlText::new).as_ref(),
+        &SqlText::new(table_name),
+    )
+    .into_result(&stmt)?;
+    // SAFETY: primary_keys puts stmt into cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+    Ok(cursor)
 }

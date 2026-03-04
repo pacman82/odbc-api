@@ -1,9 +1,7 @@
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
     buffers::BufferDesc,
-    execute::{
-        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters_polling,
-    },
+    execute::{execute_foreign_keys, execute_tables, execute_with_parameters_polling},
     handles::{
         self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
         slice_to_utf8,
@@ -556,13 +554,8 @@ impl<'c> Connection<'c> {
         table_name: &str,
         column_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-        execute_columns(
-            self.allocate_statement()?,
-            &SqlText::new(catalog_name),
-            &SqlText::new(schema_name),
-            &SqlText::new(table_name),
-            &SqlText::new(column_name),
-        )
+        let stmt = self.preallocate()?;
+        stmt.into_columns(catalog_name, schema_name, table_name, column_name)
     }
 
     /// List tables, schemas, views and catalogs of a datasource.
