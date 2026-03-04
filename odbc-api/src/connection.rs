@@ -659,10 +659,10 @@ impl<'c> Connection<'c> {
     ///
     /// The maximum length of the VARCHAR columns is driver specific.
     ///
-    /// If [`StatementAttribute::MetadataId`] statement attribute is set to true, catalog, schema
-    /// and table name parameters are treated as an identifiers and their case is not significant.
-    /// If it is false, they are ordinary arguments. As such they treated literally and their case
-    /// is significant.
+    /// If [`crate::sys::StatementAttribute::MetadataId`] statement attribute is set to true,
+    /// catalog, schema and table name parameters are treated as an identifiers and their case is
+    /// not significant. If it is false, they are ordinary arguments. As such they treated literally
+    /// and their case is significant.
     ///
     /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
     pub fn primary_keys(

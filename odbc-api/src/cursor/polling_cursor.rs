@@ -11,9 +11,10 @@ use super::{
 
 use std::thread::panicking;
 
-/// The asynchronous sibiling of [`CursorImpl`]. Use this to fetch results in asynchronous code.
+/// The asynchronous sibiling of [`super::CursorImpl`]. Use this to fetch results in asynchronous
+/// code.
 ///
-/// Like [`CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
+/// Like [`super::CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
 /// synchronous sibling this statement handle is in asynchronous polling mode.
 pub struct CursorPolling<Stmt: AsStatementRef> {
     /// A statement handle in cursor state with asynchronous mode enabled.
@@ -33,7 +34,7 @@ where
     ///
     /// `statement` must be in Cursor state, for the invariants of this type to hold. Preferable
     /// `statement` should also have asynchrous mode enabled, otherwise constructing a synchronous
-    /// [`CursorImpl`] is more suitable.
+    /// [`super::CursorImpl`] is more suitable.
     pub unsafe fn new(statement: S) -> Self {
         Self { statement }
     }
@@ -81,7 +82,7 @@ where
 
 /// Asynchronously iterates in blocks (called row sets) over a result set, filling a buffers with
 /// a lot of rows at once, instead of iterating the result set row by row. This is usually much
-/// faster. Asynchronous sibiling of [`self::BlockCursor`].
+/// faster. Asynchronous sibiling of [`super::BlockCursor`].
 pub struct BlockCursorPolling<C, B>
 where
     C: AsStatementRef,

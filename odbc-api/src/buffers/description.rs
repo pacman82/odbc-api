@@ -108,10 +108,10 @@ pub enum BufferDesc {
         /// will cause an indicator buffer to be bound.
         nullable: bool,
     },
-    /// Use [`sys::Numeric`] to represent Numeric values. Note that not all driver support Numeric
-    /// types. Even if they do, they may not respect the `scale` and `precision` values unless they
-    /// are explicit set in the Applicatior Parameter Descriptor (APD) for inserting or the
-    /// Application Row Descriptor (ARD). This currently would require unsafe code. Using text
+    /// Use [`crate::sys::Numeric`] to represent Numeric values. Note that not all driver support
+    /// Numeric types. Even if they do, they may not respect the `scale` and `precision` values
+    /// unless they are explicit set in the Applicatior Parameter Descriptor (APD) for inserting or
+    /// the Application Row Descriptor (ARD). This currently would require unsafe code. Using text
     /// buffers to insert or fetch Numeric values works more reliable.
     ///
     /// In my tests so far using Numeric buffers with PostgreSQL works for both inserting and
