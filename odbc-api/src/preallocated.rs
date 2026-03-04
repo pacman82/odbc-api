@@ -338,7 +338,7 @@ where
     /// of foreign keys in other table that refer to the primary key of the specified table.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
-    pub fn foreign_keys(
+    pub fn foreign_keys_cursor(
         &mut self,
         pk_catalog_name: &str,
         pk_schema_name: &str,
@@ -363,7 +363,7 @@ where
     /// of foreign keys in other table that refer to the primary key of the specified table.
     ///
     /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
-    pub fn into_foreign_keys(
+    pub fn into_foreign_keys_cursor(
         self,
         pk_catalog_name: &str,
         pk_schema_name: &str,

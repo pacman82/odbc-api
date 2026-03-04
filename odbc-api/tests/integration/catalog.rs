@@ -262,7 +262,7 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
 
     let mut stmt = conn.preallocate().unwrap();
     let mut cursor = stmt
-        .foreign_keys("", "", "", "", "", &fk_table_name)
+        .foreign_keys_cursor("", "", "", "", "", &fk_table_name)
         .unwrap();
     let buffer = TextRowSet::for_cursor(10, &mut cursor, Some(256)).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
