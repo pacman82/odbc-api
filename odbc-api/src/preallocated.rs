@@ -1,9 +1,6 @@
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
-    execute::{
-        execute_columns, execute_foreign_keys, execute_tables, execute_with_parameters,
-        execute_with_parameters_polling,
-    },
+    execute::{execute_tables, execute_with_parameters, execute_with_parameters_polling},
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
 };
 
@@ -288,12 +285,36 @@ where
         let stmt = self.statement.as_stmt_ref();
         execute_foreign_keys(
             stmt,
-            &SqlText::new(pk_catalog_name),
-            &SqlText::new(pk_schema_name),
-            &SqlText::new(pk_table_name),
-            &SqlText::new(fk_catalog_name),
-            &SqlText::new(fk_schema_name),
-            &SqlText::new(fk_table_name),
+            pk_catalog_name,
+            pk_schema_name,
+            pk_table_name,
+            fk_catalog_name,
+            fk_schema_name,
+            fk_table_name,
+        )
+    }
+
+    /// This can be used to retrieve either a list of foreign keys in the specified table or a list
+    /// of foreign keys in other table that refer to the primary key of the specified table.
+    ///
+    /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
+    pub fn into_foreign_keys(
+        self,
+        pk_catalog_name: &str,
+        pk_schema_name: &str,
+        pk_table_name: &str,
+        fk_catalog_name: &str,
+        fk_schema_name: &str,
+        fk_table_name: &str,
+    ) -> Result<CursorImpl<S>, Error> {
+        execute_foreign_keys(
+            self.statement,
+            pk_catalog_name,
+            pk_schema_name,
+            pk_table_name,
+            fk_catalog_name,
+            fk_schema_name,
+            fk_table_name,
         )
     }
 
@@ -410,6 +431,62 @@ where
     Ok(cursor)
 }
 
+fn execute_primary_keys<S>(
+    mut statement: S,
+    catalog_name: Option<&str>,
+    schema_name: Option<&str>,
+    table_name: &str,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+    stmt.primary_keys(
+        catalog_name.map(SqlText::new).as_ref(),
+        schema_name.map(SqlText::new).as_ref(),
+        &SqlText::new(table_name),
+    )
+    .into_result(&stmt)?;
+    // SAFETY: primary_keys puts stmt into cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+    Ok(cursor)
+}
+
+/// Shared implementation for executing a foreign keys query between [`Preallocated::foreign_keys`]
+/// and [`Preallocated::into_foreign_keys`].
+pub fn execute_foreign_keys<S>(
+    mut statement: S,
+    pk_catalog_name: &str,
+    pk_schema_name: &str,
+    pk_table_name: &str,
+    fk_catalog_name: &str,
+    fk_schema_name: &str,
+    fk_table_name: &str,
+) -> Result<CursorImpl<S>, Error>
+where
+    S: AsStatementRef,
+{
+    let mut stmt = statement.as_stmt_ref();
+
+    stmt.foreign_keys(
+        &SqlText::new(pk_catalog_name),
+        &SqlText::new(pk_schema_name),
+        &SqlText::new(pk_table_name),
+        &SqlText::new(fk_catalog_name),
+        &SqlText::new(fk_schema_name),
+        &SqlText::new(fk_table_name),
+    )
+    .into_result(&stmt)?;
+
+    // We assume foreign keys always creates a result set, since it works like a SELECT statement.
+    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+
+    // Safe: `statement` is in Cursor state.
+    let cursor = unsafe { CursorImpl::new(statement) };
+
+    Ok(cursor)
+}
+
 /// Asynchronous sibling of [`Preallocated`] using polling mode for execution. Can be obtained using
 /// [`Preallocated::into_polling`].
 pub struct PreallocatedPolling<S> {
@@ -487,25 +564,4 @@ where
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
-}
-
-fn execute_primary_keys<S>(
-    mut statement: S,
-    catalog_name: Option<&str>,
-    schema_name: Option<&str>,
-    table_name: &str,
-) -> Result<CursorImpl<S>, Error>
-where
-    S: AsStatementRef,
-{
-    let mut stmt = statement.as_stmt_ref();
-    stmt.primary_keys(
-        catalog_name.map(SqlText::new).as_ref(),
-        schema_name.map(SqlText::new).as_ref(),
-        &SqlText::new(table_name),
-    )
-    .into_result(&stmt)?;
-    // SAFETY: primary_keys puts stmt into cursor state.
-    let cursor = unsafe { CursorImpl::new(statement) };
-    Ok(cursor)
 }
