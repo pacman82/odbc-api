@@ -279,12 +279,7 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
 #[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
 #[test_case(POSTGRES, Some("test"), Some("public"); "PostgreSQL")]
 fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&str>) {
-    use odbc_api::{
-        CursorImpl, Fetch,
-        buffers::RowVec,
-        handles::{AsStatementRef, SqlText, Statement},
-        parameter::VarCharArray,
-    };
+    use odbc_api::{Fetch, buffers::RowVec, parameter::VarCharArray};
 
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
@@ -297,12 +292,7 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
 
     // When we list the primary keys for that table
     let mut stmt = conn.preallocate().unwrap();
-    let mut cursor = unsafe {
-        let _ = stmt
-            .as_stmt_ref()
-            .primary_keys(None, None, &SqlText::new(&table_name));
-        CursorImpl::new(stmt)
-    };
+    let mut cursor = stmt.primary_keys(None, None, &table_name).unwrap();
     #[derive(Fetch, Copy, Clone, Default)]
     struct PrimaryKeysRow {
         table_cat: VarCharArray<128>,
