@@ -282,10 +282,9 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
     use odbc_api::{
         CursorImpl, Fetch,
         buffers::RowVec,
-        handles::{AsStatementRef, Statement},
+        handles::{AsStatementRef, SqlText, Statement},
         parameter::VarCharArray,
     };
-    use std::ptr::null;
 
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
@@ -299,15 +298,9 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
     // When we list the primary keys for that table
     let mut stmt = conn.preallocate().unwrap();
     let mut cursor = unsafe {
-        let _ = odbc_sys::SQLPrimaryKeys(
-            stmt.as_stmt_ref().as_sys(),
-            null(),
-            0,
-            null(),
-            0,
-            table_name.as_ptr(),
-            table_name.len() as i16,
-        );
+        let _ = stmt
+            .as_stmt_ref()
+            .primary_keys(None, None, &SqlText::new(&table_name));
         CursorImpl::new(stmt)
     };
     #[derive(Fetch, Copy, Clone, Default)]

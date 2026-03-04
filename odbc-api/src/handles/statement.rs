@@ -16,7 +16,13 @@ use odbc_sys::{
     SQLFreeStmt, SQLGetData, SQLMoreResults, SQLNumParams, SQLNumResultCols, SQLParamData,
     SQLPutData, SQLRowCount, SqlDataType, SqlReturn, StatementAttribute,
 };
-use std::{ffi::c_void, marker::PhantomData, mem::ManuallyDrop, num::NonZeroUsize, ptr::null_mut};
+use std::{
+    ffi::c_void,
+    marker::PhantomData,
+    mem::ManuallyDrop,
+    num::NonZeroUsize,
+    ptr::{null, null_mut},
+};
 
 #[cfg(feature = "odbc_version_3_80")]
 use odbc_sys::SQLCompleteAsync;
@@ -26,7 +32,8 @@ use odbc_sys::{
     SQLColAttribute as sql_col_attribute, SQLColumns as sql_columns,
     SQLDescribeCol as sql_describe_col, SQLExecDirect as sql_exec_direc,
     SQLForeignKeys as sql_foreign_keys, SQLGetStmtAttr as sql_get_stmt_attr,
-    SQLPrepare as sql_prepare, SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
+    SQLPrepare as sql_prepare, SQLPrimaryKeys as sql_primary_keys,
+    SQLSetStmtAttr as sql_set_stmt_attr, SQLTables as sql_tables,
 };
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
@@ -34,7 +41,8 @@ use odbc_sys::{
     SQLColAttributeW as sql_col_attribute, SQLColumnsW as sql_columns,
     SQLDescribeColW as sql_describe_col, SQLExecDirectW as sql_exec_direc,
     SQLForeignKeysW as sql_foreign_keys, SQLGetStmtAttrW as sql_get_stmt_attr,
-    SQLPrepareW as sql_prepare, SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
+    SQLPrepareW as sql_prepare, SQLPrimaryKeysW as sql_primary_keys,
+    SQLSetStmtAttrW as sql_set_stmt_attr, SQLTablesW as sql_tables,
 };
 
 /// An owned valid (i.e. successfully allocated) ODBC statement handle. [`StatementImpl`] borrows
@@ -960,6 +968,65 @@ pub trait Statement: AnyHandle {
                 table_type.len_char().try_into().unwrap(),
             )
             .into_sql_result("SQLTables")
+        }
+    }
+
+    /// Create a result set which contains the column names that make up the primary key for the
+    /// table.
+    ///
+    /// # Parameters
+    ///
+    /// * `catalog_name`: Catalog name. If a driver supports catalogs for some tables but not for
+    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
+    ///   denotes those tables that do not have catalogs. `catalog_name` must not contain a string
+    ///   search pattern.
+    /// * `schema_name`: Schema name. If a driver supports schemas for some tables but not for
+    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
+    ///   denotes those tables that do not have schemas. `schema_name` must not contain a string
+    ///   search pattern.
+    /// * `table_name`: Table name. `table_name` must not contain a string search pattern.
+    ///
+    /// The resulting result set contains the following columns:
+    ///
+    /// * `TABLE_CAT`: Primary key table catalog name. NULL if not applicable to the data source. If
+    ///   a driver supports catalogs for some tables but not for others, such as when the driver
+    ///   retrieves data from different DBMSs, it returns an empty string ("") for those tables that
+    ///   do not have catalogs. `VARCHAR`
+    /// * `TABLE_SCHEM`: Primary key table schema name; NULL if not applicable to the data source.
+    ///   If a driver supports schemas for some tables but not for others, such as when the driver
+    ///   retrieves data from different DBMSs, it returns an empty string ("") for those tables that
+    ///   do not have schemas. `VARCHAR`
+    /// * `TABLE_NAME`: Primary key table name. `VARCHAR NOT NULL`
+    /// * `COLUMN_NAME`: Primary key column name. The driver returns an empty string for a column
+    ///   that does not have a name. `VARCHAR NOT NULL`
+    /// * `KEY_SEQ`: Column sequence number in key (starting with 1). `SMALLINT NOT NULL`
+    /// * `PK_NAME`: Primary key name. NULL if not applicable to the data source. `VARCHAR`
+    ///
+    /// The maximum length of the VARCHAR columns is driver specific.
+    ///
+    /// If [`StatementAttribute::MetadataId`] statement attribute is set to true, catalog, schema
+    /// and table name parameters are treated as an identifiers and their case is not significant.
+    /// If it is false, they are ordinary arguments. As such they treated literally and their case
+    /// is significant.
+    ///
+    /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
+    fn primary_keys(
+        &mut self,
+        catalog_name: Option<&SqlText>,
+        schema_name: Option<&SqlText>,
+        table_name: &SqlText,
+    ) -> SqlResult<()> {
+        unsafe {
+            sql_primary_keys(
+                self.as_sys(),
+                catalog_name.map_or(null(), |c| c.ptr()),
+                catalog_name.map_or(0, |c| c.len_char().try_into().unwrap()),
+                schema_name.map_or(null(), |s| s.ptr()),
+                schema_name.map_or(0, |s| s.len_char().try_into().unwrap()),
+                table_name.ptr(),
+                table_name.len_char().try_into().unwrap(),
+            )
+            .into_sql_result("SQLPrimaryKeys")
         }
     }
 
