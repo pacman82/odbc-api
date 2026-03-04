@@ -23,6 +23,7 @@ commit_parsers = [
     { message = "^feat", group = "Added" },
     { message = "^fix", group = "Fixed" },
     { message = "^perf", group = "Changed" },
+    { message = "^refactor!", group = "Changed" },
     { message = "^docs", group = "Changed" },
     { message = ".*", skip = true },
 ]
