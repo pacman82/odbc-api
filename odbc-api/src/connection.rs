@@ -556,7 +556,7 @@ impl<'c> Connection<'c> {
         column_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let stmt = self.preallocate()?;
-        stmt.into_columns(catalog_name, schema_name, table_name, column_name)
+        stmt.into_columns_cursor(catalog_name, schema_name, table_name, column_name)
     }
 
     /// List tables, schemas, views and catalogs of a datasource.
