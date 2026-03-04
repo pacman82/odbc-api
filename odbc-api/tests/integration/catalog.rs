@@ -2,9 +2,8 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
-    ColumnDescription, Cursor, CursorImpl, ResultSetMetadata,
+    ColumnDescription, Cursor, ResultSetMetadata,
     buffers::{BufferDesc, ColumnarAnyBuffer, Item, TextRowSet},
-    handles::{AsStatementRef, Statement},
 };
 
 use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, cursor_to_string};
@@ -274,11 +273,20 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     assert_eq!(batch.num_rows(), 1);
 }
 
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn list_private_keys(profile: &Profile) {
+#[cfg(feature = "derive")]
+#[test_case(MSSQL, Some("master"), Some("dbo"); "Microsoft SQL Server")]
+#[test_case(MARIADB, Some("test_db"), None; "Maria DB")]
+#[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
+#[test_case(POSTGRES, Some("test"), Some("public"); "PostgreSQL")]
+fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&str>) {
+    use odbc_api::{
+        CursorImpl, Fetch,
+        buffers::RowVec,
+        handles::{AsStatementRef, Statement},
+        parameter::VarCharArray,
+    };
+    use std::ptr::null;
+
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
     let conn = profile.connection().unwrap();
@@ -293,15 +301,71 @@ fn list_private_keys(profile: &Profile) {
     let cursor = unsafe {
         let _ = odbc_sys::SQLPrimaryKeys(
             stmt.as_stmt_ref().as_sys(),
-            std::ptr::null(),
+            null(),
             0,
-            std::ptr::null(),
+            null(),
             0,
             table_name.as_ptr(),
             table_name.len() as i16,
         );
         CursorImpl::new(stmt)
     };
+    #[derive(Fetch, Copy, Clone, Default)]
+    struct PrimaryKeysRow {
+        table_cat: VarCharArray<100>,
+        table_schem: VarCharArray<100>,
+        table_name: VarCharArray<100>,
+        column_name: VarCharArray<100>,
+        key_seq: i16,
+        pk_name: VarCharArray<100>,
+    }
+    let rows = RowVec::<PrimaryKeysRow>::new(3);
+    let mut cursor = cursor.bind_buffer(rows).unwrap();
 
-    let _output = cursor_to_string(cursor);
+    let mut primary_keys_rows: Vec<PrimaryKeysRow> = Vec::new();
+    while let Some(batch) = cursor.fetch().unwrap() {
+        primary_keys_rows.extend(batch.iter());
+    }
+
+    // Then we expact the result set to describe the primary key of the table. The columns of the
+    // result set are: TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,KEY_SEQ,PK_NAME.
+    assert_eq!(2, primary_keys_rows.len());
+    assert_eq!(catalog, primary_keys_rows[0].table_cat.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[1].table_cat.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[0].table_schem.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[1].table_schem.as_str().unwrap());
+    assert_eq!(
+        Some(table_name.as_str()),
+        primary_keys_rows[0].table_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some(table_name.as_str()),
+        primary_keys_rows[1].table_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some("a"),
+        primary_keys_rows[0].column_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some("b"),
+        primary_keys_rows[1].column_name.as_str().unwrap()
+    );
+    assert_eq!(1, primary_keys_rows[0].key_seq);
+    assert_eq!(2, primary_keys_rows[1].key_seq);
+    eprintln!(
+        "{}",
+        primary_keys_rows[0]
+            .pk_name
+            .as_str()
+            .unwrap()
+            .unwrap_or("NULL")
+    );
+    eprintln!(
+        "{}",
+        primary_keys_rows[1]
+            .pk_name
+            .as_str()
+            .unwrap()
+            .unwrap_or("NULL")
+    );
 }
