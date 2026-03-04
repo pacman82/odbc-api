@@ -183,7 +183,7 @@ where
     /// `ORDINAL_POSITION`, `IS_NULLABLE`.
     ///
     /// In addition to that there may be a number of columns specific to the data source.
-    pub fn columns(
+    pub fn columns_cursor(
         &mut self,
         catalog_name: &str,
         schema_name: &str,
