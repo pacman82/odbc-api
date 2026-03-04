@@ -5712,6 +5712,36 @@ fn fetch_fixed_type_row_wise(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn row_wise_bulk_query_using_iterator(profile: &Profile) {
+    // Given a cursor
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), Some("5")]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+
+    // When
+
+    // Choose batch size 1 so we need multiple batches.
+    let row_set_buffer = RowVec::<(i32,)>::new(1);
+    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let all_rows = block_cursor.iter().collect::<Result<Vec<_>, _>>().unwrap();
+
+    // Then
+    assert_eq!(2, all_rows.len());
+    assert_eq!(42, all_rows[0].0);
+    assert_eq!(5, all_rows[1].0);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn get_row_array_size_from_statement(profile: &Profile) {
     // Given a statement
     let table_name = table_name!();

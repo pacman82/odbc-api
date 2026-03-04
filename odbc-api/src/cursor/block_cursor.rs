@@ -2,6 +2,7 @@ use std::{mem::MaybeUninit, ptr, thread::panicking};
 
 use crate::{
     Error,
+    buffers::{FetchRow, RowVec},
     handles::{AsStatementRef, Statement as _},
 };
 
@@ -157,5 +158,56 @@ where
                 panic!("Unexpected error unbinding columns: {e:?}")
             }
         }
+    }
+}
+
+impl<C, R> BlockCursor<C, RowVec<R>>
+where
+    C: Cursor,
+    R: FetchRow,
+{
+    /// An iterator over all the rows in all the batches of the result set.
+    pub fn iter(&mut self) -> BlockCursorIterator<'_, C, R> {
+        BlockCursorIterator {
+            index: self.buffer.len(),
+            cursor: self,
+        }
+    }
+}
+
+pub struct BlockCursorIterator<'b, C: Cursor, R> {
+    cursor: &'b mut BlockCursor<C, RowVec<R>>,
+    /// Index of the next row to return. When `index >= buffer.len()`, the current batch is
+    /// exhausted and the next call to `next` will fetch a new one.
+    index: usize,
+}
+
+impl<C, R> BlockCursorIterator<'_, C, R>
+where
+    C: Cursor,
+    R: FetchRow,
+{
+    fn next_row(&mut self) -> Result<Option<R>, Error> {
+        if self.index == self.cursor.buffer.len() {
+            if self.cursor.fetch()?.is_none() {
+                return Ok(None);
+            }
+            self.index = 0;
+        }
+        let row = self.cursor.buffer[self.index];
+        self.index += 1;
+        Ok(Some(row))
+    }
+}
+
+impl<C, R> Iterator for BlockCursorIterator<'_, C, R>
+where
+    C: Cursor,
+    R: FetchRow,
+{
+    type Item = Result<R, Error>;
+
+    fn next(&mut self) -> Option<Result<R, Error>> {
+        self.next_row().transpose()
     }
 }
