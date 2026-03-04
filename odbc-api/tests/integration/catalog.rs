@@ -298,7 +298,7 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
 
     // When we list the primary keys for that table
     let mut stmt = conn.preallocate().unwrap();
-    let cursor = unsafe {
+    let mut cursor = unsafe {
         let _ = odbc_sys::SQLPrimaryKeys(
             stmt.as_stmt_ref().as_sys(),
             null(),
@@ -312,14 +312,21 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
     };
     #[derive(Fetch, Copy, Clone, Default)]
     struct PrimaryKeysRow {
-        table_cat: VarCharArray<100>,
-        table_schem: VarCharArray<100>,
-        table_name: VarCharArray<100>,
-        column_name: VarCharArray<100>,
+        table_cat: VarCharArray<128>,
+        table_schem: VarCharArray<128>,
+        table_name: VarCharArray<255>,
+        column_name: VarCharArray<255>,
         key_seq: i16,
-        pk_name: VarCharArray<100>,
+        pk_name: VarCharArray<128>,
     }
     let rows = RowVec::<PrimaryKeysRow>::new(3);
+    let mut column_description = ColumnDescription::default();
+    for index in 0..cursor.num_result_cols().unwrap() {
+        cursor
+            .describe_col(index as u16 + 1, &mut column_description)
+            .unwrap();
+        eprintln!("{column_description:?}")
+    }
     let mut cursor = cursor.bind_buffer(rows).unwrap();
 
     let mut primary_keys_rows: Vec<PrimaryKeysRow> = Vec::new();
