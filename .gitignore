@@ -8,15 +8,12 @@
 
 # Normally IDE stuff is put in global gitignore, but at the moment I don't know how to make this
 # work with the development container
-/.idea/ 
+/.idea/
 /.vscode/
-
-# Machine specific test expectation for list-drivers test
-/odbcsv/tests/list-drivers.txt
 
 # Artefact created during test run
 /odbc-api/sqlite-test.db
-/odbcsv/sqlite-test.db
+/odbc-api/sqlite-test.db-journal
 
 # Coverage report created by tarpaulin
 tarpaulin-report.html
