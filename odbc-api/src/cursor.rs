@@ -22,7 +22,7 @@ use std::{
 };
 
 pub use self::{
-    block_cursor::BlockCursor,
+    block_cursor::{BlockCursor, BlockCursorIterator},
     concurrent_block_cursor::ConcurrentBlockCursor,
     polling_cursor::{BlockCursorPolling, CursorPolling},
 };

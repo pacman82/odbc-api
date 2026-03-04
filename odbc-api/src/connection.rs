@@ -1,5 +1,6 @@
 use crate::{
-    CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
+    BlockCursorIterator, CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated,
+    Prepared, PrimaryKeysRow, Sleep,
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
@@ -670,7 +671,7 @@ impl<'c> Connection<'c> {
         catalog_name: Option<&str>,
         schema_name: Option<&str>,
         table_name: &str,
-    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementImpl<'_>>, PrimaryKeysRow>, Error> {
         let stmt = self.preallocate()?;
         stmt.into_primary_keys(catalog_name, schema_name, table_name)
     }
