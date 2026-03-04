@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated, Prepared, Sleep,
     buffers::BufferDesc,
-    execute::{execute_foreign_keys, execute_tables, execute_with_parameters_polling},
+    execute::{execute_tables, execute_with_parameters_polling},
     handles::{
         self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
         slice_to_utf8,
@@ -695,16 +695,14 @@ impl<'c> Connection<'c> {
         fk_schema_name: &str,
         fk_table_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
-        let statement = self.allocate_statement()?;
-
-        execute_foreign_keys(
-            statement,
-            &SqlText::new(pk_catalog_name),
-            &SqlText::new(pk_schema_name),
-            &SqlText::new(pk_table_name),
-            &SqlText::new(fk_catalog_name),
-            &SqlText::new(fk_schema_name),
-            &SqlText::new(fk_table_name),
+        let statement = self.preallocate()?;
+        statement.into_foreign_keys(
+            pk_catalog_name,
+            pk_schema_name,
+            pk_table_name,
+            fk_catalog_name,
+            fk_schema_name,
+            fk_table_name,
         )
     }
 
