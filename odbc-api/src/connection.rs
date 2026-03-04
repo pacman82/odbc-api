@@ -666,7 +666,7 @@ impl<'c> Connection<'c> {
     ///
     /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
     pub fn primary_keys(
-        &mut self,
+        &self,
         catalog_name: Option<&str>,
         schema_name: Option<&str>,
         table_name: &str,
