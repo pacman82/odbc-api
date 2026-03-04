@@ -690,7 +690,7 @@ impl<'c> Connection<'c> {
         fk_table_name: &str,
     ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
         let statement = self.preallocate()?;
-        statement.into_foreign_keys(
+        statement.into_foreign_keys_cursor(
             pk_catalog_name,
             pk_schema_name,
             pk_table_name,
