@@ -378,7 +378,7 @@ fn list_private_keys_with_connection(
 
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
-    let mut conn = profile.connection().unwrap();
+    let conn = profile.connection().unwrap();
     conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
         .unwrap();
     let statement =
