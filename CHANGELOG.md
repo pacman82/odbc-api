@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [21.0.0](https://github.com/pacman82/odbc-api/compare/v20.2.0...v21.0.0) - 2026-03-04
+
+### Added
+
+- [**breaking**] Rename foreign_keys to foreign_keys_cursor
+- Preallocated::into_columns is now
+- [**breaking**] Preallocated::columns has been renamed into
+- primary_key returns a ready made iterator.
+- BlockCursor::iter for BlockCursor over RowVec's.
+- add Preallocate::into_tables
+- Introduce Preallocated::into_foreign_keys
+- Introduce Preallocated::into_columns
+- add Connection::primary_keys
+- add Preallocated::primary_keys
+- add handles::Statement::primary_keys
+
+### Changed
+
+- Fixed broken links in libarary documentation
+
 ## [20.2.0](https://github.com/pacman82/odbc-api/compare/v20.1.4...v20.2.0) - 2026-03-01
 
 ### Added
