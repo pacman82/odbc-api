@@ -2,7 +2,7 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
-    ColumnDescription, Cursor, ResultSetMetadata,
+    ColumnDescription, Cursor, PrimaryKeysRow, ResultSetMetadata,
     buffers::{BufferDesc, ColumnarAnyBuffer, Item, TextRowSet},
 };
 
@@ -273,7 +273,6 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     assert_eq!(batch.num_rows(), 1);
 }
 
-#[cfg(feature = "derive")]
 #[test_case(MSSQL, Some("master"), Some("dbo"); "Microsoft SQL Server")]
 #[test_case(MARIADB, Some("test_db"), None; "Maria DB")]
 #[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
@@ -283,8 +282,6 @@ fn list_private_keys_with_preallocated(
     catalog: Option<&str>,
     schema: Option<&str>,
 ) {
-    use odbc_api::{Fetch, buffers::RowVec, parameter::VarCharArray};
-
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
     let conn = profile.connection().unwrap();
@@ -296,54 +293,26 @@ fn list_private_keys_with_preallocated(
 
     // When we list the primary keys for that table
     let mut stmt = conn.preallocate().unwrap();
-    let mut cursor = stmt.primary_keys(None, None, &table_name).unwrap();
-    #[derive(Fetch, Copy, Clone, Default)]
-    struct PrimaryKeysRow {
-        table_cat: VarCharArray<128>,
-        table_schem: VarCharArray<128>,
-        table_name: VarCharArray<255>,
-        column_name: VarCharArray<255>,
-        key_seq: i16,
-        pk_name: VarCharArray<128>,
-    }
-    let rows = RowVec::<PrimaryKeysRow>::new(3);
-    let mut column_description = ColumnDescription::default();
-    for index in 0..cursor.num_result_cols().unwrap() {
-        cursor
-            .describe_col(index as u16 + 1, &mut column_description)
-            .unwrap();
-        eprintln!("{column_description:?}")
-    }
-    let mut cursor = cursor.bind_buffer(rows).unwrap();
-
-    let mut primary_keys_rows: Vec<PrimaryKeysRow> = Vec::new();
-    while let Some(batch) = cursor.fetch().unwrap() {
-        primary_keys_rows.extend(batch.iter());
-    }
+    let iter = stmt.primary_keys(None, None, &table_name).unwrap();
+    let primary_keys_rows: Vec<_> = iter.collect::<Result<_, _>>().unwrap();
 
     // Then we expact the result set to describe the primary key of the table. The columns of the
     // result set are: TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,KEY_SEQ,PK_NAME.
     assert_eq!(2, primary_keys_rows.len());
-    assert_eq!(catalog, primary_keys_rows[0].table_cat.as_str().unwrap());
-    assert_eq!(catalog, primary_keys_rows[1].table_cat.as_str().unwrap());
-    assert_eq!(schema, primary_keys_rows[0].table_schem.as_str().unwrap());
-    assert_eq!(schema, primary_keys_rows[1].table_schem.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[0].catalog.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[1].catalog.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[0].schema.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[1].schema.as_str().unwrap());
     assert_eq!(
         Some(table_name.as_str()),
-        primary_keys_rows[0].table_name.as_str().unwrap()
+        primary_keys_rows[0].table.as_str().unwrap()
     );
     assert_eq!(
         Some(table_name.as_str()),
-        primary_keys_rows[1].table_name.as_str().unwrap()
+        primary_keys_rows[1].table.as_str().unwrap()
     );
-    assert_eq!(
-        Some("a"),
-        primary_keys_rows[0].column_name.as_str().unwrap()
-    );
-    assert_eq!(
-        Some("b"),
-        primary_keys_rows[1].column_name.as_str().unwrap()
-    );
+    assert_eq!(Some("a"), primary_keys_rows[0].column.as_str().unwrap());
+    assert_eq!(Some("b"), primary_keys_rows[1].column.as_str().unwrap());
     assert_eq!(1, primary_keys_rows[0].key_seq);
     assert_eq!(2, primary_keys_rows[1].key_seq);
     eprintln!(
@@ -364,7 +333,6 @@ fn list_private_keys_with_preallocated(
     );
 }
 
-#[cfg(feature = "derive")]
 #[test_case(MSSQL, Some("master"), Some("dbo"); "Microsoft SQL Server")]
 #[test_case(MARIADB, Some("test_db"), None; "Maria DB")]
 #[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
@@ -374,8 +342,6 @@ fn list_private_keys_with_connection(
     catalog: Option<&str>,
     schema: Option<&str>,
 ) {
-    use odbc_api::{Fetch, buffers::RowVec, parameter::VarCharArray};
-
     let table_name = table_name!();
     // Given a table with a composite primary key (a,b) and a another column c
     let conn = profile.connection().unwrap();
@@ -386,54 +352,26 @@ fn list_private_keys_with_connection(
     conn.execute(&statement, (), None).unwrap();
 
     // When we list the primary keys for that table
-    let mut cursor = conn.primary_keys(None, None, &table_name).unwrap();
-    #[derive(Fetch, Copy, Clone, Default)]
-    struct PrimaryKeysRow {
-        table_cat: VarCharArray<128>,
-        table_schem: VarCharArray<128>,
-        table_name: VarCharArray<255>,
-        column_name: VarCharArray<255>,
-        key_seq: i16,
-        pk_name: VarCharArray<128>,
-    }
-    let rows = RowVec::<PrimaryKeysRow>::new(3);
-    let mut column_description = ColumnDescription::default();
-    for index in 0..cursor.num_result_cols().unwrap() {
-        cursor
-            .describe_col(index as u16 + 1, &mut column_description)
-            .unwrap();
-        eprintln!("{column_description:?}")
-    }
-    let mut cursor = cursor.bind_buffer(rows).unwrap();
-
-    let mut primary_keys_rows: Vec<PrimaryKeysRow> = Vec::new();
-    while let Some(batch) = cursor.fetch().unwrap() {
-        primary_keys_rows.extend(batch.iter());
-    }
+    let iter = conn.primary_keys(None, None, &table_name).unwrap();
+    let primary_keys_rows: Vec<PrimaryKeysRow> = iter.collect::<Result<_, _>>().unwrap();
 
     // Then we expact the result set to describe the primary key of the table. The columns of the
     // result set are: TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,KEY_SEQ,PK_NAME.
     assert_eq!(2, primary_keys_rows.len());
-    assert_eq!(catalog, primary_keys_rows[0].table_cat.as_str().unwrap());
-    assert_eq!(catalog, primary_keys_rows[1].table_cat.as_str().unwrap());
-    assert_eq!(schema, primary_keys_rows[0].table_schem.as_str().unwrap());
-    assert_eq!(schema, primary_keys_rows[1].table_schem.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[0].catalog.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[1].catalog.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[0].schema.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[1].schema.as_str().unwrap());
     assert_eq!(
         Some(table_name.as_str()),
-        primary_keys_rows[0].table_name.as_str().unwrap()
+        primary_keys_rows[0].table.as_str().unwrap()
     );
     assert_eq!(
         Some(table_name.as_str()),
-        primary_keys_rows[1].table_name.as_str().unwrap()
+        primary_keys_rows[1].table.as_str().unwrap()
     );
-    assert_eq!(
-        Some("a"),
-        primary_keys_rows[0].column_name.as_str().unwrap()
-    );
-    assert_eq!(
-        Some("b"),
-        primary_keys_rows[1].column_name.as_str().unwrap()
-    );
+    assert_eq!(Some("a"), primary_keys_rows[0].column.as_str().unwrap());
+    assert_eq!(Some("b"), primary_keys_rows[1].column.as_str().unwrap());
     assert_eq!(1, primary_keys_rows[0].key_seq);
     assert_eq!(2, primary_keys_rows[1].key_seq);
     eprintln!(

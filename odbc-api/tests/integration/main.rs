@@ -5729,8 +5729,7 @@ fn row_wise_bulk_query_using_iterator(profile: &Profile) {
 
     // Choose batch size 1 so we need multiple batches.
     let row_set_buffer = RowVec::<(i32,)>::new(1);
-    let mut block_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
-    let all_rows = block_cursor.iter().collect::<Result<Vec<_>, _>>().unwrap();
+    let all_rows = cursor.bind_buffer(row_set_buffer).unwrap().into_iter().collect::<Result<Vec<_>, _>>().unwrap();
 
     // Then
     assert_eq!(2, all_rows.len());

@@ -1,7 +1,10 @@
 use crate::{
-    CursorImpl, Error, ParameterCollectionRef, PreallocatedPolling,
+    BlockCursorIterator, Cursor, CursorImpl, Error, ParameterCollectionRef, PreallocatedPolling,
+    TruncationInfo,
+    buffers::{FetchRow, FetchRowMember as _, RowVec},
     execute::execute_with_parameters,
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    parameter::VarCharArray,
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -215,10 +218,10 @@ where
     }
 
     /// Create a result set which contains the column names that make up the primary key for the
-    /// table. Same as [`Self::into_primary_keys`] but the cursor borrowes the statement handle
-    /// instead of taking ownership of it. This allows you to reuse the statement handle for
-    /// multiple calls to [`Self::primary_keys`] or other queries, without the need to ask the
-    /// driver for repeated allocations of new handles.
+    /// table. Same as [`Self::into_primary_keys_cursor`] but the cursor borrowes the statement
+    /// handle instead of taking ownership of it. This allows you to reuse the statement handle for
+    /// multiple calls to [`Self::primary_keys_cursor`] or other queries, without the need to ask
+    /// the driver for repeated allocations of new handles.
     ///
     /// # Parameters
     ///
@@ -256,7 +259,7 @@ where
     /// and their case is significant.
     ///
     /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
-    pub fn primary_keys(
+    pub fn primary_keys_cursor(
         &mut self,
         catalog_name: Option<&str>,
         schema_name: Option<&str>,
@@ -270,14 +273,65 @@ where
         )
     }
 
-    /// Same as [`Self::primary_keys`] but the cursor takes ownership of the statement handle.
-    pub fn into_primary_keys(
+    /// An iterator whose items contains the column names that make up the primary key for the
+    /// table. Same as [`Self::into_primary_keys`] but the cursor borrowes the statement handle
+    /// instead of taking ownership of it. This allows you to reuse the statement handle for
+    /// multiple calls to [`Self::primary_keys`] or other queries, without the need to ask the
+    /// driver for repeated allocations of new handles.
+    ///
+    /// # Parameters
+    ///
+    /// * `catalog_name`: Catalog name. If a driver supports catalogs for some tables but not for
+    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
+    ///   denotes those tables that do not have catalogs. `catalog_name` must not contain a string
+    ///   search pattern.
+    /// * `schema_name`: Schema name. If a driver supports schemas for some tables but not for
+    ///   others, such as when the driver retrieves data from different DBMSs, an empty string ("")
+    ///   denotes those tables that do not have schemas. `schema_name` must not contain a string
+    ///   search pattern.
+    /// * `table_name`: Table name. `table_name` must not contain a string search pattern.
+    ///
+    /// If [`crate::sys::StatementAttribute::MetadataId`] statement attribute is set to true,
+    /// catalog, schema and table name parameters are treated as an identifiers and their case is
+    /// not significant. If it is false, they are ordinary arguments. As such they treated literally
+    /// and their case is significant.
+    ///
+    /// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
+    pub fn primary_keys(
+        &mut self,
+        catalog_name: Option<&str>,
+        schema_name: Option<&str>,
+        table_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementRef<'_>>, PrimaryKeysRow>, Error> {
+        let cursor = self.primary_keys_cursor(catalog_name, schema_name, table_name)?;
+        // 5 seems like a senisble soft upper bound for the number of columns in a primary key. If
+        // it is more than that, we need an extra roundtrip
+        let buffer = RowVec::<PrimaryKeysRow>::new(5);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
+    }
+
+    /// Same as [`Self::primary_keys_cursor`] but the cursor takes ownership of the statement handle.
+    pub fn into_primary_keys_cursor(
         self,
         catalog_name: Option<&str>,
         schema_name: Option<&str>,
         table_name: &str,
     ) -> Result<CursorImpl<S>, Error> {
         execute_primary_keys(self.statement, catalog_name, schema_name, table_name)
+    }
+
+    /// Same as [`Self::primary_keys`] but the cursor takes ownership of the statement handle.
+    pub fn into_primary_keys(
+        self,
+        catalog_name: Option<&str>,
+        schema_name: Option<&str>,
+        table_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<S>, PrimaryKeysRow>, Error> {
+        let cursor = self.into_primary_keys_cursor(catalog_name, schema_name, table_name)?;
+        // 5 seems like a senisble soft upper bound for the number of columns in a primary key. If
+        // it is more than that, we need an extra roundtrip
+        let buffer = RowVec::<PrimaryKeysRow>::new(5);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
     }
 
     /// This can be used to retrieve either a list of foreign keys in the specified table or a list
@@ -414,6 +468,74 @@ where
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
+    }
+}
+
+/// A row returned by the iterator returned by [`Preallocated::primary_keys`]. This members are
+/// associated with the columns of the result set returned by [`Preallocated::primary_keys_cursor`].
+///
+/// See: <https://learn.microsoft.com/sql/odbc/reference/syntax/sqlprimarykeys-function>
+#[derive(Clone, Copy, Default)]
+pub struct PrimaryKeysRow {
+    // The maximum length of the VARCHAR columns is driver specific. Since this type needs to be
+    // `Copy` in order to be suitable for row wise bulk fetchings sensible upper bounds have been
+    // chosen. They have been determined by using the maximum lengths reported by PostgreSQL and
+    // Microsoft SQL Server, MariaDB and SQLite.
+    //
+    /// Binds to the `TABLE_CAT` column. Primary key table catalog name. NULL if not applicable to
+    /// the data source. If a driver supports catalogs for some tables but not for others, such as
+    /// when the driver retrieves data from different DBMSs, it returns an empty string ("") for
+    /// those tables that do not have catalogs.
+    pub catalog: VarCharArray<128>,
+    /// Binds to `TABLE_SCHEM`. Primary key table schema name; NULL if not applicable to the data
+    /// source. If a driver supports schemas for some tables but not for others, such as when the
+    /// driver retrieves data from different DBMSs, it returns an empty string ("") for those tables
+    /// that do not have schemas.
+    pub schema: VarCharArray<128>,
+    /// Binds to the `TABLE_NAME` column. Primary key table name. Drivers must not return NULL.
+    pub table: VarCharArray<255>,
+    /// Binds to the `COLUMN_NAME` column. Primary key column name. The driver returns an empty
+    /// string for a column that does not have a name. Drivers must not return NULL.
+    pub column: VarCharArray<255>,
+    /// Binds to the `KEY_SEQ` column. Column sequence number in key (starting with 1).
+    pub key_seq: i16,
+    /// Binds to the `PK_NAME` column. Primary key name. NULL if not applicable to the data source.
+    pub pk_name: VarCharArray<128>,
+}
+
+unsafe impl FetchRow for PrimaryKeysRow {
+    unsafe fn bind_columns_to_cursor(&mut self, mut cursor: StatementRef<'_>) -> Result<(), Error> {
+        unsafe {
+            self.catalog.bind_to_col(1, &mut cursor)?;
+            self.schema.bind_to_col(2, &mut cursor)?;
+            self.table.bind_to_col(3, &mut cursor)?;
+            self.column.bind_to_col(4, &mut cursor)?;
+            self.key_seq.bind_to_col(5, &mut cursor)?;
+            self.pk_name.bind_to_col(6, &mut cursor)?;
+            Ok(())
+        }
+    }
+
+    fn find_truncation(&self) -> Option<TruncationInfo> {
+        if let Some(t) = self.catalog.find_truncation(0) {
+            return Some(t);
+        }
+        if let Some(t) = self.schema.find_truncation(1) {
+            return Some(t);
+        }
+        if let Some(t) = self.table.find_truncation(2) {
+            return Some(t);
+        }
+        if let Some(t) = self.column.find_truncation(3) {
+            return Some(t);
+        }
+        if let Some(t) = self.key_seq.find_truncation(4) {
+            return Some(t);
+        }
+        if let Some(t) = self.pk_name.find_truncation(5) {
+            return Some(t);
+        }
+        None
     }
 }
 

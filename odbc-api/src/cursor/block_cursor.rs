@@ -161,13 +161,15 @@ where
     }
 }
 
-impl<C, R> BlockCursor<C, RowVec<R>>
+impl<C, R> IntoIterator for BlockCursor<C, RowVec<R>>
 where
     C: Cursor,
     R: FetchRow,
 {
-    /// An iterator over all the rows in all the batches of the result set.
-    pub fn iter(&mut self) -> BlockCursorIterator<'_, C, R> {
+    type Item = Result<R, Error>;
+    type IntoIter = BlockCursorIterator<C, R>;
+
+    fn into_iter(self) -> Self::IntoIter {
         BlockCursorIterator {
             index: self.buffer.len(),
             cursor: self,
@@ -175,14 +177,14 @@ where
     }
 }
 
-pub struct BlockCursorIterator<'b, C: Cursor, R> {
-    cursor: &'b mut BlockCursor<C, RowVec<R>>,
+pub struct BlockCursorIterator<C: AsStatementRef, R> {
+    cursor: BlockCursor<C, RowVec<R>>,
     /// Index of the next row to return. When `index >= buffer.len()`, the current batch is
     /// exhausted and the next call to `next` will fetch a new one.
     index: usize,
 }
 
-impl<C, R> BlockCursorIterator<'_, C, R>
+impl<C, R> BlockCursorIterator<C, R>
 where
     C: Cursor,
     R: FetchRow,
@@ -200,7 +202,7 @@ where
     }
 }
 
-impl<C, R> Iterator for BlockCursorIterator<'_, C, R>
+impl<C, R> Iterator for BlockCursorIterator<C, R>
 where
     C: Cursor,
     R: FetchRow,
