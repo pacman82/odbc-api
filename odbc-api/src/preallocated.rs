@@ -200,8 +200,8 @@ where
         )
     }
 
-    /// Same as [`Self::columns`], but the cursor takes ownership of the statement handle.
-    pub fn into_columns(
+    /// Same as [`Self::columns_cursor`], but the cursor takes ownership of the statement handle.
+    pub fn into_columns_cursor(
         self,
         catalog_name: &str,
         schema_name: &str,
