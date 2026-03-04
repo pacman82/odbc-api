@@ -278,7 +278,11 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
 #[test_case(MARIADB, Some("test_db"), None; "Maria DB")]
 #[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
 #[test_case(POSTGRES, Some("test"), Some("public"); "PostgreSQL")]
-fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&str>) {
+fn list_private_keys_with_preallocated(
+    profile: &Profile,
+    catalog: Option<&str>,
+    schema: Option<&str>,
+) {
     use odbc_api::{Fetch, buffers::RowVec, parameter::VarCharArray};
 
     let table_name = table_name!();
@@ -293,6 +297,96 @@ fn list_private_keys(profile: &Profile, catalog: Option<&str>, schema: Option<&s
     // When we list the primary keys for that table
     let mut stmt = conn.preallocate().unwrap();
     let mut cursor = stmt.primary_keys(None, None, &table_name).unwrap();
+    #[derive(Fetch, Copy, Clone, Default)]
+    struct PrimaryKeysRow {
+        table_cat: VarCharArray<128>,
+        table_schem: VarCharArray<128>,
+        table_name: VarCharArray<255>,
+        column_name: VarCharArray<255>,
+        key_seq: i16,
+        pk_name: VarCharArray<128>,
+    }
+    let rows = RowVec::<PrimaryKeysRow>::new(3);
+    let mut column_description = ColumnDescription::default();
+    for index in 0..cursor.num_result_cols().unwrap() {
+        cursor
+            .describe_col(index as u16 + 1, &mut column_description)
+            .unwrap();
+        eprintln!("{column_description:?}")
+    }
+    let mut cursor = cursor.bind_buffer(rows).unwrap();
+
+    let mut primary_keys_rows: Vec<PrimaryKeysRow> = Vec::new();
+    while let Some(batch) = cursor.fetch().unwrap() {
+        primary_keys_rows.extend(batch.iter());
+    }
+
+    // Then we expact the result set to describe the primary key of the table. The columns of the
+    // result set are: TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,KEY_SEQ,PK_NAME.
+    assert_eq!(2, primary_keys_rows.len());
+    assert_eq!(catalog, primary_keys_rows[0].table_cat.as_str().unwrap());
+    assert_eq!(catalog, primary_keys_rows[1].table_cat.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[0].table_schem.as_str().unwrap());
+    assert_eq!(schema, primary_keys_rows[1].table_schem.as_str().unwrap());
+    assert_eq!(
+        Some(table_name.as_str()),
+        primary_keys_rows[0].table_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some(table_name.as_str()),
+        primary_keys_rows[1].table_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some("a"),
+        primary_keys_rows[0].column_name.as_str().unwrap()
+    );
+    assert_eq!(
+        Some("b"),
+        primary_keys_rows[1].column_name.as_str().unwrap()
+    );
+    assert_eq!(1, primary_keys_rows[0].key_seq);
+    assert_eq!(2, primary_keys_rows[1].key_seq);
+    eprintln!(
+        "{}",
+        primary_keys_rows[0]
+            .pk_name
+            .as_str()
+            .unwrap()
+            .unwrap_or("NULL")
+    );
+    eprintln!(
+        "{}",
+        primary_keys_rows[1]
+            .pk_name
+            .as_str()
+            .unwrap()
+            .unwrap_or("NULL")
+    );
+}
+
+#[cfg(feature = "derive")]
+#[test_case(MSSQL, Some("master"), Some("dbo"); "Microsoft SQL Server")]
+#[test_case(MARIADB, Some("test_db"), None; "Maria DB")]
+#[test_case(SQLITE_3, Some(""), Some(""); "SQLite 3")]
+#[test_case(POSTGRES, Some("test"), Some("public"); "PostgreSQL")]
+fn list_private_keys_with_connection(
+    profile: &Profile,
+    catalog: Option<&str>,
+    schema: Option<&str>,
+) {
+    use odbc_api::{Fetch, buffers::RowVec, parameter::VarCharArray};
+
+    let table_name = table_name!();
+    // Given a table with a composite primary key (a,b) and a another column c
+    let mut conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
+        .unwrap();
+    let statement =
+        &format!("CREATE TABLE {table_name} (a INTEGER, b INTEGER, c INTEGER, PRIMARY KEY (a,b))");
+    conn.execute(&statement, (), None).unwrap();
+
+    // When we list the primary keys for that table
+    let mut cursor = conn.primary_keys(None, None, &table_name).unwrap();
     #[derive(Fetch, Copy, Clone, Default)]
     struct PrimaryKeysRow {
         table_cat: VarCharArray<128>,
