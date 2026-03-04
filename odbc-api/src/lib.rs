@@ -18,6 +18,7 @@ mod narrow;
 mod nullable;
 mod parameter_collection;
 mod preallocated;
+mod preallocated_polling;
 mod prepared;
 mod result_set_metadata;
 mod shared_connection;
@@ -48,7 +49,8 @@ pub use self::{
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
-    preallocated::{Preallocated, PreallocatedPolling},
+    preallocated::Preallocated,
+    preallocated_polling::PreallocatedPolling,
     prepared::Prepared,
     result_set_metadata::ResultSetMetadata,
     shared_connection::SharedConnection,
