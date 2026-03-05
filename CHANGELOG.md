@@ -11,20 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [**breaking**] Rename foreign_keys to foreign_keys_cursor
-- Preallocated::into_columns is now
-- [**breaking**] Preallocated::columns has been renamed into
-- primary_key returns a ready made iterator.
-- BlockCursor::iter for BlockCursor over RowVec's.
-- add Preallocate::into_tables
-- Introduce Preallocated::into_foreign_keys
-- Introduce Preallocated::into_columns
-- add Connection::primary_keys
-- add Preallocated::primary_keys
-- add handles::Statement::primary_keys
+- Support for querying the primary keys of tables.
+- BlockCursor which have a row-wise RowVec buffer bound now implement `IntoIter`
 
 ### Changed
 
+- [**breaking**] `Preallocated::foreign_keys` has been renamed into `Preallocated::foreign_keys_cursor`
+- [**breaking**] `Preallocated::columns` has been renamed into `Preallocated::columns_cursor`
 - Fixed broken links in libarary documentation
 
 ## [20.2.0](https://github.com/pacman82/odbc-api/compare/v20.1.4...v20.2.0) - 2026-03-01
