@@ -5799,6 +5799,32 @@ async fn async_stream_of_rows_from_other_thread(profile: &Profile) {
     assert_eq!([(42i32,)].as_slice(), rows)
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn close_cursor_explicitly(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .build(profile)
+        .unwrap();
+    conn.execute(
+        &format!("INSERT INTO {table_name} (a) VALUES (42)"),
+        (),
+        None,
+    )
+    .unwrap();
+    let sql = table.sql_all_ordered_by_id();
+
+    let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
+
+    // Explicitly close the cursor, rather than relying on drop.
+    let result = cursor.close();
+
+    assert!(result.is_ok())
+}
+
 // Learning tests ----------------------------------------------------------------------------------
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
