@@ -4,6 +4,8 @@ macro_rules! table_name {
     () => {
         // Make function name a valid table name
         function_name!()
+            .strip_prefix("integration::")
+            .unwrap()
             .replace("::", "_")
             .replace(r#"_{{closure}}"#, "")
     };
