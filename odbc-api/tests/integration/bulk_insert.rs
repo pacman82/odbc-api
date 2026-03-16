@@ -1,6 +1,6 @@
 use odbc_api::{
     DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
-    buffers::{AnySliceMut, BufferDesc, Item, TextColumn},
+    buffers::{AnyBuffer, AnySliceMut, BufferDesc, Item, TextColumn},
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
 };
@@ -432,6 +432,8 @@ fn columnar_insert_numeric(profile: &Profile) {
     assert_eq!("12.345\n23.456\n34.567", content);
 }
 
+/// Currently all DBMS under test would allow inserting decimals as VARCHAR and perform the
+/// conversation themselves implicitly. However 
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
@@ -447,8 +449,18 @@ fn columnar_insert_decimal(profile: &Profile) {
     // When
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     // DECIMAL(5,3) display size: precision + 2 (sign + decimal point) = 7
-    let desc = BufferDesc::Text { max_str_len: 7 };
-    let mut inserter = prepared.into_column_inserter(4, [desc]).unwrap();
+    let parameter_buffers = vec![WithDataType::new(
+        AnyBuffer::Text(TextColumn::try_new(4, 7).unwrap()),
+        DataType::Decimal {
+            precision: 5,
+            scale: 3,
+        },
+    )];
+    let index_mapping = InOrder::new(parameter_buffers.len());
+    let mut inserter = unsafe {
+        prepared.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping)
+    }
+    .unwrap();
 
     inserter.set_num_rows(4);
     let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
