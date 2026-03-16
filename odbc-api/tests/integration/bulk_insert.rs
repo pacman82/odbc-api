@@ -436,6 +436,38 @@ fn columnar_insert_numeric(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn columnar_insert_decimal(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DECIMAL(5,3)"])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    // DECIMAL(5,3) display size: precision + 2 (sign + decimal point) = 7
+    let desc = BufferDesc::Text { max_str_len: 7 };
+    let mut inserter = prepared.into_column_inserter(4, [desc]).unwrap();
+
+    inserter.set_num_rows(4);
+    let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
+    col_view.set_cell(0, Some(b"12.345"));
+    col_view.set_cell(1, Some(b"23.456"));
+    col_view.set_cell(2, None);
+    col_view.set_cell(3, Some(b"34.567"));
+
+    inserter.execute().unwrap();
+
+    // Then
+    let content = table.content_as_string(&conn);
+    assert_eq!("12.345\n23.456\nNULL\n34.567", content);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn adaptive_columnar_insert_varchar(profile: &Profile) {
     let table_name = table_name!();
     let (conn, _table) = Given::new(&table_name)
