@@ -433,7 +433,7 @@ fn columnar_insert_numeric(profile: &Profile) {
 }
 
 /// Currently all DBMS under test would allow inserting decimals as VARCHAR and perform the
-/// conversation themselves implicitly. However 
+/// conversation themselves implicitly. However
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
