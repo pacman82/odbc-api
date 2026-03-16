@@ -880,7 +880,7 @@ pub trait Statement: AnyHandle {
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
-    fn describe_param(&mut self, parameter_number: u16) -> SqlResult<ParameterDescription> {
+    fn describe_param(&mut self, parameter_number: u16) -> SqlResult<ColumnType> {
         let mut data_type = SqlDataType::UNKNOWN_TYPE;
         let mut parameter_size = 0;
         let mut decimal_digits = 0;
@@ -896,7 +896,7 @@ pub trait Statement: AnyHandle {
             )
         }
         .into_sql_result("SQLDescribeParam")
-        .on_success(|| ParameterDescription {
+        .on_success(|| ColumnType {
             data_type: DataType::new(data_type, parameter_size, decimal_digits),
             nullability: Nullability::new(nullable),
         })
@@ -1186,12 +1186,16 @@ impl Statement for StatementImpl<'_> {
     }
 }
 
-/// Description of a parameter associated with a parameter marker in a prepared statement. Returned
-/// by [`crate::Prepared::describe_param`].
+/// The relational type of a column or parameter, including nullability. Returned e.g. by
+/// [`crate::Prepared::describe_param`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct ParameterDescription {
-    /// Indicates whether the parameter may be NULL not.
+pub struct ColumnType {
+    /// Indicates whether the column or parameter may be NULL.
     pub nullability: Nullability,
-    /// The SQL Type associated with that parameter.
+    /// The SQL data type of the column or parameter.
     pub data_type: DataType,
 }
+
+/// Use [`ColumnType`] instead.
+#[deprecated(note = "Use `ColumnType` instead.")]
+pub type ParameterDescription = ColumnType;

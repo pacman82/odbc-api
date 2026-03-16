@@ -4,7 +4,7 @@ use crate::{
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     columnar_bulk_inserter::InOrder,
     execute::execute_with_parameters,
-    handles::{AsStatementRef, HasDataType, ParameterDescription, Statement, StatementRef},
+    handles::{AsStatementRef, ColumnType, HasDataType, Statement, StatementRef},
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -56,7 +56,7 @@ where
     ///
     /// * `parameter_number`: Parameter marker number ordered sequentially in increasing parameter
     ///   order, starting at 1.
-    pub fn describe_param(&mut self, parameter_number: u16) -> Result<ParameterDescription, Error> {
+    pub fn describe_param(&mut self, parameter_number: u16) -> Result<ColumnType, Error> {
         let mut stmt = self.as_stmt_ref();
 
         stmt.describe_param(parameter_number).into_result(&stmt)
@@ -75,11 +75,11 @@ where
     /// used to prepare the statement.
     ///
     /// ```
-    /// use odbc_api::{Connection, Error, handles::ParameterDescription};
+    /// use odbc_api::{Connection, Error, handles::ColumnType};
     ///
     /// fn collect_parameter_descriptions(
     ///     connection: Connection<'_>
-    /// ) -> Result<Vec<ParameterDescription>, Error>{
+    /// ) -> Result<Vec<ColumnType>, Error>{
     ///     // Note the two `?` used as placeholders for the parameters.
     ///     let sql = "INSERT INTO NationalDrink (country, drink) VALUES (?, ?)";
     ///     let mut prepared = connection.prepare(sql)?;
@@ -92,8 +92,8 @@ where
     pub fn parameter_descriptions(
         &mut self,
     ) -> Result<
-        impl DoubleEndedIterator<Item = Result<ParameterDescription, Error>>
-        + ExactSizeIterator<Item = Result<ParameterDescription, Error>>
+        impl DoubleEndedIterator<Item = Result<ColumnType, Error>>
+        + ExactSizeIterator<Item = Result<ColumnType, Error>>
         + '_,
         Error,
     > {
