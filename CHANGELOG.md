@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [21.1.0](https://github.com/pacman82/odbc-api/compare/v21.0.0...v21.1.0) - 2026-03-16
+
+### Added
+
+- Rename ParameterDescription to ColumnType
+- Cursor::close -> Allow explicitly closing cursors.
+
 ## [21.0.0](https://github.com/pacman82/odbc-api/compare/v20.2.0...v21.0.0) - 2026-03-04
 
 ### Added
