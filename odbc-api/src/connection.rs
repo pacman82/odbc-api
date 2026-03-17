@@ -364,8 +364,8 @@ impl<'c> Connection<'c> {
     ///
     /// ```no_run
     /// use odbc_api::{
-    ///     environment, Error, ColumnarBulkInserter, handles::StatementConnection,
-    ///     buffers::{BufferDesc, AnyBuffer}, ConnectionOptions, Connection
+    ///     environment, Error, ColumnarBulkInserter, handles::StatementConnection, BindParamDesc,
+    ///     buffers::AnyBuffer, ConnectionOptions, Connection, parameter::WithDataType,
     /// };
     ///
     /// const CONNECTION_STRING: &str =
@@ -375,7 +375,10 @@ impl<'c> Connection<'c> {
     ///
     /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
     /// /// takes ownership of a connection created using an environment with static lifetime.
-    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
+    /// type Inserter = ColumnarBulkInserter<
+    ///     StatementConnection<Connection<'static>>,
+    ///     WithDataType<AnyBuffer>
+    /// >;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
@@ -385,12 +388,12 @@ impl<'c> Connection<'c> {
     ///         ConnectionOptions::default()
     ///     )?;
     ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
-    ///     let buffers = [
-    ///         BufferDesc::Text { max_str_len: 255},
-    ///         BufferDesc::I16 { nullable: false },
+    ///     let params = [
+    ///         BindParamDesc::text(255),
+    ///         BindParamDesc::i16(false),
     ///     ];
     ///     let capacity = 400;
-    ///     prepared.into_column_inserter(capacity, buffers)
+    ///     prepared.into_column_inserter(capacity, params)
     /// }
     /// ```
     pub fn into_prepared(
@@ -1029,7 +1032,9 @@ pub trait ConnectionTransitions: Sized {
     /// ```no_run
     /// use odbc_api::{
     ///     environment, Error, ColumnarBulkInserter, ConnectionTransitions, Connection,
-    ///     handles::StatementConnection, buffers::{BufferDesc, AnyBuffer}, ConnectionOptions,
+    ///     handles::StatementConnection, buffers::AnyBuffer, ConnectionOptions, BindParamDesc,
+    ///     parameter::WithDataType,
+    ///
     /// };
     ///
     /// const CONNECTION_STRING: &str =
@@ -1039,7 +1044,10 @@ pub trait ConnectionTransitions: Sized {
     ///
     /// /// Supports columnar bulk inserts on a heterogenous schema (columns have different types),
     /// /// takes ownership of a connection created using an environment with static lifetime.
-    /// type Inserter = ColumnarBulkInserter<StatementConnection<Connection<'static>>, AnyBuffer>;
+    /// type Inserter = ColumnarBulkInserter<
+    ///     StatementConnection<Connection<'static>>,
+    ///     WithDataType<AnyBuffer>
+    /// >;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
     /// fn make_inserter(query: &str) -> Result<Inserter, Error> {
@@ -1050,8 +1058,8 @@ pub trait ConnectionTransitions: Sized {
     ///     )?;
     ///     let prepared = conn.into_prepared("INSERT INTO Birthyear (name, year) VALUES (?, ?)")?;
     ///     let buffers = [
-    ///         BufferDesc::Text { max_str_len: 255},
-    ///         BufferDesc::I16 { nullable: false },
+    ///         BindParamDesc::text(255),
+    ///         BindParamDesc::i16(false),
     ///     ];
     ///     let capacity = 400;
     ///     prepared.into_column_inserter(capacity, buffers)

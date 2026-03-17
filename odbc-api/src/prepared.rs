@@ -183,7 +183,7 @@ where
     /// array parameter buffers.
     ///
     /// ```no_run
-    /// use odbc_api::{Connection, Error, IntoParameter, buffers::BufferDesc};
+    /// use odbc_api::{Connection, Error, IntoParameter, BindParamDesc};
     ///
     /// fn insert_birth_years(
     ///     conn: &Connection,
@@ -196,15 +196,15 @@ where
     ///     let prepared = conn.prepare("INSERT INTO Birthdays (name, year) VALUES (?, ?)")?;
     ///
     ///     // Create a columnar buffer which fits the input parameters.
-    ///     let buffer_description = [
-    ///         BufferDesc::Text { max_str_len: 255 },
-    ///         BufferDesc::I16 { nullable: false },
+    ///     let parameter_descriptions = [
+    ///         BindParamDesc::text(255),
+    ///         BindParamDesc::i16(false),
     ///     ];
     ///     // The capacity must be able to hold at least the largest batch. We do everything in one
     ///     // go, so we set it to the length of the input parameters.
     ///     let capacity = names.len();
     ///     // Allocate memory for the array column parameters and bind it to the statement.
-    ///     let mut prebound = prepared.into_column_inserter(capacity, buffer_description)?;
+    ///     let mut prebound = prepared.into_column_inserter(capacity, parameter_descriptions)?;
     ///     // Length of this batch
     ///     prebound.set_num_rows(capacity);
     ///

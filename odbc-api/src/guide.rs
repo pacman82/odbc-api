@@ -401,7 +401,7 @@ row or column wise bulk inserts. Especially in pipelines for data science you ma
 buffers in a columnar layout at hand. [`crate::ColumnarBulkInserter`] can be used for bulk inserts.
 
 ```no_run
-use odbc_api::{Connection, Error, IntoParameter, buffers::BufferDesc};
+use odbc_api::{Connection, Error, IntoParameter, BindParamDesc};
 
 fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Result<(), Error> {
 
@@ -412,8 +412,8 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
 
     // Create a columnar buffer which fits the input parameters.
     let buffer_description = [
-        BufferDesc::Text { max_str_len: 255 },
-        BufferDesc::I16 { nullable: false },
+        BindParamDesc::text(255),
+        BindParamDesc::i16(false),
     ];
     // The capacity must be able to hold at least the largest batch. We do everything in one go, so
     // we set it to the length of the input parameters.
