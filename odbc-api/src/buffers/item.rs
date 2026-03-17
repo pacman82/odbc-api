@@ -173,7 +173,7 @@ impl Item for Timestamp {
     }
 
     fn buffer_desc(nullable: bool) -> BufferDesc {
-        BufferDesc::Time { nullable }
+        BufferDesc::Timestamp { nullable }
     }
 
     fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]> {
