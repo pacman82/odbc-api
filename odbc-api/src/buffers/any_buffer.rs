@@ -7,7 +7,7 @@ use crate::{
     buffers::columnar::Resize,
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
-    handles::{CData, CDataMut, HasDataType, StatementRef},
+    handles::{CData, CDataMut, StatementRef},
     parameter::WithDataType,
 };
 
@@ -22,12 +22,6 @@ use super::{
     columnar::ColumnBuffer,
     text_column::TextColumnSliceMut,
 };
-
-/// Since buffer shapes are the same for all time/timestamp types independent of the precision and
-/// we do not know the precise SQL type. In order to still be able to bind time/timestamp buffers as
-/// input without requiring the user to separately specify the precision, we declare 100 nanosecond
-/// precision. This was the highest precision still supported by MSSQL in the tests.
-const DEFAULT_TIME_PRECISION: i16 = 7;
 
 /// Buffer holding a single column of either a result set or parameter
 #[derive(Debug)]
@@ -254,35 +248,6 @@ unsafe impl CDataMut for AnyBuffer {
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.inner_mut().mut_value_ptr()
-    }
-}
-
-impl HasDataType for AnyBuffer {
-    fn data_type(&self) -> DataType {
-        match self {
-            AnyBuffer::Binary(col) => col.data_type(),
-            AnyBuffer::Text(col) => col.data_type(),
-            AnyBuffer::WText(col) => col.data_type(),
-            AnyBuffer::Date(_) | AnyBuffer::NullableDate(_) => DataType::Date,
-            AnyBuffer::Time(_) | AnyBuffer::NullableTime(_) => DataType::Time {
-                precision: DEFAULT_TIME_PRECISION,
-            },
-            AnyBuffer::Timestamp(_) | AnyBuffer::NullableTimestamp(_) => DataType::Timestamp {
-                precision: DEFAULT_TIME_PRECISION,
-            },
-            AnyBuffer::F64(_) | AnyBuffer::NullableF64(_) => DataType::Double,
-            AnyBuffer::F32(_) | AnyBuffer::NullableF32(_) => DataType::Real,
-            AnyBuffer::I8(_) | AnyBuffer::NullableI8(_) => DataType::TinyInt,
-            AnyBuffer::I16(_) | AnyBuffer::NullableI16(_) => DataType::SmallInt,
-            AnyBuffer::I32(_) | AnyBuffer::NullableI32(_) => DataType::Integer,
-            AnyBuffer::I64(_) | AnyBuffer::NullableI64(_) => DataType::BigInt,
-            // Few databases support unsigned types, binding U8 as tiny int might lead to weird
-            // stuff if the database has type is signed. I guess. Let's bind it as SmallInt by
-            // default, just to be on the safe side.
-            AnyBuffer::U8(_) | AnyBuffer::NullableU8(_) => DataType::SmallInt,
-            AnyBuffer::Bit(_) | AnyBuffer::NullableBit(_) => DataType::Bit,
-            AnyBuffer::Numeric(col) => col.data_type(),
-        }
     }
 }
 
