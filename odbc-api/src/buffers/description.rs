@@ -115,17 +115,12 @@ pub enum BufferDesc {
     /// buffers to insert or fetch Numeric values works more reliable.
     ///
     /// In my tests so far using Numeric buffers with PostgreSQL works for both inserting and
-    /// fetching values. With Microsoft SQL Server, it defaults to scale `0` and can only be changed
-    /// by manipulating the ARD / APD via unsafe code.
+    /// fetching values. With Microsoft SQL Server, it defaults to scale `0` and can not even be
+    /// changed by manipulating the ARD / APD via unsafe code for insertion.
     ///
     /// With MariaDB inserting works out of the box, yet fetching does default to scale `0` and
     /// would require manipulating the ARD.
-    Numeric {
-        /// Total number of significant digits.
-        precision: usize,
-        /// Number of digits to the right of the decimal point.
-        scale: i16,
-    },
+    Numeric,
 }
 
 impl BufferDesc {
@@ -189,10 +184,7 @@ impl BufferDesc {
             BufferDesc::I64 { nullable } => size_of::<i64>() + size_indicator(nullable),
             BufferDesc::U8 { nullable } => size_of::<u8>() + size_indicator(nullable),
             BufferDesc::Bit { nullable } => size_of::<Bit>() + size_indicator(nullable),
-            BufferDesc::Numeric {
-                precision: _,
-                scale: _,
-            } => size_of::<Numeric>(),
+            BufferDesc::Numeric => size_of::<Numeric>(),
         }
     }
 }
@@ -229,13 +221,6 @@ mod tests {
         assert_eq!(4, BufferDesc::I32 { nullable: false }.bytes_per_row());
         assert_eq!(8, BufferDesc::I64 { nullable: false }.bytes_per_row());
         assert_eq!(1, BufferDesc::U8 { nullable: false }.bytes_per_row());
-        assert_eq!(
-            19,
-            BufferDesc::Numeric {
-                precision: 5,
-                scale: 3,
-            }
-            .bytes_per_row()
-        );
+        assert_eq!(19, BufferDesc::Numeric.bytes_per_row());
     }
 }

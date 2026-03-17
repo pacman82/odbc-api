@@ -400,10 +400,7 @@ fn columnar_insert_numeric_using_numeric_buffer(profile: &Profile) {
 
     // When
     let desc = BindParamDesc {
-        buffer_desc: BufferDesc::Numeric {
-            precision: 5,
-            scale: 3,
-        },
+        buffer_desc: BufferDesc::Numeric,
         data_type: DataType::Numeric {
             precision: 5,
             scale: 3,
