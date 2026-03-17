@@ -16,8 +16,7 @@ use odbc_api::{
     },
     decimal_text_to_i128, environment,
     handles::{
-        AsStatementRef, CData, CDataMut, OutputStringBuffer, ParameterDescription, SqlResult,
-        Statement,
+        AsStatementRef, CData, CDataMut, ColumnType, OutputStringBuffer, SqlResult, Statement,
     },
     parameter::{
         Blob, BlobRead, BlobSlice, InputParameter, VarBinaryArray, VarCharArray, VarCharSlice,
@@ -1936,27 +1935,24 @@ fn metadata_from_prepared_insert_query(profile: &Profile) {
 }
 
 #[test_case(MSSQL, &[
-    ParameterDescription {data_type: DataType::Integer, nullability: Nullability::Nullable},
-    ParameterDescription {
+    ColumnType {data_type: DataType::Integer, nullability: Nullability::Nullable},
+    ColumnType {
         data_type: DataType::Varchar { length: NonZeroUsize::new(13) },
         nullability: Nullability::Nullable
     }
 ]; "Microsoft SQL Server")]
 #[test_case(MARIADB, &[
-    ParameterDescription {
+    ColumnType {
         data_type: DataType::Varchar { length: NonZeroUsize::new(25165824) },
         nullability: Nullability::Unknown
     },
-    ParameterDescription {
+    ColumnType {
         data_type: DataType::Varchar { length: NonZeroUsize::new(25165824) },
         nullability: Nullability::Unknown
     }
 ]; "Maria DB")]
 // PostgrelSQL and SQLite 3 expose different behaviours with various platforms and drivers
-fn describe_parameters_of_prepared_statement(
-    profile: &Profile,
-    expected: &[ParameterDescription; 2],
-) {
+fn describe_parameters_of_prepared_statement(profile: &Profile, expected: &[ColumnType; 2]) {
     let table_name = table_name!();
     let (conn, _table) = Given::new(&table_name)
         .column_types(&["INTEGER", "VARCHAR(13)"])
