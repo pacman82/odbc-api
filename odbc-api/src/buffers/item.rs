@@ -21,7 +21,7 @@ use crate::{BindParamDesc, Bit};
 ///     // Number of rows submitted in one round trip
 ///     let capacity = source.len();
 ///     // We do not need a nullable buffer since elements of source are not optional
-///     let descriptions = [A::buffer_desc(false), B::buffer_desc(false)];
+///     let descriptions = [A::bind_param_desc(false), B::bind_param_desc(false)];
 ///     let mut inserter = prepared.column_inserter(capacity, descriptions).unwrap();
 ///     // We send everything in one go.
 ///     inserter.set_num_rows(source.len());
