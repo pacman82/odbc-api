@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [22.0.0](https://github.com/pacman82/odbc-api/compare/v21.1.0...v22.0.0) - 2026-03-17
+
+### Added
+
+- [**breaking**] AnyBuffer::Binary::length is now AnyBuffer::Binary::max_bytes
+- Add BindParamDesc::decimal_as_text
+- [**breaking**] AnyBuffer::Numeric now no longer maintains precision and scale
+- [**breaking**] AnyBuffer no longer implements `HasDataType`
+- [**breaking**] Prepared::columnar_inserter_with_mapping now uses BindParamDesc
+- [**breaking**] Prepared::column_inserter now uses BindParamDesc
+- Prepared::into_column_inserter also switched to BindParamDesc
+- [**breaking**] Decimals can now be bulk inserted with relational type decimal.
+
 ## [21.1.0](https://github.com/pacman82/odbc-api/compare/v21.0.0...v21.1.0) - 2026-03-16
 
 ### Added
