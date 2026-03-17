@@ -298,14 +298,14 @@ where
     pub fn column_inserter_with_mapping(
         &mut self,
         capacity: usize,
-        descriptions: impl IntoIterator<Item = BufferDesc>,
+        descriptions: impl IntoIterator<Item = BindParamDesc>,
         index_mapping: impl InputParameterMapping,
-    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<AnyBuffer>>, Error> {
         let stmt = self.statement.as_stmt_ref();
 
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .map(|desc| desc.make_input_buffer(capacity))
             .collect();
 
         // Safe: We know that the statement is a prepared statement, and we just created the buffers
