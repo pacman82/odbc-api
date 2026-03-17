@@ -9,16 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [22.0.0](https://github.com/pacman82/odbc-api/compare/v21.1.0...v22.0.0) - 2026-03-17
 
-### Added
+### Changed
 
-- [**breaking**] AnyBuffer::Binary::length is now AnyBuffer::Binary::max_bytes
-- Add BindParamDesc::decimal_as_text
-- [**breaking**] AnyBuffer::Numeric now no longer maintains precision and scale
-- [**breaking**] AnyBuffer no longer implements `HasDataType`
-- [**breaking**] Prepared::columnar_inserter_with_mapping now uses BindParamDesc
-- [**breaking**] Prepared::column_inserter now uses BindParamDesc
-- Prepared::into_column_inserter also switched to BindParamDesc
-- [**breaking**] Decimals can now be bulk inserted with relational type decimal.
+- [**breaking**] Add support for explicitly specifying the relational type (data type) then bulk inserting data using `Prepared::columnar_inserter` or any of its sibling methods (`into_columnar_inserter`, `columnar_inserter_with_mapping`, `into_columnar_inserter_with_mapping`.). This is achieved by introducing `BindParamDesc` which replaces `BufferDesc` in this function. Previously any instance of `AnyBuffer` was mapped to its default relational type. This assumed a 1:1 relationship between buffer and relational types which does not actually exist. Concretly it was previously impossible to use a text buffer, yet announce their relational type to be decimal. That would have been a bigger issue in the past, yet most of the time the ODBC driver implicitly performed conversion. However some drivers do not and even those which do, become more picky once encryption is involved. To migrate replace the input of `BufferDesc` with an `IntoIterator<Item=BindParamDesc>`. `BindParamDesc` has various factories e.g. `BindParamDesc::text` or `BindParamDesc::i32` to help with this. The precision of the timestamp types can and must be specified now. In the past it has always been hardcoded to `7`. So if you want to trivially migrate just use this number.
+- [**breaking**] `AnyBuffer::Binary::length` is now `AnyBuffer::Binary::max_bytes`
+- [**breaking**] `AnyBuffer::Numeric` now no longer maintains precision and scale
+- [**breaking**] `AnyBuffer` no longer implements `HasDataType`
 
 ## [21.1.0](https://github.com/pacman82/odbc-api/compare/v21.0.0...v21.1.0) - 2026-03-16
 
