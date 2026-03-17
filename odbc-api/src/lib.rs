@@ -51,7 +51,7 @@ pub use self::{
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
     preallocated::{Preallocated, PrimaryKeysRow},
     preallocated_polling::PreallocatedPolling,
-    prepared::Prepared,
+    prepared::{BindParamDesc, Prepared},
     result_set_metadata::ResultSetMetadata,
     shared_connection::SharedConnection,
     sleep::Sleep,

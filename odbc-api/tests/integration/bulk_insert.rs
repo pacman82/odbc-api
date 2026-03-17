@@ -1,6 +1,6 @@
 use odbc_api::{
-    DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
-    buffers::{AnyBuffer, AnySliceMut, BufferDesc, Item, TextColumn},
+    BindParamDesc, DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
+    buffers::{AnySliceMut, BufferDesc, Item, TextColumn},
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
 };
@@ -448,19 +448,18 @@ fn columnar_insert_decimal(profile: &Profile) {
 
     // When
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    // DECIMAL(5,3) display size: precision + 2 (sign + decimal point) = 7
-    let parameter_buffers = vec![WithDataType::new(
-        AnyBuffer::Text(TextColumn::try_new(4, 7).unwrap()),
-        DataType::Decimal {
+    let descriptions = [BindParamDesc {
+        // DECIMAL(5,3) display size: precision + 2 (sign + decimal point) = 7
+        buffer_desc: BufferDesc::Text { max_str_len: 7 },
+        data_type: DataType::Decimal {
             precision: 5,
             scale: 3,
         },
-    )];
-    let index_mapping = InOrder::new(parameter_buffers.len());
-    let mut inserter = unsafe {
-        prepared.unchecked_bind_columnar_array_parameters(parameter_buffers, index_mapping)
-    }
-    .unwrap();
+    }];
+    let index_mapping = InOrder::new(descriptions.len());
+    let mut inserter = prepared
+        .into_column_inserter_with_mapping(4, descriptions, index_mapping)
+        .unwrap();
 
     inserter.set_num_rows(4);
     let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
@@ -749,7 +748,10 @@ fn bulk_insert_two_columns_from_one_buffer(profile: &Profile) {
 
     // Fill a text buffer with three rows, and insert them into the database.
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let description = [BufferDesc::I32 { nullable: false }];
+    let description = [BindParamDesc {
+        buffer_desc: BufferDesc::I32 { nullable: false },
+        data_type: DataType::Integer,
+    }];
 
     struct MyMapping;
     impl InputParameterMapping for MyMapping {

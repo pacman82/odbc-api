@@ -1,10 +1,11 @@
 use crate::{
-    ColumnarBulkInserter, CursorImpl, Error, InputParameterMapping, ParameterCollectionRef,
-    ResultSetMetadata,
+    ColumnarBulkInserter, CursorImpl, DataType, Error, InputParameterMapping,
+    ParameterCollectionRef, ResultSetMetadata,
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     columnar_bulk_inserter::InOrder,
     execute::execute_with_parameters,
     handles::{AsStatementRef, ColumnType, HasDataType, Statement, StatementRef},
+    parameter::WithDataType,
 };
 
 /// A prepared query. Prepared queries are useful if the similar queries should executed more than
@@ -245,12 +246,12 @@ where
     pub fn into_column_inserter_with_mapping(
         self,
         capacity: usize,
-        descriptions: impl IntoIterator<Item = BufferDesc>,
+        descriptions: impl IntoIterator<Item = BindParamDesc>,
         index_mapping: impl InputParameterMapping,
-    ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, WithDataType<AnyBuffer>>, Error> {
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .map(|desc| desc.make_input_buffer(capacity))
             .collect();
         // Safe: We know this to be a valid prepared statement. Also we just created the buffers
         // to be bound and know them to be empty. => Therfore they are valid and do not contain any
@@ -372,6 +373,24 @@ where
     pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
         let mut stmt = self.statement.as_stmt_ref();
         stmt.query_timeout_sec().into_result(&stmt)
+    }
+}
+
+/// Description of paramater domain and buffer bound for bulk insertion. Used by
+/// [`Prepared::column_inserter`].
+pub struct BindParamDesc {
+    /// Describes the C-Type used to describe values and wether we need a NULL representation.
+    pub buffer_desc: BufferDesc,
+    /// The relational type or domain of the parameter. While there is a strong correllation between
+    /// the buffer used and the relational type, it is not always a naive mapping. E.g. a text buffer
+    /// can not only carry VARCHAR but also a DECIMAL or a timestamp.
+    pub data_type: DataType,
+}
+
+impl BindParamDesc {
+    fn make_input_buffer(&self, max_rows: usize) -> WithDataType<AnyBuffer> {
+        let buffer = AnyBuffer::from_desc(max_rows, self.buffer_desc);
+        WithDataType::new(buffer, self.data_type)
     }
 }
 
