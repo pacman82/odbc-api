@@ -1173,13 +1173,7 @@ fn columnar_fetch_numeric(profile: &Profile) {
         .unwrap();
 
     // When
-    let buffer = ColumnarAnyBuffer::from_descs(
-        3,
-        [BufferDesc::Numeric {
-            precision: 5,
-            scale: 3,
-        }],
-    );
+    let buffer = ColumnarAnyBuffer::from_descs(3, [BufferDesc::Numeric]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
 
