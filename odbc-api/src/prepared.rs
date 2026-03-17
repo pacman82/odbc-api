@@ -555,7 +555,7 @@ impl BindParamDesc {
     /// * `max_bytes`: The maximum length of the binary data in bytes.
     pub fn binary(max_bytes: usize) -> Self {
         BindParamDesc {
-            buffer_desc: BufferDesc::Binary { length: max_bytes },
+            buffer_desc: BufferDesc::Binary { max_bytes },
             data_type: DataType::Binary {
                 length: NonZeroUsize::new(max_bytes),
             },

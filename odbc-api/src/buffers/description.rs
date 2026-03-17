@@ -14,10 +14,10 @@ use crate::{Bit, DataType};
 /// standard output, it may be more reasonable to bind it as `Text` rather than `Date`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BufferDesc {
-    /// Variable sized binary buffer, holding up to `length` bytes per value.
+    /// Variable sized binary buffer, holding up to `max_bytes` bytes per value.
     Binary {
         /// Maximum number of bytes per value.
-        length: usize,
+        max_bytes: usize,
     },
     /// Text buffer holding strings with binary length of up to `max_str_len`.
     ///
@@ -144,7 +144,7 @@ impl BufferDesc {
             DataType::Bit => BufferDesc::Bit { nullable },
             DataType::Varbinary { length }
             | DataType::Binary { length  }
-            | DataType::LongVarbinary { length } => length.map(|l| BufferDesc::Binary { length: l.get() })?,
+            | DataType::LongVarbinary { length } => length.map(|l| BufferDesc::Binary { max_bytes: l.get() })?,
             DataType::Varchar { length }
             | DataType::WVarchar { length }
             // Currently no special buffers for fixed lengths text implemented.
@@ -170,7 +170,7 @@ impl BufferDesc {
     pub fn bytes_per_row(&self) -> usize {
         let size_indicator = |nullable: bool| if nullable { size_of::<isize>() } else { 0 };
         match *self {
-            BufferDesc::Binary { length } => length + size_indicator(true),
+            BufferDesc::Binary { max_bytes: length } => length + size_indicator(true),
             BufferDesc::Text { max_str_len } => max_str_len + 1 + size_indicator(true),
             BufferDesc::WText { max_str_len } => (max_str_len + 1) * 2 + size_indicator(true),
             BufferDesc::F64 { nullable } => size_of::<f64>() + size_indicator(nullable),
@@ -197,7 +197,7 @@ mod tests {
     #[test]
     #[cfg(target_pointer_width = "64")] // Indicator size is platform dependent.
     fn bytes_per_row() {
-        assert_eq!(5 + 8, BufferDesc::Binary { length: 5 }.bytes_per_row());
+        assert_eq!(5 + 8, BufferDesc::Binary { max_bytes: 5 }.bytes_per_row());
         assert_eq!(
             5 + 1 + 8,
             BufferDesc::Text { max_str_len: 5 }.bytes_per_row()
