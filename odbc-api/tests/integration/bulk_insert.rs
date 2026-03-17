@@ -4,6 +4,7 @@ use odbc_api::{
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
 };
+
 use stdext::function_name;
 use test_case::test_case;
 use widestring::Utf16String;
@@ -50,7 +51,7 @@ fn bulk_insert_long_strings_as_wchar(profile: &Profile) {
     let mut inserter = conn
         .prepare(&table.sql_insert())
         .unwrap()
-        .into_column_inserter(1, [BufferDesc::WText { max_str_len: 5000 }])
+        .into_column_inserter(1, [BindParamDesc::wide_text(5000)])
         .unwrap();
     inserter
         .column_mut(0)
@@ -84,7 +85,7 @@ fn long_strings_with_more_than_8000_bytes(profile: &Profile, column_type: &str) 
     let mut inserter = conn
         .prepare(&table.sql_insert())
         .unwrap()
-        .into_column_inserter(1, [BufferDesc::Text { max_str_len: 8001 }])
+        .into_column_inserter(1, [BindParamDesc::text(8001)])
         .unwrap();
     inserter
         .column_mut(0)
@@ -101,7 +102,7 @@ fn long_strings_with_more_than_8000_bytes(profile: &Profile, column_type: &str) 
 /// Insert values into a DATETIME2 column using a columnar buffer
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
-// #[test_case(SQLITE_3; "SQLite 3")] default precision of 3 instead 7
+// #[test_case(SQLITE_3; "SQLite 3")] // default precision of 3 instead 7
 fn columnar_insert_timestamp(profile: &Profile) {
     let table_name = table_name!();
     // Setup
@@ -111,7 +112,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
         .unwrap();
 
     // Fill buffer with values
-    let desc = BufferDesc::Timestamp { nullable: true };
+    let desc = BindParamDesc::timestamp(true, 7);
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
@@ -167,7 +168,8 @@ fn columnar_insert_int_raw(profile: &Profile) {
         .unwrap();
 
     // Fill buffer with values
-    let desc = BufferDesc::I32 { nullable: true };
+    let nullable = true;
+    let desc = BindParamDesc::integer(nullable);
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
@@ -208,7 +210,7 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
     // Fill buffer with values
-    let desc = BufferDesc::Timestamp { nullable: true };
+    let desc = BindParamDesc::timestamp(true, 3);
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
@@ -230,7 +232,7 @@ fn columnar_insert_timestamp_ms(profile: &Profile) {
             hour: 16,
             minute: 13,
             second: 54,
-            fraction: 123456700,
+            fraction: 123000000,
         }),
         None,
     ];
@@ -263,7 +265,7 @@ fn columnar_insert_varbinary(profile: &Profile) {
         .unwrap();
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     // Fill buffer with values
-    let desc = BufferDesc::Binary { length: 5 };
+    let desc = BindParamDesc::binary(5);
     let mut prebound = prepared.into_column_inserter(4, [desc]).unwrap();
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
     // reallocation of the underlying buffer.
@@ -309,11 +311,10 @@ fn columnar_insert_varchar(profile: &Profile) {
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let desc = BufferDesc::Text {
-        // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would
-        // not work.
-        max_str_len: 5,
-    };
+    // Buffer size purposefully chosen too small, so we would get a panic if `set_max_len` would not
+    // work.
+    let max_str_len = 5;
+    let desc = BindParamDesc::text(max_str_len);
     let mut prebound = prepared.into_column_inserter(4, [desc]).unwrap();
     // Fill buffer with values
     // Input values to insert. Note that the last element has > 5 chars and is going to trigger a
@@ -389,7 +390,7 @@ fn columnar_insert_text_as_sql_integer(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
 #[test_case(POSTGRES; "PostgreSQL")]
-fn columnar_insert_numeric(profile: &Profile) {
+fn columnar_insert_numeric_using_numeric_buffer(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["DECIMAL(5,3)"])
@@ -398,10 +399,17 @@ fn columnar_insert_numeric(profile: &Profile) {
     let stmt = conn.prepare(&table.sql_insert()).unwrap();
 
     // When
-    let desc = BufferDesc::Numeric {
-        precision: 5,
-        scale: 3,
+    let desc = BindParamDesc {
+        buffer_desc: BufferDesc::Numeric {
+            precision: 5,
+            scale: 3,
+        },
+        data_type: DataType::Numeric {
+            precision: 5,
+            scale: 3,
+        },
     };
+
     let mut inserter = stmt.into_column_inserter(3, [desc]).unwrap();
     let AnySliceMut::Numeric(slice) = inserter.column_mut(0) else {
         panic!("Expected numeric column");
@@ -486,12 +494,10 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
         .build(profile)
         .unwrap();
 
-    // Fill buffer with values
-    let desc = BufferDesc::Text {
-        // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
-        // encounter larger inputs.
-        max_str_len: 1,
-    };
+    // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+    // encounter larger inputs.
+    let max_str_len = 1;
+    let desc = BindParamDesc::text(max_str_len);
     let prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
@@ -534,12 +540,11 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
         .column_types(&["VARBINARY(13)"])
         .build(profile)
         .unwrap();
-    // Fill buffer with values
-    let desc = BufferDesc::Binary {
-        // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
-        // encounter larger inputs.
-        length: 1,
-    };
+
+    // Buffer size purposefully chosen too small, so we need to increase the buffer size if we
+    // encounter larger inputs.
+    let max_bytes = 1;
+    let desc = BindParamDesc::binary(max_bytes);
     // Input values to insert.
     let input = [
         Some(&b"Hi"[..]),
@@ -591,7 +596,7 @@ fn with_varying_buffer_sizes(profile: &Profile) {
 
     // When we create a columnar inserter with a batch size of 1 and insert a single value.
     let mut inserter = prepared
-        .into_column_inserter(1, [BufferDesc::I32 { nullable: false }])
+        .into_column_inserter(1, [BindParamDesc::integer(false)])
         .unwrap();
     inserter.set_num_rows(1);
     inserter.column_mut(0).as_slice::<i32>().unwrap()[0] = 1;
@@ -631,7 +636,8 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
         Some(U16String::from_str("Hello, World!")),
     ];
     // Fill buffer with values
-    let desc = BufferDesc::WText { max_str_len: 20 };
+    let max_str_len = 20;
+    let desc = BindParamDesc::wide_text(max_str_len);
     let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
     let mut writer = prebound.column_mut(0).as_w_text_view().unwrap();
@@ -704,10 +710,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 
     // Fill a text buffer with three rows, and insert them into the database.
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let description = [
-        BufferDesc::Text { max_str_len: 50 },
-        BufferDesc::I32 { nullable: true },
-    ];
+    let description = [BindParamDesc::text(50), BindParamDesc::integer(true)];
 
     let mut prebound = prepared.into_column_inserter(5, description).unwrap();
 
@@ -801,10 +804,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 
     // Fill a buffer with three rows, and insert them into the database.
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let description = [
-        BufferDesc::Text { max_str_len: 50 },
-        BufferDesc::I32 { nullable: true },
-    ];
+    let description = [BindParamDesc::text(50), BindParamDesc::integer(true)];
     let mut prebound = prepared.into_column_inserter(5, description).unwrap();
     prebound.set_num_rows(3);
     // Fill first column with text
@@ -855,7 +855,7 @@ fn insert_i64_in_bulk(profile: &Profile) -> Result<(), odbc_api::Error> {
 
     // When
     let prepared = conn.prepare(&table.sql_insert())?;
-    let mut inserter = prepared.into_column_inserter(2, [BufferDesc::I64 { nullable: true }])?;
+    let mut inserter = prepared.into_column_inserter(2, [BindParamDesc::big_int(true)])?;
     inserter.set_num_rows(2);
     let mut view = inserter.column_mut(0).as_nullable_slice().unwrap();
     view.set_cell(0, Some(1i64));

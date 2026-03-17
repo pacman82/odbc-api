@@ -561,6 +561,15 @@ where
     }
 }
 
+impl<T> Resize for WithDataType<T>
+where
+    T: Resize,
+{
+    fn resize(&mut self, new_capacity: usize) {
+        self.value.resize(new_capacity);
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

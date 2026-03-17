@@ -1,10 +1,15 @@
+use std::num::NonZeroUsize;
+
 use crate::{
     ColumnarBulkInserter, CursorImpl, DataType, Error, InputParameterMapping,
     ParameterCollectionRef, ResultSetMetadata,
     buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
     columnar_bulk_inserter::InOrder,
     execute::execute_with_parameters,
-    handles::{AsStatementRef, ColumnType, HasDataType, Statement, StatementRef},
+    handles::{
+        ASSUMED_MAX_LENGTH_OF_VARCHAR, ASSUMED_MAX_LENGTH_OF_W_VARCHAR, AsStatementRef, ColumnType,
+        HasDataType, Statement, StatementRef,
+    },
     parameter::WithDataType,
 };
 
@@ -227,11 +232,11 @@ where
     pub fn into_column_inserter(
         self,
         capacity: usize,
-        descriptions: impl IntoIterator<Item = BufferDesc>,
-    ) -> Result<ColumnarBulkInserter<S, AnyBuffer>, Error> {
+        descriptions: impl IntoIterator<Item = BindParamDesc>,
+    ) -> Result<ColumnarBulkInserter<S, WithDataType<AnyBuffer>>, Error> {
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .map(|desc| desc.make_input_buffer(capacity))
             .collect();
         let index_mapping = InOrder::new(parameter_buffers.len());
         // Safe: We know this to be a valid prepared statement. Also we just created the buffers
@@ -388,6 +393,114 @@ pub struct BindParamDesc {
 }
 
 impl BindParamDesc {
+    /// A description for binding utf-16 data to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `max_str_len`: The maximum length of the string in utf-16 code units. Excluding
+    ///   terminating null character.
+    ///
+    /// Uses a wide character buffer and sets the data type to [`DataType::WVarchar`] or
+    /// [`DataType::WLongVarchar`].
+    pub fn wide_text(max_str_len: usize) -> Self {
+        let data_type = if max_str_len <= ASSUMED_MAX_LENGTH_OF_W_VARCHAR {
+            DataType::WVarchar {
+                length: NonZeroUsize::new(max_str_len),
+            }
+        } else {
+            DataType::WLongVarchar {
+                length: NonZeroUsize::new(max_str_len),
+            }
+        };
+        BindParamDesc {
+            buffer_desc: BufferDesc::WText { max_str_len },
+            data_type,
+        }
+    }
+
+    /// A description for binding narrow text (usually utf-8) data to a parameter.
+    ///
+    /// * `max_str_len`: The maximum length of the string in bytes. excluding terminating null
+    ///   character.
+    ///
+    /// Uses a narrow character buffer and sets the data type to [`DataType::Varchar`] or
+    /// [`DataType::LongVarchar`].
+    pub fn text(max_str_len: usize) -> Self {
+        let data_type = if max_str_len <= ASSUMED_MAX_LENGTH_OF_VARCHAR {
+            DataType::Varchar {
+                length: NonZeroUsize::new(max_str_len),
+            }
+        } else {
+            DataType::LongVarchar {
+                length: NonZeroUsize::new(max_str_len),
+            }
+        };
+        BindParamDesc {
+            buffer_desc: BufferDesc::Text { max_str_len },
+            data_type,
+        }
+    }
+
+    /// A description for binding timestamps to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    /// * `precision`: The number of digits for the fractional seconds part. E.g. if you know your
+    ///   input to be milliseconds choose `3`. Many databases error if you exceed the maximum
+    ///   precision of the column. If you are unsure about the maximum precision supported by the
+    ///   Database `7` is a good guess.
+    pub fn timestamp(nullable: bool, precision: i16) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::Timestamp { nullable },
+            data_type: DataType::Timestamp { precision },
+        }
+    }
+
+    /// A description for binding 32 bit integers to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn integer(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::I32 { nullable },
+            data_type: DataType::Integer,
+        }
+    }
+
+    /// A description for binding 64 bit integers to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn big_int(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::I64 { nullable },
+            data_type: DataType::BigInt,
+        }
+    }
+
+    /// A description for binding variadic binary data to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `max_bytes`: The maximum length of the binary data in bytes.
+    pub fn binary(max_bytes: usize) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::Binary { length: max_bytes },
+            data_type: DataType::Binary {
+                length: NonZeroUsize::new(max_bytes),
+            },
+        }
+    }
+
     fn make_input_buffer(&self, max_rows: usize) -> WithDataType<AnyBuffer> {
         let buffer = AnyBuffer::from_desc(max_rows, self.buffer_desc);
         WithDataType::new(buffer, self.data_type)
