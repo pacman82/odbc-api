@@ -273,8 +273,8 @@ where
     pub fn column_inserter(
         &mut self,
         capacity: usize,
-        descriptions: impl IntoIterator<Item = BufferDesc>,
-    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, AnyBuffer>, Error> {
+        descriptions: impl IntoIterator<Item = BindParamDesc>,
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<AnyBuffer>>, Error> {
         // Remark: We repeat the implementation here. It is hard to reuse the
         // `column_inserter_with_mapping` function, because we need to know the number of parameters
         // to create the `InOrder` mapping.
@@ -282,7 +282,7 @@ where
 
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
-            .map(|desc| AnyBuffer::from_desc(capacity, desc))
+            .map(|desc| desc.make_input_buffer(capacity))
             .collect();
 
         let index_mapping = InOrder::new(parameter_buffers.len());
@@ -383,6 +383,7 @@ where
 
 /// Description of paramater domain and buffer bound for bulk insertion. Used by
 /// [`Prepared::column_inserter`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BindParamDesc {
     /// Describes the C-Type used to describe values and wether we need a NULL representation.
     pub buffer_desc: BufferDesc,
@@ -459,6 +460,38 @@ impl BindParamDesc {
         }
     }
 
+    /// A description for binding [`crate::Time`] values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    /// * `precision`: The number of digits for the fractional seconds part. E.g. if you know your
+    ///   input to be milliseconds choose `3`. Many databases error if you exceed the maximum
+    ///   precision of the column. If you are unsure about the maximum precision supported by the
+    ///   Database `7` is a good guess.
+    pub fn time(nullable: bool, precision: i16) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::Time { nullable },
+            data_type: DataType::Time { precision },
+        }
+    }
+
+    /// A description for binding 16 bit integers to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn i16(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::I16 { nullable },
+            data_type: DataType::SmallInt,
+        }
+    }
+
     /// A description for binding 32 bit integers to a parameter.
     ///
     /// # Parameters
@@ -466,7 +499,7 @@ impl BindParamDesc {
     /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
     ///   if `false` null values can not be represented, but we can save an allocation for an
     ///   indicator buffer.
-    pub fn integer(nullable: bool) -> Self {
+    pub fn i32(nullable: bool) -> Self {
         BindParamDesc {
             buffer_desc: BufferDesc::I32 { nullable },
             data_type: DataType::Integer,
@@ -480,7 +513,7 @@ impl BindParamDesc {
     /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
     ///   if `false` null values can not be represented, but we can save an allocation for an
     ///   indicator buffer.
-    pub fn big_int(nullable: bool) -> Self {
+    pub fn i64(nullable: bool) -> Self {
         BindParamDesc {
             buffer_desc: BufferDesc::I64 { nullable },
             data_type: DataType::BigInt,
@@ -498,6 +531,93 @@ impl BindParamDesc {
             data_type: DataType::Binary {
                 length: NonZeroUsize::new(max_bytes),
             },
+        }
+    }
+
+    /// A description for binding `f64` values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn f64(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::F64 { nullable },
+            data_type: DataType::Double,
+        }
+    }
+
+    /// A description for binding `f32` values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn f32(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::F32 { nullable },
+            data_type: DataType::Real,
+        }
+    }
+
+    /// A description for binding `u8` values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn u8(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::U8 { nullable },
+            // Few databases support unsigned types, binding U8 as tiny int might lead to weird
+            // stuff if the database has type is signed. I guess. Let's bind it as SmallInt by
+            // default, just to be on the safe side.
+            data_type: DataType::SmallInt,
+        }
+    }
+
+    /// A description for binding `u8` values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn i8(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::I8 { nullable },
+            data_type: DataType::TinyInt,
+        }
+    }
+
+    /// A description for binding [`crate::sys::Date`] values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn date(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::Date { nullable },
+            data_type: DataType::Date,
+        }
+    }
+
+    /// A description for binding [`crate::Bit`] values to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
+    ///   if `false` null values can not be represented, but we can save an allocation for an
+    ///   indicator buffer.
+    pub fn bit(nullable: bool) -> Self {
+        BindParamDesc {
+            buffer_desc: BufferDesc::Bit { nullable },
+            data_type: DataType::Bit,
         }
     }
 
