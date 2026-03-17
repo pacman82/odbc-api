@@ -77,11 +77,11 @@ impl AnyBuffer {
         fallible_allocations: bool,
     ) -> Result<Self, TooLargeBufferSize> {
         let buffer = match desc {
-            BufferDesc::Binary { length } => {
+            BufferDesc::Binary { max_bytes } => {
                 if fallible_allocations {
-                    AnyBuffer::Binary(BinColumn::try_new(max_rows, length)?)
+                    AnyBuffer::Binary(BinColumn::try_new(max_rows, max_bytes)?)
                 } else {
-                    AnyBuffer::Binary(BinColumn::new(max_rows, length))
+                    AnyBuffer::Binary(BinColumn::new(max_rows, max_bytes))
                 }
             }
             BufferDesc::Text { max_str_len } => {

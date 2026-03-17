@@ -988,7 +988,7 @@ fn columnar_fetch_varbinary(profile: &Profile) {
         data_type
     );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
-    assert_eq!(BufferDesc::Binary { length: 10 }, buffer_desc);
+    assert_eq!(BufferDesc::Binary { max_bytes: 10 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
@@ -1067,7 +1067,7 @@ fn columnar_fetch_binary(profile: &Profile) {
         data_type
     );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
-    assert_eq!(BufferDesc::Binary { length: 5 }, buffer_desc);
+    assert_eq!(BufferDesc::Binary { max_bytes: 5 }, buffer_desc);
     let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
