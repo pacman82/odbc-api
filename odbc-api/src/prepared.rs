@@ -478,6 +478,34 @@ impl BindParamDesc {
         }
     }
 
+    /// A description for binding decimal represented as text to a parameter.
+    ///
+    /// # Parameters
+    ///
+    /// * `precision`: The total number of digits in the decimal number. E.g. for `123.45` this
+    ///   would be `5`.
+    /// * `scale`: The number of digits to the right of the decimal point. E.g. for `123.45` this
+    ///   would be `2`.
+    ///
+    pub fn decimal_as_text(precision: u8, scale: i8) -> Self {
+        // Length of a text representation of a decimal
+        let max_str_len = match scale {
+            // Precision digits + (- scale zeroes) + sign
+            i8::MIN..=-1 => (precision as i32 + scale as i32 + 1).try_into().unwrap(),
+            // Precision digits + sign
+            0 => precision as usize + 1,
+            // Precision digits + radix character (`.`) + sign
+            1.. => precision as usize + 1 + 1,
+        };
+        BindParamDesc {
+            buffer_desc: BufferDesc::Text { max_str_len },
+            data_type: DataType::Decimal {
+                precision: precision as usize,
+                scale: scale as i16,
+            },
+        }
+    }
+
     /// A description for binding 16 bit integers to a parameter.
     ///
     /// # Parameters
@@ -635,5 +663,39 @@ where
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::buffers::BufferDesc;
+
+    use super::BindParamDesc;
+
+    #[test]
+    fn bind_paramater_description_decimal_length_positive_scale() {
+        let BufferDesc::Text { max_str_len } = BindParamDesc::decimal_as_text(5, 2).buffer_desc
+        else {
+            panic!("Expected a text buffer for decimal parameters.")
+        };
+        assert_eq!("-123.45".len(), max_str_len);
+    }
+
+    #[test]
+    fn bind_paramater_description_decimal_length_scale_zero() {
+        let BufferDesc::Text { max_str_len } = BindParamDesc::decimal_as_text(5, 0).buffer_desc
+        else {
+            panic!("Expected a text buffer for decimal parameters.")
+        };
+        assert_eq!("-12345".len(), max_str_len);
+    }
+
+    #[test]
+    fn bind_paramater_description_decimal_length_negative_scale() {
+        let BufferDesc::Text { max_str_len } = BindParamDesc::decimal_as_text(5, -2).buffer_desc
+        else {
+            panic!("Expected a text buffer for decimal parameters.")
+        };
+        assert_eq!("-123".len(), max_str_len);
     }
 }

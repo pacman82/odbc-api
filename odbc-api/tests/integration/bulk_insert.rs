@@ -453,14 +453,7 @@ fn columnar_insert_decimal(profile: &Profile) {
 
     // When
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let descriptions = [BindParamDesc {
-        // DECIMAL(5,3) display size: precision + 2 (sign + decimal point) = 7
-        buffer_desc: BufferDesc::Text { max_str_len: 7 },
-        data_type: DataType::Decimal {
-            precision: 5,
-            scale: 3,
-        },
-    }];
+    let descriptions = [BindParamDesc::decimal_as_text(5, 3)];
     let index_mapping = InOrder::new(descriptions.len());
     let mut inserter = prepared
         .into_column_inserter_with_mapping(4, descriptions, index_mapping)
