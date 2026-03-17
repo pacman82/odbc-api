@@ -3686,7 +3686,7 @@ fn column_inserter_one_buffer_for_two_placeholders(profile: &Profile) {
         .unwrap();
 
     // When we fill both columns from one input buffer
-    let desc = BufferDesc::I32 { nullable: false };
+    let desc = BindParamDesc::i32(false);
     struct MyMapping;
     impl InputParameterMapping for MyMapping {
         fn parameter_index_to_column_index(&self, _parameter_index: u16) -> usize {
