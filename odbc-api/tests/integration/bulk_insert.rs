@@ -1,5 +1,5 @@
 use odbc_api::{
-    BindParamDesc, DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
+    BindParamDesc, Connection, DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
     buffers::{AnySliceMut, BufferDesc, Item, TextColumn},
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
@@ -169,7 +169,7 @@ fn columnar_insert_int_raw(profile: &Profile) {
 
     // Fill buffer with values
     let nullable = true;
-    let desc = BindParamDesc::integer(nullable);
+    let desc = BindParamDesc::i32(nullable);
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
     let mut prebound = prepared.into_column_inserter(10, [desc]).unwrap();
 
@@ -596,7 +596,7 @@ fn with_varying_buffer_sizes(profile: &Profile) {
 
     // When we create a columnar inserter with a batch size of 1 and insert a single value.
     let mut inserter = prepared
-        .into_column_inserter(1, [BindParamDesc::integer(false)])
+        .into_column_inserter(1, [BindParamDesc::i32(false)])
         .unwrap();
     inserter.set_num_rows(1);
     inserter.column_mut(0).as_slice::<i32>().unwrap()[0] = 1;
@@ -710,7 +710,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 
     // Fill a text buffer with three rows, and insert them into the database.
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let description = [BindParamDesc::text(50), BindParamDesc::integer(true)];
+    let description = [BindParamDesc::text(50), BindParamDesc::i32(true)];
 
     let mut prebound = prepared.into_column_inserter(5, description).unwrap();
 
@@ -804,7 +804,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
 
     // Fill a buffer with three rows, and insert them into the database.
     let prepared = conn.prepare(&table.sql_insert()).unwrap();
-    let description = [BindParamDesc::text(50), BindParamDesc::integer(true)];
+    let description = [BindParamDesc::text(50), BindParamDesc::i32(true)];
     let mut prebound = prepared.into_column_inserter(5, description).unwrap();
     prebound.set_num_rows(3);
     // Fill first column with text
@@ -855,7 +855,7 @@ fn insert_i64_in_bulk(profile: &Profile) -> Result<(), odbc_api::Error> {
 
     // When
     let prepared = conn.prepare(&table.sql_insert())?;
-    let mut inserter = prepared.into_column_inserter(2, [BindParamDesc::big_int(true)])?;
+    let mut inserter = prepared.into_column_inserter(2, [BindParamDesc::i64(true)])?;
     inserter.set_num_rows(2);
     let mut view = inserter.column_mut(0).as_nullable_slice().unwrap();
     view.set_cell(0, Some(1i64));
@@ -884,7 +884,7 @@ fn grow_batch_size_during_bulk_insert(profile: &Profile) {
     let mut prepared = conn
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let desc = BufferDesc::I32 { nullable: false };
+    let desc = BindParamDesc::i32(false);
     // The first batch is inserted with capacity 1
     let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
     prebound.set_num_rows(1);
@@ -925,7 +925,7 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
     let mut prepared = conn
         .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
-    let desc = BufferDesc::I32 { nullable: false };
+    let desc = BindParamDesc::i32(false);
     // Insert a batch
     let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
     prebound.set_num_rows(1);
@@ -941,4 +941,52 @@ fn bulk_inserter_owning_connection(profile: &Profile) {
         .unwrap();
     let actual = cursor_to_string(cursor);
     assert_eq!("1", actual);
+}
+
+/// Inserts a Vector of integers using a generic implementation
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn insert_vec_column_using_generic_code(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "BIGINT", "FLOAT(53)"])
+        .build(profile)
+        .unwrap();
+    let insert_sql = table.sql_insert();
+
+    fn insert_tuple_vec<A: Item, B: Item, C: Item>(
+        conn: &Connection<'_>,
+        insert_sql: &str,
+        source: &[(A, B, C)],
+    ) {
+        let mut prepared = conn.prepare(insert_sql).unwrap();
+        // Number of rows submitted in one round trip
+        let capacity = source.len();
+        // We do not need a nullable buffer since elements of source are not optional
+        let descriptions = [
+            A::bind_param_desc(false),
+            B::bind_param_desc(false),
+            C::bind_param_desc(false),
+        ];
+        let mut inserter = prepared.column_inserter(capacity, descriptions).unwrap();
+        // We send everything in one go.
+        inserter.set_num_rows(source.len());
+        // Now let's copy the row based tuple into the columnar structure
+        for (index, (a, b, c)) in source.iter().enumerate() {
+            inserter.column_mut(0).as_slice::<A>().unwrap()[index] = *a;
+            inserter.column_mut(1).as_slice::<B>().unwrap()[index] = *b;
+            inserter.column_mut(2).as_slice::<C>().unwrap()[index] = *c;
+        }
+        inserter.execute().unwrap();
+    }
+    insert_tuple_vec(
+        &conn,
+        &insert_sql,
+        &[(1i32, 1i64, 0.5f64), (2, 2, 0.25), (3, 3, 0.125)],
+    );
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("1,1,0.5\n2,2,0.25\n3,3,0.125", actual);
 }
