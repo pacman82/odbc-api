@@ -21,6 +21,7 @@ git_tag_enable = false
 [changelog]
 commit_parsers = [
     { message = "^feat", group = "Added" },
+    { message = "^feat!", group = "Changed" },
     { message = "^fix", group = "Fixed" },
     { message = "^perf", group = "Changed" },
     { message = "^refactor!", group = "Changed" },
