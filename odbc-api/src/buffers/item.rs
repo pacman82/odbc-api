@@ -50,7 +50,6 @@ pub trait Item: Sized + Copy {
     /// assert_eq!(BufferDesc::I64{ nullable: true }, i64::buffer_desc(true));
     /// assert_eq!(BufferDesc::I64{ nullable: false }, i64::buffer_desc(false));
     /// ```
-    #[deprecated(note = "Use `bind_param_desc` instead")]
     fn buffer_desc(nullable: bool) -> BufferDesc;
 
     /// Extract the array type from an [`AnySlice`].
