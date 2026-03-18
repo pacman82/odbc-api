@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [23.0.1](https://github.com/pacman82/odbc-api/compare/v23.0.0...v23.0.1) - 2026-03-18
 
+### Changed
+
+- `Item::buffer_desc` is no longer marked deprecated, as it turned out to be still valuable for writing bulk fetch over generic types.
+
 ### Fixed
 
-- `BindParamDesc::decimal_as_text` did generate text buffers which
+- `BindParamDesc::decimal_as_text` did generate text buffers which were too short, if decimal scale had been negative.
 
 ## [23.0.0](https://github.com/pacman82/odbc-api/compare/v22.0.0...v23.0.0) - 2026-03-18
 
