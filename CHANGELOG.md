@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [22.0.1](https://github.com/pacman82/odbc-api/compare/v22.0.0...v22.0.1) - 2026-03-18
+## [23.0.0](https://github.com/pacman82/odbc-api/compare/v22.0.0...v23.0.0) - 2026-03-18
 
 ### Added
 
-- [**breaking**] BindParamDesc::time no longer takes a precision component.
+- `BindParamDesc::text_as_time` for binding text buffer as time relational type.
+
+### Changed
+
+- [**breaking**] `BindParamDesc::time` no longer takes a precision component.
 
 ## [22.0.0](https://github.com/pacman82/odbc-api/compare/v21.1.0...v22.0.0) - 2026-03-17
 
