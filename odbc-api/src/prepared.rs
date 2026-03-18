@@ -511,7 +511,7 @@ impl BindParamDesc {
         // Length of a text representation of a decimal
         let max_str_len = match scale {
             // Precision digits + (- scale zeroes) + sign
-            i8::MIN..=-1 => (precision as i32 + scale as i32 + 1).try_into().unwrap(),
+            i8::MIN..=-1 => (precision as i32 - scale as i32 + 1).try_into().unwrap(),
             // Precision digits + sign
             0 => precision as usize + 1,
             // Precision digits + radix character (`.`) + sign
@@ -716,6 +716,6 @@ mod tests {
         else {
             panic!("Expected a text buffer for decimal parameters.")
         };
-        assert_eq!("-123".len(), max_str_len);
+        assert_eq!("-1234500".len(), max_str_len);
     }
 }
