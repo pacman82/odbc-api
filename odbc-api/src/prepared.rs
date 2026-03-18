@@ -467,13 +467,33 @@ impl BindParamDesc {
     /// * `nullable`: Whether the parameter can be NULL. If `true` null values can be represented,
     ///   if `false` null values can not be represented, but we can save an allocation for an
     ///   indicator buffer.
-    /// * `precision`: The number of digits for the fractional seconds part. E.g. if you know your
-    ///   input to be milliseconds choose `3`. Many databases error if you exceed the maximum
-    ///   precision of the column. If you are unsure about the maximum precision supported by the
-    ///   Database `7` is a good guess.
-    pub fn time(nullable: bool, precision: i16) -> Self {
+    pub fn time(nullable: bool) -> Self {
         BindParamDesc {
             buffer_desc: BufferDesc::Time { nullable },
+            data_type: DataType::Time { precision: 0 },
+        }
+    }
+
+    /// A description for binding wallclock time in a text buffer.
+    ///
+    /// # Parameters
+    ///
+    /// * `precision`: The number of digits for the fractional seconds part. E.g. if you know your
+    ///   input to be milliseconds choose `3`. Some databases error if you exceed the maximum
+    ///   precision of the column. If you are unsure about the maximum precision supported by the
+    ///   Database `7` is a good guess.
+    pub fn time_as_text(precision: i16) -> Self {
+        // Text representation of time has a fixed length of 8 (hh:mm:ss) plus the radix character
+        // and the fractional seconds. E.g. for milliseconds we would have `hh:mm:ss.fff` which has
+        // a length of 12.
+        let max_str_len = 8 + if precision > 0 {
+            // Radix character + fractional seconds digits
+            1 + precision as usize
+        } else {
+            0
+        };
+        BindParamDesc {
+            buffer_desc: BufferDesc::Text { max_str_len },
             data_type: DataType::Time { precision },
         }
     }

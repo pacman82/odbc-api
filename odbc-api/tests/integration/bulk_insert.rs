@@ -438,12 +438,20 @@ fn columnar_insert_numeric_using_numeric_buffer(profile: &Profile) {
 }
 
 /// Currently all DBMS under test would allow inserting decimals as VARCHAR and perform the
-/// conversation themselves implicitly. However
+/// conversation themselves implicitly. However Sybase is reported to require relational type
+/// DECIMAL.
+///
+/// See: <https://github.com/pacman82/arrow-odbc-py/issues/187#issuecomment-4074606734>
+///
+/// Also Microsoft SQL Server seems less inclined to implicit conversions when encryption is
+/// enabled.
+///
+/// See: <https://github.com/pacman82/odbc-api/issues/801#issuecomment-4066315342>
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn columnar_insert_decimal(profile: &Profile) {
+fn columnar_insert_text_as_decimal(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -471,6 +479,39 @@ fn columnar_insert_decimal(profile: &Profile) {
     // Then
     let content = table.content_as_string(&conn);
     assert_eq!("12.345\n23.456\nNULL\n34.567", content);
+}
+
+#[test_case(MSSQL, "TIME(3)"; "Microsoft SQL Server")]
+// #[test_case(MARIADB, "TIME(3)"; "Maria DB")] Fractional seconds cause overflow
+#[test_case(SQLITE_3, "TIME(3)"; "SQLite 3")]
+#[test_case(POSTGRES, "TIME(3)"; "PostgreSQL")]
+fn columnar_insert_text_as_time_ms(profile: &Profile, time_ms: &str) {
+    // Given
+    let table_name = table_name!();
+    let types = [time_ms];
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&types)
+        .build(profile)
+        .unwrap();
+
+    // When
+    let prepared = conn.prepare(&table.sql_insert()).unwrap();
+    let descriptions = [BindParamDesc::time_as_text(3)];
+    let index_mapping = InOrder::new(descriptions.len());
+    let mut inserter = prepared
+        .into_column_inserter_with_mapping(2, descriptions, index_mapping)
+        .unwrap();
+
+    inserter.set_num_rows(2);
+    let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
+    col_view.set_cell(0, Some(b"09:18:53.123"));
+    col_view.set_cell(1, None);
+
+    inserter.execute().unwrap();
+
+    // Then
+    let content = table.content_as_string(&conn);
+    assert_eq!("09:18:53.123\nNULL", content);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
