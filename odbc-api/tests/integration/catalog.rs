@@ -117,6 +117,35 @@ fn list_tables_with_preallocated(
     assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
 }
 
+#[test_case(MSSQL, Some("master"), Some("dbo"), None; "Microsoft SQL Server")]
+#[test_case(MARIADB, Some("test_db"), None, Some(""); "Maria DB")]
+#[test_case(SQLITE_3, None, None, None; "SQLite 3")]
+#[test_case(POSTGRES, Some("test"), Some("public"), Some(""); "PostgreSQL")]
+fn list_tables_with_connection(
+    profile: &Profile,
+    catalog: Option<&str>,
+    schema: Option<&str>,
+    remarks: Option<&str>,
+) {
+    let table_name = table_name!();
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
+        .unwrap();
+    conn.execute(&format!("CREATE TABLE {table_name} (a INTEGER)"), (), None)
+        .unwrap();
+
+    let iter = conn.tables("", "", &table_name, "").unwrap();
+    let rows: Vec<TablesRow> = iter.collect::<Result<_, _>>().unwrap();
+
+    assert_eq!(1, rows.len());
+    let row = &rows[0];
+    assert_eq!(catalog, row.catalog.as_str().unwrap());
+    assert_eq!(schema, row.schema.as_str().unwrap());
+    assert_eq!(Some(table_name.as_str()), row.table.as_str().unwrap());
+    assert_eq!(Some("TABLE"), row.table_type.as_str().unwrap(), "TABLE_TYPE");
+    assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
+}
+
 #[test_case(MSSQL, "master", Some("dbo"), "int", 10, 4, 0, 10, None, None, None, Some("YES"); "Microsoft SQL Server")]
 #[test_case(MARIADB, "test_db", None, "INT", 10, 4, 0, 10, Some(""), Some("NULL"), Some(2), Some("YES"); "Maria DB")]
 #[test_case(SQLITE_3, "", Some(""), "INTEGER", 9, 10, 10, 0, None, Some("NULL"), Some(16384), Some("YES"); "SQLite 3")]

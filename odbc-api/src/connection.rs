@@ -1,6 +1,6 @@
 use crate::{
     BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ParameterCollectionRef,
-    Preallocated, Prepared, PrimaryKeysRow, Sleep,
+    Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow,
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
@@ -576,43 +576,16 @@ impl<'c> Connection<'c> {
     /// # Example
     ///
     /// ```
-    /// use odbc_api::{Connection, Cursor, Error, ResultSetMetadata, buffers::TextRowSet};
+    /// use odbc_api::{Connection, Error, TablesRow};
     ///
     /// fn print_all_tables(conn: &Connection<'_>) -> Result<(), Error> {
-    ///     // Set all filters to an empty string, to really print all tables
-    ///     let mut cursor = conn.tables("", "", "", "")?;
-    ///
-    ///     // The column are gonna be TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE,REMARKS, but may
-    ///     // also contain additional driver specific columns.
-    ///     for (index, name) in cursor.column_names()?.enumerate() {
-    ///         if index != 0 {
-    ///             print!(",")
-    ///         }
-    ///         print!("{}", name?);
+    ///     for row in conn.tables("", "", "", "")? {
+    ///         let row: TablesRow = row?;
+    ///         let table = row.table.as_str().unwrap().unwrap_or("NULL");
+    ///         let catalog = row.catalog.as_str().unwrap().unwrap_or("NULL");
+    ///         let schema = row.schema.as_str().unwrap().unwrap_or("NULL");
+    ///         println!("{catalog}.{schema}.{table}");
     ///     }
-    ///
-    ///     let batch_size = 100;
-    ///     let mut buffer = TextRowSet::for_cursor(batch_size, &mut cursor, Some(4096))?;
-    ///     let mut row_set_cursor = cursor.bind_buffer(&mut buffer)?;
-    ///
-    ///     while let Some(row_set) = row_set_cursor.fetch()? {
-    ///         for row_index in 0..row_set.num_rows() {
-    ///             if row_index != 0 {
-    ///                 print!("\n");
-    ///             }
-    ///             for col_index in 0..row_set.num_cols() {
-    ///                 if col_index != 0 {
-    ///                     print!(",");
-    ///                 }
-    ///                 let value = row_set
-    ///                     .at_as_str(col_index, row_index)
-    ///                     .unwrap()
-    ///                     .unwrap_or("NULL");
-    ///                 print!("{}", value);
-    ///             }
-    ///         }
-    ///     }
-    ///
     ///     Ok(())
     /// }
     /// ```
@@ -622,9 +595,9 @@ impl<'c> Connection<'c> {
         schema_name: &str,
         table_name: &str,
         table_type: &str,
-    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementImpl<'_>>, TablesRow>, Error> {
         let statement = self.preallocate()?;
-        statement.into_tables_cursor(catalog_name, schema_name, table_name, table_type)
+        statement.into_tables(catalog_name, schema_name, table_name, table_type)
     }
 
     /// Create a result set which contains the column names that make up the primary key for the
