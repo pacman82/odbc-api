@@ -579,17 +579,17 @@ fn error_handling_for_fetch(
     // record to be there, as the driver could generate a large amount of diagnostic records,
     // while we are limited in the amount we can check. The second check serves as an optimization
     // for the happy path.
-    if error_for_truncation && result == SqlResult::SuccessWithInfo(()) {
-        if let Some(TruncationInfo {
+    if error_for_truncation
+        && result == SqlResult::SuccessWithInfo(())
+        && let Some(TruncationInfo {
             indicator,
             buffer_index,
         }) = buffer.find_truncation()
-        {
-            return Err(Error::TooLargeValueForBuffer {
-                indicator,
-                buffer_index,
-            });
-        }
+    {
+        return Err(Error::TooLargeValueForBuffer {
+            indicator,
+            buffer_index,
+        });
     }
 
     let has_row = result
