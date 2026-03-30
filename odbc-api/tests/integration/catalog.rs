@@ -2,8 +2,8 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
-    ColumnDescription, Cursor, PrimaryKeysRow, ResultSetMetadata,
-    buffers::{BufferDesc, ColumnarAnyBuffer, Item, TextRowSet},
+    ColumnsRow, Cursor, PrimaryKeysRow, ResultSetMetadata,
+    buffers::{ColumnarAnyBuffer, Item, TextRowSet},
 };
 
 use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, cursor_to_string};
@@ -65,8 +65,9 @@ fn columns_query(profile: &Profile, schema: &str) {
         ColumnarAnyBuffer::try_from_descs(2, conn.columns_buffer_descs(255, 255, 255).unwrap())
             .unwrap();
     // Mariadb does not support schemas
-    let columns = conn
-        .columns(&conn.current_catalog().unwrap(), schema, &table_name, "a")
+    let mut stmt = conn.preallocate().unwrap();
+    let columns = stmt
+        .columns_cursor(&conn.current_catalog().unwrap(), schema, &table_name, "a")
         .unwrap();
 
     let mut cursor = columns.bind_buffer(row_set_buffer).unwrap();
@@ -120,72 +121,83 @@ fn list_tables_preallocated(profile: &Profile, expected: &str) {
     assert_eq!(expected.to_lowercase(), actual);
 }
 
-/// List columns for various data sources
-#[test_case(MSSQL, "master,dbo,ListColumns,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
-#[test_case(MARIADB, "test_db,NULL,ListColumns,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
-#[test_case(SQLITE_3, ",,ListColumns,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
-// #[test_case(POSTGRES, ""; "PostgreSQL")] Fails in linux
-fn list_columns(profile: &Profile, expected: &str) {
-    // Table name is part of test expectation for this test
-    let table_name = "ListColumns";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
-
-    let cursor = conn.columns("", "", table_name, "a").unwrap();
-    let actual = cursor_to_string(cursor).to_lowercase();
-
-    assert_eq!(expected.to_lowercase(), actual);
-}
-
-/// List columns for various data sources, using a preallocated statement
-#[test_case(MSSQL, "master,dbo,ListColumnsPreallocated,a,4,int,10,4,0,10,1,NULL,NULL,4,NULL,NULL,2,YES,0,0,0,0,NULL,NULL,NULL,NULL,NULL,NULL,38"; "Microsoft SQL Server")]
-#[test_case(MARIADB, "test_db,NULL,ListColumnsPreallocated,a,4,INT,10,4,0,10,1,,NULL,4,NULL,2,2,YES"; "Maria DB")]
-#[test_case(SQLITE_3, ",,ListColumnsPreallocated,a,4,INTEGER,9,10,10,0,1,NULL,NULL,4,NULL,16384,2,YES"; "SQLite 3")]
-// #[test_case(POSTGRES, ""; "PostgreSQL")] Fails in linux
-fn list_columns_preallocated(profile: &Profile, expected: &str) {
-    // Table name is part of test expectation for this test
-    let table_name = "ListColumnsPreallocated";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
-    let mut preallocated = conn.preallocate().unwrap();
-
-    let cursor = preallocated
-        .columns_cursor("", "", table_name, "a")
-        .unwrap();
-    let actual = cursor_to_string(cursor).to_lowercase();
-
-    assert_eq!(expected.to_lowercase(), actual);
-}
-
-/// This test documents the amount of memory needed to hold the maximum row of the columns table
-/// as described by the result sets metadata.
-#[test_case(MSSQL, 10039; "Microsoft SQL Server")]
-// Fails on CI in Windows, due to MariaDB not being recent enough
-// #[test_case(MARIADB, 16975179; "Maria DB")]
-#[test_case(SQLITE_3, 986; "SQLite 3")]
-// #[test_case(POSTGRES, 1676; "PostgreSQL")] Fails in Linux
-fn list_columns_oom(profile: &Profile, expected_row_size_in_bytes: usize) {
-    let conn = profile.connection().unwrap();
-
-    // This filter does not change the assertions, but makes the tests run so much faster for
-    // Microsoft Sql Server (which seems to lock each table listed). This also likely prevents a
-    // deadlock or transaction collision with other tests. Since the other tests destroy and create
-    // tables a lot, listing them in parallel is dangerous. This filter gets rid of most of the
-    // weirdness.
+#[test_case(MSSQL, "master", Some("dbo"), "int", 10, 4, 0, 10, None, None, None, Some("YES"); "Microsoft SQL Server")]
+#[test_case(MARIADB, "test_db", None, "INT", 10, 4, 0, 10, Some(""), Some("NULL"), Some(2), Some("YES"); "Maria DB")]
+#[test_case(SQLITE_3, "", Some(""), "INTEGER", 9, 10, 10, 0, None, Some("NULL"), Some(16384), Some("YES"); "SQLite 3")]
+#[test_case(POSTGRES, "test", Some("public"), "int4", 10, 4, 0, 10, Some(""), None, Some(-1), None; "PostgreSQL")]
+fn list_columns_with_preallocated(
+    profile: &Profile,
+    catalog: &str,
+    schema: Option<&str>,
+    type_name: &str,
+    column_size: i32,
+    buffer_length: i32,
+    decimal_digits: i16,
+    num_prec_radix: i16,
+    remarks: Option<&str>,
+    column_default: Option<&str>,
+    char_octet_length: Option<i32>,
+    is_nullable: Option<&str>,
+) {
     let table_name = table_name!();
-    let mut cursor = conn.columns("", "", &table_name, "").unwrap();
-    let mut column_description = ColumnDescription::default();
-    let mut size_of_row = 0;
-    for index in 0..cursor.num_result_cols().unwrap() {
-        cursor
-            .describe_col(index as u16 + 1, &mut column_description)
-            .unwrap();
-        let buffer_description = BufferDesc::from_data_type(
-            column_description.data_type,
-            column_description.could_be_nullable(),
-        )
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
         .unwrap();
-        size_of_row += buffer_description.bytes_per_row();
-    }
-    assert_eq!(expected_row_size_in_bytes, size_of_row)
+    conn.execute(&format!("CREATE TABLE {table_name} (a INTEGER)"), (), None)
+        .unwrap();
+
+    let mut stmt = conn.preallocate().unwrap();
+    let iter = stmt.columns("", "", &table_name, "").unwrap();
+    let rows: Vec<ColumnsRow> = iter.collect::<Result<_, _>>().unwrap();
+
+    assert_eq!(1, rows.len());
+    let row = &rows[0];
+    assert_eq!(catalog, row.catalog.as_str().unwrap().unwrap());
+    assert_eq!(schema, row.schema.as_str().unwrap());
+    assert_eq!(Some(table_name.as_str()), row.table.as_str().unwrap());
+    assert_eq!(Some("a"), row.column_name.as_str().unwrap());
+    assert_eq!(4, row.data_type, "DATA_TYPE");
+    assert_eq!(
+        Some(type_name),
+        row.type_name.as_str().unwrap(),
+        "TYPE_NAME"
+    );
+    assert_eq!(Some(&column_size), row.column_size.as_opt(), "COLUMN_SIZE");
+    assert_eq!(
+        Some(&buffer_length),
+        row.buffer_length.as_opt(),
+        "BUFFER_LENGTH"
+    );
+    assert_eq!(
+        Some(&decimal_digits),
+        row.decimal_digits.as_opt(),
+        "DECIMAL_DIGITS"
+    );
+    assert_eq!(
+        Some(&num_prec_radix),
+        row.num_prec_radix.as_opt(),
+        "NUM_PREC_RADIX"
+    );
+    assert_eq!(1, row.nullable, "NULLABLE");
+    assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
+    assert_eq!(
+        column_default,
+        row.column_default.as_str().unwrap(),
+        "COLUMN_DEF"
+    );
+    assert_eq!(4, row.sql_data_type, "SQL_DATA_TYPE");
+    assert_eq!(None, row.sql_datetime_sub.as_opt(), "SQL_DATETIME_SUB");
+    assert_eq!(
+        char_octet_length.as_ref(),
+        row.char_octet_length.as_opt(),
+        "CHAR_OCTET_LENGTH"
+    );
+    assert_eq!(1, row.ordinal_position, "ORDINAL_POSITION");
+    assert_eq!(
+        is_nullable,
+        row.is_nullable.as_str().unwrap(),
+        "IS_NULLABLE"
+    );
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -431,6 +443,14 @@ fn columns_varchar_column_sizes(
 
     assert_eq!(expected_type_name_display_size, ds(TYPE_NAME), "TYPE_NAME");
     assert_eq!(expected_remarks_display_size, ds(REMARKS), "REMARKS");
-    assert_eq!(expected_column_def_display_size, ds(COLUMN_DEF), "COLUMN_DEF");
-    assert_eq!(expected_is_nullable_display_size, ds(IS_NULLABLE), "IS_NULLABLE");
+    assert_eq!(
+        expected_column_def_display_size,
+        ds(COLUMN_DEF),
+        "COLUMN_DEF"
+    );
+    assert_eq!(
+        expected_is_nullable_display_size,
+        ds(IS_NULLABLE),
+        "IS_NULLABLE"
+    );
 }
