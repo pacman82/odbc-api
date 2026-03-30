@@ -2,8 +2,8 @@ use crate::{
     BlockCursorIterator, Cursor, CursorImpl, Error, ParameterCollectionRef, PreallocatedPolling,
     buffers::RowVec,
     catalog::{
-        ColumnsRow, PrimaryKeysRow, TablesRow, execute_columns, execute_primary_keys,
-        execute_tables,
+        ColumnsRow, ForeignKeysRow, PrimaryKeysRow, TablesRow, execute_columns,
+        execute_foreign_keys, execute_primary_keys, execute_tables,
     },
     execute::execute_with_parameters,
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
@@ -440,6 +440,55 @@ where
         )
     }
 
+    /// An iterator over the foreign keys of a table.
+    ///
+    /// Same as [`Self::foreign_keys_cursor`] but returns [`ForeignKeysRow`] items instead of a raw
+    /// cursor.
+    ///
+    /// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function>
+    pub fn foreign_keys(
+        &mut self,
+        pk_catalog_name: &str,
+        pk_schema_name: &str,
+        pk_table_name: &str,
+        fk_catalog_name: &str,
+        fk_schema_name: &str,
+        fk_table_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementRef<'_>>, ForeignKeysRow>, Error> {
+        let cursor = self.foreign_keys_cursor(
+            pk_catalog_name,
+            pk_schema_name,
+            pk_table_name,
+            fk_catalog_name,
+            fk_schema_name,
+            fk_table_name,
+        )?;
+        let buffer = RowVec::<ForeignKeysRow>::new(100);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
+    }
+
+    /// Same as [`Self::foreign_keys`] but the cursor takes ownership of the statement handle.
+    pub fn into_foreign_keys(
+        self,
+        pk_catalog_name: &str,
+        pk_schema_name: &str,
+        pk_table_name: &str,
+        fk_catalog_name: &str,
+        fk_schema_name: &str,
+        fk_table_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<S>, ForeignKeysRow>, Error> {
+        let cursor = self.into_foreign_keys_cursor(
+            pk_catalog_name,
+            pk_schema_name,
+            pk_table_name,
+            fk_catalog_name,
+            fk_schema_name,
+            fk_table_name,
+        )?;
+        let buffer = RowVec::<ForeignKeysRow>::new(100);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
+    }
+
     /// Number of rows affected by the last `INSERT`, `UPDATE` or `DELETE` statment. May return
     /// `None` if row count is not available. Some drivers may also allow to use this to determine
     /// how many rows have been fetched using `SELECT`. Most drivers however only know how many rows
@@ -526,39 +575,4 @@ where
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
-}
-
-/// Shared implementation for executing a foreign keys query between [`Preallocated::foreign_keys`]
-/// and [`Preallocated::into_foreign_keys`].
-fn execute_foreign_keys<S>(
-    mut statement: S,
-    pk_catalog_name: &str,
-    pk_schema_name: &str,
-    pk_table_name: &str,
-    fk_catalog_name: &str,
-    fk_schema_name: &str,
-    fk_table_name: &str,
-) -> Result<CursorImpl<S>, Error>
-where
-    S: AsStatementRef,
-{
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.foreign_keys(
-        &SqlText::new(pk_catalog_name),
-        &SqlText::new(pk_schema_name),
-        &SqlText::new(pk_table_name),
-        &SqlText::new(fk_catalog_name),
-        &SqlText::new(fk_schema_name),
-        &SqlText::new(fk_table_name),
-    )
-    .into_result(&stmt)?;
-
-    // We assume foreign keys always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
-
-    // Safe: `statement` is in Cursor state.
-    let cursor = unsafe { CursorImpl::new(statement) };
-
-    Ok(cursor)
 }

@@ -1,6 +1,6 @@
 use crate::{
-    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ParameterCollectionRef,
-    Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow,
+    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ForeignKeysRow,
+    ParameterCollectionRef, Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow,
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
@@ -661,9 +661,9 @@ impl<'c> Connection<'c> {
         fk_catalog_name: &str,
         fk_schema_name: &str,
         fk_table_name: &str,
-    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementImpl<'_>>, ForeignKeysRow>, Error> {
         let statement = self.preallocate()?;
-        statement.into_foreign_keys_cursor(
+        statement.into_foreign_keys(
             pk_catalog_name,
             pk_schema_name,
             pk_table_name,

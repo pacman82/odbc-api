@@ -31,7 +31,7 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
-    catalog::{ColumnsRow, PrimaryKeysRow, TablesRow},
+    catalog::{ColumnsRow, ForeignKeysRow, PrimaryKeysRow, TablesRow},
     columnar_bulk_inserter::{
         BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping,
     },

@@ -2,8 +2,8 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
-    ColumnsRow, Cursor, PrimaryKeysRow, ResultSetMetadata, TablesRow,
-    buffers::{ColumnarAnyBuffer, Item, TextRowSet},
+    ColumnsRow, Cursor, ForeignKeysRow, PrimaryKeysRow, ResultSetMetadata, TablesRow,
+    buffers::{ColumnarAnyBuffer, Item},
 };
 
 use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3};
@@ -315,51 +315,7 @@ fn list_columns_with_connection(
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn list_foreign_keys(profile: &Profile) {
-    // Other table references table
-    let pk_table_name = table_name!();
-    let fk_table_name = format!("other_{pk_table_name}");
-    let conn = profile.connection().unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {fk_table_name};"), (), None)
-        .unwrap();
-    conn.execute(&format!("DROP TABLE IF EXISTS {pk_table_name};"), (), None)
-        .unwrap();
-    conn.execute(
-        &format!("CREATE TABLE {pk_table_name} (id INTEGER, PRIMARY KEY(id));"),
-        (),
-        None,
-    )
-    .unwrap();
-    conn.execute(
-        &format!(
-            "CREATE TABLE {fk_table_name} (ext_id INTEGER, FOREIGN KEY (ext_id) REFERENCES \
-            {pk_table_name}(id));"
-        ),
-        (),
-        None,
-    )
-    .unwrap();
-
-    let mut cursor = conn
-        .foreign_keys("", "", "", "", "", &fk_table_name)
-        .unwrap();
-    let buffer = TextRowSet::for_cursor(10, &mut cursor, Some(256)).unwrap();
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let batch = cursor.fetch().unwrap().unwrap();
-    let retrieved_pk_table_name = batch.at_as_str(2, 0).unwrap().unwrap();
-    let retrieved_fk_table_name = batch.at_as_str(6, 0).unwrap().unwrap();
-
-    assert_eq!(retrieved_pk_table_name, pk_table_name);
-    assert_eq!(retrieved_fk_table_name, fk_table_name);
-    assert_eq!(batch.num_rows(), 1);
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn list_foreign_keys_prealloc(profile: &Profile) {
-    // Other table references table
+fn list_foreign_keys_with_preallocated(profile: &Profile) {
     let pk_table_name = table_name!();
     let fk_table_name = format!("other_{pk_table_name}");
     let conn = profile.connection().unwrap();
@@ -384,18 +340,60 @@ fn list_foreign_keys_prealloc(profile: &Profile) {
     .unwrap();
 
     let mut stmt = conn.preallocate().unwrap();
-    let mut cursor = stmt
-        .foreign_keys_cursor("", "", "", "", "", &fk_table_name)
+    let iter = stmt
+        .foreign_keys("", "", "", "", "", &fk_table_name)
         .unwrap();
-    let buffer = TextRowSet::for_cursor(10, &mut cursor, Some(256)).unwrap();
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let batch = cursor.fetch().unwrap().unwrap();
-    let retrieved_pk_table_name = batch.at_as_str(2, 0).unwrap().unwrap();
-    let retrieved_fk_table_name = batch.at_as_str(6, 0).unwrap().unwrap();
+    let rows: Vec<ForeignKeysRow> = iter.collect::<Result<_, _>>().unwrap();
 
-    assert_eq!(retrieved_pk_table_name, pk_table_name);
-    assert_eq!(retrieved_fk_table_name, fk_table_name);
-    assert_eq!(batch.num_rows(), 1);
+    assert_eq!(1, rows.len());
+    let row = &rows[0];
+    assert_eq!(Some(pk_table_name.as_str()), row.pk_table.as_str().unwrap());
+    assert_eq!(Some(fk_table_name.as_str()), row.fk_table.as_str().unwrap());
+    assert_eq!(Some("id"), row.pk_column.as_str().unwrap());
+    assert_eq!(Some("ext_id"), row.fk_column.as_str().unwrap());
+    assert_eq!(1, row.key_seq);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn list_foreign_keys_with_connection(profile: &Profile) {
+    let pk_table_name = table_name!();
+    let fk_table_name = format!("other_{pk_table_name}");
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {fk_table_name};"), (), None)
+        .unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {pk_table_name};"), (), None)
+        .unwrap();
+    conn.execute(
+        &format!("CREATE TABLE {pk_table_name} (id INTEGER, PRIMARY KEY(id));"),
+        (),
+        None,
+    )
+    .unwrap();
+    conn.execute(
+        &format!(
+            "CREATE TABLE {fk_table_name} (ext_id INTEGER, FOREIGN KEY (ext_id) REFERENCES \
+            {pk_table_name}(id));"
+        ),
+        (),
+        None,
+    )
+    .unwrap();
+
+    let iter = conn
+        .foreign_keys("", "", "", "", "", &fk_table_name)
+        .unwrap();
+    let rows: Vec<ForeignKeysRow> = iter.collect::<Result<_, _>>().unwrap();
+
+    assert_eq!(1, rows.len());
+    let row = &rows[0];
+    assert_eq!(Some(pk_table_name.as_str()), row.pk_table.as_str().unwrap());
+    assert_eq!(Some(fk_table_name.as_str()), row.fk_table.as_str().unwrap());
+    assert_eq!(Some("id"), row.pk_column.as_str().unwrap());
+    assert_eq!(Some("ext_id"), row.fk_column.as_str().unwrap());
+    assert_eq!(1, row.key_seq);
 }
 
 #[test_case(MSSQL, Some("master"), Some("dbo"); "Microsoft SQL Server")]
