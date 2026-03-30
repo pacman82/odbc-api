@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.0.0](https://github.com/pacman82/odbc-api/compare/v23.0.1...v24.0.0) - 2026-03-30
+
+### Added
+
+- Deprecate `Connection::columns_buffer_descs`
+- [**breaking**] Allow iterating over ForeignKeysRow
+- [**breaking**] Connection::tables now returns an iterator
+- Add Preallocated::tables
+- [**breaking**] Connection::columns now returns an iterator
+- Add Preallocated::columns
+
 ## [23.0.1](https://github.com/pacman82/odbc-api/compare/v23.0.0...v23.0.1) - 2026-03-18
 
 ### Changed
