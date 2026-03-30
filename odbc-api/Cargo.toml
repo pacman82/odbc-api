@@ -102,7 +102,7 @@ prompt = ["dep:winit"]
 
 [dependencies]
 # Low level bindings to ODBC API calls into libodbc.so
-odbc-sys = { version = "0.30.0", default-features = false, features = ["odbc_version_3_50"] }
+odbc-sys = { version = "0.31.0", default-features = false, features = ["odbc_version_3_50"] }
 # Used to generate code for the error type
 thiserror = "2.0.18"
 # Used as a log frontend to emit log messages for applications
