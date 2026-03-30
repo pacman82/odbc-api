@@ -198,8 +198,7 @@ where
         table_name: &str,
         table_type: &str,
     ) -> Result<BlockCursorIterator<CursorImpl<S>, TablesRow>, Error> {
-        let cursor =
-            self.into_tables_cursor(catalog_name, schema_name, table_name, table_type)?;
+        let cursor = self.into_tables_cursor(catalog_name, schema_name, table_name, table_type)?;
         let buffer = RowVec::<TablesRow>::new(100);
         Ok(cursor.bind_buffer(buffer)?.into_iter())
     }
@@ -529,7 +528,6 @@ where
     }
 }
 
-
 /// Shared implementation for executing a foreign keys query between [`Preallocated::foreign_keys`]
 /// and [`Preallocated::into_foreign_keys`].
 fn execute_foreign_keys<S>(
@@ -564,4 +562,3 @@ where
 
     Ok(cursor)
 }
-

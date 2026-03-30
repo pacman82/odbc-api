@@ -113,7 +113,11 @@ fn list_tables_with_preallocated(
     assert_eq!(catalog, row.catalog.as_str().unwrap());
     assert_eq!(schema, row.schema.as_str().unwrap());
     assert_eq!(Some(table_name.as_str()), row.table.as_str().unwrap());
-    assert_eq!(Some("TABLE"), row.table_type.as_str().unwrap(), "TABLE_TYPE");
+    assert_eq!(
+        Some("TABLE"),
+        row.table_type.as_str().unwrap(),
+        "TABLE_TYPE"
+    );
     assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
 }
 
@@ -142,7 +146,11 @@ fn list_tables_with_connection(
     assert_eq!(catalog, row.catalog.as_str().unwrap());
     assert_eq!(schema, row.schema.as_str().unwrap());
     assert_eq!(Some(table_name.as_str()), row.table.as_str().unwrap());
-    assert_eq!(Some("TABLE"), row.table_type.as_str().unwrap(), "TABLE_TYPE");
+    assert_eq!(
+        Some("TABLE"),
+        row.table_type.as_str().unwrap(),
+        "TABLE_TYPE"
+    );
     assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
 }
 
