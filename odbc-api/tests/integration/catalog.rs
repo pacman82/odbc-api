@@ -2,11 +2,11 @@ use stdext::function_name;
 use test_case::test_case;
 
 use odbc_api::{
-    ColumnsRow, Cursor, PrimaryKeysRow, ResultSetMetadata,
+    ColumnsRow, Cursor, PrimaryKeysRow, ResultSetMetadata, TablesRow,
     buffers::{ColumnarAnyBuffer, Item, TextRowSet},
 };
 
-use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, cursor_to_string};
+use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3};
 
 // Check the max name length for the catalogs, schemas, tables, and columns.
 #[test_case(MSSQL, 128, 128, 128, 128; "Microsoft SQL Server")]
@@ -87,38 +87,34 @@ fn columns_query(profile: &Profile, schema: &str) {
     assert!(column_has_name_a_and_size_10);
 }
 
-/// List tables for various data sources
-/// Table name comparison is insensitive on Windows
-#[test_case(MSSQL, "master,dbo,ListTables,TABLE,NULL"; "Microsoft SQL Server")]
-#[test_case(MARIADB, "test_db,NULL,ListTables,TABLE,"; "Maria DB")]
-#[test_case(SQLITE_3, "NULL,NULL,ListTables,TABLE,NULL"; "SQLite 3")]
-#[test_case(POSTGRES, ""; "PostgreSQL")]
-fn list_tables(profile: &Profile, expected: &str) {
-    // Table name is part of test expectation for this test
-    let table_name = "ListTables";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
+#[test_case(MSSQL, Some("master"), Some("dbo"), None; "Microsoft SQL Server")]
+#[test_case(MARIADB, Some("test_db"), None, Some(""); "Maria DB")]
+#[test_case(SQLITE_3, None, None, None; "SQLite 3")]
+#[test_case(POSTGRES, Some("test"), Some("public"), Some(""); "PostgreSQL")]
+fn list_tables_with_preallocated(
+    profile: &Profile,
+    catalog: Option<&str>,
+    schema: Option<&str>,
+    remarks: Option<&str>,
+) {
+    let table_name = table_name!();
+    let conn = profile.connection().unwrap();
+    conn.execute(&format!("DROP TABLE IF EXISTS {table_name}"), (), None)
+        .unwrap();
+    conn.execute(&format!("CREATE TABLE {table_name} (a INTEGER)"), (), None)
+        .unwrap();
 
-    let cursor = conn.tables("", "", table_name, "").unwrap();
-    let actual = cursor_to_string(cursor).to_lowercase();
-    assert_eq!(expected.to_lowercase(), actual);
-}
+    let mut stmt = conn.preallocate().unwrap();
+    let iter = stmt.tables("", "", &table_name, "").unwrap();
+    let rows: Vec<TablesRow> = iter.collect::<Result<_, _>>().unwrap();
 
-/// List tables for various data sources, using a preallocated statement
-/// Table name comparison is insensitive on Windows
-#[test_case(MSSQL, "master,dbo,ListTablesPreallocated,TABLE,NULL"; "Microsoft SQL Server")]
-#[test_case(MARIADB, "test_db,NULL,ListTablesPreallocated,TABLE,"; "Maria DB")]
-#[test_case(SQLITE_3, "NULL,NULL,ListTablesPreallocated,TABLE,NULL"; "SQLite 3")]
-#[test_case(POSTGRES, ""; "PostgreSQL")]
-fn list_tables_preallocated(profile: &Profile, expected: &str) {
-    // Table name is part of test expectation for this test
-    let table_name = "ListTablesPreallocated";
-    let conn = profile.setup_empty_table(table_name, &["INTEGER"]).unwrap();
-    let mut preallocated = conn.preallocate().unwrap();
-
-    let cursor = preallocated.tables_cursor("", "", table_name, "").unwrap();
-    let actual = cursor_to_string(cursor).to_lowercase();
-
-    assert_eq!(expected.to_lowercase(), actual);
+    assert_eq!(1, rows.len());
+    let row = &rows[0];
+    assert_eq!(catalog, row.catalog.as_str().unwrap());
+    assert_eq!(schema, row.schema.as_str().unwrap());
+    assert_eq!(Some(table_name.as_str()), row.table.as_str().unwrap());
+    assert_eq!(Some("TABLE"), row.table_type.as_str().unwrap(), "TABLE_TYPE");
+    assert_eq!(remarks, row.remarks.as_str().unwrap(), "REMARKS");
 }
 
 #[test_case(MSSQL, "master", Some("dbo"), "int", 10, 4, 0, 10, None, None, None, Some("YES"); "Microsoft SQL Server")]
