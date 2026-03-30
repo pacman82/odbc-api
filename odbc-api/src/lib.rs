@@ -4,6 +4,7 @@
 //! standard to access databases. See the [`guide`] for more information and code
 //! examples.
 
+mod catalog;
 mod columnar_bulk_inserter;
 mod connection;
 mod conversion;
@@ -49,7 +50,8 @@ pub use self::{
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
-    preallocated::{Preallocated, PrimaryKeysRow},
+    catalog::PrimaryKeysRow,
+    preallocated::Preallocated,
     preallocated_polling::PreallocatedPolling,
     prepared::{BindParamDesc, Prepared},
     result_set_metadata::ResultSetMetadata,
