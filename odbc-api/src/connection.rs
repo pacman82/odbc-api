@@ -1,6 +1,6 @@
 use crate::{
-    BlockCursorIterator, CursorImpl, CursorPolling, Error, ParameterCollectionRef, Preallocated,
-    Prepared, PrimaryKeysRow, Sleep,
+    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ParameterCollectionRef,
+    Preallocated, Prepared, PrimaryKeysRow, Sleep,
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
@@ -542,24 +542,21 @@ impl<'c> Connection<'c> {
         Ok(name)
     }
 
-    /// A cursor describing columns of all tables matching the patterns. Patterns support as
-    /// placeholder `%` for multiple characters or `_` for a single character. Use `\` to escape.The
-    /// returned cursor has the columns:
-    /// `TABLE_CAT`, `TABLE_SCHEM`, `TABLE_NAME`, `COLUMN_NAME`, `DATA_TYPE`, `TYPE_NAME`,
-    /// `COLUMN_SIZE`, `BUFFER_LENGTH`, `DECIMAL_DIGITS`, `NUM_PREC_RADIX`, `NULLABLE`,
-    /// `REMARKS`, `COLUMN_DEF`, `SQL_DATA_TYPE`, `SQL_DATETIME_SUB`, `CHAR_OCTET_LENGTH`,
-    /// `ORDINAL_POSITION`, `IS_NULLABLE`.
+    /// An iterator over the columns of tables matching the patterns. Patterns support `%` for
+    /// multiple characters or `_` for a single character. Use `\` to escape.
     ///
-    /// In addition to that there may be a number of columns specific to the data source.
+    /// Returns an iterator over [`ColumnsRow`] items. If you need the raw cursor (e.g. to access
+    /// driver-specific columns beyond the standard 18), use [`Preallocated::columns_cursor`]
+    /// instead.
     pub fn columns(
         &self,
         catalog_name: &str,
         schema_name: &str,
         table_name: &str,
         column_name: &str,
-    ) -> Result<CursorImpl<StatementImpl<'_>>, Error> {
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementImpl<'_>>, ColumnsRow>, Error> {
         let stmt = self.preallocate()?;
-        stmt.into_columns_cursor(catalog_name, schema_name, table_name, column_name)
+        stmt.into_columns(catalog_name, schema_name, table_name, column_name)
     }
 
     /// List tables, schemas, views and catalogs of a datasource.

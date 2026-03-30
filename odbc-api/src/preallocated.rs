@@ -230,6 +230,20 @@ where
         )
     }
 
+    /// Same as [`Self::columns`] but the cursor takes ownership of the statement handle.
+    pub fn into_columns(
+        self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<S>, ColumnsRow>, Error> {
+        let cursor =
+            self.into_columns_cursor(catalog_name, schema_name, table_name, column_name)?;
+        let buffer = RowVec::<ColumnsRow>::new(250);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
+    }
+
     /// Create a result set which contains the column names that make up the primary key for the
     /// table. Same as [`Self::into_primary_keys_cursor`] but the cursor borrowes the statement
     /// handle instead of taking ownership of it. This allows you to reuse the statement handle for
