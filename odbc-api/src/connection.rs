@@ -681,8 +681,10 @@ impl<'c> Connection<'c> {
     /// * `type_name_max_len` - The maximum expected length of type names.
     /// * `remarks_max_len` - The maximum expected length of remarks.
     /// * `column_default_max_len` - The maximum expected length of column defaults.
-    #[deprecated(note = "Use `Connection::columns` or `Preallocated::columns` which return \
-        strongly typed `ColumnsRow` items instead.")]
+    #[deprecated(
+        note = "Use `Connection::columns` or `Preallocated::columns` which return strongly typed \
+        `ColumnsRow` items instead."
+    )]
     pub fn columns_buffer_descs(
         &self,
         type_name_max_len: usize,
