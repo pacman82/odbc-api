@@ -190,6 +190,20 @@ where
         )
     }
 
+    /// Same as [`Self::tables`] but the cursor takes ownership of the statement handle.
+    pub fn into_tables(
+        self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        table_type: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<S>, TablesRow>, Error> {
+        let cursor =
+            self.into_tables_cursor(catalog_name, schema_name, table_name, table_type)?;
+        let buffer = RowVec::<TablesRow>::new(100);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
+    }
+
     /// A cursor describing columns of all tables matching the patterns. Patterns support as
     /// placeholder `%` for multiple characters or `_` for a single character. Use `\` to escape.The
     /// returned cursor has the columns:
