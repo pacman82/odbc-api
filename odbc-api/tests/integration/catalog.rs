@@ -51,6 +51,7 @@ fn current_catalog(profile: &Profile, expected_catalog: &str) {
     assert_eq!(conn.current_catalog().unwrap(), expected_catalog);
 }
 
+#[allow(deprecated)]
 #[test_case(MSSQL, "dbo"; "Microsoft SQL Server")]
 #[test_case(MARIADB, ""; "Maria DB")]
 #[test_case(SQLITE_3, "dbo"; "SQLite 3")]
