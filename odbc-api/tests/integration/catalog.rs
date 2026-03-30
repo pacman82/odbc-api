@@ -393,3 +393,44 @@ fn list_private_keys_with_connection(
             .unwrap_or("NULL")
     );
 }
+
+/// Document the display sizes of the variable-length columns in the `SQLColumns` result set. The
+/// ODBC spec does not provide `SQLGetInfo` types for TYPE_NAME, REMARKS, COLUMN_DEF or
+/// IS_NULLABLE lengths, so we assert the values each driver reports here to inform the buffer
+/// sizes for a strongly typed `ColumnsRow` struct.
+#[test_case(MSSQL, 128, 254, 4000, 254; "Microsoft SQL Server")]
+#[test_case(MARIADB, 16777216, 1024, 196596, 3; "Maria DB")]
+#[test_case(SQLITE_3, 50, 50, 50, 50; "SQLite 3")]
+#[test_case(POSTGRES, 128, 254, 254, 254; "PostgreSQL")]
+fn columns_varchar_column_sizes(
+    profile: &Profile,
+    expected_type_name_display_size: usize,
+    expected_remarks_display_size: usize,
+    expected_column_def_display_size: usize,
+    expected_is_nullable_display_size: usize,
+) {
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
+
+    let mut cursor = conn.columns("", "", &table_name, "").unwrap();
+
+    const TYPE_NAME: u16 = 6;
+    const REMARKS: u16 = 12;
+    const COLUMN_DEF: u16 = 13;
+    const IS_NULLABLE: u16 = 18;
+
+    let mut ds = |col: u16| -> usize {
+        cursor
+            .col_display_size(col)
+            .unwrap()
+            .map(|n: std::num::NonZeroUsize| n.get())
+            .unwrap_or(0)
+    };
+
+    assert_eq!(expected_type_name_display_size, ds(TYPE_NAME), "TYPE_NAME");
+    assert_eq!(expected_remarks_display_size, ds(REMARKS), "REMARKS");
+    assert_eq!(expected_column_def_display_size, ds(COLUMN_DEF), "COLUMN_DEF");
+    assert_eq!(expected_is_nullable_display_size, ds(IS_NULLABLE), "IS_NULLABLE");
+}
