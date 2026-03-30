@@ -31,6 +31,7 @@ pub mod handles;
 pub mod parameter;
 
 pub use self::{
+    catalog::{ColumnsRow, PrimaryKeysRow, TablesRow},
     columnar_bulk_inserter::{
         BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping,
     },
@@ -50,7 +51,6 @@ pub use self::{
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
-    catalog::{ColumnsRow, PrimaryKeysRow, TablesRow},
     preallocated::Preallocated,
     preallocated_polling::PreallocatedPolling,
     prepared::{BindParamDesc, Prepared},
