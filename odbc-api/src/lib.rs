@@ -50,7 +50,7 @@ pub use self::{
     nullable::Nullable,
     parameter::{InOut, Out, OutputParameter},
     parameter_collection::{ParameterCollection, ParameterCollectionRef, ParameterTupleElement},
-    catalog::PrimaryKeysRow,
+    catalog::{ColumnsRow, PrimaryKeysRow},
     preallocated::Preallocated,
     preallocated_polling::PreallocatedPolling,
     prepared::{BindParamDesc, Prepared},

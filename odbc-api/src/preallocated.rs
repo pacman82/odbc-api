@@ -1,7 +1,7 @@
 use crate::{
     BlockCursorIterator, Cursor, CursorImpl, Error, ParameterCollectionRef, PreallocatedPolling,
     buffers::RowVec,
-    catalog::{PrimaryKeysRow, execute_primary_keys},
+    catalog::{ColumnsRow, PrimaryKeysRow, execute_columns, execute_primary_keys},
     execute::execute_with_parameters,
     handles::{AsStatementRef, SqlText, Statement, StatementRef},
 };
@@ -197,6 +197,20 @@ where
             &SqlText::new(table_name),
             &SqlText::new(column_name),
         )
+    }
+
+    /// An iterator over the columns of a table. Same as [`Self::columns_cursor`] but returns
+    /// strongly typed [`ColumnsRow`] items instead of a raw cursor.
+    pub fn columns(
+        &mut self,
+        catalog_name: &str,
+        schema_name: &str,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<BlockCursorIterator<CursorImpl<StatementRef<'_>>, ColumnsRow>, Error> {
+        let cursor = self.columns_cursor(catalog_name, schema_name, table_name, column_name)?;
+        let buffer = RowVec::<ColumnsRow>::new(250);
+        Ok(cursor.bind_buffer(buffer)?.into_iter())
     }
 
     /// Same as [`Self::columns_cursor`], but the cursor takes ownership of the statement handle.
@@ -468,32 +482,6 @@ where
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
-}
-
-
-/// Shared implementation for executing a columns query between [`crate::Preallocated::columns`] and
-/// [`crate::Preallocated::into_columns`].
-fn execute_columns<S>(
-    mut statement: S,
-    catalog_name: &SqlText,
-    schema_name: &SqlText,
-    table_name: &SqlText,
-    column_name: &SqlText,
-) -> Result<CursorImpl<S>, Error>
-where
-    S: AsStatementRef,
-{
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.columns(catalog_name, schema_name, table_name, column_name)
-        .into_result(&stmt)?;
-
-    // We assume columns always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
-
-    // Safe: `statement` is in cursor state
-    let cursor = unsafe { CursorImpl::new(statement) };
-    Ok(cursor)
 }
 
 
