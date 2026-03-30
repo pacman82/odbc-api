@@ -674,13 +674,15 @@ impl<'c> Connection<'c> {
     }
 
     /// The buffer descriptions for all standard buffers (not including extensions) returned in the
-    /// columns query (e.g. [`Connection::columns`]).
+    /// columns query (e.g. [`Preallocated::columns_cursor`]).
     ///
     /// # Arguments
     ///
     /// * `type_name_max_len` - The maximum expected length of type names.
     /// * `remarks_max_len` - The maximum expected length of remarks.
     /// * `column_default_max_len` - The maximum expected length of column defaults.
+    #[deprecated(note = "Use `Connection::columns` or `Preallocated::columns` which return \
+        strongly typed `ColumnsRow` items instead.")]
     pub fn columns_buffer_descs(
         &self,
         type_name_max_len: usize,
