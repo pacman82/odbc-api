@@ -1,43 +1,26 @@
 services:
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2019-latest
-    ports:
-      - 1433:1433
-    environment:
-      - MSSQL_SA_PASSWORD=My@Test@Password1
-    command:
-      [
-        "/opt/mssql/bin/sqlservr",
-        "--accept-eula",
-        "--reset-sa-password"
-      ]
+    mssql:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+            - 1433:1433
+        environment:
+            - MSSQL_SA_PASSWORD=My@Test@Password1
+        command:
+            ["/opt/mssql/bin/sqlservr", "--accept-eula", "--reset-sa-password"]
 
-  mariadb:
-    image: mariadb
-    environment:
-      MYSQL_ROOT_PASSWORD: my-secret-pw
-      MYSQL_DATABASE: test_db
-    ports:
-      - 3306:3306
+    mariadb:
+        image: mariadb
+        environment:
+            MYSQL_ROOT_PASSWORD: my-secret-pw
+            MYSQL_DATABASE: test_db
+        ports:
+            - 3306:3306
 
-  postgres:
-    image: postgres:17
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: test
-      POSTGRES_USER: test
-      POSTGRES_PASSWORD: test
-
-  dev:
-    build:
-      context: ./docker
-      dockerfile: Dockerfile.dev
-    volumes:
-      - .:/workspace:cached
-
-    # Overrides default command so things don't shut down after the process ends.
-    command: sleep infinity
-
-    # Allows accessing dbs through the port forwardings. dev container behaves like host for networking
-    network_mode: host
+    postgres:
+        image: postgres:17
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: test
+            POSTGRES_USER: test
+            POSTGRES_PASSWORD: test
