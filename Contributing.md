@@ -12,23 +12,13 @@ Whether they be in code, interesting feature suggestions, design critique or bug
 
 Running local tests currently requires:
 
-* Docker and Docker compose.
+* Docker
 
-### Visual Studio Code
+Run `docker compose up` to start the various databases used in the integration tests.
 
-Should you use Visual Studio Code with the Remote Development extension, it will pick up the `.devcontainer` configuration and everything should be setup for you.
+There is a devcontainer which will automatically be picked up by Visual Studio Code or Zed. It contains a Rust toolchain and the necessary ODBC drivers to run the integration tests.
 
-### Not Visual Studio Code
-
-With docker and the SQL Driver installed run:
-
-```shell
-docker-compose up
-```
-
-This starts containers called `odbc-api_dev`, `odbc-api_mssql` and `odbc-api_mariadb`. You can use the `dev` container to build your code and execute tests in case you do not want to install the required ODBC drivers and/or Rust toolchain on your local machine.
-
-Otherwise you can install these requirements from here:
+If you do not want to use a devcontainer you can install these requirements from here:
 
 * Install Rust compiler and Cargo. Follow the instructions on [this site](https://www.rust-lang.org/en-US/install.html).
 * [Microsoft ODBC Driver 18 for SQL Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16).
