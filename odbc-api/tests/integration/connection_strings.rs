@@ -17,7 +17,7 @@ pub const MARIADB_CONNECTION: &str = "Driver={MariaDB ODBC 3.1 Driver};\
 // Use 127.0.0.1 instead of localhost so the system uses the TCP/IP connector instead of the socket
 // connector. Prevents error message: 'Can't connect to local MySQL server through socket'.
 #[cfg(not(target_os = "windows"))]
-pub const MARIADB_CONNECTION: &str = "Driver={MariaDB 3.1 Driver};\
+pub const MARIADB_CONNECTION: &str = "Driver={MariaDB Unicode};\
     Server=127.0.0.1;DB=test_db;\
     UID=root;PWD=my-secret-pw;\
     Port=3306";

@@ -1,32 +1,24 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.163.1/containers/debian/.devcontainer/base.Dockerfile
+# Docker image intended for CI
+FROM debian:trixie-slim
 
-# [Choice] Debian version: buster, stretch
-ARG VARIANT="bullseye"
-FROM mcr.microsoft.com/vscode/devcontainers/base:0-${VARIANT}
+# Download the package to configure the Microsoft repo
+RUN apt-get update && apt-get -y install --no-install-recommends curl ca-certificates gnupg unzip
+RUN curl -sSL -O https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb
+RUN dpkg -i packages-microsoft-prod.deb
+RUN rm packages-microsoft-prod.deb
 
-# Install Microsoft ODBC SQL Drivers (msodbcsql18 package) for Debian 10
-# https://docs.microsoft.com/de-de/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver15
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
 RUN echo msodbcsql18 msodbcsql/ACCEPT_EULA boolean true | debconf-set-selections
 
-# Add buster backports to source list (required for Maria DB ODBC driver)
-# 
-# Turns out this package ships with to old a driver. Leave this in for reference still.
-# 
-# RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-
-# This section to installs additional packages.
+# Install packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	&& apt-get -y install --no-install-recommends \
 	build-essential \
 	unixodbc-dev \
 	msodbcsql18 \
-	# odbc-mariadb/buster-backports \
-	sqlite3 \
+	odbc-mariadb \
 	libsqliteodbc \
 	odbc-postgresql \
-	unzip
+	&& rm -rf /var/lib/apt/lists/*
 
 # Fix SQLite driver paths
 RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
@@ -35,14 +27,6 @@ RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsq
 # Fix PostgreSQL driver paths
 RUN sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
 RUN sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
-
-# Install MariaDB driver from tar bundle
-COPY docker/mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz .
-COPY docker/mariadb_odbc_template.ini .
-RUN tar -xf mariadb-connector-odbc-3.1.15-debian-buster-amd64.tar.gz
-RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmaodbc.so /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so
-RUN cp mariadb-connector-odbc-3.1.15-debian-buster-amd64/lib/mariadb/libmariadb.so.3 /usr/lib/x86_64-linux-gnu/
-RUN odbcinst -i -d -f mariadb_odbc_template.ini
 
 # Install DuckDB ODBC driver
 RUN curl -L -o duckdb_odbc.zip https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0/duckdb_odbc-linux-amd64.zip \
