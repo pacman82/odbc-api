@@ -29,7 +29,7 @@ If you do not want to use a devcontainer you can install these requirements from
 The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
 
 ```shell
-cargo test
+cargo test --features derive
 ```
 
 to run all tests in the workspace, which should now succeed.
