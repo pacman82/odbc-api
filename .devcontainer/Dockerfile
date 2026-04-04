@@ -21,14 +21,6 @@ RUN apt update && export DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /workspace
 
-# # Fix SQLite driver paths
-# RUN sed --in-place 's/libsqlite3odbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqlite3odbc.so/' /etc/odbcinst.ini
-# RUN sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
-
-# # Fix PostgreSQL driver paths
-# RUN sed --in-place 's/psqlodbca.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbca.so/' /etc/odbcinst.ini
-# RUN sed --in-place 's/psqlodbcw.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/psqlodbcw.so/' /etc/odbcinst.ini
-
 # Install DuckDB ODBC driver
 RUN curl -L -o duckdb_odbc.zip https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0/duckdb_odbc-linux-amd64.zip \
 	&& unzip duckdb_odbc.zip -d /opt/duckdb_odbc \
