@@ -26,7 +26,7 @@ If you do not want to use a devcontainer you can install these requirements from
 * PostgreSQL ODBC driver
 * [DuckDB ODBC driver](https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0)
 
-The `mssql` container runs a Microsoft SQL Server used for answering the test queries. We can execute the tests in Rust typical fashion using:
+Execute
 
 ```shell
 cargo test --features derive
