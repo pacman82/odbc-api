@@ -1,6 +1,6 @@
 [workspace]
 members=[ "derive","odbc-api"]
-resolver = "2"
+resolver = "3"
 
 [profile.release]
 # Panics should only be caused by logic errors and are considered bugs
