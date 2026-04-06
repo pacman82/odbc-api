@@ -19,11 +19,10 @@ jobs:
           default: true
           override: true
 
-      # Extract all files from installer
       - name: Install SQLite drivers
         run: |
-          Invoke-WebRequest http://www.ch-werner.de/sqliteodbc/sqliteodbc_w64.exe -OutFile C:\sqliteodbc.exe
-          7z x C:\sqliteodbc.exe -o"C:\Program Files\SQLite ODBC Driver for Win64"
+          New-Item -ItemType Directory -Force -Path "C:\Program Files\SQLite ODBC Driver for Win64"
+          Copy-Item -Path "vendored\sqlite-odbc-win64\sqlite3odbc.dll" -Destination "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll"
           REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" /v "SQLite3 ODBC Driver" /t REG_SZ /d Installed /f
           REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Driver" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
           REG ADD "HKLM\SOFTWARE\ODBC\ODBCINST.INI\SQLite3 ODBC Driver" /v "Setup" /t REG_SZ /d "C:\Program Files\SQLite ODBC Driver for Win64\sqlite3odbc.dll" /f
