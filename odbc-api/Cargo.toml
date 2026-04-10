@@ -88,6 +88,12 @@ derive = ["dep:odbc-api-derive"]
 # source code, which is licensed under the same terms as unixODBC itself.
 vendored-unix-odbc = ["odbc-sys/vendored-unix-odbc"]
 
+# Enable structured logging with key-value pairs in log records. Requires a log subscriber that
+# supports the `kv` feature of the `log` crate to access the structured fields. Without this
+# feature, log messages contain all information as formatted text. With this feature, information
+# is moved into structured key-value pairs, so a kv-aware subscriber is needed to see it.
+structured_logging = ["log/kv"]
+
 default = ["odbc_version_3_80", "prompt"]
 
 # ODBC offers an interface to prompt the user for a connection string. This requires passing a
