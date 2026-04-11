@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Reworked log message if using structured logging; logging of
-- Structured logging for odbc diagnostics
-- Introduce feature flag for structured logging
+- Introduced Feature flag `structured_logging`. It uses terser log messages and moves some information out of the log message into the kv attributes. This is currently opt-in, as this requires a log backend which supports logs `kv` feature. This is currently planned to become the primary logging mechanism in the future.
+
+### Changed
+
+- Querying of connection and statement attributes is now `trace` and instead of `debug`.
 
 ## [24.0.0](https://github.com/pacman82/odbc-api/compare/v23.0.1...v24.0.0) - 2026-03-30
 
