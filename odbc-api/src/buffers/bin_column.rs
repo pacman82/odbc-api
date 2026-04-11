@@ -6,7 +6,7 @@ use crate::{
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
 };
 
-use log::debug;
+use log::trace;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, ffi::c_void, num::NonZeroUsize};
 
@@ -201,9 +201,18 @@ impl BinColumn {
     /// * `new_max_len`: New maximum element length in bytes.
     /// * `num_rows`: Number of valid rows currently stored in this buffer.
     pub fn resize_max_element_length(&mut self, new_max_len: usize, num_rows: usize) {
-        debug!(
+        #[cfg(not(feature = "structured_logging"))]
+        trace!(
             "Rebinding binary column buffer with {} elements. Maximum length {} => {}",
             num_rows, self.max_len, new_max_len
+        );
+        #[cfg(feature = "structured_logging")]
+        trace!(
+            target: "odbc_api",
+            num_rows = num_rows,
+            old_max_len = self.max_len,
+            new_max_len = new_max_len;
+            "Binary column buffer resized"
         );
 
         let batch_size = self.indicators.len();

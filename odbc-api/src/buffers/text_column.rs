@@ -11,7 +11,7 @@ use crate::{
 
 use super::{ColumnBuffer, Indicator};
 
-use log::debug;
+use log::trace;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{cmp::min, ffi::c_void, mem::size_of, num::NonZeroUsize, panic};
 use widestring::U16Str;
@@ -177,9 +177,18 @@ impl<C> TextColumn<C> {
     where
         C: Default + Copy,
     {
-        debug!(
+        #[cfg(not(feature = "structured_logging"))]
+        trace!(
             "Rebinding text column buffer with {} elements. Maximum string length {} => {}",
             num_rows, self.max_str_len, new_max_str_len
+        );
+        #[cfg(feature = "structured_logging")]
+        trace!(
+            target: "odbc_api",
+            num_rows = num_rows,
+            old_max_str_len = self.max_str_len,
+            new_max_str_len = new_max_str_len;
+            "Text column buffer resized"
         );
 
         let batch_size = self.indicators.len();

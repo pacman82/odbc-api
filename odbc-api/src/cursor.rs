@@ -11,6 +11,7 @@ use crate::{
     error::ExtendResult,
     handles::{
         AsStatementRef, CDataMut, DiagnosticStream, SqlResult, State, Statement, StatementRef,
+        log_diagnostic_record,
     },
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
 };
@@ -523,7 +524,7 @@ unsafe fn bind_row_set_buffer_to_statement(
         // size, in order to not mess with other diagnostic records.
         let mut option_value_changed = false;
         while let Some(record) = diagnostic_stream.next() {
-            warn!("{record}");
+            log_diagnostic_record(record);
             if record.state == State::OPTION_VALUE_CHANGED {
                 option_value_changed = true;
             }
@@ -532,8 +533,16 @@ unsafe fn bind_row_set_buffer_to_statement(
             // Now rejecting a too large buffer size is save, but not if the value is something
             // even larger after. Zero is also suspicious.
             let actual_size = stmt.row_array_size().into_result(&stmt)?;
+            #[cfg(not(feature = "structured_logging"))]
             warn!(
                 "Row array size set by the driver to: {actual_size}. Desired size had been: {size}"
+            );
+            #[cfg(feature = "structured_logging")]
+            warn!(
+                target: "odbc_api",
+                requested = size,
+                actual = actual_size;
+                "Row array size overridden by driver"
             );
             if actual_size > size || actual_size == 0 {
                 panic!(

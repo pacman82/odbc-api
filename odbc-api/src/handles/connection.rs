@@ -10,7 +10,7 @@ use super::{
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
 };
-use log::debug;
+use log::trace;
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
     IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
@@ -456,9 +456,18 @@ impl Connection<'_> {
         .into_sql_result("SQLGetConnectAttr")
         .on_success(|| {
             let handle = self.handle;
-            debug!(
+            #[cfg(not(feature = "structured_logging"))]
+            trace!(
                 "SQLGetConnectAttr called with attribute '{attribute:?}' for connection \
                 '{handle:?}' reported '{out}'."
+            );
+            #[cfg(feature = "structured_logging")]
+            trace!(
+                target: "odbc_api",
+                attribute:? = attribute,
+                handle:? = handle,
+                value = out;
+                "Connection attribute queried"
             );
             out
         })

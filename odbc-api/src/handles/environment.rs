@@ -135,7 +135,14 @@ impl Environment {
                 .into_sql_result("SQLAllocHandle")
                 .on_success(|| {
                     let handle = handle.as_hdbc();
+                    #[cfg(not(feature = "structured_logging"))]
                     debug!("SQLAllocHandle allocated connection (Dbc) handle '{handle:?}'");
+                    #[cfg(feature = "structured_logging")]
+                    debug!(
+                        target: "odbc_api",
+                        handle:? = handle;
+                        "Connection handle allocated"
+                    );
                     Connection::new(handle)
                 })
         }

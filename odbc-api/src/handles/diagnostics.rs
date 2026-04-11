@@ -309,9 +309,15 @@ where
         if self.record_number == i16::MAX {
             // Prevent overflow. This is not that unlikely to happen, since some `execute` or
             // `fetch` calls can cause diagnostic messages for each row
+            #[cfg(not(feature = "structured_logging"))]
             warn!(
                 "Too many diagnostic records were generated. Ignoring the remaining to prevent \
                 overflowing the 16Bit integer counting them."
+            );
+            #[cfg(feature = "structured_logging")]
+            warn!(
+                target: "odbc_api",
+                "Diagnostic record limit reached"
             );
             return None;
         }
