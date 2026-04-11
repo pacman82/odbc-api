@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.1.0](https://github.com/pacman82/odbc-api/compare/v24.0.0...v24.1.0) - 2026-04-11
+
+### Added
+
+- Reworked log message if using structured logging; logging of
+- Structured logging for odbc diagnostics
+- Introduce feature flag for structured logging
+
 ## [24.0.0](https://github.com/pacman82/odbc-api/compare/v23.0.1...v24.0.0) - 2026-03-30
 
 ### Added
