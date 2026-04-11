@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.1.1](https://github.com/pacman82/odbc-api/compare/v24.1.0...v24.1.1) - 2026-04-11
+
+### Fixed
+
+- ODBC Diagnostics no longer emit the message in a "message"
+
 ## [24.1.0](https://github.com/pacman82/odbc-api/compare/v24.0.0...v24.1.0) - 2026-04-11
 
 ### Added
