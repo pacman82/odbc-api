@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- ODBC Diagnostics no longer emit the message in a "message"
+- ODBC Diagnostics no longer emit the message in a "message" attribute in order to avoid clashes between attributes and message in log sinks.
 
 ## [24.1.0](https://github.com/pacman82/odbc-api/compare/v24.0.0...v24.1.0) - 2026-04-11
 
