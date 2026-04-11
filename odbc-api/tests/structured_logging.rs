@@ -120,8 +120,14 @@ fn emit_a_warning_for_each_diagnostic() {
         assert_eq!(captured[0].level, Level::Warn);
         assert_eq!(captured[0].target, "odbc");
         assert_eq!(captured[0].body, "Diagnostic");
-        assert_eq!(captured[0].kv.get("state").map(String::as_str), Some("01000"));
-        assert_eq!(captured[0].kv.get("native_error").map(String::as_str), Some("0"));
+        assert_eq!(
+            captured[0].kv.get("state").map(String::as_str),
+            Some("01000")
+        );
+        assert_eq!(
+            captured[0].kv.get("native_error").map(String::as_str),
+            Some("0")
+        );
         assert_eq!(
             captured[0].kv.get("message").map(String::as_str),
             Some("first diagnostic")
@@ -130,8 +136,14 @@ fn emit_a_warning_for_each_diagnostic() {
         assert_eq!(captured[1].level, Level::Warn);
         assert_eq!(captured[1].target, "odbc");
         assert_eq!(captured[1].body, "Diagnostic");
-        assert_eq!(captured[1].kv.get("state").map(String::as_str), Some("01000"));
-        assert_eq!(captured[1].kv.get("native_error").map(String::as_str), Some("0"));
+        assert_eq!(
+            captured[1].kv.get("state").map(String::as_str),
+            Some("01000")
+        );
+        assert_eq!(
+            captured[1].kv.get("native_error").map(String::as_str),
+            Some("0")
+        );
         assert_eq!(
             captured[1].kv.get("message").map(String::as_str),
             Some("second diagnostic")

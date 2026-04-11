@@ -1,6 +1,6 @@
-use super::{DiagnosticStream, Diagnostics};
 #[cfg(feature = "structured_logging")]
 use super::slice_to_cow_utf8;
+use super::{DiagnosticStream, Diagnostics};
 use log::{Level, warn};
 
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
