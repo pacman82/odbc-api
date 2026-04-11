@@ -29,8 +29,7 @@ pub fn log_diagnostic_record(record: &Record) {
     warn!(
         target: "odbc",
         state = record.state.as_str(),
-        native_error = record.native_error,
-        message:% = slice_to_cow_utf8(&record.message);
-        "Diagnostic"
+        native_error = record.native_error;
+        "{}", slice_to_cow_utf8(&record.message)
     );
 }

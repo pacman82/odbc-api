@@ -113,13 +113,15 @@ fn emit_a_warning_for_each_diagnostic() {
     // When logging the diagnostics of the handle
     log_diagnostics(&DiagnosticStub);
 
-    // Both diagnostics are captured as warnings with structured fields on the "odbc" target
+    // Both diagnostics are captured as warnings with structured fields on the "odbc" target.
+    // The driver message becomes the log body so that sinks surface it in their native message
+    // field, avoiding any collision with a `message` kv key.
     validate(|captured| {
         assert_eq!(captured.len(), 2);
 
         assert_eq!(captured[0].level, Level::Warn);
         assert_eq!(captured[0].target, "odbc");
-        assert_eq!(captured[0].body, "Diagnostic");
+        assert_eq!(captured[0].body, "first diagnostic");
         assert_eq!(
             captured[0].kv.get("state").map(String::as_str),
             Some("01000")
@@ -128,14 +130,10 @@ fn emit_a_warning_for_each_diagnostic() {
             captured[0].kv.get("native_error").map(String::as_str),
             Some("0")
         );
-        assert_eq!(
-            captured[0].kv.get("message").map(String::as_str),
-            Some("first diagnostic")
-        );
 
         assert_eq!(captured[1].level, Level::Warn);
         assert_eq!(captured[1].target, "odbc");
-        assert_eq!(captured[1].body, "Diagnostic");
+        assert_eq!(captured[1].body, "second diagnostic");
         assert_eq!(
             captured[1].kv.get("state").map(String::as_str),
             Some("01000")
@@ -143,10 +141,6 @@ fn emit_a_warning_for_each_diagnostic() {
         assert_eq!(
             captured[1].kv.get("native_error").map(String::as_str),
             Some("0")
-        );
-        assert_eq!(
-            captured[1].kv.get("message").map(String::as_str),
-            Some("second diagnostic")
         );
     });
 }
