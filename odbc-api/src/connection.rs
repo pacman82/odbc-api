@@ -35,10 +35,16 @@ impl Drop for Connection<'_> {
                     // See also issue:
                     // <https://github.com/pacman82/odbc-api/issues/574#issuecomment-2286449125>
 
+                    #[cfg(not(feature = "structured_logging"))]
                     error!(
-                        "Error during rolling back transaction (In order to recover from \
-                        invalid transaction state during disconnect {}",
-                        e
+                        "Error rolling back transaction (in order to recover from invalid \
+                        transaction state during disconnect): {e}"
+                    );
+                    #[cfg(feature = "structured_logging")]
+                    error!(
+                        target: "odbc_api",
+                        error:err = e;
+                        "Failed rollback on disconnect"
                     );
                 }
                 // Transaction might be rolled back or suspended. Now let's try again to disconnect.

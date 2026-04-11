@@ -1,5 +1,7 @@
 //! Test for logging is isolated in its own module to avoid messing with the global settings of
 //! other, non-logging related tests.
+#![cfg(not(feature = "structured_logging"))]
+
 use log::Level;
 use odbc_api::handles::{DiagnosticResult, Diagnostics, SqlChar, State, log_diagnostics};
 
