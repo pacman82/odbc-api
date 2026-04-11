@@ -1,4 +1,6 @@
 use super::{DiagnosticStream, Diagnostics};
+#[cfg(feature = "structured_logging")]
+use super::slice_to_cow_utf8;
 use log::{Level, warn};
 
 /// This function inspects all the diagnostics of an ODBC handle and logs their text messages. It
@@ -14,6 +16,15 @@ pub fn log_diagnostics(handle: &(impl Diagnostics + ?Sized)) {
 
     // Log results, while there are diagnostic records
     while let Some(record) = diagnostic_stream.next() {
+        #[cfg(not(feature = "structured_logging"))]
         warn!("{record}");
+        #[cfg(feature = "structured_logging")]
+        warn!(
+            target: "odbc",
+            state = record.state.as_str(),
+            native_error = record.native_error,
+            message:% = slice_to_cow_utf8(&record.message);
+            "Diagnostic"
+        );
     }
 }

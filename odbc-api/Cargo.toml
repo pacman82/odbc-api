@@ -92,7 +92,7 @@ vendored-unix-odbc = ["odbc-sys/vendored-unix-odbc"]
 # supports the `kv` feature of the `log` crate to access the structured fields. Without this
 # feature, log messages contain all information as formatted text. With this feature, information
 # is moved into structured key-value pairs, so a kv-aware subscriber is needed to see it.
-structured_logging = ["log/kv"]
+structured_logging = ["log/kv_std"]
 
 default = ["odbc_version_3_80", "prompt"]
 
