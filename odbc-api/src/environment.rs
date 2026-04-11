@@ -165,9 +165,11 @@ impl Environment {
             other => panic!("Unexpected return value '{other:?}'"),
         };
 
+        #[cfg(not(feature = "structured_logging"))]
         debug!("ODBC Environment created.");
+        #[cfg(feature = "structured_logging")]
+        debug!(target: "odbc_api", "ODBC environment created");
 
-        debug!("Setting ODBC API version to {ODBC_API_VERSION:?}");
         let result = environment
             .declare_version(ODBC_API_VERSION)
             .into_result(&environment);
@@ -191,6 +193,15 @@ impl Environment {
             | State::INVALID_ATTRIBUTE_VALUE => Error::UnsupportedOdbcApiVersion(record),
             _ => Error::Diagnostics { record, function },
         })?;
+
+        #[cfg(not(feature = "structured_logging"))]
+        debug!("ODBC API version {ODBC_API_VERSION:?} declared");
+        #[cfg(feature = "structured_logging")]
+        debug!(
+            target: "odbc_api",
+            version:? = ODBC_API_VERSION;
+            "ODBC version declared"
+        );
 
         Ok(Self {
             environment,

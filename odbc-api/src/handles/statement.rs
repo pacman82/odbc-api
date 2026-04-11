@@ -9,7 +9,7 @@ use super::{
     sql_char::{binary_length, is_truncated_bin, resize_to_fit_without_tz},
     sql_result::ExtSqlReturn,
 };
-use log::debug;
+use log::trace;
 use odbc_sys::{
     Desc, FreeStmtOption, HDbc, HDesc, HStmt, Handle, HandleType, IS_POINTER, Len, ParamType,
     Pointer, SQLBindCol, SQLBindParameter, SQLCloseCursor, SQLDescribeParam, SQLExecute, SQLFetch,
@@ -858,9 +858,18 @@ pub trait Statement: AnyHandle {
         }
         .into_sql_result("SQLColAttribute")
         .on_success(|| {
-            debug!(
+            #[cfg(not(feature = "structured_logging"))]
+            trace!(
                 "SQLColAttribute called with attribute '{attribute:?}' for column \
                 '{column_number}' reported {out}."
+            );
+            #[cfg(feature = "structured_logging")]
+            trace!(
+                target: "odbc_api",
+                attribute:? = attribute,
+                column_number = column_number,
+                value = out;
+                "Column attribute queried"
             );
             out
         })

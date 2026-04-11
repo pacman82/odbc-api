@@ -29,7 +29,7 @@ pub use self::{
     descriptor::Descriptor,
     diagnostics::{DiagnosticResult, DiagnosticStream, Diagnostics, Record, State},
     environment::Environment,
-    logging::log_diagnostics,
+    logging::{log_diagnostic_record, log_diagnostics},
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ColumnType, Statement, StatementImpl, StatementRef},
@@ -54,7 +54,15 @@ use std::thread::panicking;
 pub unsafe fn drop_handle(handle: Handle, handle_type: HandleType) {
     match unsafe { SQLFreeHandle(handle_type, handle) } {
         SqlReturn::SUCCESS => {
+            #[cfg(not(feature = "structured_logging"))]
             debug!("SQLFreeHandle dropped {handle:?} of type {handle_type:?}.");
+            #[cfg(feature = "structured_logging")]
+            debug!(
+                target: "odbc_api",
+                handle:? = handle,
+                handle_type:? = handle_type;
+                "ODBC handle freed"
+            );
         }
         other => {
             // Avoid panicking, if we already have a panic. We don't want to mask the
