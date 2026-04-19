@@ -1,6 +1,6 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
-use crate::handles::{AnyHandle, Statement, StatementRef, drop_handle};
+use crate::handles::{AnyHandle, SqlResult, Statement, StatementRef, drop_handle};
 
 /// Statement handle which also takes ownership of Connection
 #[derive(Debug)]
@@ -76,5 +76,9 @@ where
 {
     fn as_sys(&self) -> HStmt {
         self.handle
+    }
+
+    fn end_cursor_scope(&mut self) -> SqlResult<()> {
+        SqlResult::Success(())
     }
 }

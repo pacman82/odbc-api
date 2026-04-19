@@ -335,7 +335,11 @@ where
     S: Statement,
 {
     fn drop(&mut self) {
-        if let Err(e) = self.statement.close_cursor().into_result(&self.statement) {
+        if let Err(e) = self
+            .statement
+            .end_cursor_scope()
+            .into_result(&self.statement)
+        {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {

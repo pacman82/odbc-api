@@ -141,6 +141,10 @@ impl Statement for StatementRef<'_> {
     fn as_sys(&self) -> HStmt {
         self.handle
     }
+
+    fn end_cursor_scope(&mut self) -> SqlResult<()> {
+        self.close_cursor()
+    }
 }
 
 unsafe impl AnyHandle for StatementRef<'_> {
@@ -190,6 +194,15 @@ where
 pub trait Statement: AnyHandle {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt;
+
+    /// Invoke [`self::close_cursor`] to close the cursor for implementations which borrow the
+    /// statement handle. For implementations which own the statement handle exclusively, this is a
+    /// no-op. The idea is that if the statement handle is borrowed, we must assume it is going to
+    /// be reused for other queries, so we must spend the effort to close the cursor. If the
+    /// statement handle is exclusively owned it is dropped and freed right away if dropping a
+    /// cursor wrapper. So we do not need to bother with closing the cursor explicitly. The driver
+    /// can take care of it during cleanup however it seems fit.
+    fn end_cursor_scope(&mut self) -> SqlResult<()>;
 
     /// Binds application data buffers to columns in the result set.
     ///
@@ -1183,6 +1196,11 @@ impl Statement for StatementImpl<'_> {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt {
         self.handle
+    }
+
+    fn end_cursor_scope(&mut self) -> SqlResult<()> {
+        // No-op. We own the statement handle exclusively. We can assume it is freed right after.
+        SqlResult::Success(())
     }
 }
 
