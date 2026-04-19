@@ -43,7 +43,7 @@ pub async fn execute_with_parameters_polling<S>(
     sleep: impl Sleep,
 ) -> Result<Option<CursorPolling<S>>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     unsafe {
         if let Some(statement) = bind_parameters(statement, params)? {
@@ -59,19 +59,19 @@ unsafe fn bind_parameters<S>(
     mut params: impl ParameterCollectionRef,
 ) -> Result<Option<S>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     unsafe {
         let parameter_set_size = params.parameter_set_size();
 
-        let mut stmt = statement.as_stmt_ref();
         // Reset parameters so we do not dereference stale once by mistake if we call
         // `exec_direct`.
-        stmt.reset_parameters().into_result(&stmt)?;
-        stmt.set_paramset_size(parameter_set_size)
-            .into_result(&stmt)?;
+        statement.reset_parameters().into_result(&statement)?;
+        statement
+            .set_paramset_size(parameter_set_size)
+            .into_result(&statement)?;
         // Bind new parameters passed by caller.
-        params.bind_parameters_to(&mut stmt)?;
+        params.bind_parameters_to(&mut statement)?;
         Ok(Some(statement))
     }
 }
@@ -139,16 +139,15 @@ pub async unsafe fn execute_polling<S>(
     mut sleep: impl Sleep,
 ) -> Result<Option<CursorPolling<S>>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     unsafe {
-        let mut stmt = statement.as_stmt_ref();
         let result = if let Some(sql) = query {
             // We execute an unprepared "one shot query"
-            wait_for(|| stmt.exec_direct(sql), &mut sleep).await
+            wait_for(|| statement.exec_direct(sql), &mut sleep).await
         } else {
             // We execute a prepared query
-            wait_for(|| stmt.execute(), &mut sleep).await
+            wait_for(|| statement.execute(), &mut sleep).await
         };
 
         // If delayed parameters (e.g. input streams) are bound we might need to put data in order
@@ -157,8 +156,9 @@ where
             .on_success(|| false)
             .on_no_data(|| false)
             .on_need_data(|| true)
-            .into_result(&stmt)?;
+            .into_result(&statement)?;
 
+        let mut stmt = statement.as_stmt_ref();
         if need_data {
             // Check if any delayed parameters have been bound which stream data to the database at
             // statement execution time. Loops over each bound stream.
@@ -172,9 +172,9 @@ where
         }
 
         // Check if a result set has been created.
-        let num_result_cols = wait_for(|| stmt.num_result_cols(), &mut sleep)
+        let num_result_cols = wait_for(|| statement.num_result_cols(), &mut sleep)
             .await
-            .into_result(&stmt)?;
+            .into_result(&statement)?;
         if num_result_cols == 0 {
             Ok(None)
         } else {

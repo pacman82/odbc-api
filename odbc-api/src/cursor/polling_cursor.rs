@@ -16,14 +16,14 @@ use std::thread::panicking;
 ///
 /// Like [`super::CursorImpl`] this is an ODBC statement handle in cursor state. However unlike its
 /// synchronous sibling this statement handle is in asynchronous polling mode.
-pub struct CursorPolling<Stmt: AsStatementRef> {
+pub struct CursorPolling<Stmt: Statement> {
     /// A statement handle in cursor state with asynchronous mode enabled.
     statement: Stmt,
 }
 
 impl<S> CursorPolling<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     /// Users of this library are encouraged not to call this constructor directly. This method is
     /// pubilc so users with an understanding of the raw ODBC C-API have a way to create an
@@ -57,7 +57,7 @@ where
 
 impl<S> AsStatementRef for CursorPolling<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
@@ -66,11 +66,14 @@ where
 
 impl<S> Drop for CursorPolling<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     fn drop(&mut self) {
-        let mut stmt = self.statement.as_stmt_ref();
-        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
+        if let Err(e) = self
+            .statement
+            .end_cursor_scope()
+            .into_result(&self.statement)
+        {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
