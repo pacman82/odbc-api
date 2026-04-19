@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [24.1.2](https://github.com/pacman82/odbc-api/compare/v24.1.1...v24.1.2) - 2026-04-19
+
+### Added
+
+- If it is clear at compile time that a statement handle would be
+- [**breaking**] Removed `Cursor::close` because it could violate invariants of
+- [**breaking**] Remove superfluous implementation of AsStatementRef for &mut
+
+### Changed
+
+- [**breaking**] Cursor and Preallocated statement type now has to implement
+
 ## [24.1.1](https://github.com/pacman82/odbc-api/compare/v24.1.0...v24.1.1) - 2026-04-11
 
 ### Fixed
