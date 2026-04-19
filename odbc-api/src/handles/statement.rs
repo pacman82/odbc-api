@@ -170,15 +170,12 @@ pub trait AsStatementRef {
     fn as_stmt_ref(&mut self) -> StatementRef<'_>;
 }
 
-impl AsStatementRef for StatementImpl<'_> {
+impl<T> AsStatementRef for T
+where
+    T: Statement,
+{
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
-        self.as_stmt_ref()
-    }
-}
-
-impl AsStatementRef for StatementRef<'_> {
-    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
-        unsafe { StatementRef::new(self.handle) }
+        unsafe { StatementRef::new(self.as_sys()) }
     }
 }
 

@@ -1,6 +1,6 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
-use crate::handles::{AnyHandle, AsStatementRef, Statement, StatementRef, drop_handle};
+use crate::handles::{AnyHandle, Statement, StatementRef, drop_handle};
 
 /// Statement handle which also takes ownership of Connection
 #[derive(Debug)]
@@ -76,14 +76,5 @@ where
 {
     fn as_sys(&self) -> HStmt {
         self.handle
-    }
-}
-
-impl<C> AsStatementRef for StatementConnection<C>
-where
-    C: StatementParent,
-{
-    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
-        self.as_stmt_ref()
     }
 }
