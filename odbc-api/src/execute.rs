@@ -24,7 +24,7 @@ pub fn execute_with_parameters<S>(
     params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     unsafe {
         if let Some(statement) = bind_parameters(statement, params)? {
@@ -86,16 +86,15 @@ pub unsafe fn execute<S>(
     query: Option<&SqlText<'_>>,
 ) -> Result<Option<CursorImpl<S>>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     unsafe {
-        let mut stmt = statement.as_stmt_ref();
         let result = if let Some(sql) = query {
             // We execute an unprepared "one shot query"
-            stmt.exec_direct(sql)
+            statement.exec_direct(sql)
         } else {
             // We execute a prepared query
-            stmt.execute()
+            statement.execute()
         };
 
         // If delayed parameters (e.g. input streams) are bound we might need to put data in order
@@ -104,8 +103,9 @@ where
             .on_success(|| false)
             .on_no_data(|| false)
             .on_need_data(|| true)
-            .into_result(&stmt)?;
+            .into_result(&statement)?;
 
+        let mut stmt = statement.as_stmt_ref();
         if need_data {
             // Check if any delayed parameters have been bound which stream data to the database at
             // statement execution time. Loops over each bound stream.
@@ -118,7 +118,7 @@ where
         }
 
         // Check if a result set has been created.
-        if stmt.num_result_cols().into_result(&stmt)? == 0 {
+        if statement.num_result_cols().into_result(&statement)? == 0 {
             Ok(None)
         } else {
             // Safe: `statement` is in cursor state.

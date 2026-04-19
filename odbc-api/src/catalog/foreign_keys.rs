@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, Error, Nullable, TruncationInfo,
     buffers::{FetchRow, FetchRowMember as _},
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{SqlText, Statement, StatementRef},
     parameter::VarCharArray,
 };
 
@@ -122,22 +122,21 @@ pub fn execute_foreign_keys<S>(
     fk_table_name: &str,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.foreign_keys(
-        &SqlText::new(pk_catalog_name),
-        &SqlText::new(pk_schema_name),
-        &SqlText::new(pk_table_name),
-        &SqlText::new(fk_catalog_name),
-        &SqlText::new(fk_schema_name),
-        &SqlText::new(fk_table_name),
-    )
-    .into_result(&stmt)?;
+    statement
+        .foreign_keys(
+            &SqlText::new(pk_catalog_name),
+            &SqlText::new(pk_schema_name),
+            &SqlText::new(pk_table_name),
+            &SqlText::new(fk_catalog_name),
+            &SqlText::new(fk_schema_name),
+            &SqlText::new(fk_table_name),
+        )
+        .into_result(&statement)?;
 
     // We assume foreign keys always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+    debug_assert_ne!(statement.num_result_cols().unwrap(), 0);
 
     // Safe: `statement` is in Cursor state.
     let cursor = unsafe { CursorImpl::new(statement) };
