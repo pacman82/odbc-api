@@ -176,12 +176,6 @@ impl AsStatementRef for StatementImpl<'_> {
     }
 }
 
-impl AsStatementRef for &mut StatementImpl<'_> {
-    fn as_stmt_ref(&mut self) -> StatementRef<'_> {
-        (*self).as_stmt_ref()
-    }
-}
-
 impl AsStatementRef for StatementRef<'_> {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         unsafe { StatementRef::new(self.handle) }
