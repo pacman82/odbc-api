@@ -98,10 +98,6 @@ pub trait Cursor: ResultSetMetadata {
     fn more_results(self) -> Result<Option<Self>, Error>
     where
         Self: Sized;
-
-    /// Close the current cursor explicitly. Allows application to handle errors emitted by
-    /// `SQLCloseCursor`.
-    fn close(self) -> Result<(), Error>;
 }
 
 /// An individual row of an result set. See [`crate::Cursor::next_row`].
@@ -391,13 +387,6 @@ where
             None
         };
         Ok(next)
-    }
-
-    fn close(self) -> Result<(), Error> {
-        let mut stmt = self.into_stmt();
-        let mut stmt = stmt.as_stmt_ref();
-        stmt.close_cursor().into_result(&stmt)?;
-        Ok(())
     }
 }
 
