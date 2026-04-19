@@ -11,13 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- If it is clear at compile time that a statement handle would be
-- [**breaking**] Removed `Cursor::close` because it could violate invariants of
-- [**breaking**] Remove superfluous implementation of AsStatementRef for &mut
+- If it is clear at compile time that a statement handle would be freed right after being closed, it is no longer explicitly closed. This safes a call to the ODBC API while still freeing all resources. It also can help sidestep problematic driver behaviour if errors occurr during `SQLCloseCursor`.
 
 ### Changed
 
-- [**breaking**] Cursor and Preallocated statement type now has to implement
+- [**breaking**] Removed `Cursor::close` because it could violate invariants of statements if it failed for cursors which did not own the statement.
+- [**breaking**] Remove superfluous implementation of `AsStatementRef` for `&mut StatementImpl`
+- [**breaking**] Cursor and Preallocated statement type now requires `Statement` instead of `AsStatementRef`
 
 ## [24.1.1](https://github.com/pacman82/odbc-api/compare/v24.1.0...v24.1.1) - 2026-04-11
 
