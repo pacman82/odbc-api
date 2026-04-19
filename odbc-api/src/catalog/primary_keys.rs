@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, Error, TruncationInfo,
     buffers::{FetchRow, FetchRowMember as _},
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{SqlText, Statement, StatementRef},
     parameter::VarCharArray,
 };
 
@@ -81,15 +81,15 @@ pub fn execute_primary_keys<S>(
     table_name: &str,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
-    let mut stmt = statement.as_stmt_ref();
-    stmt.primary_keys(
-        catalog_name.map(SqlText::new).as_ref(),
-        schema_name.map(SqlText::new).as_ref(),
-        &SqlText::new(table_name),
-    )
-    .into_result(&stmt)?;
+    statement
+        .primary_keys(
+            catalog_name.map(SqlText::new).as_ref(),
+            schema_name.map(SqlText::new).as_ref(),
+            &SqlText::new(table_name),
+        )
+        .into_result(&statement)?;
     // SAFETY: primary_keys puts stmt into cursor state.
     let cursor = unsafe { CursorImpl::new(statement) };
     Ok(cursor)

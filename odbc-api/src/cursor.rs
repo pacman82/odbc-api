@@ -325,18 +325,17 @@ impl CursorRow<'_> {
 /// by either a prepared query or direct execution. Usually utilized through the [`crate::Cursor`]
 /// trait.
 #[derive(Debug)]
-pub struct CursorImpl<Stmt: AsStatementRef> {
+pub struct CursorImpl<Stmt: Statement> {
     /// A statement handle in cursor mode.
     statement: Stmt,
 }
 
 impl<S> Drop for CursorImpl<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     fn drop(&mut self) {
-        let mut stmt = self.statement.as_stmt_ref();
-        if let Err(e) = stmt.close_cursor().into_result(&stmt) {
+        if let Err(e) = self.statement.close_cursor().into_result(&self.statement) {
             // Avoid panicking, if we already have a panic. We don't want to mask the original
             // error.
             if !panicking() {
@@ -348,18 +347,18 @@ where
 
 impl<S> AsStatementRef for CursorImpl<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
     }
 }
 
-impl<S> ResultSetMetadata for CursorImpl<S> where S: AsStatementRef {}
+impl<S> ResultSetMetadata for CursorImpl<S> where S: Statement {}
 
 impl<S> Cursor for CursorImpl<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     fn bind_buffer<B>(mut self, mut row_set_buffer: B) -> Result<BlockCursor<Self, B>, Error>
     where
@@ -378,9 +377,9 @@ where
     {
         // Consume self without calling drop to avoid calling close_cursor.
         let mut statement = self.into_stmt();
-        let mut stmt = statement.as_stmt_ref();
 
-        let has_another_result = unsafe { stmt.more_results() }.into_result_bool(&stmt)?;
+        let has_another_result =
+            unsafe { statement.more_results() }.into_result_bool(&statement)?;
         let next = if has_another_result {
             Some(CursorImpl { statement })
         } else {
@@ -392,7 +391,7 @@ where
 
 impl<S> CursorImpl<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     /// Users of this library are encouraged not to call this constructor directly but rather invoke
     /// [`crate::Connection::execute`] or [`crate::Prepared::execute`] to get a cursor and utilize

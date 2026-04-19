@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, Error, TruncationInfo,
     buffers::{FetchRow, FetchRowMember as _},
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{SqlText, Statement, StatementRef},
     parameter::VarCharArray,
 };
 
@@ -63,20 +63,19 @@ pub fn execute_tables<S>(
     table_type: &str,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.tables(
-        &SqlText::new(catalog_name),
-        &SqlText::new(schema_name),
-        &SqlText::new(table_name),
-        &SqlText::new(table_type),
-    )
-    .into_result(&stmt)?;
+    statement
+        .tables(
+            &SqlText::new(catalog_name),
+            &SqlText::new(schema_name),
+            &SqlText::new(table_name),
+            &SqlText::new(table_type),
+        )
+        .into_result(&statement)?;
 
     // We assume tables always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+    debug_assert_ne!(statement.num_result_cols().unwrap(), 0);
 
     // Safe: `statement` is in Cursor state.
     let cursor = unsafe { CursorImpl::new(statement) };

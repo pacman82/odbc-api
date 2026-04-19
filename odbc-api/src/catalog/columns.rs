@@ -1,7 +1,7 @@
 use crate::{
     CursorImpl, Error, Nullable, TruncationInfo,
     buffers::{FetchRow, FetchRowMember as _},
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{SqlText, Statement, StatementRef},
     parameter::VarCharArray,
 };
 
@@ -153,15 +153,14 @@ pub fn execute_columns<S>(
     column_name: &SqlText,
 ) -> Result<CursorImpl<S>, Error>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
-    let mut stmt = statement.as_stmt_ref();
-
-    stmt.columns(catalog_name, schema_name, table_name, column_name)
-        .into_result(&stmt)?;
+    statement
+        .columns(catalog_name, schema_name, table_name, column_name)
+        .into_result(&statement)?;
 
     // We assume columns always creates a result set, since it works like a SELECT statement.
-    debug_assert_ne!(stmt.num_result_cols().unwrap(), 0);
+    debug_assert_ne!(statement.num_result_cols().unwrap(), 0);
 
     // Safe: `statement` is in cursor state
     let cursor = unsafe { CursorImpl::new(statement) };

@@ -42,7 +42,7 @@ pub struct Preallocated<S> {
 
 impl<S> Preallocated<S>
 where
-    S: AsStatementRef,
+    S: Statement,
 {
     /// Users which intend to write their application in safe Rust should prefer using
     /// [`crate::Connection::preallocate`] as opposed to this constructor.
@@ -516,15 +516,17 @@ where
     /// }
     /// ```
     pub fn row_count(&mut self) -> Result<Option<usize>, Error> {
-        let mut stmt = self.statement.as_stmt_ref();
-        stmt.row_count().into_result(&stmt).map(|count| {
-            // ODBC returns -1 in case a row count is not available
-            if count == -1 {
-                None
-            } else {
-                Some(count.try_into().unwrap())
-            }
-        })
+        self.statement
+            .row_count()
+            .into_result(&self.statement)
+            .map(|count| {
+                // ODBC returns -1 in case a row count is not available
+                if count == -1 {
+                    None
+                } else {
+                    Some(count.try_into().unwrap())
+                }
+            })
     }
 
     /// Use this to limit the time the query is allowed to take, before responding with data to the
@@ -538,10 +540,9 @@ where
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     pub fn set_query_timeout_sec(&mut self, timeout_sec: usize) -> Result<(), Error> {
-        let mut stmt = self.statement.as_stmt_ref();
-        stmt.as_stmt_ref()
+        self.statement
             .set_query_timeout_sec(timeout_sec)
-            .into_result(&stmt)
+            .into_result(&self.statement)
     }
 
     /// The number of seconds to wait for a SQL statement to execute before returning to the
@@ -552,8 +553,9 @@ where
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetstmtattr-function>
     pub fn query_timeout_sec(&mut self) -> Result<usize, Error> {
-        let mut stmt = self.statement.as_stmt_ref();
-        stmt.query_timeout_sec().into_result(&stmt)
+        self.statement
+            .query_timeout_sec()
+            .into_result(&self.statement)
     }
 
     /// Call this method to enable asynchronous polling mode on the statement.
@@ -562,8 +564,9 @@ where
     /// [Asynchronous execution using polling
     /// mode](crate::guide#asynchronous-execution-using-polling-mode)
     pub fn into_polling(mut self) -> Result<PreallocatedPolling<S>, Error> {
-        let mut stmt = self.statement.as_stmt_ref();
-        stmt.set_async_enable(true).into_result(&stmt)?;
+        self.statement
+            .set_async_enable(true)
+            .into_result(&self.statement)?;
         Ok(PreallocatedPolling::new(self.statement))
     }
 }
