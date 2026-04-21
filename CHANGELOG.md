@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [24.1.2](https://github.com/pacman82/odbc-api/compare/v24.1.1...v24.1.2) - 2026-04-19
+## [25.0.0](https://github.com/pacman82/odbc-api/compare/v24.1.1...v25.0.0) - 2026-04-21)
 
 ### Added
 
@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [**breaking**] Removed `Cursor::close` because it could violate invariants of statements if it failed for cursors which did not own the statement.
 - [**breaking**] Remove superfluous implementation of `AsStatementRef` for `&mut StatementImpl`
 - [**breaking**] Cursor and Preallocated statement type now requires `Statement` instead of `AsStatementRef`
+
+## [24.1.2](https://github.com/pacman82/odbc-api/compare/v24.1.1...v24.1.2) - 2026-04-19
+
+Yanked. Version 25.0.0 had been erronously be released as 24.1.2
 
 ## [24.1.1](https://github.com/pacman82/odbc-api/compare/v24.1.0...v24.1.1) - 2026-04-11
 
