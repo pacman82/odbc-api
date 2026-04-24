@@ -42,13 +42,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # LLVM tools preview is a requirement of cargo-llvm-cov
       - name: Install llvm-tools-preview
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@3f7f2bd74f95d407a45d96b106f26d4f6c238fab # cargo-llvm-cov
       - name: Update package repostiory
         run: sudo apt-get update
       - name: Install PostgreSQL Driver
@@ -83,7 +83,7 @@ jobs:
           cargo llvm-cov --features narrow --no-report -- --skip maria_db
           cargo llvm-cov --no-run --lcov --output-path lcov.info
       - name: Push coverage results to Coveralls
-        uses: coverallsapp/github-action@v2.3.4
+        uses: coverallsapp/github-action@cfd0633edbd2411b532b808ba7a8b5e04f76d2c8 # v2.3.4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: "lcov.info"
