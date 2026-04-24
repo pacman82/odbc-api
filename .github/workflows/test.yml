@@ -155,17 +155,3 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Build
         run: cargo build --features vendored-unix-odbc
-
-  dependabot:
-    needs: [linux, win64, osx, win32]
-    permissions:
-      pull-requests: write
-      contents: write
-    runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
-    steps:
-      - name: Merge Depenabot Pull Request
-        run: gh pr merge --auto --rebase "$PR_URL"
-        env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
