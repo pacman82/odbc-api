@@ -22,7 +22,6 @@ macro_rules! table_name {
 /// in a service be executed asynchronously?
 #[tokio::test]
 async fn otel_insert_mssql() {
-
     let table_name = table_name!();
     let table = Table::new(&table_name, &["INTEGER"], &["A"]);
 
@@ -30,13 +29,16 @@ async fn otel_insert_mssql() {
     let env = Environment::new().unwrap();
 
     // Blocking
-    let conn = env.connect_with_connection_string(MSSQL_CONNECTION, ConnectionOptions::default()).unwrap();
+    let conn = env
+        .connect_with_connection_string(MSSQL_CONNECTION, ConnectionOptions::default())
+        .unwrap();
 
     conn.execute(&table.sql_drop_if_exists(), (), None).unwrap();
-    conn.execute(&table.sql_create_table("int IDENTITY(1,1)"), (), None).unwrap();
+    conn.execute(&table.sql_create_table("int IDENTITY(1,1)"), (), None)
+        .unwrap();
 
-    conn.execute(&table.sql_insert(), &42.into_parameter(), None).unwrap();
-
+    conn.execute(&table.sql_insert(), &42.into_parameter(), None)
+        .unwrap();
 }
 
 /// Declarative description for a table to conveniently build queries for it
