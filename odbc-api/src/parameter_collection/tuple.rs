@@ -4,35 +4,26 @@
 use super::ParameterCollectionRef;
 use crate::{Error, InOut, Out, OutputParameter, handles::Statement, parameter::InputParameter};
 
-macro_rules! impl_bind_parameters {
-    ($offset:expr, $stmt:ident) => (
-        Ok(())
-    );
-    ($offset:expr, $stmt:ident $head:ident $($tail:ident)*) => (
-        {
-            $head.bind_to($offset+1, $stmt)?;
-            impl_bind_parameters!($offset+1, $stmt $($tail)*)
-        }
-    );
-}
-
 macro_rules! impl_parameters_for_tuple{
     ($($t:ident)*) => (
-        #[allow(unused_parens)]
-        #[allow(unused_variables)]
-        #[allow(non_snake_case)]
         unsafe impl<$($t:ParameterTupleElement,)*> ParameterCollectionRef for ($($t,)*)
         {
             fn parameter_set_size(&self) -> usize {
                 1
             }
 
+            #[allow(unused_variables, non_snake_case)]
             unsafe fn bind_parameters_to(&mut self, stmt: &mut impl Statement) -> Result<(), Error> {
                 let ($($t,)*) = self;
                 #[allow(unused_unsafe)]
                 unsafe {
-                impl_bind_parameters!(0, stmt $($t)*)
+                    let column_index = 1;
+                    $(
+                        ($t).bind_to(column_index, stmt)?;
+                        let column_index = column_index + 1;
+                    )*
                 }
+                Ok(())
             }
         }
     );
