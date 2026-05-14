@@ -460,7 +460,7 @@ impl BindParamDesc {
         }
     }
 
-    /// A description for binding [`crate::Time`] values to a parameter.
+    /// A description for binding [`crate::sys::Time`] values to a parameter.
     ///
     /// # Parameters
     ///

@@ -195,7 +195,7 @@ pub trait Statement: AnyHandle {
     /// Gain access to the underlying statement handle without transferring ownership to it.
     fn as_sys(&self) -> HStmt;
 
-    /// Invoke [`self::close_cursor`] to close the cursor for implementations which borrow the
+    /// Invoke [`Self::close_cursor`] to close the cursor for implementations which borrow the
     /// statement handle. For implementations which own the statement handle exclusively, this is a
     /// no-op. The idea is that if the statement handle is borrowed, we must assume it is going to
     /// be reused for other queries, so we must spend the effort to close the cursor. If the
