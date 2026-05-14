@@ -4,7 +4,7 @@ use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 
 use crate::{
     Bit, Error,
-    buffers::columnar::Resize,
+    buffers::columnar::{ColumnBufferView, Resize},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, StatementRef},
@@ -535,8 +535,6 @@ impl<'a> AnySliceMut<'a> {
 }
 
 unsafe impl ColumnBuffer for AnyBuffer {
-    type View<'a> = AnySlice<'a>;
-
     fn capacity(&self) -> usize {
         match self {
             AnyBuffer::Binary(col) => col.capacity(),
@@ -568,6 +566,19 @@ unsafe impl ColumnBuffer for AnyBuffer {
         }
     }
 
+    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
+        match self {
+            AnyBuffer::Binary(col) => col.has_truncated_values(num_rows),
+            AnyBuffer::Text(col) => col.has_truncated_values(num_rows),
+            AnyBuffer::WText(col) => col.has_truncated_values(num_rows),
+            _ => None,
+        }
+    }
+}
+
+unsafe impl ColumnBufferView for AnyBuffer {
+    type View<'a> = AnySlice<'a>;
+
     fn view(&self, valid_rows: usize) -> AnySlice<'_> {
         match self {
             AnyBuffer::Binary(col) => AnySlice::Binary(col.view(valid_rows)),
@@ -598,15 +609,6 @@ unsafe impl ColumnBuffer for AnyBuffer {
             AnyBuffer::NullableBit(col) => AnySlice::NullableBit(col.iter(valid_rows)),
         }
     }
-
-    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
-        match self {
-            AnyBuffer::Binary(col) => col.has_truncated_values(num_rows),
-            AnyBuffer::Text(col) => col.has_truncated_values(num_rows),
-            AnyBuffer::WText(col) => col.has_truncated_values(num_rows),
-            _ => None,
-        }
-    }
 }
 
 impl Resize for AnyBuffer {
@@ -617,7 +619,9 @@ impl Resize for AnyBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffers::{AnySlice, AnySliceMut, ColumnBuffer, Resize};
+    use crate::buffers::{
+        AnySlice, AnySliceMut, ColumnBuffer as _, Resize, columnar::ColumnBufferView as _,
+    };
 
     use super::AnyBuffer;
 

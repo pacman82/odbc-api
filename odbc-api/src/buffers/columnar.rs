@@ -66,7 +66,9 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     pub fn num_cols(&self) -> usize {
         self.columns.len()
     }
+}
 
+impl<C: ColumnBufferView> ColumnarBuffer<C> {
     /// Use this method to gain read access to the actual column data.
     ///
     /// # Parameters
@@ -237,12 +239,17 @@ pub struct ColumnarBuffer<C> {
     columns: Vec<(u16, C)>,
 }
 
-/// A buffer for a single column intended to be used together with [`ColumnarBuffer`].
+/// Access a safe view of the column buffer.
+///
+/// After a fetch operation buffers may only partially be filled with data, the rest of the buffer
+/// may contain uninitialized values. Also we must not permit any operation which would invalidate
+/// the addresses of the buffer. To make reading buffer contents after a fetch safe,
+/// [`ColumnBuffer`]s implement this trait to offer safe views.
 ///
 /// # Safety
 ///
 /// Views must not allow access to uninitialized / invalid rows.
-pub unsafe trait ColumnBuffer: CDataMut {
+pub unsafe trait ColumnBufferView {
     /// Immutable view on the column data. Used in safe abstractions. User must not be able to
     /// access uninitialized or invalid memory of the buffer through this interface.
     type View<'a>
@@ -254,10 +261,19 @@ pub unsafe trait ColumnBuffer: CDataMut {
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element.
     fn view(&self, valid_rows: usize) -> Self::View<'_>;
+}
 
-    // /// Fills the column with the default representation of values, between `from` and `to` index.
-    // fn fill_default(&mut self, from: usize, to: usize);
-
+/// A buffer for a single column intended to be used together with [`ColumnarBuffer`].
+///
+/// # Safety
+///
+/// Implementations must ensure that:
+///
+/// * Capacity must be correctly reported otherwise data may be written outside its bounds.
+/// * truncation must be correctly reported. Code which reuses the same column buffer for reading
+///   and inserting may rely on this in order to avoid passing values indicators of truncated values
+///   in bulk insertions. This could lead to out of bounds memory access.
+pub unsafe trait ColumnBuffer: CDataMut {
     /// Current capacity of the column
     fn capacity(&self) -> usize;
 
@@ -269,9 +285,9 @@ pub unsafe trait ColumnBuffer: CDataMut {
     fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator>;
 }
 
-unsafe impl<T> ColumnBuffer for WithDataType<T>
+unsafe impl<T> ColumnBufferView for WithDataType<T>
 where
-    T: ColumnBuffer,
+    T: ColumnBufferView,
 {
     type View<'a>
         = T::View<'a>
@@ -281,7 +297,12 @@ where
     fn view(&self, valid_rows: usize) -> T::View<'_> {
         self.value.view(valid_rows)
     }
+}
 
+unsafe impl<T> ColumnBuffer for WithDataType<T>
+where
+    T: ColumnBuffer,
+{
     fn capacity(&self) -> usize {
         self.value.capacity()
     }
@@ -522,18 +543,23 @@ unsafe impl<T> ColumnBuffer for Vec<T>
 where
     T: Pod,
 {
-    type View<'a> = &'a [T];
-
-    fn view(&self, valid_rows: usize) -> &[T] {
-        &self[..valid_rows]
-    }
-
     fn capacity(&self) -> usize {
         self.len()
     }
 
     fn has_truncated_values(&self, _num_rows: usize) -> Option<Indicator> {
         None
+    }
+}
+
+unsafe impl<T> ColumnBufferView for Vec<T>
+where
+    T: Pod,
+{
+    type View<'a> = &'a [T];
+
+    fn view(&self, valid_rows: usize) -> &[T] {
+        &self[..valid_rows]
     }
 }
 
