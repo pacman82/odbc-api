@@ -1,6 +1,6 @@
 use crate::{
     DataType, Error,
-    buffers::Resize,
+    buffers::{Resize, columnar::ColumnBufferView},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{
@@ -325,19 +325,10 @@ impl WCharColumn {
     }
 }
 
-unsafe impl<C: 'static> ColumnBuffer for TextColumn<C>
+unsafe impl<C> ColumnBuffer for TextColumn<C>
 where
     TextColumn<C>: CDataMut + HasDataType,
 {
-    type View<'a> = TextColumnView<'a, C>;
-
-    fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
-        TextColumnView {
-            num_rows: valid_rows,
-            col: self,
-        }
-    }
-
     /// Maximum number of text strings this column may hold.
     fn capacity(&self) -> usize {
         self.indicators.len()
@@ -353,6 +344,17 @@ where
                 let indicator = Indicator::from_isize(indicator);
                 indicator.is_truncated(max_bin_length).then_some(indicator)
             })
+    }
+}
+
+unsafe impl<C: 'static> ColumnBufferView for TextColumn<C> {
+    type View<'a> = TextColumnView<'a, C>;
+
+    fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
+        TextColumnView {
+            num_rows: valid_rows,
+            col: self,
+        }
     }
 }
 
