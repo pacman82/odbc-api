@@ -37,7 +37,7 @@ pub use self::{
     any_buffer::{AnyBuffer, AnySlice, AnySliceMut, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
     column_with_indicator::{NullableSlice, NullableSliceMut},
-    columnar::{ColumnBuffer, ColumnarBuffer, Resize, TextRowSet},
+    columnar::{ColumnBuffer, ColumnarBuffer, DynColumnBuffer, Resize, TextRowSet},
     description::BufferDesc,
     indicator::Indicator,
     item::Item,
