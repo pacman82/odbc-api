@@ -3,6 +3,37 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [26.0.0](https://github.com/pacman82/odbc-api/compare/25.0.0...26.0.0) - 2026-05-17
+
+### 🚀 Features
+
+- [**breaking**] Introduce ColumnarDynBuffer
+
+  This buffer is intended to replace ColumnarAnyBuffer
+
+- [**breaking**] Introduce ColumnarDynBuffer
+
+  Renamed DynColumnBuffer to AnyColumnBuffer in the process
+
+- [**breaking**] BinColumnView is now BinColumnSlice
+- [**breaking**] TextColumnView is now TextColumnSlice
+- [**breaking**] Rename ColumnBufferView to Slice
+- ColumnarBuffer can now hold `Box<dyn DynColumnBuffer>`
+
+  `DynColumnBuffer` is intended to replace `AnyColumnBuffer` and exchange
+  the visitor pattern with a strategy based approach open for extension.
+
+- [**breaking**] Extracted trait `ColumnBufferView` from trait `ColumnBuffer`
+
+  This has been done in order to allow `ColumnBuffer` to be Object safe
+  and support `ColumnarBuffer`s of &dyn ColumnBuffer's
+
+
+
+### 📚 Documentation
+
+- Fix broken links
+
 
 ## [25.0.0](https://github.com/pacman82/odbc-api/compare/v24.1.1...v25.0.0) - 2026-04-21)
 
