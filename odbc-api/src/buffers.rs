@@ -35,7 +35,7 @@ mod text_column;
 
 pub use self::{
     any_buffer::{AnyBuffer, AnySlice, AnySliceMut, ColumnarAnyBuffer},
-    bin_column::{BinColumn, BinColumnIt, BinColumnSliceMut, BinColumnView},
+    bin_column::{BinColumn, BinColumnIt, BinColumnSlice, BinColumnSliceMut},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnarBuffer, DynColumnBuffer, Resize, TextRowSet},
     description::BufferDesc,
@@ -43,6 +43,6 @@ pub use self::{
     item::Item,
     row_vec::{FetchRow, FetchRowMember, RowVec},
     text_column::{
-        CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnSlice, WCharColumn,
+        CharColumn, TextColumn, TextColumnIt, TextColumnSlice, TextColumnSliceMut, WCharColumn,
     },
 };

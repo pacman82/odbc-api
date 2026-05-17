@@ -149,8 +149,8 @@ impl BinColumn {
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element. It will panic however if `row_index` is larger or equal
     /// to the maximum number of elements in the buffer.
-    pub fn view(&self, num_rows: usize) -> BinColumnView<'_> {
-        BinColumnView {
+    pub fn view(&self, num_rows: usize) -> BinColumnSlice<'_> {
+        BinColumnSlice {
             num_rows,
             col: self,
         }
@@ -336,12 +336,12 @@ impl BinColumnSliceMut<'_> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct BinColumnView<'c> {
+pub struct BinColumnSlice<'c> {
     num_rows: usize,
     col: &'c BinColumn,
 }
 
-impl<'c> BinColumnView<'c> {
+impl<'c> BinColumnSlice<'c> {
     /// The number of valid elements in the text column.
     pub fn len(&self) -> usize {
         self.num_rows

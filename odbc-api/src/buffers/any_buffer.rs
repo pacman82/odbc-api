@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
+    BinColumn, BinColumnSlice, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
     NullableSlice, NullableSliceMut, TextColumn, TextColumnSlice, WCharColumn,
     bin_column::BinColumnSliceMut,
     column_with_indicator::{
@@ -325,7 +325,7 @@ pub enum AnySlice<'a> {
     Text(TextColumnSlice<'a, u8>),
     /// Nullable character data encoded in UTF-16.
     WText(TextColumnSlice<'a, u16>),
-    Binary(BinColumnView<'a>),
+    Binary(BinColumnSlice<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
     Timestamp(&'a [Timestamp]),
@@ -375,7 +375,7 @@ impl<'a> AnySlice<'a> {
 
     /// This method is useful if you expect the variant to be [`AnySlice::Binary`]. It allows you to
     /// unwrap the inner column view without explictly matching it.
-    pub fn as_bin_view(self) -> Option<BinColumnView<'a>> {
+    pub fn as_bin_view(self) -> Option<BinColumnSlice<'a>> {
         if let Self::Binary(view) = self {
             Some(view)
         } else {
