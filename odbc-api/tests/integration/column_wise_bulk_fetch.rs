@@ -1,6 +1,9 @@
 use odbc_api::{
     ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, ResultSetMetadata as _,
-    buffers::{AnySlice, BufferDesc, ColumnarAnyBuffer, Item, TextRowSet},
+    buffers::{
+        AnySlice, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, DynColumnBuffer, Item, TextColumn,
+        TextRowSet,
+    },
     sys::{Date, NULL_DATA, Numeric, Time, Timestamp},
 };
 
@@ -45,6 +48,38 @@ fn text_row_set(profile: &Profile) {
     let actual = cursor_to_string(cursor);
     let expected = "Interstellar,NULL\n2001: A Space Odyssey,1968\nJurassic Park,1993";
     assert_eq!(expected, actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn dyn_text_column(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .values_by_column(&[&[Some("Hello, World!")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let batch_size = 5;
+    let max_str_len = 256;
+    let column_buffer: Box<dyn DynColumnBuffer> =
+        Box::new(TextColumn::<u8>::new(batch_size, max_str_len));
+    let buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0);
+
+    let actual = column.of::<TextColumn<u8>>().unwrap().get(0);
+    assert_eq!(Some(b"Hello, World!".as_slice()), actual);
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

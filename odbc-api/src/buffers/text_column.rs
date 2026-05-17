@@ -13,7 +13,7 @@ use super::{ColumnBuffer, Indicator};
 
 use log::trace;
 use odbc_sys::{CDataType, NULL_DATA};
-use std::{cmp::min, ffi::c_void, mem::size_of, num::NonZeroUsize, panic};
+use std::{any::Any, cmp::min, ffi::c_void, mem::size_of, num::NonZeroUsize, panic};
 use widestring::U16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
@@ -327,7 +327,7 @@ impl WCharColumn {
 
 unsafe impl<C> ColumnBuffer for TextColumn<C>
 where
-    TextColumn<C>: CDataMut + HasDataType,
+    TextColumn<C>: CDataMut + HasDataType + Any,
 {
     /// Maximum number of text strings this column may hold.
     fn capacity(&self) -> usize {
