@@ -1,6 +1,7 @@
+use super::{ColumnBuffer, Indicator, Resize, Slice};
+
 use crate::{
     DataType, Error,
-    buffers::{Indicator, columnar::Resize},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, HasDataType, Statement, StatementRef},
@@ -102,23 +103,6 @@ impl BinColumn {
                 Some(length)
             }
         }
-    }
-
-    /// `Some` if any value is truncated in the range [0, num_rows).
-    ///
-    /// After fetching data we may want to know if any value has been truncated due to the buffer
-    /// not being able to hold elements of that size. This method checks the indicator buffer
-    /// element wise and reports one indicator which indicates a size large than the maximum element
-    /// size, if it exits.
-    pub fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
-        self.indicators
-            .iter()
-            .copied()
-            .take(num_rows)
-            .find_map(|indicator| {
-                let indicator = Indicator::from_isize(indicator);
-                indicator.is_truncated(self.max_len).then_some(indicator)
-            })
     }
 
     /// Changes the maximum element length the buffer can hold. This operation is useful if you find
@@ -269,11 +253,6 @@ impl BinColumn {
             self.indicators[index] = NULL_DATA;
         }
     }
-
-    /// Maximum number of elements this buffer can hold.
-    pub fn capacity(&self) -> usize {
-        self.indicators.len()
-    }
 }
 
 unsafe impl<'a> BoundInputSlice<'a> for BinColumn {
@@ -376,6 +355,17 @@ impl<'c> BinColumnSlice<'c> {
     }
 }
 
+unsafe impl Slice for BinColumn {
+    type Slice<'a> = BinColumnSlice<'a>;
+
+    fn slice(&self, valid_rows: usize) -> Self::Slice<'_> {
+        BinColumnSlice {
+            num_rows: valid_rows,
+            col: self,
+        }
+    }
+}
+
 /// Iterator over a binary column. See [`crate::buffers::BinColumn`]
 #[derive(Debug)]
 pub struct BinColumnIt<'c> {
@@ -448,11 +438,28 @@ impl Resize for BinColumn {
     }
 }
 
+unsafe impl ColumnBuffer for BinColumn {
+    fn capacity(&self) -> usize {
+        self.indicators.len()
+    }
+
+    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
+        self.indicators
+            .iter()
+            .copied()
+            .take(num_rows)
+            .find_map(|indicator| {
+                let indicator = Indicator::from_isize(indicator);
+                indicator.is_truncated(self.max_len).then_some(indicator)
+            })
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{buffers::columnar::Resize, error::TooLargeBufferSize};
+    use crate::error::TooLargeBufferSize;
 
-    use super::BinColumn;
+    use super::{BinColumn, Resize};
 
     #[test]
     #[ignore = "On windows this tests does cause containerized linux and WSL to allocate all \

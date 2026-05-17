@@ -1,17 +1,83 @@
-use super::{ColumnBuffer, Indicator, Slice};
+use super::{
+    BinColumn, BinColumnSlice, BufferDesc, ColumnBuffer, ColumnarBuffer, Indicator, NullableSlice,
+    Slice, TextColumn, TextColumnSlice, column_with_indicator::ColumnWithIndicator,
+};
 
 use crate::{
-    buffers::ColumnarBuffer,
+    Error,
+    fixed_sized::Pod,
     handles::{CData, CDataMut},
 };
 
-use std::{any::Any, ffi::c_void};
+use std::{any::Any, collections::HashSet, ffi::c_void};
 
 /// Columnar buffer with dynamic column types decided at runtime.
 ///
 /// Go to buffer implementation for this crate if fetching data. If you have no reason to use
 /// something else use this.
 pub type ColumnarDynBuffer = ColumnarBuffer<BoxColumnBuffer>;
+
+impl ColumnarDynBuffer {
+    /// Allocates a [`ColumnarDynBuffer`] fitting the buffer descriptions.
+    pub fn from_descs(capacity: usize, descs: impl IntoIterator<Item = BufferDesc>) -> Self {
+        let mut column_index = 0;
+        let columns = descs
+            .into_iter()
+            .map(move |desc| {
+                let buffer = desc.column_buffer(capacity);
+                column_index += 1;
+                (column_index, buffer)
+            })
+            .collect();
+        unsafe { ColumnarBuffer::new_unchecked(capacity, columns) }
+    }
+
+    /// Allocates a [`ColumnarDynBuffer`] fitting the buffer descriptions. If not enough memory is
+    /// available to allocate the buffers this function fails with
+    /// [`Error::TooLargeColumnBufferSize`]. This function is slower than [`Self::from_descs`] which
+    /// would just panic if not enough memory is available for allocation.
+    pub fn try_from_descs(
+        capacity: usize,
+        descs: impl IntoIterator<Item = BufferDesc>,
+    ) -> Result<Self, Error> {
+        let mut column_index = 0;
+        let columns = descs
+            .into_iter()
+            .map(move |desc| {
+                let buffer = desc
+                    .try_column_buffer(capacity)
+                    .map_err(|source| source.add_context(column_index))?;
+                column_index += 1;
+                Ok::<_, Error>((column_index, buffer))
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(unsafe { ColumnarBuffer::new_unchecked(capacity, columns) })
+    }
+
+    /// Allows you to pass the buffer descriptions together with a one based column index referring
+    /// the column, the buffer is supposed to bind to. This allows you also to ignore columns in a
+    /// result set, by not binding them at all. There is no restriction on the order of column
+    /// indices passed, but the function will panic, if the indices are not unique.
+    pub fn from_descs_and_indices(
+        max_rows: usize,
+        description: impl Iterator<Item = (u16, BufferDesc)>,
+    ) -> Self {
+        let columns: Vec<_> = description
+            .map(|(col_index, buffer_desc)| (col_index, buffer_desc.column_buffer(max_rows)))
+            .collect();
+
+        // Assert uniqueness of indices
+        let mut indices = HashSet::new();
+        if columns
+            .iter()
+            .any(move |&(col_index, _)| !indices.insert(col_index))
+        {
+            panic!("Column indices must be unique.")
+        }
+
+        ColumnarBuffer::new(columns)
+    }
+}
 
 /// Heap allocated column buffer with dynamic type. Intended to be used as a type parameter for
 /// [`ColumnarBuffer`] to enable columns of different types only known at runtime to be bound to the
@@ -21,9 +87,14 @@ pub type BoxColumnBuffer = Box<dyn AnyColumnBuffer>;
 /// A [`ColumnBuffer`] that additionally carries runtime type information, so a trait object can
 /// be downcast to the concrete buffer type it was constructed from. Intended for [`ColumnarBuffer`]
 /// with heterogenous columns, i.e. integer and text columns.
-pub trait AnyColumnBuffer: ColumnBuffer + Any {}
+///
+/// This trait also inherits from`Send` so we can use it in concurrent bulk fetches using double
+/// buffering in multiple threads. Currently there are no buffer implementations which are not
+/// `Send`. So a distinction between `Send` and non-`Send` buffers is assumed to cause more friction
+/// rather than being helpful.
+pub trait AnyColumnBuffer: ColumnBuffer + Any + Send {}
 
-impl<T> AnyColumnBuffer for T where T: ColumnBuffer + Any {}
+impl<T> AnyColumnBuffer for T where T: ColumnBuffer + Any + Send {}
 
 unsafe impl CData for Box<dyn AnyColumnBuffer> {
     fn cdata_type(&self) -> odbc_sys::CDataType {
@@ -76,18 +147,75 @@ unsafe impl Slice for Box<dyn AnyColumnBuffer> {
 
 /// Enables reading the valid contents of a column buffer, while it is bound to a block cursor
 /// as [`Box<dyn AnyColumnBuffer>`].
+#[derive(Clone, Copy)]
 pub struct AnyColumnBufferSlice<'a> {
-    buffer: &'a dyn Any,
+    buffer: &'a BoxColumnBuffer,
     valid_rows: usize,
 }
 
 impl<'a> AnyColumnBufferSlice<'a> {
-    pub fn of<T>(&self) -> Option<T::Slice<'_>>
+    /// Fetch the associated slice if we know the underlying buffer to be of type `T`.
+    pub fn of<T>(self) -> Option<T::Slice<'a>>
     where
         T: Slice + 'static,
     {
-        let buffer: &dyn Any = self.buffer;
+        let buffer: &dyn Any = self.buffer.as_ref();
         let buffer = buffer.downcast_ref::<T>()?;
         Some(T::slice(buffer, self.valid_rows))
+    }
+
+    /// Use this if you know the underlying buffer holds narrow (e.g. UTF-8) character data and you
+    /// want to read it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`TextColumn`] with `u8` values. Same as
+    /// `Self::of::<TextColumn<u8>>`.
+    pub fn as_text(self) -> Option<TextColumnSlice<'a, u8>> {
+        self.of::<TextColumn<u8>>()
+    }
+
+    /// Use this if you know the underlying buffer holds wide (i.e. UTF-16) character data and you
+    /// want to read it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`TextColumn`] with `u16` values. Same as
+    /// `Self::of::<TextColumn<u16>>`.
+    pub fn as_wide_text(self) -> Option<TextColumnSlice<'a, u16>> {
+        self.of::<TextColumn<u16>>()
+    }
+
+    /// Use this if you know the underlying buffer holds binary data and you want to read it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`BinColumn`]. Same as
+    /// `Self::of::<BinColumn>`.
+    pub fn as_binary(self) -> Option<BinColumnSlice<'a>> {
+        self.of::<BinColumn>()
+    }
+
+    /// Use this if you know the underlying buffer to hold **non-nullable** data of type `T`.
+    pub fn as_slice<T>(self) -> Option<&'a [T]>
+    where
+        T: Pod,
+    {
+        self.of::<Vec<T>>()
+    }
+
+    /// Use this if you know the underlying buffer to hold **nullable** data of type `T`.
+    pub fn as_nullable_slice<T>(self) -> Option<NullableSlice<'a, T>>
+    where
+        T: Pod,
+    {
+        self.of::<ColumnWithIndicator<T>>()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::{BufferDesc, ColumnarDynBuffer};
+
+    #[test]
+    #[should_panic(expected = "Column indices must be unique.")]
+    fn assert_unique_column_indices() {
+        let bd = BufferDesc::I32 { nullable: false };
+        ColumnarDynBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 }
