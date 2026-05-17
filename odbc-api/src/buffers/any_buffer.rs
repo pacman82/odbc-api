@@ -4,7 +4,7 @@ use odbc_sys::{CDataType, Date, Numeric, Time, Timestamp};
 
 use crate::{
     Bit, Error,
-    buffers::columnar::{ColumnBufferView, Resize},
+    buffers::columnar::{Resize, Slice},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{CData, CDataMut, StatementRef},
@@ -576,14 +576,14 @@ unsafe impl ColumnBuffer for AnyBuffer {
     }
 }
 
-unsafe impl ColumnBufferView for AnyBuffer {
-    type View<'a> = AnySlice<'a>;
+unsafe impl Slice for AnyBuffer {
+    type Slice<'a> = AnySlice<'a>;
 
-    fn view(&self, valid_rows: usize) -> AnySlice<'_> {
+    fn slice(&self, valid_rows: usize) -> AnySlice<'_> {
         match self {
             AnyBuffer::Binary(col) => AnySlice::Binary(col.view(valid_rows)),
-            AnyBuffer::Text(col) => AnySlice::Text(col.view(valid_rows)),
-            AnyBuffer::WText(col) => AnySlice::WText(col.view(valid_rows)),
+            AnyBuffer::Text(col) => AnySlice::Text(col.slice(valid_rows)),
+            AnyBuffer::WText(col) => AnySlice::WText(col.slice(valid_rows)),
             AnyBuffer::Date(col) => AnySlice::Date(&col[0..valid_rows]),
             AnyBuffer::Time(col) => AnySlice::Time(&col[0..valid_rows]),
             AnyBuffer::Timestamp(col) => AnySlice::Timestamp(&col[0..valid_rows]),
@@ -619,9 +619,7 @@ impl Resize for AnyBuffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffers::{
-        AnySlice, AnySliceMut, ColumnBuffer as _, Resize, columnar::ColumnBufferView as _,
-    };
+    use crate::buffers::{AnySlice, AnySliceMut, ColumnBuffer as _, Resize, columnar::Slice as _};
 
     use super::AnyBuffer;
 
@@ -635,7 +633,7 @@ mod tests {
 
         // Then the buffer should still have the same values in the first two positions and the
         // remaining positions should be filled with default values (0 for i32)
-        assert_eq!(buffer.view(4).as_slice(), Some([1i32, 2, 0, 0].as_slice()));
+        assert_eq!(buffer.slice(4).as_slice(), Some([1i32, 2, 0, 0].as_slice()));
         // And the capacity should be 4
         assert_eq!(buffer.capacity(), 4);
     }
@@ -644,7 +642,7 @@ mod tests {
     fn slice_should_only_contain_part_of_the_buffer() {
         let buffer = AnyBuffer::I32(vec![1, 2, 3]);
 
-        let view = buffer.view(2);
+        let view = buffer.slice(2);
 
         assert_eq!(Some([1, 2].as_slice()), view.as_slice::<i32>());
     }

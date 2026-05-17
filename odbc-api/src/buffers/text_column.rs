@@ -1,6 +1,6 @@
 use crate::{
     DataType, Error,
-    buffers::{Resize, columnar::ColumnBufferView},
+    buffers::{Resize, columnar::Slice},
     columnar_bulk_inserter::BoundInputSlice,
     error::TooLargeBufferSize,
     handles::{
@@ -347,10 +347,10 @@ where
     }
 }
 
-unsafe impl<C: 'static> ColumnBufferView for TextColumn<C> {
-    type View<'a> = TextColumnView<'a, C>;
+unsafe impl<C: 'static> Slice for TextColumn<C> {
+    type Slice<'a> = TextColumnView<'a, C>;
 
-    fn view(&self, valid_rows: usize) -> TextColumnView<'_, C> {
+    fn slice(&self, valid_rows: usize) -> TextColumnView<'_, C> {
         TextColumnView {
             num_rows: valid_rows,
             col: self,

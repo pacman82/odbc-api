@@ -70,7 +70,7 @@ impl<C: ColumnBuffer> ColumnarBuffer<C> {
     }
 }
 
-impl<C: ColumnBufferView> ColumnarBuffer<C> {
+impl<C: Slice> ColumnarBuffer<C> {
     /// Use this method to gain read access to the actual column data.
     ///
     /// # Parameters
@@ -81,8 +81,8 @@ impl<C: ColumnBufferView> ColumnarBuffer<C> {
     ///   columns may simply be ignored. That being said, if every column of the output is bound in
     ///   the buffer, in the same order in which they are enumerated in the result set, the
     ///   relationship between column index and buffer index is `buffer_index = column_index - 1`.
-    pub fn column(&self, buffer_index: usize) -> C::View<'_> {
-        self.columns[buffer_index].1.view(*self.num_rows)
+    pub fn column(&self, buffer_index: usize) -> C::Slice<'_> {
+        self.columns[buffer_index].1.slice(*self.num_rows)
     }
 }
 
@@ -251,10 +251,10 @@ pub struct ColumnarBuffer<C> {
 /// # Safety
 ///
 /// Views must not allow access to uninitialized / invalid rows.
-pub unsafe trait ColumnBufferView {
+pub unsafe trait Slice {
     /// Immutable view on the column data. Used in safe abstractions. User must not be able to
     /// access uninitialized or invalid memory of the buffer through this interface.
-    type View<'a>
+    type Slice<'a>
     where
         Self: 'a;
 
@@ -262,7 +262,7 @@ pub unsafe trait ColumnBufferView {
     /// column buffer does not know how many elements were in the last row group, and therefore can
     /// not guarantee the accessed element to be valid and in a defined state. It also can not panic
     /// on accessing an undefined element.
-    fn view(&self, valid_rows: usize) -> Self::View<'_>;
+    fn slice(&self, valid_rows: usize) -> Self::Slice<'_>;
 }
 
 /// A buffer for a single column intended to be used together with [`ColumnarBuffer`].
@@ -296,17 +296,17 @@ pub trait DynColumnBuffer: ColumnBuffer + Any {}
 
 impl<T> DynColumnBuffer for T where T: ColumnBuffer + Any {}
 
-unsafe impl<T> ColumnBufferView for WithDataType<T>
+unsafe impl<T> Slice for WithDataType<T>
 where
-    T: ColumnBufferView,
+    T: Slice,
 {
-    type View<'a>
-        = T::View<'a>
+    type Slice<'a>
+        = T::Slice<'a>
     where
         T: 'a;
 
-    fn view(&self, valid_rows: usize) -> T::View<'_> {
-        self.value.view(valid_rows)
+    fn slice(&self, valid_rows: usize) -> T::Slice<'_> {
+        self.value.slice(valid_rows)
     }
 }
 
@@ -376,10 +376,10 @@ unsafe impl ColumnBuffer for Box<dyn DynColumnBuffer> {
     }
 }
 
-unsafe impl ColumnBufferView for Box<dyn DynColumnBuffer> {
-    type View<'a> = DynColumnBufferView<'a>;
+unsafe impl Slice for Box<dyn DynColumnBuffer> {
+    type Slice<'a> = DynColumnBufferView<'a>;
 
-    fn view(&self, valid_rows: usize) -> DynColumnBufferView<'_> {
+    fn slice(&self, valid_rows: usize) -> DynColumnBufferView<'_> {
         DynColumnBufferView {
             buffer: self,
             valid_rows,
@@ -395,13 +395,13 @@ pub struct DynColumnBufferView<'a> {
 }
 
 impl<'a> DynColumnBufferView<'a> {
-    pub fn of<T>(&self) -> Option<T::View<'_>>
+    pub fn of<T>(&self) -> Option<T::Slice<'_>>
     where
-        T: DynColumnBuffer + ColumnBufferView,
+        T: DynColumnBuffer + Slice,
     {
         let buffer: &dyn Any = self.buffer.as_ref();
         let buffer = buffer.downcast_ref::<T>()?;
-        Some(T::view(buffer, self.valid_rows))
+        Some(T::slice(buffer, self.valid_rows))
     }
 }
 
@@ -630,13 +630,13 @@ where
     }
 }
 
-unsafe impl<T> ColumnBufferView for Vec<T>
+unsafe impl<T> Slice for Vec<T>
 where
     T: Pod,
 {
-    type View<'a> = &'a [T];
+    type Slice<'a> = &'a [T];
 
-    fn view(&self, valid_rows: usize) -> &[T] {
+    fn slice(&self, valid_rows: usize) -> &[T] {
         &self[..valid_rows]
     }
 }
