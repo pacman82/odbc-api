@@ -348,10 +348,10 @@ where
 }
 
 unsafe impl<C: 'static> Slice for TextColumn<C> {
-    type Slice<'a> = TextColumnView<'a, C>;
+    type Slice<'a> = TextColumnSlice<'a, C>;
 
-    fn slice(&self, valid_rows: usize) -> TextColumnView<'_, C> {
-        TextColumnView {
+    fn slice(&self, valid_rows: usize) -> TextColumnSlice<'_, C> {
+        TextColumnSlice {
             num_rows: valid_rows,
             col: self,
         }
@@ -367,12 +367,12 @@ unsafe impl<C: 'static> Slice for TextColumn<C> {
 /// of valid rows, in addition to holding a reference to the buffer, in order to guarantee, that
 /// every element accessed through it, is valid.
 #[derive(Debug, Clone, Copy)]
-pub struct TextColumnView<'c, C> {
+pub struct TextColumnSlice<'c, C> {
     num_rows: usize,
     col: &'c TextColumn<C>,
 }
 
-impl<'c, C> TextColumnView<'c, C> {
+impl<'c, C> TextColumnSlice<'c, C> {
     /// The number of valid elements in the text column.
     pub fn len(&self) -> usize {
         self.num_rows
