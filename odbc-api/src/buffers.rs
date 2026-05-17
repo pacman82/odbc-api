@@ -28,6 +28,7 @@ mod bin_column;
 mod column_with_indicator;
 mod columnar;
 mod description;
+mod dyn_column_buffer;
 mod indicator;
 mod item;
 mod row_vec;
@@ -37,8 +38,11 @@ pub use self::{
     any_buffer::{AnyBuffer, AnySlice, AnySliceMut, ColumnarAnyBuffer},
     bin_column::{BinColumn, BinColumnIt, BinColumnSlice, BinColumnSliceMut},
     column_with_indicator::{NullableSlice, NullableSliceMut},
-    columnar::{ColumnBuffer, ColumnarBuffer, DynColumnBuffer, Resize, TextRowSet},
+    columnar::{ColumnBuffer, ColumnarBuffer, Resize, Slice, TextRowSet},
     description::BufferDesc,
+    dyn_column_buffer::{
+        AnyColumnBuffer, AnyColumnBufferSlice, BoxColumnBuffer, ColumnarDynBuffer,
+    },
     indicator::Indicator,
     item::Item,
     row_vec::{FetchRow, FetchRowMember, RowVec},
