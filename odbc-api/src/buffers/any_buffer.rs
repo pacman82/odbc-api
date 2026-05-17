@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     BinColumn, BinColumnView, BufferDesc, CharColumn, ColumnarBuffer, Indicator, Item,
-    NullableSlice, NullableSliceMut, TextColumn, TextColumnView, WCharColumn,
+    NullableSlice, NullableSliceMut, TextColumn, TextColumnSlice, WCharColumn,
     bin_column::BinColumnSliceMut,
     column_with_indicator::{
         OptBitColumn, OptDateColumn, OptF32Column, OptF64Column, OptI8Column, OptI16Column,
@@ -322,9 +322,9 @@ impl ColumnarAnyBuffer {
 #[derive(Debug, Clone, Copy)]
 pub enum AnySlice<'a> {
     /// Nullable character data in the system encoding.
-    Text(TextColumnView<'a, u8>),
+    Text(TextColumnSlice<'a, u8>),
     /// Nullable character data encoded in UTF-16.
-    WText(TextColumnView<'a, u16>),
+    WText(TextColumnSlice<'a, u16>),
     Binary(BinColumnView<'a>),
     Date(&'a [Date]),
     Time(&'a [Time]),
@@ -355,7 +355,7 @@ pub enum AnySlice<'a> {
 impl<'a> AnySlice<'a> {
     /// This method is useful if you expect the variant to be [`AnySlice::Text`]. It allows you to
     /// unwrap the inner column view without explictly matching it.
-    pub fn as_text_view(self) -> Option<TextColumnView<'a, u8>> {
+    pub fn as_text_view(self) -> Option<TextColumnSlice<'a, u8>> {
         if let Self::Text(view) = self {
             Some(view)
         } else {
@@ -365,7 +365,7 @@ impl<'a> AnySlice<'a> {
 
     /// This method is useful if you expect the variant to be [`AnySlice::WText`]. It allows you to
     /// unwrap the inner column view without explictly matching it.
-    pub fn as_w_text_view(self) -> Option<TextColumnView<'a, u16>> {
+    pub fn as_w_text_view(self) -> Option<TextColumnSlice<'a, u16>> {
         if let Self::WText(view) = self {
             Some(view)
         } else {

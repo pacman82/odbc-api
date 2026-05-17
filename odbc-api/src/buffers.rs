@@ -43,6 +43,6 @@ pub use self::{
     item::Item,
     row_vec::{FetchRow, FetchRowMember, RowVec},
     text_column::{
-        CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnView, WCharColumn,
+        CharColumn, TextColumn, TextColumnIt, TextColumnSliceMut, TextColumnSlice, WCharColumn,
     },
 };
