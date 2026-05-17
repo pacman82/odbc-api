@@ -1,7 +1,5 @@
 use std::{
-    any::Any,
     collections::HashSet,
-    ffi::c_void,
     num::NonZeroUsize,
     str::{Utf8Error, from_utf8},
 };
@@ -11,7 +9,7 @@ use crate::{
     columnar_bulk_inserter::BoundInputSlice,
     cursor::TruncationInfo,
     fixed_sized::Pod,
-    handles::{CData, CDataMut, Statement, StatementRef},
+    handles::{CDataMut, Statement, StatementRef},
     parameter::WithDataType,
     result_set_metadata::utf8_display_sizes,
 };
@@ -287,15 +285,6 @@ pub unsafe trait ColumnBuffer: CDataMut {
     fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator>;
 }
 
-/// A [`ColumnBuffer`] that additionally carries runtime type information, so a trait object can
-/// be downcast to the concrete buffer type it was constructed from. Use this as the trait object
-/// type whenever buffers of different concrete types must live in the same collection
-/// (e.g. `Box<dyn DynColumnBuffer>`). For statically-typed use sites prefer the plain
-/// [`ColumnBuffer`] bound, which does not require `'static`.
-pub trait DynColumnBuffer: ColumnBuffer + Any {}
-
-impl<T> DynColumnBuffer for T where T: ColumnBuffer + Any {}
-
 unsafe impl<T> Slice for WithDataType<T>
 where
     T: Slice,
@@ -335,73 +324,6 @@ where
         stmt: StatementRef<'a>,
     ) -> Self::SliceMut {
         unsafe { self.value.as_view_mut(parameter_index, stmt) }
-    }
-}
-
-unsafe impl CData for Box<dyn DynColumnBuffer> {
-    fn cdata_type(&self) -> odbc_sys::CDataType {
-        self.as_ref().cdata_type()
-    }
-
-    fn indicator_ptr(&self) -> *const isize {
-        self.as_ref().indicator_ptr()
-    }
-
-    fn value_ptr(&self) -> *const c_void {
-        self.as_ref().value_ptr()
-    }
-
-    fn buffer_length(&self) -> isize {
-        self.as_ref().buffer_length()
-    }
-}
-
-unsafe impl CDataMut for Box<dyn DynColumnBuffer> {
-    fn mut_indicator_ptr(&mut self) -> *mut isize {
-        self.as_mut().mut_indicator_ptr()
-    }
-
-    fn mut_value_ptr(&mut self) -> *mut c_void {
-        self.as_mut().mut_value_ptr()
-    }
-}
-
-unsafe impl ColumnBuffer for Box<dyn DynColumnBuffer> {
-    fn capacity(&self) -> usize {
-        self.as_ref().capacity()
-    }
-
-    fn has_truncated_values(&self, num_rows: usize) -> Option<Indicator> {
-        self.as_ref().has_truncated_values(num_rows)
-    }
-}
-
-unsafe impl Slice for Box<dyn DynColumnBuffer> {
-    type Slice<'a> = DynColumnBufferView<'a>;
-
-    fn slice(&self, valid_rows: usize) -> DynColumnBufferView<'_> {
-        DynColumnBufferView {
-            buffer: self,
-            valid_rows,
-        }
-    }
-}
-
-/// A view which allows to savely read the valid contents of a column buffer, while it is bound to a
-/// block cursor as `Box<dyn DynColumnBuffer>`.
-pub struct DynColumnBufferView<'a> {
-    buffer: &'a Box<dyn DynColumnBuffer>,
-    valid_rows: usize,
-}
-
-impl<'a> DynColumnBufferView<'a> {
-    pub fn of<T>(&self) -> Option<T::Slice<'_>>
-    where
-        T: DynColumnBuffer + Slice,
-    {
-        let buffer: &dyn Any = self.buffer.as_ref();
-        let buffer = buffer.downcast_ref::<T>()?;
-        Some(T::slice(buffer, self.valid_rows))
     }
 }
 

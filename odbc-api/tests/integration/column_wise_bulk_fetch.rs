@@ -1,7 +1,7 @@
 use odbc_api::{
     ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, ResultSetMetadata as _,
     buffers::{
-        AnySlice, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, DynColumnBuffer, Item, TextColumn,
+        AnyColumnBuffer, AnySlice, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Item, TextColumn,
         TextRowSet,
     },
     sys::{Date, NULL_DATA, Numeric, Time, Timestamp},
@@ -68,7 +68,7 @@ fn dyn_text_column(profile: &Profile) {
     // When
     let batch_size = 5;
     let max_str_len = 256;
-    let column_buffer: Box<dyn DynColumnBuffer> =
+    let column_buffer: Box<dyn AnyColumnBuffer> =
         Box::new(TextColumn::<u8>::new(batch_size, max_str_len));
     let buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
