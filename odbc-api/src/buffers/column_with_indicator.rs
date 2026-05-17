@@ -1,5 +1,5 @@
+use super::{ColumnBuffer, Indicator, Resize, Slice};
 use crate::{
-    buffers::Resize,
     fixed_sized::{Bit, Pod},
     handles::{CData, CDataMut},
 };
@@ -66,11 +66,6 @@ where
             indicators: &mut self.indicators[0..n],
             values: &mut self.values[0..n],
         }
-    }
-
-    /// Maximum number elements which the column may hold.
-    pub fn capacity(&self) -> usize {
-        self.indicators.len()
     }
 }
 
@@ -184,6 +179,33 @@ where
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.values.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl<T> ColumnBuffer for ColumnWithIndicator<T>
+where
+    T: Pod,
+{
+    fn capacity(&self) -> usize {
+        self.indicators.len()
+    }
+
+    fn has_truncated_values(&self, _num_rows: usize) -> Option<Indicator> {
+        None
+    }
+}
+
+unsafe impl<T> Slice for ColumnWithIndicator<T>
+where
+    T: Pod,
+{
+    type Slice<'a> = NullableSlice<'a, T>;
+
+    fn slice(&self, valid_rows: usize) -> NullableSlice<'_, T> {
+        NullableSlice {
+            indicators: &self.indicators[0..valid_rows],
+            values: &self.values[0..valid_rows],
+        }
     }
 }
 

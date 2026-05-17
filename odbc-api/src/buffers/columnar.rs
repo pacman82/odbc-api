@@ -600,11 +600,13 @@ where
 mod tests {
 
     use super::Resize;
-    use crate::buffers::{BufferDesc, ColumnarAnyBuffer};
+    use crate::buffers::BufferDesc;
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]
     fn assert_unique_column_indices() {
+        use crate::buffers::ColumnarAnyBuffer;
+
         let bd = BufferDesc::I32 { nullable: false };
         ColumnarAnyBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }

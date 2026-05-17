@@ -1,9 +1,7 @@
 use odbc_api::{
-    ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, ResultSetMetadata as _,
-    buffers::{
-        AnyColumnBuffer, AnySlice, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Item, TextColumn,
-        TextRowSet,
-    },
+    Bit, ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter,
+    ResultSetMetadata as _,
+    buffers::{BufferDesc, ColumnarAnyBuffer, ColumnarDynBuffer, TextRowSet},
     sys::{Date, NULL_DATA, Numeric, Time, Timestamp},
 };
 
@@ -54,7 +52,7 @@ fn text_row_set(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn dyn_text_column(profile: &Profile) {
+fn text(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -67,18 +65,74 @@ fn dyn_text_column(profile: &Profile) {
 
     // When
     let batch_size = 5;
-    let max_str_len = 256;
-    let column_buffer: Box<dyn AnyColumnBuffer> =
-        Box::new(TextColumn::<u8>::new(batch_size, max_str_len));
-    let buffer = ColumnarBuffer::new(vec![(1, column_buffer)]);
+    let buffer = ColumnarDynBuffer::from_descs(batch_size, [BufferDesc::Text { max_str_len: 256 }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
 
     // Then
     let batch = maybe_batch.unwrap();
-    let column = batch.column(0);
+    let actual = batch.column(0).as_text().unwrap().get(0);
 
-    let actual = column.of::<TextColumn<u8>>().unwrap().get(0);
+    assert_eq!(Some(b"Hello, World!".as_slice()), actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn wide_text(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(50)"])
+        .values_by_column(&[&[Some("Hello, World!")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let batch_size = 5;
+    let buffer =
+        ColumnarDynBuffer::from_descs(batch_size, [BufferDesc::WText { max_str_len: 256 }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_wide_text().unwrap().get(0);
+
+    assert!(actual.is_some());
+    let actual = actual.unwrap();
+    assert_eq!("Hello, World!", String::from_utf16(actual).unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bin_from_text(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        // VARBINARY does not exist for every database system. Since this test is about the buffer,
+        // we just use VARCHAR and fetch it as binary rather than text
+        .column_types(&["VARCHAR(50)"])
+        .values_by_column(&[&[Some("Hello, World!")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let batch_size = 5;
+    let buffer = ColumnarDynBuffer::from_descs(batch_size, [BufferDesc::Binary { max_bytes: 256 }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_binary().unwrap().get(0);
     assert_eq!(Some(b"Hello, World!".as_slice()), actual);
 }
 
@@ -87,6 +141,39 @@ fn dyn_text_column(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn time(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TIME"])
+        .values_by_column(&[&[Some("12:34:56")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::Time { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<Time>().unwrap();
+    assert_eq!(
+        Time {
+            hour: 12,
+            minute: 34,
+            second: 56
+        },
+        actual[0]
+    );
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn time_any_buffer(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -131,6 +218,40 @@ fn nullable_time(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::Time { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<Time>().unwrap();
+    assert_eq!(
+        Some(&Time {
+            hour: 12,
+            minute: 34,
+            second: 56
+        }),
+        actual.get(0)
+    );
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn nullable_time_any_buffer(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["TIME"])
+        .values_by_column(&[&[Some("12:34:56"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
     let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Time { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -153,7 +274,358 @@ fn nullable_time(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
+fn f32(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["REAL"])
+        .values_by_column(&[&[Some("12.3")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::F32 { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<f32>().unwrap();
+    assert_eq!(12.3, actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn f32_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["REAL"])
+        .values_by_column(&[&[Some("12.3"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::F32 { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<f32>().unwrap();
+    assert_eq!(Some(&12.3), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i8(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::I8 { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<i8>().unwrap();
+    assert_eq!(42, actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i8_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::I8 { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<i8>().unwrap();
+    assert_eq!(Some(&42), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i16(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::I16 { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<i16>().unwrap();
+    assert_eq!(42, actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i16_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::I16 { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<i16>().unwrap();
+    assert_eq!(Some(&42), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn u8(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::U8 { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<u8>().unwrap();
+    assert_eq!(42, actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn u8_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::U8 { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<u8>().unwrap();
+    assert_eq!(Some(&42), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bit(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["BIT"])
+        .values_by_column(&[&[Some("1")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::Bit { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<Bit>().unwrap();
+    assert_eq!(Bit::from_bool(true), actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bit_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["BIT"])
+        .values_by_column(&[&[Some("1"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::Bit { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<Bit>().unwrap();
+    assert_eq!(Some(&Bit::from_bool(true)), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i64(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::I64 { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_slice::<i64>().unwrap();
+    assert_eq!(42, actual[0]);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn i64_nullable(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER"])
+        .values_by_column(&[&[Some("42"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::I64 { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let actual = batch.column(0).as_nullable_slice::<i64>().unwrap();
+    assert_eq!(Some(&42), actual.get(0));
+    assert_eq!(None, actual.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
 fn date(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DATE"])
+        .values_by_column(&[&[Some("2025-05-23")]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::Date { nullable: false }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_slice::<Date>().unwrap();
+    assert_eq!(
+        Date {
+            year: 2025,
+            month: 5,
+            day: 23
+        },
+        column[0]
+    );
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn date_any_buffecr(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -198,6 +670,40 @@ fn nullable_date(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let maybe_batch = cursor.fetch().unwrap();
+
+    // Then
+    let batch = maybe_batch.unwrap();
+    let column = batch.column(0).as_nullable_slice::<Date>().unwrap();
+    assert_eq!(
+        Some(&Date {
+            year: 2025,
+            month: 5,
+            day: 23
+        }),
+        column.get(0)
+    );
+    assert_eq!(None, column.get(1));
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn nullable_date_any_buffer(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["DATE"])
+        .values_by_column(&[&[Some("2025-05-23"), None]])
+        .build(profile)
+        .unwrap();
+    let query = table.sql_all_ordered_by_id();
+    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
+
+    // When
     let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -220,7 +726,7 @@ fn nullable_date(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // Convert syntax is different
 // #[test_case(SQLITE_3; "SQLite 3")]
-fn varbinary(profile: &Profile) {
+fn from_varbinary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -249,10 +755,10 @@ fn varbinary(profile: &Profile) {
     );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { max_bytes: 10 }, buffer_desc);
-    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
+    let mut col_it = batch.column(0).as_binary().unwrap().iter();
 
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
@@ -264,7 +770,7 @@ fn varbinary(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] // different convert syntax
 // #[test_case(SQLITE_3; "SQLite 3")]
-fn binary(profile: &Profile) {
+fn from_fixed_size_binary(profile: &Profile) {
     // Setup
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -297,10 +803,10 @@ fn binary(profile: &Profile) {
     );
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Binary { max_bytes: 5 }, buffer_desc);
-    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let mut col_it = batch.column(0).as_bin_view().unwrap().iter();
+    let mut col_it = batch.column(0).as_binary().unwrap().iter();
     assert_eq!(Some(&b"Hello"[..]), col_it.next().unwrap());
     assert_eq!(Some(&b"World"[..]), col_it.next().unwrap());
     assert_eq!(Some(None), col_it.next()); // Expecting NULL
@@ -311,7 +817,76 @@ fn binary(profile: &Profile) {
 #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
 #[test_case(SQLITE_3; "SQLite 3")]
-fn timestamp(profile: &Profile) {
+fn datetime_2_into_timestamp(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, _table) = Given::new(&table_name)
+        .column_types(&["DATETIME2(3) NOT NULL"])
+        .build(profile)
+        .unwrap();
+    conn.execute(
+        &format!(
+            "INSERT INTO {table_name} (a) Values \
+        ({{ ts '2021-03-20 15:24:12.12' }}),\
+        ({{ ts '2020-03-20 15:24:12' }}),\
+        ({{ ts '1970-01-01 00:00:00' }})"
+        ),
+        (),
+        None,
+    )
+    .unwrap();
+
+    // Retrieve values
+    let mut cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY Id"), (), None)
+        .unwrap()
+        .unwrap();
+    let data_type = cursor.col_data_type(1).unwrap();
+    assert_eq!(DataType::Timestamp { precision: 3 }, data_type);
+    let buffer_desc = BufferDesc::from_data_type(data_type, false).unwrap();
+    assert_eq!(BufferDesc::Timestamp { nullable: false }, buffer_desc);
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
+    let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
+    let batch = cursor.fetch().unwrap().unwrap();
+    let col = batch.column(0).as_slice().unwrap();
+    assert_eq!(
+        &[
+            Timestamp {
+                year: 2021,
+                month: 3,
+                day: 20,
+                hour: 15,
+                minute: 24,
+                second: 12,
+                fraction: 120_000_000,
+            },
+            Timestamp {
+                year: 2020,
+                month: 3,
+                day: 20,
+                hour: 15,
+                minute: 24,
+                second: 12,
+                fraction: 0,
+            },
+            Timestamp {
+                year: 1970,
+                month: 1,
+                day: 1,
+                hour: 0,
+                minute: 0,
+                second: 0,
+                fraction: 0,
+            }
+        ],
+        col
+    );
+}
+
+/// Bind a columnar buffer to a DATETIME2 column and fetch data.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+// #[test_case(MARIADB; "Maria DB")] No DATEIME2 type
+#[test_case(SQLITE_3; "SQLite 3")]
+fn datetime_2_into_nullable_timestamp(profile: &Profile) {
     let table_name = table_name!();
     let (conn, _table) = Given::new(&table_name)
         .column_types(&["DATETIME2(3)"])
@@ -339,7 +914,7 @@ fn timestamp(profile: &Profile) {
     assert_eq!(DataType::Timestamp { precision: 3 }, data_type);
     let buffer_desc = BufferDesc::from_data_type(data_type, true).unwrap();
     assert_eq!(BufferDesc::Timestamp { nullable: true }, buffer_desc);
-    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(10, iter::once(buffer_desc)).unwrap();
     let mut cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let mut col_it = batch.column(0).as_nullable_slice().unwrap();
@@ -388,7 +963,7 @@ fn timestamp(profile: &Profile) {
 // #[test_case(MARIADB; "Maria DB")]
 // #[test_case(SQLITE_3; "SQLite 3")] Unsupported parameter type
 #[test_case(POSTGRES; "PostgreSQL")]
-fn numeric(profile: &Profile) {
+fn from_numeric_into_nullable_numeric(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -402,14 +977,12 @@ fn numeric(profile: &Profile) {
         .unwrap();
 
     // When
-    let buffer = ColumnarAnyBuffer::from_descs(3, [BufferDesc::Numeric]);
+    let buffer = ColumnarDynBuffer::from_descs(3, [BufferDesc::Numeric]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
 
     // Then
-    let AnySlice::Numeric(numeric) = batch.column(0) else {
-        panic!("Expected numeric column");
-    };
+    let numeric = batch.column(0).as_slice::<Numeric>().unwrap();
     assert_eq!(
         Numeric {
             precision: 5,
@@ -461,16 +1034,16 @@ fn multiple_columns(profile: &Profile) {
         BufferDesc::I32 { nullable: true },
         BufferDesc::Text { max_str_len: 20 },
     ];
-    let buffer = ColumnarAnyBuffer::try_from_descs(20, buffer_description.iter().copied()).unwrap();
+    let buffer = ColumnarDynBuffer::try_from_descs(20, buffer_description).unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
 
     // Then
-    let mut col = i32::as_nullable_slice(batch.column(0)).unwrap();
+    let mut col = batch.column(0).as_nullable_slice().unwrap();
     assert_eq!(Some(&42), col.next().unwrap());
     assert_eq!(
         Some(&b"Hello, World!"[..]),
-        batch.column(1).as_text_view().unwrap().get(0)
+        batch.column(1).as_text().unwrap().get(0)
     );
     // Assert that there is no second batch.
     assert!(cursor.fetch().unwrap().is_none());
@@ -487,7 +1060,7 @@ fn row_array_size_66536(profile: &Profile) {
     let conn = profile.setup_empty_table(&table_name, &["BIT"]).unwrap();
     let sql = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
-    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(
         u16::MAX as usize + 1,
         [BufferDesc::Bit { nullable: false }],
     )
@@ -520,8 +1093,7 @@ fn memcopy_values_from_nullable_slice(profile: &Profile) {
         .execute(&format!("SELECT a FROM {table_name}"), (), None)
         .unwrap() // Unwrap Result
         .unwrap(); // Unwrap Option, we know a select statement to produce a cursor.
-    let buffer =
-        ColumnarAnyBuffer::try_from_descs(3, [BufferDesc::I32 { nullable: true }]).unwrap();
+    let buffer = ColumnarDynBuffer::from_descs(3, [BufferDesc::I32 { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let nullable_slice = batch.column(0).as_nullable_slice::<i32>().unwrap();
@@ -574,11 +1146,11 @@ fn text_view_allows_for_filling_arrow_arrays(profile: &Profile) {
         .unwrap();
 
     let columnar_buffer =
-        ColumnarAnyBuffer::try_from_descs(10, [BufferDesc::Text { max_str_len: 50 }]).unwrap();
+        ColumnarDynBuffer::try_from_descs(10, [BufferDesc::Text { max_str_len: 50 }]).unwrap();
 
     let mut cursor = cursor.bind_buffer(columnar_buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
-    let view = batch.column(0).as_text_view().unwrap();
+    let view = batch.column(0).as_text().unwrap();
 
     let mut valid = Vec::with_capacity(view.len());
     let mut offsets = Vec::with_capacity(view.len() + 1);
@@ -629,7 +1201,7 @@ fn detect_truncated_output(profile: &Profile) {
 
     // When fetching that field as part of a bulk, but with a buffer of only length 5.
     let buffer_description = BufferDesc::Text { max_str_len: 5 };
-    let buffer = ColumnarAnyBuffer::try_from_descs(1, [buffer_description]).unwrap();
+    let buffer = ColumnarDynBuffer::try_from_descs(1, [buffer_description]).unwrap();
     let query = format!("SELECT a FROM {table_name}");
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
@@ -664,7 +1236,7 @@ fn row_arrary_size_from_block_cursor(profile: &Profile) {
         .execute(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
-    let buffer = ColumnarAnyBuffer::from_descs(
+    let buffer = ColumnarDynBuffer::from_descs(
         capacity_used_to_create_buffer,
         [BufferDesc::I32 { nullable: true }],
     );
@@ -699,8 +1271,8 @@ fn concurrent_double_buffered(profile: &Profile) {
     .unwrap();
 
     // When
-    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let mut buffer_a = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
         .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
@@ -743,7 +1315,7 @@ fn concurrent_single_buffer(profile: &Profile) {
     .unwrap();
 
     // When
-    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
         .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
@@ -785,7 +1357,7 @@ fn concurrent_fetch_of_one_batch(profile: &Profile) {
     .unwrap();
 
     // When
-    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
         .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
@@ -825,8 +1397,8 @@ fn concurrent_with_invalid_buffer_type(profile: &Profile) {
     .unwrap();
 
     // When fetching with a Columnar buffer not supporting nullable values
-    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let mut buffer_a = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn
         .into_cursor(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
@@ -850,8 +1422,8 @@ fn concurrent_fetch_of_multiple_result_sets(profile: &Profile) {
     let query = "SELECT 1 AS a; SELECT 2 AS b;";
 
     // When
-    let mut buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let mut buffer_a = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn.into_cursor(query, (), None).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
     let mut concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
@@ -877,8 +1449,8 @@ fn concurrent_fetch_skip_first_result_set(profile: &Profile) {
     let query = "SELECT 1 AS a; SELECT 2 AS b;";
 
     // When
-    let buffer_a = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
-    let buffer_b = ColumnarAnyBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_a = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
+    let buffer_b = ColumnarDynBuffer::from_descs(1, [BufferDesc::I32 { nullable: false }]);
     let cursor = conn.into_cursor(query, (), None).unwrap().unwrap();
     let block_cursor = cursor.bind_buffer(buffer_b).unwrap();
     let concurrent_block_cursor = ConcurrentBlockCursor::from_block_cursor(block_cursor);
