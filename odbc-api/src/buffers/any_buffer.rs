@@ -249,8 +249,10 @@ unsafe impl CDataMut for AnyBuffer {
 
 /// Flexible columnar buffer implementation. Bind this to a cursor to fetch values in bulk, or pass
 /// this as a parameter to a statement, to submit many parameters at once.
+#[deprecated(note = "ColumnarAnyBuffer is replaced by ColumnarDynBuffer")]
 pub type ColumnarAnyBuffer = ColumnarBuffer<AnyBuffer>;
 
+#[expect(deprecated)]
 impl ColumnarAnyBuffer {
     /// Allocates a [`ColumnarBuffer`] fitting the buffer descriptions.
     pub fn from_descs(capacity: usize, descs: impl IntoIterator<Item = BufferDesc>) -> Self {

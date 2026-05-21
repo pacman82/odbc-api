@@ -1,7 +1,9 @@
+#[expect(deprecated)]
+use odbc_api::buffers::ColumnarAnyBuffer;
 use odbc_api::{
     Bit, ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, Pod,
     ResultSetMetadata as _,
-    buffers::{AnyColumnBufferSlice, BufferDesc, ColumnarAnyBuffer, ColumnarDynBuffer, TextRowSet},
+    buffers::{AnyColumnBufferSlice, BufferDesc, ColumnarDynBuffer, TextRowSet},
     sys::{Date, NULL_DATA, Numeric, Time, Timestamp},
 };
 
@@ -185,6 +187,7 @@ fn time_any_buffer(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    #[expect(deprecated)]
     let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Time { nullable: false }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -252,6 +255,7 @@ fn nullable_time_any_buffer(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    #[expect(deprecated)]
     let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Time { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -637,6 +641,7 @@ fn date_any_buffecr(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    #[expect(deprecated)]
     let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Date { nullable: false }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -704,6 +709,7 @@ fn nullable_date_any_buffer(profile: &Profile) {
     let cursor = conn.execute(&query, (), None).unwrap().unwrap();
 
     // When
+    #[expect(deprecated)]
     let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
@@ -1514,6 +1520,53 @@ async fn async_bulk_fetch(profile: &Profile, expected_to_support_polling: bool) 
     assert_eq!(1000, sum_rows_fetched);
     let used_polling = sleep_counter_spy != 0;
     assert_eq!(expected_to_support_polling, used_polling);
+}
+
+/// In use cases there the user supplies the query it may be necessary to ignore one column then
+/// binding the buffers. This test constructs a result set with 3 columns and ignores the second
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn ignore_output_column_any_buffer(profile: &Profile) {
+    let conn = profile
+        .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
+        .unwrap();
+    let cursor = conn
+        .execute("SELECT a, b, c FROM IgnoreOutputColumn", (), None)
+        .unwrap()
+        .unwrap();
+
+    let bd = BufferDesc::I32 { nullable: true };
+    #[expect(deprecated)]
+    let buffer = ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+
+    // Assert that there is no batch.
+    assert!(cursor.fetch().unwrap().is_none());
+}
+
+/// In use cases there the user supplies the query it may be necessary to ignore one column then
+/// binding the buffers. This test constructs a result set with 3 columns and ignores the second
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn ignore_output_column(profile: &Profile) {
+    let conn = profile
+        .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
+        .unwrap();
+    let cursor = conn
+        .execute("SELECT a, b, c FROM IgnoreOutputColumn", (), None)
+        .unwrap()
+        .unwrap();
+
+    let bd = BufferDesc::I32 { nullable: true };
+    let buffer = ColumnarDynBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+
+    // Assert that there is no batch.
+    assert!(cursor.fetch().unwrap().is_none());
 }
 
 /// Compliation test that we can use as_slice in generic code. In earlier versions the Pod trait had

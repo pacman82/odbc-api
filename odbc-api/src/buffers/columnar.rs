@@ -600,15 +600,23 @@ where
 mod tests {
 
     use super::Resize;
-    use crate::buffers::BufferDesc;
+    use crate::buffers::{BufferDesc, ColumnarDynBuffer};
 
     #[test]
+    #[expect(deprecated)]
     #[should_panic(expected = "Column indices must be unique.")]
-    fn assert_unique_column_indices() {
+    fn assert_unique_column_indices_columnar_any_buffer() {
         use crate::buffers::ColumnarAnyBuffer;
 
         let bd = BufferDesc::I32 { nullable: false };
         ColumnarAnyBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
+    }
+
+    #[test]
+    #[should_panic(expected = "Column indices must be unique.")]
+    fn assert_unique_column_indices() {
+        let bd = BufferDesc::I32 { nullable: false };
+        ColumnarDynBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
     }
 
     /// Vec's can resize just fine without this library, yet it is important that they implement the

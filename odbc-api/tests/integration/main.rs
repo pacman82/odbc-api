@@ -12,8 +12,7 @@ use odbc_api::{
     Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str,
     U16String,
     buffers::{
-        BufferDesc, ColumnarAnyBuffer, ColumnarBuffer, Indicator, Item, RowVec, TextColumn,
-        TextRowSet,
+        BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
     },
     decimal_text_to_i128, environment,
     handles::{
@@ -1230,11 +1229,11 @@ fn wchar(profile: &Profile) {
     let cursor = conn.execute(&sql, (), None).unwrap().unwrap();
 
     let desc = BufferDesc::WText { max_str_len: 1 };
-    let row_set_buffer = ColumnarAnyBuffer::try_from_descs(2, iter::once(desc)).unwrap();
+    let row_set_buffer = ColumnarDynBuffer::try_from_descs(2, iter::once(desc)).unwrap();
     let mut row_set_cursor = cursor.bind_buffer(row_set_buffer).unwrap();
     let batch = row_set_cursor.fetch().unwrap().unwrap();
     let col = batch.column(0);
-    let wtext_col = col.as_w_text_view().unwrap();
+    let wtext_col = col.as_wide_text().unwrap();
     assert_eq!(2, wtext_col.len());
     assert_eq!(
         &U16String::from_str("A"),
@@ -1770,29 +1769,6 @@ fn parameter_cstr(profile: &Profile) {
     let actual = table.content_as_string(&conn);
     let expected = "Hello, World!\nHello, World!";
     assert_eq!(expected, actual);
-}
-
-/// In use cases there the user supplies the query it may be necessary to ignore one column then
-/// binding the buffers. This test constructs a result set with 3 columns and ignores the second
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn ignore_output_column(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
-        .unwrap();
-    let cursor = conn
-        .execute("SELECT a, b, c FROM IgnoreOutputColumn", (), None)
-        .unwrap()
-        .unwrap();
-
-    let bd = BufferDesc::I32 { nullable: true };
-    let buffer = ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-
-    // Assert that there is no batch.
-    assert!(cursor.fetch().unwrap().is_none());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -2895,7 +2871,7 @@ fn database_management_system_name(profile: &Profile, expected_name: &'static st
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn fill_vec_of_rows(profile: &Profile) {
+fn fill_vec_of_rows_of_idiomatic_types(profile: &Profile) {
     let table_name = table_name!();
     let conn = profile
         .setup_empty_table(&table_name, &["VARCHAR(50)", "INTEGER"])
@@ -2908,30 +2884,17 @@ fn fill_vec_of_rows(profile: &Profile) {
 
     let query_sql = format!("SELECT a,b FROM {table_name}");
     let cursor = conn.execute(&query_sql, (), None).unwrap().unwrap();
-    let buf_desc = [
-        BufferDesc::Text { max_str_len: 50 },
-        BufferDesc::I32 { nullable: false },
-    ];
+    type Row = (VarCharArray<50>, i32);
 
-    let buffer = ColumnarAnyBuffer::try_from_descs(1, buf_desc).unwrap();
+    let buffer = RowVec::<Row>::new(1);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
-
     let mut actual = Vec::new();
 
     while let Some(batch) = cursor.fetch().unwrap() {
-        // Extract first column known to contain text
-        let col_a = batch.column(0).as_text_view().unwrap();
-
-        // Extract second column known to contain non nullable i32
-        let col_b = i32::as_slice(batch.column(1)).unwrap();
-
-        for &b in col_b {
-            let a = col_a
-                .iter()
-                .next()
-                .unwrap()
-                .map(|bytes| str::from_utf8(bytes).unwrap().to_owned());
-            actual.push((a, b))
+        for (a, b) in batch.iter() {
+            let a = a.as_str().unwrap().map(ToOwned::to_owned);
+            let b = *b;
+            actual.push((a, b));
         }
     }
 

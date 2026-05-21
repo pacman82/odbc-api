@@ -3,7 +3,7 @@ use test_case::test_case;
 
 use odbc_api::{
     ColumnsRow, Cursor, ForeignKeysRow, PrimaryKeysRow, ResultSetMetadata, TablesRow,
-    buffers::{ColumnarAnyBuffer, Item},
+    buffers::ColumnarDynBuffer,
 };
 
 use crate::common::{MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3};
@@ -63,7 +63,7 @@ fn columns_query(profile: &Profile, schema: &str) {
         .unwrap();
 
     let row_set_buffer =
-        ColumnarAnyBuffer::try_from_descs(2, conn.columns_buffer_descs(255, 255, 255).unwrap())
+        ColumnarDynBuffer::try_from_descs(2, conn.columns_buffer_descs(255, 255, 255).unwrap())
             .unwrap();
     // Mariadb does not support schemas
     let mut stmt = conn.preallocate().unwrap();
@@ -75,10 +75,13 @@ fn columns_query(profile: &Profile, schema: &str) {
     let batch = cursor.fetch().unwrap().unwrap();
 
     const COLUMN_NAME_INDEX: usize = 3;
-    let column_names = batch.column(COLUMN_NAME_INDEX).as_text_view().unwrap();
+    let column_names = batch.column(COLUMN_NAME_INDEX).as_text().unwrap();
 
     const COLUMN_SIZE_INDEX: usize = 6;
-    let column_sizes = i32::as_nullable_slice(batch.column(COLUMN_SIZE_INDEX)).unwrap();
+    let column_sizes = batch
+        .column(COLUMN_SIZE_INDEX)
+        .as_nullable_slice::<i32>()
+        .unwrap();
 
     let column_has_name_a_and_size_10 = column_names
         .iter()
