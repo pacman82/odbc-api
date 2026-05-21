@@ -7,7 +7,7 @@
 
 ### 🚀 Features
 
-- `Pod` trait is now `pub`
+- `Pod` trait is now `pub`. This enables the use of `AnyColumnBufferSlice::as_slice` in generic code.
 
 ## [26.0.0](https://github.com/pacman82/odbc-api/compare/25.0.0...26.0.0) - 2026-05-17
 
