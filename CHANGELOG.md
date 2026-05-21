@@ -7,26 +7,16 @@
 
 ### 🚀 Features
 
-- [**breaking**] Introduce ColumnarDynBuffer
+- [**breaking**] Introduce `ColumnarDynBuffer`
 
-  This buffer is intended to replace ColumnarAnyBuffer
+  `ColumnarDynBuffer` is a `ColumnarBuffer` which uses `Box<dyn AnyColumnBuffer>` as its column type. `ColumnarDynBuffer` buffer is intended to replace `ColumnarAnyBuffer`. It uses a strategy pattern rather than a visitor to allow for heterogenous column buffers. I.e. then reading a column you downcast to the appropriate buffer rather than `match`ing on an `AnyBuffer` variant. This has enables users to provide their own buffer implementations without the need for upstream contributions. It makes it harder for users though to use the buffer type as a proxy for the relational type if the code declaring the buffer and the one using it live far apart in the codebase. This is however usually an antipattern as the mapping between buffer and relational type is not bijective by any means.
 
-- [**breaking**] Introduce ColumnarDynBuffer
-
-  Renamed DynColumnBuffer to AnyColumnBuffer in the process
-
-- [**breaking**] BinColumnView is now BinColumnSlice
-- [**breaking**] TextColumnView is now TextColumnSlice
-- [**breaking**] Rename ColumnBufferView to Slice
-- ColumnarBuffer can now hold `Box<dyn DynColumnBuffer>`
-
-  `DynColumnBuffer` is intended to replace `AnyColumnBuffer` and exchange
-  the visitor pattern with a strategy based approach open for extension.
-
-- [**breaking**] Extracted trait `ColumnBufferView` from trait `ColumnBuffer`
+- [**breaking**] `BinColumnView` is now `BinColumnSlice`
+- [**breaking**] `TextColumnView` is now `TextColumnSlice`
+- [**breaking**] Extracted trait `Slice` from trait `ColumnBuffer`
 
   This has been done in order to allow `ColumnBuffer` to be Object safe
-  and support `ColumnarBuffer`s of &dyn ColumnBuffer's
+  and support `ColumnarBuffer`s of &dyn `ColumnarAnyBuffer`s
 
 
 
