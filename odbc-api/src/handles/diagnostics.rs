@@ -45,7 +45,10 @@ impl State {
 
         let mut ascii = [0; SQLSTATE_SIZE];
         for (index, letter) in code[..SQLSTATE_SIZE].iter().copied().enumerate() {
-            ascii[index] = letter as u8;
+            // Then using wide character set, convert to ASCII first
+            #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
+            let letter = letter as u8;
+            ascii[index] = letter;
         }
         State(ascii)
     }

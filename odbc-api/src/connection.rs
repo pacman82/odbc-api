@@ -1,5 +1,5 @@
 use crate::{
-    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ForeignKeysRow,
+    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ForeignKeysRow, OwnedCursor,
     ParameterCollectionRef, Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow,
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
@@ -283,8 +283,7 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Connection<'c>>>>, ConnectionAndError<'c>>
-    {
+    ) -> Result<Option<OwnedCursor<Connection<'c>>>, ConnectionAndError<'c>> {
         // With the current Rust version the borrow checker needs some convincing, so that it allows
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
@@ -993,10 +992,7 @@ pub trait ConnectionTransitions: Sized {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<
-        Option<CursorImpl<StatementConnection<Self::StatementParent>>>,
-        FailedStateTransition<Self>,
-    >;
+    ) -> Result<Option<OwnedCursor<Self::StatementParent>>, FailedStateTransition<Self>>;
 
     /// Prepares an SQL statement which takes ownership of the connection. The advantage over
     /// [`Connection::prepare`] is, that you do not need to keep track of the lifetime of the
@@ -1065,7 +1061,7 @@ impl<'env> ConnectionTransitions for Connection<'env> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>> {
+    ) -> Result<Option<OwnedCursor<Self>>, FailedStateTransition<Self>> {
         self.into_cursor(query, params, query_timeout_sec)
     }
 
@@ -1086,7 +1082,7 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>> {
+    ) -> Result<Option<OwnedCursor<Self>>, FailedStateTransition<Self>> {
         // Result borrows the connection. We convert the cursor into a raw pointer, to not confuse
         // the borrow checker.
         let result = self.execute(query, params, query_timeout_sec);

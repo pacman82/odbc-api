@@ -10,8 +10,8 @@ use crate::{
     buffers::Indicator,
     error::ExtendResult,
     handles::{
-        AsStatementRef, CDataMut, DiagnosticStream, SqlResult, State, Statement, StatementRef,
-        log_diagnostic_record,
+        AsStatementRef, CDataMut, DiagnosticStream, SqlResult, State, Statement,
+        StatementConnection, StatementRef, log_diagnostic_record,
     },
     parameter::{Binary, CElement, Text, VarCell, VarKind, WideText},
 };
@@ -27,6 +27,10 @@ pub use self::{
     concurrent_block_cursor::ConcurrentBlockCursor,
     polling_cursor::{BlockCursorPolling, CursorPolling},
 };
+
+/// A cursor which owns both its statement and its connection. It is generic over the type of
+/// ownership of the connection. E.g. [`SharedConnection`] or just plain [`Connection`].
+pub type OwnedCursor<P> = CursorImpl<StatementConnection<P>>;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.
 ///

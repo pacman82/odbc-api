@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    Connection, CursorImpl, Error, ParameterCollectionRef, Preallocated, Prepared,
+    Connection, CursorImpl, Error, OwnedCursor, ParameterCollectionRef, Preallocated, Prepared,
     connection::{ConnectionTransitions, FailedStateTransition},
     handles::{StatementConnection, StatementParent},
 };
@@ -24,7 +24,7 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<CursorImpl<StatementConnection<Self>>>, FailedStateTransition<Self>> {
+    ) -> Result<Option<OwnedCursor<Self>>, FailedStateTransition<Self>> {
         let guard = self
             .lock()
             .expect("Shared connection lock must not be poisned");

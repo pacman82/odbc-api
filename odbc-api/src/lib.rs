@@ -39,7 +39,7 @@ pub use self::{
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
         BlockCursor, BlockCursorIterator, BlockCursorPolling, ConcurrentBlockCursor, Cursor,
-        CursorImpl, CursorPolling, CursorRow, RowSetBuffer, TruncationInfo,
+        CursorImpl, CursorPolling, CursorRow, OwnedCursor, RowSetBuffer, TruncationInfo,
     },
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment, environment},

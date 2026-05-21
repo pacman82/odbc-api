@@ -310,8 +310,7 @@ impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
             panic!("Trying to insert elements into TextRowSet beyond batch size.")
         }
 
-        let mut col_index = 1;
-        for column in &mut self.parameters {
+        for (col_index, column) in &mut (1..).zip(self.parameters.iter_mut()) {
             let text = row.next().expect(
                 "Row passed to TextRowSet::append must contain one element for each column.",
             );
@@ -325,7 +324,6 @@ impl<S> ColumnarBulkInserter<S, TextColumn<u8>> {
             } else {
                 column.set_value(self.parameter_set_size, None);
             }
-            col_index += 1;
         }
 
         self.parameter_set_size += 1;
