@@ -1529,11 +1529,13 @@ async fn async_bulk_fetch(profile: &Profile, expected_to_support_polling: bool) 
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn ignore_output_column_any_buffer(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER", "INTEGER"])
+        .build(profile)
         .unwrap();
     let cursor = conn
-        .execute("SELECT a, b, c FROM IgnoreOutputColumn", (), None)
+        .execute(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
 
@@ -1553,11 +1555,13 @@ fn ignore_output_column_any_buffer(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn ignore_output_column(profile: &Profile) {
-    let conn = profile
-        .setup_empty_table("IgnoreOutputColumn", &["INTEGER", "INTEGER", "INTEGER"])
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER", "INTEGER", "INTEGER"])
+        .build(profile)
         .unwrap();
     let cursor = conn
-        .execute("SELECT a, b, c FROM IgnoreOutputColumn", (), None)
+        .execute(&table.sql_all_ordered_by_id(), (), None)
         .unwrap()
         .unwrap();
 
