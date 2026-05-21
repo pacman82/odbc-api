@@ -44,7 +44,7 @@ pub use self::{
     driver_complete_option::DriverCompleteOption,
     environment::{DataSourceInfo, DriverInfo, Environment, environment},
     error::{Error, TooLargeBufferSize},
-    fixed_sized::Bit,
+    fixed_sized::{Bit, Pod},
     handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
     narrow::Narrow,

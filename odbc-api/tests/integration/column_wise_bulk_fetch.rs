@@ -1,7 +1,7 @@
 use odbc_api::{
-    Bit, ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter,
+    Bit, ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, Pod,
     ResultSetMetadata as _,
-    buffers::{BufferDesc, ColumnarAnyBuffer, ColumnarDynBuffer, TextRowSet},
+    buffers::{AnyColumnBufferSlice, BufferDesc, ColumnarAnyBuffer, ColumnarDynBuffer, TextRowSet},
     sys::{Date, NULL_DATA, Numeric, Time, Timestamp},
 };
 
@@ -1514,4 +1514,14 @@ async fn async_bulk_fetch(profile: &Profile, expected_to_support_polling: bool) 
     assert_eq!(1000, sum_rows_fetched);
     let used_polling = sleep_counter_spy != 0;
     assert_eq!(expected_to_support_polling, used_polling);
+}
+
+/// Compliation test that we can use as_slice in generic code. In earlier versions the Pod trait had
+/// not been `pub`.
+#[test]
+fn as_slice_works_in_generic_code() {
+    #[allow(dead_code)]
+    fn generic<'a, T: Pod>(view: &'a AnyColumnBufferSlice) -> &'a [T] {
+        view.as_slice::<T>().unwrap()
+    }
 }
