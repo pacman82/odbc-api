@@ -3,6 +3,12 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [26.1.0](https://github.com/pacman82/odbc-api/compare/26.0.0...26.1.0) - 2026-05-21
+
+### 🚀 Features
+
+- `Pod` trait is now `pub`
+
 ## [26.0.0](https://github.com/pacman82/odbc-api/compare/25.0.0...26.0.0) - 2026-05-17
 
 ### 🚀 Features
