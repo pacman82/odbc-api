@@ -4,9 +4,9 @@ use super::{
 };
 
 use crate::{
-    Error,
+    BoundInputSlice, Error,
     fixed_sized::Pod,
-    handles::{CData, CDataMut},
+    handles::{CData, CDataMut, StatementRef},
 };
 
 use std::{any::Any, collections::HashSet, ffi::c_void};
@@ -96,7 +96,7 @@ pub trait AnyColumnBuffer: ColumnBuffer + Any + Send {}
 
 impl<T> AnyColumnBuffer for T where T: ColumnBuffer + Any + Send {}
 
-unsafe impl CData for Box<dyn AnyColumnBuffer> {
+unsafe impl CData for BoxColumnBuffer {
     fn cdata_type(&self) -> odbc_sys::CDataType {
         self.as_ref().cdata_type()
     }
@@ -114,7 +114,7 @@ unsafe impl CData for Box<dyn AnyColumnBuffer> {
     }
 }
 
-unsafe impl CDataMut for Box<dyn AnyColumnBuffer> {
+unsafe impl CDataMut for BoxColumnBuffer {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.as_mut().mut_indicator_ptr()
     }
@@ -124,7 +124,7 @@ unsafe impl CDataMut for Box<dyn AnyColumnBuffer> {
     }
 }
 
-unsafe impl ColumnBuffer for Box<dyn AnyColumnBuffer> {
+unsafe impl ColumnBuffer for BoxColumnBuffer {
     fn capacity(&self) -> usize {
         self.as_ref().capacity()
     }
@@ -134,7 +134,7 @@ unsafe impl ColumnBuffer for Box<dyn AnyColumnBuffer> {
     }
 }
 
-unsafe impl Slice for Box<dyn AnyColumnBuffer> {
+unsafe impl Slice for BoxColumnBuffer {
     type Slice<'a> = AnyColumnBufferSlice<'a>;
 
     fn slice(&self, valid_rows: usize) -> AnyColumnBufferSlice<'_> {
@@ -146,7 +146,7 @@ unsafe impl Slice for Box<dyn AnyColumnBuffer> {
 }
 
 /// Enables reading the valid contents of a column buffer, while it is bound to a block cursor
-/// as [`Box<dyn AnyColumnBuffer>`].
+/// as [`BoxColumnBuffer>`].
 #[derive(Clone, Copy)]
 pub struct AnyColumnBufferSlice<'a> {
     buffer: &'a BoxColumnBuffer,
@@ -204,6 +204,53 @@ impl<'a> AnyColumnBufferSlice<'a> {
         T: Pod,
     {
         self.of::<ColumnWithIndicator<T>>()
+    }
+}
+
+unsafe impl<'a> BoundInputSlice<'a> for BoxColumnBuffer {
+    type SliceMut = BoxColumBufferRefMut<'a>;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        parameter_index: u16,
+        stmt: StatementRef<'a>,
+    ) -> BoxColumBufferRefMut<'a> {
+        BoxColumBufferRefMut {
+            buffer: self,
+            parameter_index,
+            stmt,
+        }
+    }
+}
+
+/// Fat reference to a [`BoxColumnBuffer`] that is bound as an array parameter to a [`Statement`].
+///
+/// This reference allows mutating the buffer contents, e.g. in order to reuse the same bound buffer
+/// for inserting multiple batches of data. If any operation is performed which would invalidate the
+/// column buffer will be automatically re-bound to the statement.
+pub struct BoxColumBufferRefMut<'a> {
+    /// Column buffer which will be downcast to the concrete type provided by the user in the `of`
+    /// method.
+    buffer: &'a mut BoxColumnBuffer,
+    /// We need the parameter index to re-bind the column to the same parameter placeholder should
+    /// the buffer be invalidated.
+    parameter_index: u16,
+    /// A handle to the statement to which the column buffer is bound. We need a reference to
+    /// support operations that may invalidate the buffer. Using the statement handle we can re-bind
+    /// after.
+    stmt: StatementRef<'a>,
+}
+
+impl<'a> BoxColumBufferRefMut<'a> {
+    /// Fetch the associated slice if we know the underlying buffer to be of type `T`.
+    pub fn of<T>(self) -> Option<T::SliceMut>
+    where
+        T: BoundInputSlice<'a> + 'static,
+    {
+        let buffer: &mut dyn Any = self.buffer.as_mut();
+        let buffer = buffer.downcast_mut::<T>()?;
+        let view_mut = unsafe { buffer.as_view_mut(self.parameter_index, self.stmt) };
+        Some(view_mut)
     }
 }
 
