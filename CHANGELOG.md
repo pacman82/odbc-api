@@ -3,6 +3,19 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [27.0.0](https://github.com/pacman82/odbc-api/compare/26.1.0...27.0.0) - 2026-05-22
+
+### 🚀 Features
+
+- Deperate `AnyBuffer` it is replaced by `BoxColumnBuffer`.
+- [**breaking**] Prepared::into_column_inserter now uses BoxColumnBuffer
+
+  From the perspective of the user this works largely the same. Most
+  likely calls to `as_text_view` need to be exchanged with `as_text`,
+  `as_w_text_view` -> `as_wide_text`, `as_bin_view` -> `as_binary`.
+
+- `BoxColumnBuffer` now implements `BoundInputSlice`
+
 ## [26.1.0](https://github.com/pacman82/odbc-api/compare/26.0.0...26.1.0) - 2026-05-21
 
 ### 🚀 Features
