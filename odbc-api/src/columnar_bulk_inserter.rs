@@ -157,7 +157,7 @@ where
     ///     // Fill names
     ///     let mut col = prebound
     ///         .column_mut(0)
-    ///         .as_text_view()
+    ///         .as_text()
     ///         .expect("We know the name column to hold text.");
     ///     for (index, name) in names.iter().map(|s| Some(s.as_bytes())).enumerate() {
     ///         col.set_cell(index, name);

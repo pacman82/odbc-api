@@ -1,7 +1,8 @@
 use super::{ColumnBuffer, Indicator, Resize, Slice};
 use crate::{
+    BoundInputSlice,
     fixed_sized::{Bit, Pod},
-    handles::{CData, CDataMut},
+    handles::{CData, CDataMut, StatementRef},
 };
 use odbc_sys::{Date, NULL_DATA, Time, Timestamp};
 use std::{
@@ -209,6 +210,21 @@ where
     }
 }
 
+unsafe impl<'a, T> BoundInputSlice<'a> for ColumnWithIndicator<T>
+where
+    T: Pod + 'static,
+{
+    type SliceMut = NullableSliceMut<'a, T>;
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        _parameter_index: u16,
+        _stmt: StatementRef<'a>,
+    ) -> NullableSliceMut<'a, T> {
+        self.writer_n(self.capacity())
+    }
+}
+
 unsafe impl<T> CData for Vec<T>
 where
     T: Pod,
@@ -240,6 +256,21 @@ where
 
     fn mut_value_ptr(&mut self) -> *mut c_void {
         self.as_mut_ptr() as *mut c_void
+    }
+}
+
+unsafe impl<'a, T> BoundInputSlice<'a> for Vec<T>
+where
+    T: Pod + 'static,
+{
+    type SliceMut = &'a mut [T];
+
+    unsafe fn as_view_mut(
+        &'a mut self,
+        _parameter_index: u16,
+        _stmt: StatementRef<'a>,
+    ) -> &'a mut [T] {
+        self.as_mut_slice()
     }
 }
 

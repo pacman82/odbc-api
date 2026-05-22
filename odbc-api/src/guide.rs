@@ -427,7 +427,7 @@ fn insert_birth_years(conn: &Connection, names: &[&str], years: &[i16]) -> Resul
     // Fill the buffer with values column by column
     let mut col = prebound
         .column_mut(0)
-        .as_text_view()
+        .as_text()
         .expect("We know the name column to hold text.");
 
     for (index, name) in names.iter().enumerate() {
