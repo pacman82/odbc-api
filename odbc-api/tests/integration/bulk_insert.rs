@@ -1,6 +1,6 @@
 use odbc_api::{
     BindParamDesc, Connection, DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
-    buffers::{AnySliceMut, BufferDesc, Item, TextColumn},
+    buffers::{BufferDesc, Item, TextColumn},
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
 };
@@ -55,7 +55,7 @@ fn bulk_insert_long_strings_as_wchar(profile: &Profile) {
         .unwrap();
     inserter
         .column_mut(0)
-        .as_w_text_view()
+        .as_wide_text()
         .unwrap()
         .set_cell(0, Some(text.as_slice()));
     inserter.set_num_rows(1);
@@ -89,7 +89,7 @@ fn long_strings_with_more_than_8000_bytes(profile: &Profile, column_type: &str) 
         .unwrap();
     inserter
         .column_mut(0)
-        .as_text_view()
+        .as_text()
         .unwrap()
         .set_cell(0, Some(text.as_bytes()));
     inserter.set_num_rows(1);
@@ -142,7 +142,7 @@ fn columnar_insert_timestamp(profile: &Profile) {
 
     prebound.set_num_rows(input.len());
     let column = prebound.column_mut(0);
-    let mut writer = Timestamp::as_nullable_slice_mut(column).unwrap();
+    let mut writer = column.as_nullable_slice().unwrap();
     writer.write(input.iter().copied());
 
     // Bind buffer and insert values.
@@ -277,7 +277,7 @@ fn columnar_insert_varbinary(profile: &Profile) {
     ];
     prebound.set_num_rows(input.len());
 
-    let mut writer = prebound.column_mut(0).as_bin_view().unwrap();
+    let mut writer = prebound.column_mut(0).as_binary().unwrap();
     // Reset length to make room for `Hello, World!`.
     writer.ensure_max_element_length(13, 0).unwrap();
     writer.set_cell(0, Some("Hello".as_bytes()));
@@ -327,7 +327,7 @@ fn columnar_insert_varchar(profile: &Profile) {
     ];
 
     prebound.set_num_rows(input.len());
-    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    let mut col_view = prebound.column_mut(0).as_text().unwrap();
     // Reset length to make room for `Hello, World!`.
     col_view.ensure_max_element_length(13, 0).unwrap();
     col_view.set_cell(0, Some("Hello".as_bytes()));
@@ -408,9 +408,7 @@ fn columnar_insert_numeric_using_numeric_buffer(profile: &Profile) {
     };
 
     let mut inserter = stmt.into_column_inserter(3, [desc]).unwrap();
-    let AnySliceMut::Numeric(slice) = inserter.column_mut(0) else {
-        panic!("Expected numeric column");
-    };
+    let slice = inserter.column_mut(0).as_slice().unwrap();
     slice[0] = Numeric {
         precision: 5,
         scale: 3,
@@ -468,7 +466,7 @@ fn columnar_insert_text_as_decimal(profile: &Profile) {
         .unwrap();
 
     inserter.set_num_rows(4);
-    let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
+    let mut col_view = inserter.column_mut(0).as_text().unwrap();
     col_view.set_cell(0, Some(b"12.345"));
     col_view.set_cell(1, Some(b"23.456"));
     col_view.set_cell(2, None);
@@ -503,7 +501,7 @@ fn columnar_insert_text_as_time_ms(profile: &Profile, time_ms: &str) {
         .unwrap();
 
     inserter.set_num_rows(2);
-    let mut col_view = inserter.column_mut(0).as_text_view().unwrap();
+    let mut col_view = inserter.column_mut(0).as_text().unwrap();
     col_view.set_cell(0, Some(b"09:18:53.123"));
     col_view.set_cell(1, None);
 
@@ -542,7 +540,7 @@ fn adaptive_columnar_insert_varchar(profile: &Profile) {
     ];
     let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
-    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    let mut col_view = prebound.column_mut(0).as_text().unwrap();
     for (index, &text) in input.iter().enumerate() {
         col_view
             .ensure_max_element_length(input[index].map(|s| s.len()).unwrap_or(0), index)
@@ -591,7 +589,7 @@ fn adaptive_columnar_insert_varbin(profile: &Profile) {
         .unwrap();
     let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
-    let mut writer = prebound.column_mut(0).as_bin_view().unwrap();
+    let mut writer = prebound.column_mut(0).as_binary().unwrap();
     for (row_index, &bytes) in input.iter().enumerate() {
         // Resize and rebind the buffer if it turns out to be to small.
         writer
@@ -671,7 +669,7 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
     let desc = BindParamDesc::wide_text(max_str_len);
     let mut prebound = prepared.into_column_inserter(input.len(), [desc]).unwrap();
     prebound.set_num_rows(input.len());
-    let mut writer = prebound.column_mut(0).as_w_text_view().unwrap();
+    let mut writer = prebound.column_mut(0).as_wide_text().unwrap();
     for (row_index, value) in input
         .iter()
         .map(|opt| opt.as_ref().map(|ustring| ustring.as_slice()))
@@ -747,7 +745,7 @@ fn bulk_insert_with_columnar_buffer(profile: &Profile) {
 
     prebound.set_num_rows(3);
     // Fill first column with text
-    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    let mut col_view = prebound.column_mut(0).as_text().unwrap();
     col_view.set_cell(0, Some("England".as_bytes()));
     col_view.set_cell(1, Some("France".as_bytes()));
     col_view.set_cell(2, Some("Germany".as_bytes()));
@@ -839,7 +837,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
     let mut prebound = prepared.into_column_inserter(5, description).unwrap();
     prebound.set_num_rows(3);
     // Fill first column with text
-    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    let mut col_view = prebound.column_mut(0).as_text().unwrap();
     col_view.set_cell(0, Some("England".as_bytes()));
     col_view.set_cell(1, Some("France".as_bytes()));
     col_view.set_cell(2, Some("Germany".as_bytes()));
@@ -856,7 +854,7 @@ fn bulk_insert_with_multiple_batches(profile: &Profile) {
     // Fill a buffer with one row, and insert them into the database.
     prebound.set_num_rows(1);
     // Fill first column with text
-    let mut col_view = prebound.column_mut(0).as_text_view().unwrap();
+    let mut col_view = prebound.column_mut(0).as_text().unwrap();
     col_view.set_cell(0, Some("Spain".as_bytes()));
 
     // Fill second column with integers

@@ -1,7 +1,7 @@
 use odbc_sys::{Date, Time, Timestamp};
 
 use super::{AnySlice, AnySliceMut, BufferDesc, NullableSlice, NullableSliceMut};
-use crate::{BindParamDesc, Bit};
+use crate::{BindParamDesc, Bit, Pod};
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
 /// the user to avoid matching on all possible variants of an [`AnySlice`] in case the
@@ -33,7 +33,7 @@ use crate::{BindParamDesc, Bit};
 ///     inserter.execute().unwrap();
 /// }
 /// ```
-pub trait Item: Sized + Copy {
+pub trait Item: Pod {
     /// Useful to instantiate a [`crate::ColumnarBulkInserter`] in generic code.
     fn bind_param_desc(nullable: bool) -> BindParamDesc;
 

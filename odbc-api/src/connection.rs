@@ -370,7 +370,7 @@ impl<'c> Connection<'c> {
     /// ```no_run
     /// use odbc_api::{
     ///     environment, Error, ColumnarBulkInserter, handles::StatementConnection, BindParamDesc,
-    ///     buffers::AnyBuffer, ConnectionOptions, Connection, parameter::WithDataType,
+    ///     buffers::BoxColumnBuffer, ConnectionOptions, Connection, parameter::WithDataType,
     /// };
     ///
     /// const CONNECTION_STRING: &str =
@@ -382,7 +382,7 @@ impl<'c> Connection<'c> {
     /// /// takes ownership of a connection created using an environment with static lifetime.
     /// type Inserter = ColumnarBulkInserter<
     ///     StatementConnection<Connection<'static>>,
-    ///     WithDataType<AnyBuffer>
+    ///     WithDataType<BoxColumnBuffer>
     /// >;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.
@@ -1008,9 +1008,8 @@ pub trait ConnectionTransitions: Sized {
     /// ```no_run
     /// use odbc_api::{
     ///     environment, Error, ColumnarBulkInserter, ConnectionTransitions, Connection,
-    ///     handles::StatementConnection, buffers::AnyBuffer, ConnectionOptions, BindParamDesc,
-    ///     parameter::WithDataType,
-    ///
+    ///     handles::StatementConnection, buffers::BoxColumnBuffer, ConnectionOptions,
+    ///     BindParamDesc, parameter::WithDataType,
     /// };
     ///
     /// const CONNECTION_STRING: &str =
@@ -1022,7 +1021,7 @@ pub trait ConnectionTransitions: Sized {
     /// /// takes ownership of a connection created using an environment with static lifetime.
     /// type Inserter = ColumnarBulkInserter<
     ///     StatementConnection<Connection<'static>>,
-    ///     WithDataType<AnyBuffer>
+    ///     WithDataType<BoxColumnBuffer>
     /// >;
     ///
     /// /// Creates an inserter which can be reused to bulk insert birthyears with static lifetime.

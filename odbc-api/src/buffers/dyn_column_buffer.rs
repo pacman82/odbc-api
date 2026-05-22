@@ -1,6 +1,7 @@
 use super::{
-    BinColumn, BinColumnSlice, BufferDesc, ColumnBuffer, ColumnarBuffer, Indicator, NullableSlice,
-    Slice, TextColumn, TextColumnSlice, column_with_indicator::ColumnWithIndicator,
+    BinColumn, BinColumnSlice, BinColumnSliceMut, BufferDesc, ColumnBuffer, ColumnarBuffer,
+    Indicator, NullableSlice, NullableSliceMut, Resize, Slice, TextColumn, TextColumnSlice,
+    TextColumnSliceMut, column_with_indicator::ColumnWithIndicator,
 };
 
 use crate::{
@@ -92,9 +93,9 @@ pub type BoxColumnBuffer = Box<dyn AnyColumnBuffer>;
 /// buffering in multiple threads. Currently there are no buffer implementations which are not
 /// `Send`. So a distinction between `Send` and non-`Send` buffers is assumed to cause more friction
 /// rather than being helpful.
-pub trait AnyColumnBuffer: ColumnBuffer + Any + Send {}
+pub trait AnyColumnBuffer: ColumnBuffer + Resize + Any + Send {}
 
-impl<T> AnyColumnBuffer for T where T: ColumnBuffer + Any + Send {}
+impl<T> AnyColumnBuffer for T where T: ColumnBuffer + Resize + Any + Send {}
 
 unsafe impl CData for BoxColumnBuffer {
     fn cdata_type(&self) -> odbc_sys::CDataType {
@@ -154,7 +155,12 @@ pub struct AnyColumnBufferSlice<'a> {
 }
 
 impl<'a> AnyColumnBufferSlice<'a> {
-    /// Fetch the associated slice if we know the underlying buffer to be of type `T`.
+    /// Fetch the associated slice if we know the underlying buffer to be of type `T`. Usually it is
+    /// more convenient to use methods which some amount of knowledge about the buffer types used by
+    /// this crate. I.e. it is better to use [`Self::as_text`], [`Self::as_wide_text`],
+    /// [`Self::as_binary`], [`Self::as_slice`] or [`Self::as_nullable_slice`] instead. The
+    /// exception would be if you use a custom column buffer type provided by your application
+    /// rather than `odbc-api` itself.
     pub fn of<T>(self) -> Option<T::Slice<'a>>
     where
         T: Slice + 'static,
@@ -251,6 +257,52 @@ impl<'a> BoxColumBufferRefMut<'a> {
         let buffer = buffer.downcast_mut::<T>()?;
         let view_mut = unsafe { buffer.as_view_mut(self.parameter_index, self.stmt) };
         Some(view_mut)
+    }
+
+    /// Use this if you know the underlying buffer holds wide (i.e. UTF-16) character data and you
+    /// want to access it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`TextColumn`] with `u16` values. Same as
+    /// `Self::of::<TextColumn<u16>>`.
+    pub fn as_wide_text(self) -> Option<TextColumnSliceMut<'a, u16>> {
+        self.of::<TextColumn<u16>>()
+    }
+
+    /// Use this if you know the underlying buffer holds narrow (e.g. UTF-8) character data and you
+    /// want to access it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`TextColumn`] with `u8` values. Same as
+    /// `Self::of::<TextColumn<u8>>`.
+    pub fn as_text(self) -> Option<TextColumnSliceMut<'a, u8>> {
+        self.of::<TextColumn<u8>>()
+    }
+
+    /// Use this if you know the underlying buffer holds binary data and you want to access it.
+    ///
+    /// `Some` if the the underlying buffer is of type [`BinColumn`]. Same as
+    /// `Self::of::<BinColumn>`.
+    pub fn as_binary(self) -> Option<BinColumnSliceMut<'a>> {
+        self.of::<BinColumn>()
+    }
+
+    pub fn as_slice<T>(self) -> Option<&'a mut [T]>
+    where
+        T: Pod,
+    {
+        self.of::<Vec<T>>()
+    }
+
+    pub fn as_nullable_slice<T>(self) -> Option<NullableSliceMut<'a, T>>
+    where
+        T: Pod,
+    {
+        self.of::<ColumnWithIndicator<T>>()
+    }
+}
+
+impl Resize for BoxColumnBuffer {
+    fn resize(&mut self, new_capacity: usize) {
+        self.as_mut().resize(new_capacity);
     }
 }
 

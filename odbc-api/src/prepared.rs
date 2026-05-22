@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use crate::{
     ColumnarBulkInserter, CursorImpl, DataType, Error, InputParameterMapping,
     ParameterCollectionRef, ResultSetMetadata,
-    buffers::{AnyBuffer, BufferDesc, ColumnBuffer, TextColumn},
+    buffers::{BoxColumnBuffer, BufferDesc, ColumnBuffer, TextColumn},
     columnar_bulk_inserter::InOrder,
     execute::execute_with_parameters,
     handles::{
@@ -212,7 +212,7 @@ where
     ///     // Fill the buffer with values column by column
     ///     let mut col = prebound
     ///         .column_mut(0)
-    ///         .as_text_view()
+    ///         .as_text()
     ///         .expect("We know the name column to hold text.");
     ///
     ///     for (index, name) in names.iter().enumerate() {
@@ -233,7 +233,7 @@ where
         self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BindParamDesc>,
-    ) -> Result<ColumnarBulkInserter<S, WithDataType<AnyBuffer>>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, WithDataType<BoxColumnBuffer>>, Error> {
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
             .map(|desc| desc.make_input_buffer(capacity))
@@ -253,7 +253,7 @@ where
         capacity: usize,
         descriptions: impl IntoIterator<Item = BindParamDesc>,
         index_mapping: impl InputParameterMapping,
-    ) -> Result<ColumnarBulkInserter<S, WithDataType<AnyBuffer>>, Error> {
+    ) -> Result<ColumnarBulkInserter<S, WithDataType<BoxColumnBuffer>>, Error> {
         let parameter_buffers: Vec<_> = descriptions
             .into_iter()
             .map(|desc| desc.make_input_buffer(capacity))
@@ -274,7 +274,7 @@ where
         &mut self,
         capacity: usize,
         descriptions: impl IntoIterator<Item = BindParamDesc>,
-    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<AnyBuffer>>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<BoxColumnBuffer>>, Error> {
         // Remark: We repeat the implementation here. It is hard to reuse the
         // `column_inserter_with_mapping` function, because we need to know the number of parameters
         // to create the `InOrder` mapping.
@@ -300,7 +300,7 @@ where
         capacity: usize,
         descriptions: impl IntoIterator<Item = BindParamDesc>,
         index_mapping: impl InputParameterMapping,
-    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<AnyBuffer>>, Error> {
+    ) -> Result<ColumnarBulkInserter<StatementRef<'_>, WithDataType<BoxColumnBuffer>>, Error> {
         let stmt = self.statement.as_stmt_ref();
 
         let parameter_buffers: Vec<_> = descriptions
@@ -669,8 +669,8 @@ impl BindParamDesc {
         }
     }
 
-    fn make_input_buffer(&self, max_rows: usize) -> WithDataType<AnyBuffer> {
-        let buffer = AnyBuffer::from_desc(max_rows, self.buffer_desc);
+    fn make_input_buffer(&self, max_rows: usize) -> WithDataType<BoxColumnBuffer> {
+        let buffer = self.buffer_desc.column_buffer(max_rows);
         WithDataType::new(buffer, self.data_type)
     }
 }
