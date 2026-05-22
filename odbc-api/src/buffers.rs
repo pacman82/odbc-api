@@ -41,7 +41,8 @@ pub use self::{
     columnar::{ColumnBuffer, ColumnarBuffer, Resize, Slice, TextRowSet},
     description::BufferDesc,
     dyn_column_buffer::{
-        AnyColumnBuffer, AnyColumnBufferSlice, BoxColumnBuffer, ColumnarDynBuffer,
+        AnyColumnBuffer, AnyColumnBufferSlice, BoxColumBufferRefMut, BoxColumnBuffer,
+        ColumnarDynBuffer,
     },
     indicator::Indicator,
     item::Item,
