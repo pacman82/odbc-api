@@ -35,7 +35,7 @@ mod row_vec;
 mod text_column;
 
 pub use self::{
-    any_buffer::{AnyBuffer, AnySlice, AnySliceMut},
+    any_buffer::{AnySlice, AnySliceMut},
     bin_column::{BinColumn, BinColumnIt, BinColumnSlice, BinColumnSliceMut},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnarBuffer, Resize, Slice, TextRowSet},
@@ -53,4 +53,4 @@ pub use self::{
 };
 
 #[expect(deprecated)]
-pub use self::any_buffer::ColumnarAnyBuffer;
+pub use self::any_buffer::{AnyBuffer, ColumnarAnyBuffer};
