@@ -22,6 +22,7 @@ use super::{
     text_column::TextColumnSliceMut,
 };
 
+#[deprecated(note = "Use BoxColumnBuffer instead")]
 /// Buffer holding a single column of either a result set or parameter
 #[derive(Debug)]
 pub enum AnyBuffer {
@@ -57,6 +58,7 @@ pub enum AnyBuffer {
     NullableBit(OptBitColumn),
 }
 
+#[expect(deprecated)]
 impl AnyBuffer {
     /// Map buffer description to actual buffer.
     pub fn try_from_desc(max_rows: usize, desc: BufferDesc) -> Result<Self, TooLargeBufferSize> {
@@ -219,6 +221,7 @@ trait AnyBufferVariantMut: CDataMut + Resize {}
 
 impl<T> AnyBufferVariantMut for T where T: CDataMut + Resize {}
 
+#[expect(deprecated)]
 unsafe impl CData for AnyBuffer {
     fn cdata_type(&self) -> CDataType {
         self.inner().cdata_type()
@@ -237,6 +240,7 @@ unsafe impl CData for AnyBuffer {
     }
 }
 
+#[expect(deprecated)]
 unsafe impl CDataMut for AnyBuffer {
     fn mut_indicator_ptr(&mut self) -> *mut isize {
         self.inner_mut().mut_indicator_ptr()
@@ -250,6 +254,7 @@ unsafe impl CDataMut for AnyBuffer {
 /// Flexible columnar buffer implementation. Bind this to a cursor to fetch values in bulk, or pass
 /// this as a parameter to a statement, to submit many parameters at once.
 #[deprecated(note = "ColumnarAnyBuffer is replaced by ColumnarDynBuffer")]
+#[expect(deprecated)]
 pub type ColumnarAnyBuffer = ColumnarBuffer<AnyBuffer>;
 
 #[expect(deprecated)]
@@ -396,6 +401,7 @@ impl<'a> AnySlice<'a> {
     }
 }
 
+#[expect(deprecated)]
 unsafe impl<'a> BoundInputSlice<'a> for AnyBuffer {
     type SliceMut = AnySliceMut<'a>;
 
@@ -536,6 +542,7 @@ impl<'a> AnySliceMut<'a> {
     }
 }
 
+#[expect(deprecated)]
 unsafe impl ColumnBuffer for AnyBuffer {
     fn capacity(&self) -> usize {
         match self {
@@ -578,6 +585,7 @@ unsafe impl ColumnBuffer for AnyBuffer {
     }
 }
 
+#[expect(deprecated)]
 unsafe impl Slice for AnyBuffer {
     type Slice<'a> = AnySlice<'a>;
 
@@ -613,6 +621,7 @@ unsafe impl Slice for AnyBuffer {
     }
 }
 
+#[expect(deprecated)]
 impl Resize for AnyBuffer {
     fn resize(&mut self, new_capacity: usize) {
         self.inner_mut().resize(new_capacity);
@@ -623,8 +632,10 @@ impl Resize for AnyBuffer {
 mod tests {
     use crate::buffers::{AnySlice, AnySliceMut, ColumnBuffer as _, Resize, columnar::Slice as _};
 
+    #[expect(deprecated)]
     use super::AnyBuffer;
 
+    #[expect(deprecated)]
     #[test]
     fn any_buffer_is_resize() {
         // Given an `AnyBuffer` with a capacity of 2 and values [1, 2]
@@ -640,6 +651,7 @@ mod tests {
         assert_eq!(buffer.capacity(), 4);
     }
 
+    #[expect(deprecated)]
     #[test]
     fn slice_should_only_contain_part_of_the_buffer() {
         let buffer = AnyBuffer::I32(vec![1, 2, 3]);

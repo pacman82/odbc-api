@@ -308,13 +308,48 @@ impl Resize for BoxColumnBuffer {
 
 #[cfg(test)]
 mod tests {
-
-    use super::{BufferDesc, ColumnarDynBuffer};
+    use super::{BoxColumnBuffer, BufferDesc, ColumnarDynBuffer, Slice};
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]
     fn assert_unique_column_indices() {
         let bd = BufferDesc::I32 { nullable: false };
         ColumnarDynBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
+    }
+
+    #[test]
+    fn box_column_buffer_is_resize() {
+        // Given an `BoxColumnBuffer` with a capacity of 2 and values [1, 2]
+        let mut buffer: BoxColumnBuffer = Box::new(vec![1i32, 2]);
+
+        // When we resize it to a capacity of 4
+        buffer.resize(4);
+
+        // Then the buffer should still have the same values in the first two positions and the
+        // remaining positions should be filled with default values (0 for i32)
+        assert_eq!(buffer.slice(4).as_slice(), Some([1i32, 2, 0, 0].as_slice()));
+        // And the capacity should be 4
+        assert_eq!(buffer.capacity(), 4);
+    }
+
+    #[test]
+    fn slice_should_only_contain_part_of_the_buffer() {
+        let buffer: BoxColumnBuffer = Box::new(vec![1i32, 2, 3]);
+        let view = buffer.slice(2);
+        assert_eq!(Some([1, 2].as_slice()), view.as_slice::<i32>());
+    }
+
+    #[test]
+    fn slice_should_be_none_if_types_mismatch() {
+        let buffer: BoxColumnBuffer = Box::new(vec![1i32, 2, 3]);
+        let view = buffer.slice(3);
+        assert_eq!(None, view.as_slice::<i16>());
+    }
+
+    #[test]
+    fn nullable_slice_should_be_none_if_buffer_is_non_nullable() {
+        let buffer: BoxColumnBuffer = Box::new(vec![1i32, 2, 3]);
+        let view = buffer.slice(3);
+        assert!(view.as_nullable_slice::<i32>().is_none());
     }
 }
