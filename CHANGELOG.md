@@ -7,14 +7,10 @@
 
 ### 🚀 Features
 
-- Deperate `AnyBuffer` it is replaced by `BoxColumnBuffer`.
-- [**breaking**] Prepared::into_column_inserter now uses BoxColumnBuffer
+- `AnyBuffer` is deprecated and replaced by `BoxColumnBuffer`.
+- [**breaking**] Prepared::into_column_inserter now uses `BoxColumnBuffer` instead of `AnyBuffer`.
 
-  From the perspective of the user this works largely the same. Most
-  likely calls to `as_text_view` need to be exchanged with `as_text`,
-  `as_w_text_view` -> `as_wide_text`, `as_bin_view` -> `as_binary`.
-
-- `BoxColumnBuffer` now implements `BoundInputSlice`
+  From the perspective of the user this works largely the same. Calls to `as_text_view` must be exchanged with `as_text`, `as_w_text_view` -> `as_wide_text`, `as_bin_view` -> `as_binary`.
 
 ## [26.1.0](https://github.com/pacman82/odbc-api/compare/26.0.0...26.1.0) - 2026-05-21
 
