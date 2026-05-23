@@ -3,6 +3,17 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [28.0.0](https://github.com/pacman82/odbc-api/compare/27.0.0...28.0.0) - 2026-05-23
+
+### 🚀 Features
+
+- [**breaking**] Use widestring types with stronger invariants
+
+  For wide strings (i.e. strings which character points are represented in
+  `u16`) we use `Utf16Str` and `Utf16String` in public interfaces. This
+  replaces `U16String` and `U16Str` respectively.
+
+
 ## [27.0.0](https://github.com/pacman82/odbc-api/compare/26.1.0...27.0.0) - 2026-05-22
 
 ### 🚀 Features
