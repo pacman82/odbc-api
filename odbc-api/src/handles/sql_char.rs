@@ -29,7 +29,7 @@ use std::{
 };
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
-use widestring::{U16CStr, U16String};
+use widestring::{U16CStr, Utf16String};
 
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 pub type SqlChar = u8;
@@ -118,7 +118,7 @@ pub struct SqlText<'a> {
     /// In case we use wide methods we need to convert to UTF-16. We'll take ownership of the
     /// buffer here.
     #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
-    text: U16String,
+    text: Utf16String,
     /// We include the lifetime in the declaration of the type still, so the borrow checker
     /// complains, if we would mess up the compilation for narrow methods.
     #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
@@ -133,7 +133,7 @@ impl<'a> SqlText<'a> {
     /// Create an SqlText buffer from an UTF-8 string slice
     pub fn new(text: &'a str) -> Self {
         Self {
-            text: U16String::from_str(text),
+            text: Utf16String::from_str(text),
             _ref: PhantomData,
         }
     }

@@ -68,8 +68,8 @@ impl ColumnDescription {
         }
         #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
         pub fn utf8_to_vec_char(text: &str) -> Vec<u16> {
-            use widestring::U16String;
-            U16String::from_str(text).into_vec()
+            use widestring::Utf16String;
+            Utf16String::from_str(text).into_vec()
         }
         Self {
             name: utf8_to_vec_char(name),

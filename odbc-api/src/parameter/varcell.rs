@@ -8,7 +8,7 @@ use std::{
 };
 
 use odbc_sys::{CDataType, NULL_DATA};
-use widestring::{U16Str, U16String};
+use widestring::{Utf16Str, Utf16String};
 
 use crate::{
     DataType, OutputParameter,
@@ -203,15 +203,15 @@ where
     K: VarKind<Element = u16>,
 {
     /// Create an owned parameter containing the character data from the passed string.
-    pub fn from_u16_string(val: U16String) -> Self {
+    pub fn from_utf16_string(val: Utf16String) -> Self {
         Self::from_vec(val.into_vec())
     }
 
     /// Create an owned parameter containing the character data from the passed string. Converts it
     /// to UTF-16 and allocates it.
     pub fn from_str_slice(val: &str) -> Self {
-        let utf16 = U16String::from_str(val);
-        Self::from_u16_string(utf16)
+        let utf16 = Utf16String::from_str(val);
+        Self::from_utf16_string(utf16)
     }
 }
 
@@ -401,9 +401,9 @@ impl<B> VarCell<B, WideText>
 where
     B: Borrow<[u16]>,
 {
-    pub fn as_utf16(&self) -> Option<&U16Str> {
+    pub fn as_utf16(&self) -> Option<&Utf16Str> {
         if let Some(chars) = self.as_slice() {
-            let text = U16Str::from_slice(chars);
+            let text = Utf16Str::from_slice(chars).expect("Wide character encoding must be UTF-16");
             Some(text)
         } else {
             None

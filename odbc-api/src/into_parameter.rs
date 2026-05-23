@@ -1,4 +1,4 @@
-use widestring::{U16Str, U16String};
+use widestring::{Utf16Str, Utf16String};
 
 use crate::{
     Nullable,
@@ -143,20 +143,20 @@ impl IntoParameter for Option<Vec<u8>> {
     }
 }
 
-impl<'a> IntoParameter for &'a U16Str {
+impl<'a> IntoParameter for &'a Utf16Str {
     type Parameter = VarWCharSlice<'a>;
 
-    fn into_parameter(self) -> Self::Parameter {
+    fn into_parameter(self) -> VarWCharSlice<'a> {
         let slice = self.as_slice();
         let length_in_bytes = slice.len() * 2;
         VarWCharSlice::from_buffer(slice, Indicator::Length(length_in_bytes))
     }
 }
 
-impl<'a> IntoParameter for Option<&'a U16Str> {
+impl<'a> IntoParameter for Option<&'a Utf16Str> {
     type Parameter = VarWCharSlice<'a>;
 
-    fn into_parameter(self) -> Self::Parameter {
+    fn into_parameter(self) -> VarWCharSlice<'a> {
         match self {
             Some(str) => str.into_parameter(),
             None => VarWCharSlice::NULL,
@@ -164,15 +164,15 @@ impl<'a> IntoParameter for Option<&'a U16Str> {
     }
 }
 
-impl IntoParameter for U16String {
+impl IntoParameter for Utf16String {
     type Parameter = VarWCharBox;
 
     fn into_parameter(self) -> Self::Parameter {
-        VarWCharBox::from_u16_string(self)
+        VarWCharBox::from_utf16_string(self)
     }
 }
 
-impl IntoParameter for Option<U16String> {
+impl IntoParameter for Option<Utf16String> {
     type Parameter = VarWCharBox;
 
     fn into_parameter(self) -> Self::Parameter {

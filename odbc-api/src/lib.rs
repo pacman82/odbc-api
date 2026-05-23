@@ -62,7 +62,7 @@ pub use self::{
 /// Reexports `odbc-sys` as sys to enable applications to always use the same version as this
 /// crate.
 pub use odbc_sys as sys;
-pub use widestring::{U16Str, U16String};
+pub use widestring::{Utf16Str, Utf16String};
 
 // Reexport fetch if derive feature is enabled
 #[cfg(feature = "derive")]

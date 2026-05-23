@@ -9,8 +9,8 @@ mod derive;
 use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
     Cursor, DataType, Error, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability,
-    Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, U16Str,
-    U16String,
+    Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, Utf16Str,
+    Utf16String,
     buffers::{
         BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
     },
@@ -554,8 +554,13 @@ fn bind_wide_column_to_char(profile: &Profile) {
     drop(row_set_cursor);
 
     assert_eq!(
-        Some(U16String::from_str("Hello").as_ustr()),
-        buf.column(0).get(0).map(U16Str::from_slice)
+        "Hello",
+        buf.column(0)
+            .get(0)
+            .map(Utf16Str::from_slice)
+            .unwrap()
+            .unwrap()
+            .to_string()
     );
 }
 
@@ -662,8 +667,10 @@ fn bind_varchar_to_wchar(profile: &Profile) {
     let batch = row_set_cursor.fetch().unwrap().unwrap();
 
     assert_eq!(
-        U16String::from_str("Hello, World!").as_ustr(),
-        U16Str::from_slice(batch.column(0).get(0).unwrap())
+        "Hello, World!",
+        Utf16Str::from_slice(batch.column(0).get(0).unwrap())
+            .unwrap()
+            .to_string()
     );
 }
 
@@ -1236,12 +1243,16 @@ fn wchar(profile: &Profile) {
     let wtext_col = col.as_wide_text().unwrap();
     assert_eq!(2, wtext_col.len());
     assert_eq!(
-        &U16String::from_str("A"),
-        &U16Str::from_slice(wtext_col.get(0).unwrap())
+        "A",
+        &Utf16Str::from_slice(wtext_col.get(0).unwrap())
+            .unwrap()
+            .to_string()
     );
     assert_eq!(
-        &U16String::from_str("Ü"),
-        &U16Str::from_slice(wtext_col.get(1).unwrap())
+        "Ü",
+        &Utf16Str::from_slice(wtext_col.get(1).unwrap())
+            .unwrap()
+            .to_string()
     );
     assert!(row_set_cursor.fetch().unwrap().is_none());
 }
@@ -1348,7 +1359,7 @@ fn bind_narrow_parameter_to_varchar(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn bind_u16_str_parameter_to_char(profile: &Profile) {
+fn bind_utf16_str_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["CHAR(5)"])
@@ -1356,13 +1367,13 @@ fn bind_u16_str_parameter_to_char(profile: &Profile) {
         .unwrap();
     let insert_sql = table.sql_insert();
 
-    let hello = U16String::from_str("Hello");
-    let hello = hello.as_ustr();
+    let hello = Utf16String::from_str("Hello");
+    let hello = hello.as_utfstr();
     conn.execute(&insert_sql, &hello.into_parameter(), None)
         .unwrap();
     conn.execute(&insert_sql, &Some(hello).into_parameter(), None)
         .unwrap();
-    conn.execute(&insert_sql, &None::<&U16Str>.into_parameter(), None)
+    conn.execute(&insert_sql, &None::<&Utf16Str>.into_parameter(), None)
         .unwrap();
 
     let actual = table.content_as_string(&conn);
@@ -1373,7 +1384,7 @@ fn bind_u16_str_parameter_to_char(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn bind_u16_string_parameter_to_char(profile: &Profile) {
+fn bind_utf16_string_parameter_to_char(profile: &Profile) {
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
         .column_types(&["CHAR(5)"])
@@ -1382,12 +1393,12 @@ fn bind_u16_string_parameter_to_char(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // Usecase: Create an owned parameter from a UTF-16 string
-    let hello = U16String::from_str("Hello");
+    let hello = Utf16String::from_str("Hello");
     conn.execute(&insert_sql, &hello.clone().into_parameter(), None)
         .unwrap();
     conn.execute(&insert_sql, &Some(hello).into_parameter(), None)
         .unwrap();
-    conn.execute(&insert_sql, &None::<U16String>.into_parameter(), None)
+    conn.execute(&insert_sql, &None::<Utf16String>.into_parameter(), None)
         .unwrap();
 
     let actual = table.content_as_string(&conn);
@@ -1533,9 +1544,9 @@ fn describe_parameters_of_prepared_statement(profile: &Profile, expected: &[Colu
     assert_eq!(2, prepared.num_params().unwrap());
 }
 
-// Windows and non-windows versions of drivers may report different data types
-const fn native_varchar_data_type(length: usize) -> DataType {
-    if cfg!(target_os = "windows") {
+// Wide and non-wide versions of drivers may report different data types
+const fn varchar_data_type(length: usize) -> DataType {
+    if cfg!(feature = "wide") {
         DataType::WVarchar {
             length: NonZeroUsize::new(length),
         }
@@ -1546,7 +1557,20 @@ const fn native_varchar_data_type(length: usize) -> DataType {
     }
 }
 
-// Windows and non-windows versions of drivers may report different data types
+// Wide and non-wide versions of drivers may report different data types
+const fn long_varchar_data_type(length: usize) -> DataType {
+    if cfg!(feature = "wide") {
+        DataType::WLongVarchar {
+            length: NonZeroUsize::new(length),
+        }
+    } else {
+        DataType::LongVarchar {
+            length: NonZeroUsize::new(length),
+        }
+    }
+}
+
+// Windows and non-Windows versions of drivers may report different data types
 const fn native_long_varchar_data_type(length: usize) -> DataType {
     if cfg!(target_os = "windows") {
         DataType::WLongVarchar {
@@ -1559,7 +1583,7 @@ const fn native_long_varchar_data_type(length: usize) -> DataType {
     }
 }
 
-// Windows and non-windows versions of drivers may report different data types
+// Wide and non-wide versions of drivers may report different data types
 const fn native_char_data_type(length: usize) -> DataType {
     if cfg!(target_os = "windows") {
         DataType::WChar {
@@ -1577,7 +1601,7 @@ const fn native_char_data_type(length: usize) -> DataType {
 #[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
 #[test_case(MARIADB, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Maria DB")]
 #[test_case(SQLITE_3, native_char_data_type(1000); "SQLite 3")]
-#[test_case(POSTGRES, native_long_varchar_data_type(1000); "PostgreSQL")]
+#[test_case(POSTGRES, long_varchar_data_type(1000); "PostgreSQL")]
 fn data_types_for_varchar_1000_from_concise_type(profile: &Profile, expected_data_type: DataType) {
     // Given
     let table_name = table_name!();
@@ -1599,9 +1623,9 @@ fn data_types_for_varchar_1000_from_concise_type(profile: &Profile, expected_dat
 
 // Remarkabely the data types reported may differ if the source is a column description
 #[test_case(MSSQL, DataType::Varchar { length: NonZeroUsize::new(1000) }; "Microsoft SQL Server")]
-#[test_case(MARIADB, native_varchar_data_type(1000); "Maria DB")]
+#[test_case(MARIADB, varchar_data_type(1000); "Maria DB")]
 #[test_case(SQLITE_3, native_long_varchar_data_type(1000); "SQLite 3")]
-#[test_case(POSTGRES, native_long_varchar_data_type(1000); "PostgreSQL")]
+#[test_case(POSTGRES, long_varchar_data_type(1000); "PostgreSQL")]
 fn data_types_for_varchar_1000_from_description(profile: &Profile, expected_data_type: DataType) {
     // Given
     let table_name = table_name!();
@@ -2101,7 +2125,7 @@ fn get_wide_text(profile: &Profile) {
     let mut actual = Vec::with_capacity("Hello, World!".len() - 1);
     let is_not_null = row.get_wide_text(1, &mut actual).unwrap();
 
-    let actual = U16String::from_vec(actual).to_string().unwrap();
+    let actual = Utf16String::from_vec(actual).unwrap().to_string();
     assert!(is_not_null);
     assert_eq!("Hello, World!", &actual);
 }
@@ -2747,7 +2771,7 @@ fn escape_hatch(profile: &Profile) {
     unsafe {
         let select_utf8 = table.sql_all_ordered_by_id();
         // TableName does not exist, but we won't execute the query anyway
-        let select = U16String::from_str(&select_utf8);
+        let select = Utf16String::from_str(&select_utf8);
         let ret = SQLPrepareW(
             statement.as_sys(),
             select.as_ptr(),
@@ -3199,7 +3223,8 @@ fn describe_column_name_with_umlaut(profile: &Profile) {
 // synatx error.
 // #[test_case(MSSQL; "Microsoft SQL Server")]
 // #[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
+// SQLite 3 does not work with wide character encoding in linux
+// #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn umlaut_in_column_name(profile: &Profile) {
     let table_name = table_name!();
@@ -3304,8 +3329,8 @@ fn chinese_text_argument(profile: &Profile) {
         let mut cursor = cursor.bind_buffer(buffer).unwrap();
         let batch = cursor.fetch().unwrap().unwrap();
         let utf16 = batch.column(0).get(0).unwrap();
-        let utf16 = U16Str::from_slice(utf16);
-        utf16.to_string().unwrap()
+        let utf16 = Utf16Str::from_slice(utf16).unwrap();
+        utf16.to_string()
     };
 
     // Fetching non narrow should always work, but does not for PostgreSQL with narrow compilation
@@ -3334,7 +3359,7 @@ fn chinese_text_argument_nvarchar(profile: &Profile) {
     let insert_sql = table.sql_insert();
 
     // When
-    let arg = U16String::from_str("您好"); // Narrow build will fail for MSSQL without this line.
+    let arg = Utf16String::from_str("您好"); // Narrow build will fail for MSSQL without this line.
     conn.execute(&insert_sql, &arg.into_parameter(), None)
         .unwrap();
 
@@ -3347,8 +3372,8 @@ fn chinese_text_argument_nvarchar(profile: &Profile) {
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let batch = cursor.fetch().unwrap().unwrap();
     let utf16 = batch.column(0).get(0).unwrap();
-    let utf16 = U16Str::from_slice(utf16);
-    let actual = utf16.to_string().unwrap();
+    let utf16 = Utf16Str::from_slice(utf16).unwrap();
+    let actual = utf16.to_string();
     assert_eq!("您好", actual);
 }
 
@@ -3760,10 +3785,7 @@ fn row_wise_bulk_query_wide_text(profile: &Profile) {
     let batch = block_cursor.fetch().unwrap().unwrap();
 
     // Then
-    assert_eq!(
-        "Hello, World!",
-        batch[0].0.as_utf16().unwrap().to_string().unwrap()
-    );
+    assert_eq!("Hello, World!", batch[0].0.as_utf16().unwrap().to_string());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]

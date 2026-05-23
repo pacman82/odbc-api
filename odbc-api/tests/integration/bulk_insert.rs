@@ -1,5 +1,5 @@
 use odbc_api::{
-    BindParamDesc, Connection, DataType, InOrder, InputParameterMapping, IntoParameter, U16String,
+    BindParamDesc, Connection, DataType, InOrder, InputParameterMapping, IntoParameter,
     buffers::{BufferDesc, Item, TextColumn},
     parameter::WithDataType,
     sys::{NULL_DATA, Numeric, Timestamp},
@@ -659,10 +659,10 @@ fn columnar_insert_wide_varchar(profile: &Profile) {
         .prepare(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
         .unwrap();
     let input = [
-        Some(U16String::from_str("Hello")),
-        Some(U16String::from_str("World")),
+        Some(Utf16String::from_str("Hello")),
+        Some(Utf16String::from_str("World")),
         None,
-        Some(U16String::from_str("Hello, World!")),
+        Some(Utf16String::from_str("Hello, World!")),
     ];
     // Fill buffer with values
     let max_str_len = 20;

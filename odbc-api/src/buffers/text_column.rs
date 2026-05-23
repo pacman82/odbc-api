@@ -14,7 +14,7 @@ use super::{ColumnBuffer, Indicator};
 use log::trace;
 use odbc_sys::{CDataType, NULL_DATA};
 use std::{any::Any, cmp::min, ffi::c_void, mem::size_of, num::NonZeroUsize, panic};
-use widestring::U16Str;
+use widestring::Utf16Str;
 
 /// A column buffer for character data. The actual encoding used may depend on your system locale.
 pub type CharColumn = TextColumn<u8>;
@@ -311,8 +311,8 @@ impl<C> TextColumn<C> {
 }
 
 impl WCharColumn {
-    /// The string slice at the specified position as `U16Str`. Includes interior nuls, but excludes
-    /// the terminating nul.
+    /// The string slice at the specified position as `Utf16Str`. Includes interior nuls, but
+    /// excludes the terminating nul.
     ///
     /// # Safety
     ///
@@ -320,8 +320,11 @@ impl WCharColumn {
     /// can not guarantee the accessed element to be valid and in a defined state. It also can not
     /// panic on accessing an undefined element. It will panic however if `row_index` is larger or
     /// equal to the maximum number of elements in the buffer.
-    pub unsafe fn ustr_at(&self, row_index: usize) -> Option<&U16Str> {
-        self.value_at(row_index).map(U16Str::from_slice)
+    pub unsafe fn utf16_str_at(&self, row_index: usize) -> Option<&Utf16Str> {
+        self.value_at(row_index)
+            .map(Utf16Str::from_slice)
+            .transpose()
+            .expect("Wide character encoding must be UTF-16")
     }
 }
 
@@ -570,10 +573,14 @@ impl<'c> Iterator for TextColumnIt<'c, u8> {
 impl ExactSizeIterator for TextColumnIt<'_, u8> {}
 
 impl<'c> Iterator for TextColumnIt<'c, u16> {
-    type Item = Option<&'c U16Str>;
+    type Item = Option<&'c Utf16Str>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next_impl().map(|opt| opt.map(U16Str::from_slice))
+    fn next(&mut self) -> Option<Option<&'c Utf16Str>> {
+        self.next_impl().map(|opt| {
+            opt.map(Utf16Str::from_slice)
+                .transpose()
+                .expect("Wide character encoding must be UTF-16")
+        })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
