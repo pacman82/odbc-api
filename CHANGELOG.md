@@ -14,6 +14,8 @@
   been reported to return the number of code points rather than the number
   of bytes then using narrow encoding in Linux.
 
+  Thanks to @sylvain-pajaud for reporting the issue.
+
 
 ## [28.0.0](https://github.com/pacman82/odbc-api/compare/27.0.0...28.0.0) - 2026-05-23
 
