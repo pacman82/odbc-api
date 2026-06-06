@@ -70,7 +70,14 @@ pub struct DiagnosticResult {
     pub state: State,
     /// Native error code specific to the data source.
     pub native_error: i32,
-    /// The length of the diagnostic message reported by ODBC (excluding the terminating zero).
+    /// The length of the diagnostic message reported by ODBC. This is supposed to be the size in
+    /// characters (excluding the terminating zero). For narrow encodings this is the size in bytes;
+    /// For wide encodings this is the size in 16-bit double words. Some drivers however report
+    /// larger values (e.g. they add additional padding `\0` bytes to the message and include the
+    /// padding in the length). Other drivers (IBM i Access ODBC driver, see
+    /// [issue #898](https://github.com/pacman82/odbc-api/issues/898>) underreport the text length.
+    /// They report only one "character" for each UTF-8 code point even if they consist of multiple
+    /// bytes.
     pub text_length: i16,
 }
 
@@ -146,28 +153,34 @@ pub trait Diagnostics {
             .map(|mut result| {
                 let mut text_length = result.text_length.try_into().unwrap();
 
-                // Check if the buffer has been large enough to hold the message.
-                if text_length > message_text.len() {
+                // Check if the buffer has been large enough to hold the message and terminating
+                // zero.
+                if text_length + 1 > message_text.len() {
                     // The `message_text` buffer was too small to hold the requested diagnostic
-                    // message. No diagnostic records were generated. To
-                    // determine that a truncation occurred, the application
-                    // must compare the buffer length to the actual number of bytes
-                    // available, which is found in `DiagnosticResult::text_length`.
+                    // message.
 
                     // Resize with +1 to account for terminating zero
                     message_text.resize(text_length + 1, 0);
 
                     // Call diagnostics again with the larger buffer. Should be a success this time
-                    // if driver isn't buggy.
+                    // if driver is not buggy.
                     result = self.diagnostic_record(rec_number, message_text).unwrap();
                 }
-                // Now `message_text` has been large enough to hold the entire message.
+                // Now `message_text` should have been large enough to hold the entire message.
 
-                // Some drivers pad the message with null-chars (which is still a valid C string,
-                // but not a valid Rust string).
-                while text_length > 0 && message_text[text_length - 1] == 0 {
-                    text_length -= 1;
+                // For a well behaved driver, we expect the last character to not be a terminating
+                // zero, followed by a terminating zero.
+                if text_length != 0
+                    && (message_text[text_length - 1] == 0 || message_text[text_length] != 0)
+                {
+                    text_length = 0;
+                    // Driver is not well behaved. Let's scan for the terminating zero instead to
+                    // determine the message length..
+                    while text_length < message_text.len() && message_text[text_length] != 0 {
+                        text_length += 1;
+                    }
                 }
+
                 // Resize Vec to hold exactly the message.
                 message_text.resize(text_length, 0);
 
@@ -412,5 +425,67 @@ mod tests {
         while let Some(_rec) = stream.next() {}
 
         assert_eq!(diagnostics.num_calls(), i16::MAX as usize)
+    }
+
+    #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
+    #[test]
+    fn driver_pads_diagnostic_message_text_with_zeroes() {
+        struct DiagnosticStub;
+
+        impl Diagnostics for DiagnosticStub {
+            fn diagnostic_record(
+                &self,
+                _rec_number: i16,
+                message_text: &mut [SqlChar],
+            ) -> Option<DiagnosticResult> {
+                let message = "Hello, World!";
+                message_text[..message.len()].copy_from_slice(message.as_bytes());
+                message_text[message.len()..].fill(0);
+                Some(DiagnosticResult {
+                    state: State([0, 0, 0, 0, 0]),
+                    native_error: 0,
+                    // Overreport: length is actually 13
+                    text_length: 20,
+                })
+            }
+        }
+
+        let mut message_text = Vec::with_capacity(50);
+        DiagnosticStub.diagnostic_record_vec(0, &mut message_text);
+
+        assert_eq!("Hello, World!", String::from_utf8(message_text).unwrap())
+    }
+
+    /// IBM i Access ODBC driver only reports one "character" for each UTF-8 code point even if they
+    /// consist of multiple bytes
+    ///
+    /// See: <https://github.com/pacman82/odbc-api/issues/898> underreport the text length.
+    #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
+    #[test]
+    fn driver_understates_length_of_message_text() {
+        struct DiagnosticStub;
+
+        impl Diagnostics for DiagnosticStub {
+            fn diagnostic_record(
+                &self,
+                _rec_number: i16,
+                message_text: &mut [SqlChar],
+            ) -> Option<DiagnosticResult> {
+                let message = "Hällö, Wörld!";
+                message_text[..message.len()].copy_from_slice(message.as_bytes());
+                message_text[message.len()] = 0;
+                Some(DiagnosticResult {
+                    state: State([0, 0, 0, 0, 0]),
+                    native_error: 0,
+                    // Underreport: length in codepoints not bytes
+                    text_length: 13,
+                })
+            }
+        }
+
+        let mut message_text = Vec::with_capacity(50);
+        DiagnosticStub.diagnostic_record_vec(0, &mut message_text);
+
+        assert_eq!("Hällö, Wörld!", String::from_utf8(message_text).unwrap())
     }
 }
