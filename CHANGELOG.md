@@ -3,6 +3,18 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [28.1.0](https://github.com/pacman82/odbc-api/compare/28.0.0...28.1.0) - 2026-06-06
+
+### 🚀 Features
+
+- Robust against drivers underreporting length for diagonstics
+
+  Scan for termintating zero in cases there driver underreports length of
+  diagnostic messages. This has been added since IBM i Access Driver has
+  been reported to return the number of code points rather than the number
+  of bytes then using narrow encoding in Linux.
+
+
 ## [28.0.0](https://github.com/pacman82/odbc-api/compare/27.0.0...28.0.0) - 2026-05-23
 
 ### 🚀 Features
