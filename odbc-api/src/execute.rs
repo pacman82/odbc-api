@@ -67,9 +67,12 @@ where
         // Reset parameters so we do not dereference stale once by mistake if we call
         // `exec_direct`.
         statement.reset_parameters().into_result(&statement)?;
-        statement
-            .set_paramset_size(parameter_set_size)
-            .into_result(&statement)?;
+
+        if parameter_set_size != 1 {
+            statement
+                .set_paramset_size(parameter_set_size)
+                .into_result(&statement)?;
+        }
         // Bind new parameters passed by caller.
         params.bind_parameters_to(&mut statement)?;
         Ok(Some(statement))
