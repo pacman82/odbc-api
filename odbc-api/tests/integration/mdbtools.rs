@@ -14,7 +14,6 @@ const MDBTOOLS_CONNECTION: &str = concat!(
 /// mdbtools does not support SQL_ATTR_PARAMSET_SIZE; executing a prepared statement with no
 /// parameters must not call SQLSetStmtAttr for that attribute.
 #[test]
-#[should_panic = "Invalid attribute/option identifier"]
 fn execute_prepared_without_parameters() {
     let env = environment().unwrap();
     let conn = env

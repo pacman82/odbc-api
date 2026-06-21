@@ -2,7 +2,7 @@ use std::mem::transmute;
 
 use crate::{
     CursorImpl, CursorPolling, Error, ParameterCollectionRef, Sleep,
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    handles::{AsStatementRef, SqlText, State, Statement, StatementRef},
     parameter::Blob,
     sleep::wait_for,
 };
@@ -67,9 +67,17 @@ where
         // Reset parameters so we do not dereference stale once by mistake if we call
         // `exec_direct`.
         statement.reset_parameters().into_result(&statement)?;
-        statement
+        let result = statement
             .set_paramset_size(parameter_set_size)
-            .into_result(&statement)?;
+            .into_result(&statement);
+        if !matches!(
+            &result,
+            Err(Error::Diagnostics { record, .. })
+                if record.state == State::INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER
+                    && parameter_set_size == 1
+        ) {
+            result?;
+        }
         // Bind new parameters passed by caller.
         params.bind_parameters_to(&mut statement)?;
         Ok(Some(statement))

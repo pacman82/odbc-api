@@ -37,6 +37,19 @@ impl State {
     /// Can be returned by SQLSetStmtAttr function. We expect it in case the array set size is
     /// rejected.
     pub const OPTION_VALUE_CHANGED: State = State(*b"01S02");
+    /// One of two things:
+    ///
+    /// * The value specified for the argument Attribute was not valid for the version of ODBC
+    ///   supported by the driver.
+    /// * The value specified for the argument Attribute was a read-only attribute.
+    ///
+    /// Both are emitted by the driver manager, rather than the driver itself.
+    ///
+    /// One example of this error code emitted is when using `mdbtools`. When the driver builds its
+    /// dispatch table, it comments out `SQLSetStmtAttr` triggering unixODBC to use the fallback
+    /// behavior implemented against `SQLSetStmtOption`. `SQLSetStmtOption` does not have any notion
+    /// of array parameters, so setting the parameter size triggers this error code.
+    pub const INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER: State = State(*b"HY092");
 
     /// Drops terminating zero and changes char type, if required
     pub fn from_chars_with_nul(code: &[SqlChar; SQLSTATE_SIZE + 1]) -> Self {
