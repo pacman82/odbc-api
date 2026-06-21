@@ -7,7 +7,10 @@
 
 ### 🐛 Bug Fixes
 
-- Gracefully handle drivers, which do not support setting parameter
+- Gracefully handle drivers which do not support setting parameter set size
+
+  This allows executing statements using mdbtools, which do not support
+  ODBC 3 statement attributes.
 
 ## [28.1.0](https://github.com/pacman82/odbc-api/compare/28.0.0...28.1.0) - 2026-06-06
 
