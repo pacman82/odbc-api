@@ -69,6 +69,8 @@ jobs:
           sed --in-place 's/libsqliteodbc.so/\/usr\/lib\/x86_64-linux-gnu\/odbc\/libsqliteodbc.so/' /etc/odbcinst.ini
           # apt-get install -y odbc-mariadb
         shell: sudo bash {0}
+      - name: Install MDBTools ODBC Driver
+        run: sudo apt-get install -y mdbtools odbc-mdbtools
       - name: Install DuckDB ODBC Driver
         run: |
           curl -L -o duckdb_odbc.zip https://github.com/duckdb/duckdb-odbc/releases/download/v1.4.4.0/duckdb_odbc-linux-amd64.zip
