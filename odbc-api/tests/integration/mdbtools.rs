@@ -20,7 +20,11 @@ fn execute_query() {
         .connect_with_connection_string(MDBTOOLS_CONNECTION, ConnectionOptions::default())
         .unwrap();
     let mut cursor = conn
-        .execute("SELECT ProductName FROM Products WHERE ProductID = 1", (), None)
+        .execute(
+            "SELECT ProductName FROM Products WHERE ProductID = 1",
+            (),
+            None,
+        )
         .unwrap()
         .unwrap();
     let mut row = cursor.next_row().unwrap().unwrap();
