@@ -17,6 +17,8 @@ RUN apt update && export DEBIAN_FRONTEND=noninteractive \
     odbc-mariadb \
     libsqliteodbc \
     odbc-postgresql \
+    mdbtools \
+	odbc-mdbtools \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

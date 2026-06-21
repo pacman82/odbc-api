@@ -18,6 +18,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 	odbc-mariadb \
 	libsqliteodbc \
 	odbc-postgresql \
+	mdbtools \
+	odbc-mdbtools \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Install DuckDB ODBC driver

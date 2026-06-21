@@ -5,6 +5,7 @@ mod catalog;
 mod column_wise_bulk_fetch;
 mod connection_strings;
 mod derive;
+mod mdbtools;
 
 use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
