@@ -70,6 +70,15 @@ where
         let result = statement
             .set_paramset_size(parameter_set_size)
             .into_result(&statement);
+        // If setting parameter size is not supported, we can ignore the error in case we want to
+        // set it to 1, because 1 is the default and it could not have been set to something else.
+        //
+        // This occurred using mdbtools. See PR: https://github.com/pacman82/odbc-api/pull/903
+        //
+        // mdbtools claims to support ODBC 3, but zeroes out the SQLSetStmtAttr explicitly in the
+        // dispatch table handed to the unixODBC driver manager. UnixODBC does applay the fallback
+        // behavior, and finds that seting the parameter size is not supported by ODBC2's
+        // SQLSetStmtOption.
         if !matches!(
             &result,
             Err(Error::Diagnostics { record, .. })
