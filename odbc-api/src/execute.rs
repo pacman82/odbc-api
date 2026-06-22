@@ -19,7 +19,7 @@ use crate::{
 ///   executed.
 /// * `params`: The parameters bound to the statement before query execution.
 pub fn execute_with_parameters<S>(
-    statement: S,
+    mut statement: S,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
 ) -> Result<Option<CursorImpl<S>>, Error>
@@ -27,17 +27,14 @@ where
     S: Statement,
 {
     unsafe {
-        if let Some(statement) = bind_parameters(statement, params)? {
-            execute(statement, query)
-        } else {
-            Ok(None)
-        }
+        bind_parameters(&mut statement, params)?;
+        execute(statement, query)
     }
 }
 
 /// Asynchronous sibiling of [`execute_with_parameters`]
 pub async fn execute_with_parameters_polling<S>(
-    statement: S,
+    mut statement: S,
     query: Option<&SqlText<'_>>,
     params: impl ParameterCollectionRef,
     sleep: impl Sleep,
@@ -46,30 +43,24 @@ where
     S: Statement,
 {
     unsafe {
-        if let Some(statement) = bind_parameters(statement, params)? {
-            execute_polling(statement, query, sleep).await
-        } else {
-            Ok(None)
-        }
+        bind_parameters(&mut statement, params)?;
+        execute_polling(statement, query, sleep).await
     }
 }
 
-unsafe fn bind_parameters<S>(
-    mut statement: S,
+unsafe fn bind_parameters(
+    statement: &mut impl Statement,
     mut params: impl ParameterCollectionRef,
-) -> Result<Option<S>, Error>
-where
-    S: Statement,
-{
+) -> Result<(), Error> {
     unsafe {
         let parameter_set_size = params.parameter_set_size();
 
         // Reset parameters so we do not dereference stale once by mistake if we call
         // `exec_direct`.
-        statement.reset_parameters().into_result(&statement)?;
+        statement.reset_parameters().into_result(statement)?;
         let result = statement
             .set_paramset_size(parameter_set_size)
-            .into_result(&statement);
+            .into_result(statement);
         // If setting parameter size is not supported, we can ignore the error in case we want to
         // set it to 1, because 1 is the default and it could not have been set to something else.
         //
@@ -88,8 +79,8 @@ where
             result?;
         }
         // Bind new parameters passed by caller.
-        params.bind_parameters_to(&mut statement)?;
-        Ok(Some(statement))
+        params.bind_parameters_to(statement)?;
+        Ok(())
     }
 }
 
