@@ -3,11 +3,15 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-## [28.1.2](https://github.com/pacman82/odbc-api/compare/28.1.1...28.1.2) - 2026-06-28
+
+## [28.2.0](https://github.com/pacman82/odbc-api/compare/28.1.1...28.2.0) - 2026-06-28
 
 ### 🚀 Features
 
-- Make trait implementations for `Box<dyn InputParameter>` generic
+- Make trait implementations for `Box<dyn InputParameter>` generic over lifetime.
+
+  This allows borrowing data without reallocation then passing input parameters with heterogenous
+  types only decided at runtime.
 
 
 
