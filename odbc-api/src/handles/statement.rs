@@ -221,7 +221,8 @@ pub trait Statement: AnyHandle {
     /// # Safety
     ///
     /// It is the callers responsibility to make sure the bound columns live until they are no
-    /// longer bound.
+    /// longer bound. I.e. `target` must live long enough to cover every read of the bound value
+    /// pointers until they are unbound.
     unsafe fn bind_col(&mut self, column_number: u16, target: &mut impl CDataMut) -> SqlResult<()> {
         unsafe {
             SQLBindCol(

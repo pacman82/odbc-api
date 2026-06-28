@@ -624,7 +624,7 @@ where
 unsafe impl<T> OutputParameter for WithDataType<T> where T: Pod {}
 
 // Allow for input parameters whose type is only known at runtime.
-unsafe impl CData for Box<dyn InputParameter> {
+unsafe impl CData for Box<dyn InputParameter + '_> {
     fn cdata_type(&self) -> CDataType {
         self.as_ref().cdata_type()
     }
@@ -642,12 +642,13 @@ unsafe impl CData for Box<dyn InputParameter> {
     }
 }
 
-impl HasDataType for Box<dyn InputParameter> {
+impl HasDataType for Box<dyn InputParameter + '_> {
     fn data_type(&self) -> DataType {
         self.as_ref().data_type()
     }
 }
-unsafe impl CElement for Box<dyn InputParameter> {
+
+unsafe impl CElement for Box<dyn InputParameter + '_> {
     fn assert_completness(&self) {
         self.as_ref().assert_completness()
     }

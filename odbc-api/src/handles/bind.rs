@@ -13,6 +13,8 @@ use crate::DataType;
 /// In case of variable sized types [`Self::indicator_ptr`] must not exceed the value pointed to by
 /// [`Self::value_ptr`]. This requirement is a bit tricky since, if the same indicator buffer is
 /// used in an output paramater the indicator value may be larger in case of truncation.
+///
+/// The values pointed to must be valid for the lifetime of the [`CData`] instance.
 pub unsafe trait CData {
     /// The identifier of the C data type of the value buffer. When it is retrieving data from the
     /// data source with `fetch`, the driver converts the data to this type. When it sends data to
