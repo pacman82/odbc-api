@@ -3,6 +3,7 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ## [28.1.1](https://github.com/pacman82/odbc-api/compare/28.1.0...28.1.1) - 2026-06-21
 
 ### 🐛 Bug Fixes
