@@ -2542,6 +2542,34 @@ fn arbitrary_input_parameters(profile: &Profile) {
     assert_eq!("Hello, World!,42", actual)
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn arbitrary_input_parameters_with_borrowed_data(profile: &Profile) {
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(20)", "INT"])
+        .build(profile)
+        .unwrap();
+
+    // Borrowed text parameter
+    let text = "Hello, World!".to_owned();
+    let local_text_ref = text.as_str();
+    let number = 42i32;
+
+    let insert_statement = format!("INSERT INTO {table_name} (a, b) VALUES (?, ?);");
+    let parameters: Vec<Box<dyn InputParameter + '_>> = vec![
+        Box::new(VarCharSlice::new(local_text_ref.as_bytes())),
+        Box::new(number),
+    ];
+    conn.execute(&insert_statement, parameters.as_slice(), None)
+        .unwrap();
+
+    let actual = table.content_as_string(&conn);
+    assert_eq!("Hello, World!,42", actual);
+}
+
 /// Ensures access to driver and data source info is synchronized correctly when multiple threads
 /// attempt to query it at the same time. First, we query the list of the known drivers and data
 /// sources on the main thread. Then we spawn multiple threads that attempt to query these lists in
