@@ -1,5 +1,3 @@
-#[expect(deprecated)]
-use odbc_api::buffers::ColumnarAnyBuffer;
 use odbc_api::{
     Bit, ConcurrentBlockCursor, Cursor as _, DataType, Error, IntoParameter, Pod,
     ResultSetMetadata as _,
@@ -175,40 +173,6 @@ fn time(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn time_any_buffer(profile: &Profile) {
-    // Given
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["TIME"])
-        .values_by_column(&[&[Some("12:34:56")]])
-        .build(profile)
-        .unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
-
-    // When
-    #[expect(deprecated)]
-    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Time { nullable: false }]);
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let maybe_batch = cursor.fetch().unwrap();
-
-    // Then
-    let batch = maybe_batch.unwrap();
-    let column = batch.column(0).as_slice::<Time>().unwrap();
-    assert_eq!(
-        Time {
-            hour: 12,
-            minute: 34,
-            second: 56
-        },
-        column[0]
-    );
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
 fn nullable_time(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -237,41 +201,6 @@ fn nullable_time(profile: &Profile) {
         actual.get(0)
     );
     assert_eq!(None, actual.get(1));
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn nullable_time_any_buffer(profile: &Profile) {
-    // Given
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["TIME"])
-        .values_by_column(&[&[Some("12:34:56"), None]])
-        .build(profile)
-        .unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
-
-    // When
-    #[expect(deprecated)]
-    let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Time { nullable: true }]);
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let maybe_batch = cursor.fetch().unwrap();
-
-    // Then
-    let batch = maybe_batch.unwrap();
-    let column = batch.column(0).as_nullable_slice::<Time>().unwrap();
-    assert_eq!(
-        Some(&Time {
-            hour: 12,
-            minute: 34,
-            second: 56
-        }),
-        column.get(0)
-    );
-    assert_eq!(None, column.get(1));
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
@@ -629,40 +558,6 @@ fn date(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn date_any_buffecr(profile: &Profile) {
-    // Given
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["DATE"])
-        .values_by_column(&[&[Some("2025-05-23")]])
-        .build(profile)
-        .unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
-
-    // When
-    #[expect(deprecated)]
-    let buffer = ColumnarAnyBuffer::from_descs(1, [BufferDesc::Date { nullable: false }]);
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let maybe_batch = cursor.fetch().unwrap();
-
-    // Then
-    let batch = maybe_batch.unwrap();
-    let column = batch.column(0).as_slice::<Date>().unwrap();
-    assert_eq!(
-        Date {
-            year: 2025,
-            month: 5,
-            day: 23
-        },
-        column[0]
-    );
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
 fn nullable_date(profile: &Profile) {
     // Given
     let table_name = table_name!();
@@ -676,41 +571,6 @@ fn nullable_date(profile: &Profile) {
 
     // When
     let buffer = ColumnarDynBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-    let maybe_batch = cursor.fetch().unwrap();
-
-    // Then
-    let batch = maybe_batch.unwrap();
-    let column = batch.column(0).as_nullable_slice::<Date>().unwrap();
-    assert_eq!(
-        Some(&Date {
-            year: 2025,
-            month: 5,
-            day: 23
-        }),
-        column.get(0)
-    );
-    assert_eq!(None, column.get(1));
-}
-
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn nullable_date_any_buffer(profile: &Profile) {
-    // Given
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["DATE"])
-        .values_by_column(&[&[Some("2025-05-23"), None]])
-        .build(profile)
-        .unwrap();
-    let query = table.sql_all_ordered_by_id();
-    let cursor = conn.execute(&query, (), None).unwrap().unwrap();
-
-    // When
-    #[expect(deprecated)]
-    let buffer = ColumnarAnyBuffer::from_descs(2, [BufferDesc::Date { nullable: true }]);
     let mut cursor = cursor.bind_buffer(buffer).unwrap();
     let maybe_batch = cursor.fetch().unwrap();
 
@@ -1520,32 +1380,6 @@ async fn async_bulk_fetch(profile: &Profile, expected_to_support_polling: bool) 
     assert_eq!(1000, sum_rows_fetched);
     let used_polling = sleep_counter_spy != 0;
     assert_eq!(expected_to_support_polling, used_polling);
-}
-
-/// In use cases there the user supplies the query it may be necessary to ignore one column then
-/// binding the buffers. This test constructs a result set with 3 columns and ignores the second
-#[test_case(MSSQL; "Microsoft SQL Server")]
-#[test_case(MARIADB; "Maria DB")]
-#[test_case(SQLITE_3; "SQLite 3")]
-#[test_case(POSTGRES; "PostgreSQL")]
-fn ignore_output_column_any_buffer(profile: &Profile) {
-    let table_name = table_name!();
-    let (conn, table) = Given::new(&table_name)
-        .column_types(&["INTEGER", "INTEGER", "INTEGER"])
-        .build(profile)
-        .unwrap();
-    let cursor = conn
-        .execute(&table.sql_all_ordered_by_id(), (), None)
-        .unwrap()
-        .unwrap();
-
-    let bd = BufferDesc::I32 { nullable: true };
-    #[expect(deprecated)]
-    let buffer = ColumnarAnyBuffer::from_descs_and_indices(20, [(1, bd), (3, bd)].iter().copied());
-    let mut cursor = cursor.bind_buffer(buffer).unwrap();
-
-    // Assert that there is no batch.
-    assert!(cursor.fetch().unwrap().is_none());
 }
 
 /// In use cases there the user supplies the query it may be necessary to ignore one column then

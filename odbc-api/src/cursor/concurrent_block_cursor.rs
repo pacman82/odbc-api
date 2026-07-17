@@ -16,7 +16,7 @@ use super::RowSetBuffer;
 ///
 /// ```no_run
 /// use odbc_api::{
-///     environment, buffers::{ColumnarAnyBuffer, BufferDesc}, Cursor, ConcurrentBlockCursor
+///     environment, buffers::{ColumnarDynBuffer, BufferDesc}, Cursor, ConcurrentBlockCursor
 /// };
 ///
 /// // We want to use the ODBC environment from another system thread without scope => Therefore it
@@ -35,8 +35,8 @@ use super::RowSetBuffer;
 /// let cursor = conn.into_cursor(query, params, timeout_sec)?.unwrap();
 ///
 /// // Batch size and buffer description. Here we assume there is only one integer column
-/// let buffer_a = ColumnarAnyBuffer::from_descs(1000, [BufferDesc::I32 { nullable: false }]);
-/// let mut buffer_b = ColumnarAnyBuffer::from_descs(1000, [BufferDesc::I32 { nullable: false }]);
+/// let buffer_a = ColumnarDynBuffer::from_descs(1000, [BufferDesc::I32 { nullable: false }]);
+/// let mut buffer_b = ColumnarDynBuffer::from_descs(1000, [BufferDesc::I32 { nullable: false }]);
 /// // And now we have a sendable block cursor with static lifetime
 /// let block_cursor = cursor.bind_buffer(buffer_a)?;
 ///

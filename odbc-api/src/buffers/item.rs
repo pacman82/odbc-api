@@ -1,6 +1,6 @@
 use odbc_sys::{Date, Time, Timestamp};
 
-use super::{AnySlice, AnySliceMut, BufferDesc, NullableSlice, NullableSliceMut};
+use super::BufferDesc;
 use crate::{BindParamDesc, Bit, Pod};
 
 /// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
@@ -51,17 +51,6 @@ pub trait Item: Pod {
     /// assert_eq!(BufferDesc::I64{ nullable: false }, i64::buffer_desc(false));
     /// ```
     fn buffer_desc(nullable: bool) -> BufferDesc;
-
-    /// Extract the array type from an [`AnySlice`].
-    fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]>;
-    /// Extract the typed nullable buffer from an [`AnySlice`].
-    fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<'_, Self>>;
-
-    /// Extract the array type from an [`AnySliceMut`].
-    fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]>;
-
-    /// Extract the typed nullable buffer from an [`AnySliceMut`].
-    fn as_nullable_slice_mut(variant: AnySliceMut<'_>) -> Option<NullableSliceMut<'_, Self>>;
 }
 
 macro_rules! impl_item {
@@ -73,36 +62,6 @@ macro_rules! impl_item {
 
             fn buffer_desc(nullable: bool) -> BufferDesc {
                 BufferDesc::$plain { nullable }
-            }
-
-            fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]> {
-                match variant {
-                    AnySlice::$plain(vals) => Some(vals),
-                    _ => None,
-                }
-            }
-
-            fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<'_, Self>> {
-                match variant {
-                    AnySlice::$null(vals) => Some(vals),
-                    _ => None,
-                }
-            }
-
-            fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]> {
-                match variant {
-                    AnySliceMut::$plain(vals) => Some(vals),
-                    _ => None,
-                }
-            }
-
-            fn as_nullable_slice_mut(
-                variant: AnySliceMut<'_>,
-            ) -> Option<NullableSliceMut<'_, Self>> {
-                match variant {
-                    AnySliceMut::$null(vals) => Some(vals),
-                    _ => None,
-                }
             }
         }
     };
@@ -132,38 +91,6 @@ impl Item for Timestamp {
 
     fn buffer_desc(nullable: bool) -> BufferDesc {
         BufferDesc::Timestamp { nullable }
-    }
-
-    fn as_slice(variant: AnySlice<'_>) -> Option<&[Self]> {
-        if let AnySlice::Timestamp(vals) = variant {
-            Some(vals)
-        } else {
-            None
-        }
-    }
-
-    fn as_nullable_slice(variant: AnySlice<'_>) -> Option<NullableSlice<'_, Self>> {
-        if let AnySlice::NullableTimestamp(vals) = variant {
-            Some(vals)
-        } else {
-            None
-        }
-    }
-
-    fn as_slice_mut(variant: AnySliceMut<'_>) -> Option<&'_ mut [Self]> {
-        if let AnySliceMut::Timestamp(vals) = variant {
-            Some(vals)
-        } else {
-            None
-        }
-    }
-
-    fn as_nullable_slice_mut(variant: AnySliceMut<'_>) -> Option<NullableSliceMut<'_, Self>> {
-        if let AnySliceMut::NullableTimestamp(vals) = variant {
-            Some(vals)
-        } else {
-            None
-        }
     }
 }
 

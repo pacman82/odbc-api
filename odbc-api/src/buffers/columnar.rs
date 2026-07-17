@@ -132,14 +132,14 @@ where
 /// at compile time, as well as for generic applications which work with a wide range of different
 /// data.
 ///
-/// # Example: Fetching results column wise with `ColumnarBuffer`.
+/// # Example: Fetching results column wise with `ColumnarDynBuffer`.
 ///
 /// Consider querying a table with two columns `year` and `name`.
 ///
 /// ```no_run
 /// use odbc_api::{
 ///     Environment, Cursor, ConnectionOptions,
-///     buffers::{AnySlice, BufferDesc, Item, ColumnarAnyBuffer},
+///     buffers::{BufferDesc, Item, ColumnarDynBuffer},
 /// };
 ///
 /// let env = Environment::new()?;
@@ -153,7 +153,7 @@ where
 /// ];
 ///
 /// /// Creates a columnar buffer fitting the buffer description with the capacity of `batch_size`.
-/// let mut buffer = ColumnarAnyBuffer::from_descs(batch_size, buffer_description);
+/// let mut buffer = ColumnarDynBuffer::from_descs(batch_size, buffer_description);
 ///
 /// let mut conn = env.connect(
 ///     "YourDatabase", "SA", "My@Test@Password1",
@@ -170,7 +170,8 @@ where
 ///     while let Some(row_set) = row_set_cursor.fetch()? {
 ///         // Process years in row set
 ///         let year_col = row_set.column(0);
-///         for year in i16::as_nullable_slice(year_col)
+///         for year in year_col
+///             .as_nullable_slice::<i16>()
 ///             .expect("Year column buffer expected to be nullable Int")
 ///         {
 ///             // Iterate over `Option<i16>` with it ..
@@ -178,7 +179,7 @@ where
 ///         // Process names in row set
 ///         let name_col = row_set.column(1);
 ///         for name in name_col
-///             .as_text_view()
+///             .as_text()
 ///             .expect("Name column buffer expected to be text")
 ///             .iter()
 ///         {
@@ -198,11 +199,11 @@ where
 /// ```no_run
 /// use odbc_api::{
 ///     Connection, BlockCursor, Error, Cursor, Nullability, ResultSetMetadata,
-///     buffers::{ AnyBuffer, BufferDesc, ColumnarAnyBuffer, ColumnarBuffer }
+///     buffers::{ BufferDesc, ColumnarDynBuffer }
 /// };
 ///
 /// fn get_birthdays<'a>(conn: &'a mut Connection)
-///     -> Result<BlockCursor<impl Cursor + 'a, ColumnarAnyBuffer>, Error>
+///     -> Result<BlockCursor<impl Cursor + 'a, ColumnarDynBuffer>, Error>
 /// {
 ///     let query = "SELECT year, name FROM Birthdays;";
 ///     let params = ();
@@ -223,7 +224,7 @@ where
 ///     }).collect::<Result<_, Error>>()?;
 ///
 ///     // Row set size of 5000 rows.
-///     let buffer = ColumnarAnyBuffer::from_descs(5000, buffer_description);
+///     let buffer = ColumnarDynBuffer::from_descs(5000, buffer_description);
 ///     // Bind buffer and take ownership over it.
 ///     cursor.bind_buffer(buffer)
 /// }
@@ -601,16 +602,6 @@ mod tests {
 
     use super::Resize;
     use crate::buffers::{BufferDesc, ColumnarDynBuffer};
-
-    #[test]
-    #[expect(deprecated)]
-    #[should_panic(expected = "Column indices must be unique.")]
-    fn assert_unique_column_indices_columnar_any_buffer() {
-        use crate::buffers::ColumnarAnyBuffer;
-
-        let bd = BufferDesc::I32 { nullable: false };
-        ColumnarAnyBuffer::from_descs_and_indices(1, [(1, bd), (2, bd), (1, bd)].iter().cloned());
-    }
 
     #[test]
     #[should_panic(expected = "Column indices must be unique.")]

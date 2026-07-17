@@ -41,26 +41,6 @@ where
         }
     }
 
-    /// Access the value at a specific row index.
-    ///
-    /// The buffer size is not automatically adjusted to the size of the last row set. It is the
-    /// callers responsibility to ensure, a value has been written to the indexed position by
-    /// [`crate::Cursor::fetch`] using the value bound to the cursor with
-    /// [`crate::Cursor::set_num_result_rows_fetched`].
-    pub fn iter(&self, num_rows: usize) -> NullableSlice<'_, T> {
-        NullableSlice {
-            indicators: &self.indicators[0..num_rows],
-            values: &self.values[0..num_rows],
-        }
-    }
-
-    /// Fills the column with NULL, between From and To
-    pub fn fill_null(&mut self, from: usize, to: usize) {
-        for index in from..to {
-            self.indicators[index] = NULL_DATA;
-        }
-    }
-
     /// Create a writer which writes to the first `n` elements of the buffer.
     pub fn writer_n(&mut self, n: usize) -> NullableSliceMut<'_, T> {
         NullableSliceMut {
@@ -361,7 +341,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::buffers::Resize;
+    use crate::buffers::{Resize, Slice};
 
     use super::ColumnWithIndicator;
 
@@ -377,9 +357,9 @@ mod tests {
         column.resize(3);
 
         // Then the first two elements are still `1` and `2`, and the third is NULL
-        let reader = column.iter(3);
-        assert_eq!(reader.get(0), Some(&1));
-        assert_eq!(reader.get(1), Some(&2));
-        assert_eq!(reader.get(2), None);
+        let slice = column.slice(3);
+        assert_eq!(slice.get(0), Some(&1));
+        assert_eq!(slice.get(1), Some(&2));
+        assert_eq!(slice.get(2), None);
     }
 }

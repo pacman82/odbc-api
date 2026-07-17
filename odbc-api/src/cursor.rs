@@ -37,7 +37,7 @@ pub type OwnedCursor<P> = CursorImpl<StatementConnection<P>>;
 /// # Example: Fetching result in batches
 ///
 /// ```rust
-/// use odbc_api::{Cursor, buffers::{BufferDesc, ColumnarAnyBuffer}, Error};
+/// use odbc_api::{Cursor, buffers::{BufferDesc, ColumnarDynBuffer}, Error};
 ///
 /// /// Fetches all values from the first column of the cursor as i32 in batches of 100 and stores
 /// /// them in a vector.
@@ -50,7 +50,7 @@ pub type OwnedCursor<P> = CursorImpl<StatementConnection<P>>;
 ///     // runtime.
 ///     let description = BufferDesc::I32 { nullable: false };
 ///     // This is the buffer we bind to the driver, and repeatedly use to fetch each batch
-///     let buffer = ColumnarAnyBuffer::from_descs(batch_size, [description]);
+///     let buffer = ColumnarDynBuffer::from_descs(batch_size, [description]);
 ///     // Bind buffer to cursor
 ///     let mut row_set_buffer = cursor.bind_buffer(buffer)?;
 ///     // Fetch data batch by batch
