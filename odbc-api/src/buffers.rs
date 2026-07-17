@@ -23,7 +23,6 @@ used in safe code:
   application logic is built in a row-by-row fashion, rather than column by column.
 */
 
-mod any_buffer;
 mod bin_column;
 mod column_with_indicator;
 mod columnar;
@@ -35,7 +34,6 @@ mod row_vec;
 mod text_column;
 
 pub use self::{
-    any_buffer::{AnySlice, AnySliceMut},
     bin_column::{BinColumn, BinColumnIt, BinColumnSlice, BinColumnSliceMut},
     column_with_indicator::{NullableSlice, NullableSliceMut},
     columnar::{ColumnBuffer, ColumnarBuffer, Resize, Slice, TextRowSet},
@@ -51,6 +49,3 @@ pub use self::{
         CharColumn, TextColumn, TextColumnIt, TextColumnSlice, TextColumnSliceMut, WCharColumn,
     },
 };
-
-#[expect(deprecated)]
-pub use self::any_buffer::{AnyBuffer, ColumnarAnyBuffer};
