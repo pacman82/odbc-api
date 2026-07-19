@@ -3,6 +3,16 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [29.0.0](https://github.com/pacman82/odbc-api/compare/28.2.0...29.0.0) - 2026-07-19
+
+### 🚀 Features
+
+- [**breaking**] Deprecated `ColumnarAnyBuffer` is removed
+
+
+  `AnySlice` and `AnySliceMut` are also removed as they are only used in conjunction with `ColumnarAnyBuffer`.
+
+
 
 ## [28.2.0](https://github.com/pacman82/odbc-api/compare/28.1.1...28.2.0) - 2026-06-28
 
