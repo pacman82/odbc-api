@@ -1,8 +1,73 @@
-use std::io;
+use std::{fmt, io, slice};
 
 use thiserror::Error as ThisError;
 
 use crate::handles::{Diagnostics, Record as DiagnosticRecord, SqlResult, log_diagnostics};
+
+/// Non-empty collection of diagnostic records emitted by one ODBC call.
+#[derive(Debug)]
+pub struct DiagnosticRecords(Vec<DiagnosticRecord>);
+
+impl DiagnosticRecords {
+    /// Construct a non-empty diagnostic collection.
+    pub fn new(first: DiagnosticRecord, additional_records: Vec<DiagnosticRecord>) -> Self {
+        let mut records = Vec::with_capacity(additional_records.len() + 1);
+        records.push(first);
+        records.extend(additional_records);
+        Self(records)
+    }
+
+    fn from_handle(handle: &impl Diagnostics) -> Option<Self> {
+        let mut records = Vec::new();
+        let mut record_number = 1;
+
+        loop {
+            let mut record = DiagnosticRecord::with_capacity(512);
+            if !record.fill_from(handle, record_number) {
+                break;
+            }
+            records.push(record);
+
+            if record_number == i16::MAX {
+                break;
+            }
+            record_number += 1;
+        }
+
+        (!records.is_empty()).then_some(Self(records))
+    }
+
+    /// Iterate over the diagnostic records in the order returned by ODBC.
+    pub fn iter(&self) -> slice::Iter<'_, DiagnosticRecord> {
+        self.0.iter()
+    }
+
+    /// Return the first diagnostic record.
+    pub fn first(&self) -> &DiagnosticRecord {
+        &self.0[0]
+    }
+
+    /// Return the last diagnostic record.
+    pub fn last(&self) -> &DiagnosticRecord {
+        &self.0[self.0.len() - 1]
+    }
+
+    pub(crate) fn into_last(mut self) -> DiagnosticRecord {
+        self.0.pop().unwrap()
+    }
+}
+
+impl fmt::Display for DiagnosticRecords {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (index, record) in self.iter().enumerate() {
+            if index != 0 {
+                f.write_str("\n")?;
+            }
+            record.fmt(f)?;
+        }
+        Ok(())
+    }
+}
 
 /// Error indicating a failed allocation for a column buffer
 #[derive(Debug)]
@@ -54,12 +119,12 @@ pub enum Error {
         /// ODBC API call which returned error without producing a diagnostic record.
         function: &'static str,
     },
-    /// SQL Error had been returned by a low level ODBC function call. A Diagnostic record is
+    /// SQL Error had been returned by a low level ODBC function call. Its diagnostic records are
     /// obtained and associated with this error.
-    #[error("ODBC emitted an error calling '{function}':\n{record}")]
+    #[error("ODBC emitted an error calling '{function}':\n{records}")]
     Diagnostics {
-        /// Diagnostic record returned by the ODBC driver manager
-        record: DiagnosticRecord,
+        /// Diagnostic records returned by the ODBC driver manager and driver.
+        records: DiagnosticRecords,
         /// ODBC API call which produced the diagnostic record
         function: &'static str,
     },
@@ -141,10 +206,10 @@ impl Error {
     /// offering the oppertunity to provide context in the error message.
     fn provide_context_for_diagnostic<F>(self, f: F) -> Self
     where
-        F: FnOnce(DiagnosticRecord, &'static str) -> Error,
+        F: FnOnce(DiagnosticRecords, &'static str) -> Error,
     {
-        if let Error::Diagnostics { record, function } = self {
-            f(record, function)
+        if let Error::Diagnostics { records, function } = self {
+            f(records, function)
         } else {
             self
         }
@@ -155,13 +220,13 @@ impl Error {
 pub(crate) trait ExtendResult {
     fn provide_context_for_diagnostic<F>(self, f: F) -> Self
     where
-        F: FnOnce(DiagnosticRecord, &'static str) -> Error;
+        F: FnOnce(DiagnosticRecords, &'static str) -> Error;
 }
 
 impl<T> ExtendResult for Result<T, Error> {
     fn provide_context_for_diagnostic<F>(self, f: F) -> Self
     where
-        F: FnOnce(DiagnosticRecord, &'static str) -> Error,
+        F: FnOnce(DiagnosticRecords, &'static str) -> Error,
     {
         self.map_err(|error| error.provide_context_for_diagnostic(f))
     }
@@ -212,9 +277,8 @@ impl<T> SqlResult<T> {
             // The function has been executed successfully. Holds result.
             SqlResult::Success(value) | SqlResult::SuccessWithInfo(value) => Ok(value),
             SqlResult::Error { function } => {
-                let mut record = DiagnosticRecord::with_capacity(512);
-                if record.fill_from(handle, 1) {
-                    Err(Error::Diagnostics { record, function })
+                if let Some(records) = DiagnosticRecords::from_handle(handle) {
+                    Err(Error::Diagnostics { records, function })
                 } else {
                     // Anecdotal ways to reach this code paths:
                     //
@@ -245,5 +309,50 @@ impl<T> SqlResult<T> {
     /// [`SqlResult::NoData`] to [`SqlResult::Success`] with `None`.
     pub fn or_no_data(self) -> SqlResult<Option<T>> {
         self.map(Some).on_no_data(|| None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::handles::{DiagnosticResult, SqlChar, State};
+
+    struct TwoDiagnostics;
+
+    impl Diagnostics for TwoDiagnostics {
+        fn diagnostic_record(
+            &self,
+            record_number: i16,
+            _message_text: &mut [SqlChar],
+        ) -> Option<DiagnosticResult> {
+            let state = match record_number {
+                1 => State(*b"HY000"),
+                2 => State(*b"08001"),
+                _ => return None,
+            };
+            Some(DiagnosticResult {
+                state,
+                native_error: 0,
+                text_length: 0,
+            })
+        }
+    }
+
+    #[test]
+    fn error_preserves_all_diagnostic_records() {
+        let error = SqlResult::<()>::Error {
+            function: "SQLDriverConnect",
+        }
+        .into_result_without_logging(&TwoDiagnostics)
+        .unwrap_err();
+
+        let Error::Diagnostics { records, .. } = error else {
+            panic!("expected ODBC diagnostics");
+        };
+        let states = records
+            .iter()
+            .map(|record| record.state)
+            .collect::<Vec<_>>();
+        assert_eq!(states, [State(*b"HY000"), State(*b"08001")]);
     }
 }

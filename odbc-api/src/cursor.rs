@@ -156,11 +156,11 @@ impl CursorRow<'_> {
         self.statement
             .get_data(col_or_param_num, target)
             .into_result(&self.statement)
-            .provide_context_for_diagnostic(|record, function| {
-                if record.state == State::INDICATOR_VARIABLE_REQUIRED_BUT_NOT_SUPPLIED {
-                    Error::UnableToRepresentNull(record)
+            .provide_context_for_diagnostic(|records, function| {
+                if records.last().state == State::INDICATOR_VARIABLE_REQUIRED_BUT_NOT_SUPPLIED {
+                    Error::UnableToRepresentNull(records.into_last())
                 } else {
-                    Error::Diagnostics { record, function }
+                    Error::Diagnostics { records, function }
                 }
             })
     }
@@ -557,11 +557,14 @@ unsafe fn bind_row_set_buffer_to_statement(
             // SAP anywhere has been seen to return with an "invalid attribute" error instead of
             // a success with "option value changed" info. Let us map invalid attributes during
             // setting row set array size to something more precise.
-            .provide_context_for_diagnostic(|record, function| {
-                if record.state == State::INVALID_ATTRIBUTE_VALUE {
-                    Error::InvalidRowArraySize { record, size }
+            .provide_context_for_diagnostic(|records, function| {
+                if records.last().state == State::INVALID_ATTRIBUTE_VALUE {
+                    Error::InvalidRowArraySize {
+                        record: records.into_last(),
+                        size,
+                    }
                 } else {
-                    Error::Diagnostics { record, function }
+                    Error::Diagnostics { records, function }
                 }
             })?;
         stmt.set_num_rows_fetched(row_set_buffer.mut_num_fetch_rows())
@@ -605,11 +608,11 @@ fn error_handling_for_fetch(
         // tell it to the user when binding parameters, but rather now then we fetch
         // results. The error code returned is `HY004` rather than `HY003` which should
         // be used to indicate invalid buffer types.
-        .provide_context_for_diagnostic(|record, function| {
-            if record.state == State::INVALID_SQL_DATA_TYPE {
-                Error::OracleOdbcDriverDoesNotSupport64Bit(record)
+        .provide_context_for_diagnostic(|records, function| {
+            if records.last().state == State::INVALID_SQL_DATA_TYPE {
+                Error::OracleOdbcDriverDoesNotSupport64Bit(records.into_last())
             } else {
-                Error::Diagnostics { record, function }
+                Error::Diagnostics { records, function }
             }
         })?;
     Ok(has_row)

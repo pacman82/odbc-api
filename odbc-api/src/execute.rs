@@ -72,8 +72,8 @@ unsafe fn bind_parameters(
         // SQLSetStmtOption.
         if !matches!(
             &result,
-            Err(Error::Diagnostics { record, .. })
-                if record.state == State::INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER
+            Err(Error::Diagnostics { records, .. })
+                if records.last().state == State::INVALID_ATTRIBUTE_OR_OPTION_IDENTIFIER
                     && parameter_set_size == 1
         ) {
             result?;

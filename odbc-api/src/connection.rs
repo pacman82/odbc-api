@@ -23,9 +23,9 @@ impl Drop for Connection<'_> {
         match self.connection.disconnect().into_result(&self.connection) {
             Ok(()) => (),
             Err(Error::Diagnostics {
-                record,
+                records,
                 function: _,
-            }) if record.state == State::INVALID_STATE_TRANSACTION => {
+            }) if records.last().state == State::INVALID_STATE_TRANSACTION => {
                 // Invalid transaction state. Let's rollback the current transaction and try again.
                 if let Err(e) = self.rollback() {
                     // Connection might be in a suspended state. See documentation about suspended

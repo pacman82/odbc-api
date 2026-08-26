@@ -68,10 +68,10 @@ fn bogus_connection_string() {
 
     // We also want to be sure our error messages do not contain any Nul.
     let error = result.err().unwrap();
-    if let Error::Diagnostics { record, function } = error {
+    if let Error::Diagnostics { records, function } = error {
         assert_eq!("SQLDriverConnect", function);
         // Make sure we remove any Nuls from the message, trailing or otherwise.
-        assert!(!record.message.contains(&0));
+        assert!(records.iter().all(|record| !record.message.contains(&0)));
     } else {
         panic!("Expected Error::Diagnostics")
     };

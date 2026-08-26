@@ -182,7 +182,7 @@ impl Environment {
 
         // Translate invalid attribute into a more meaningful error, provided the additional
         // context that we know we tried to set version number.
-        result.provide_context_for_diagnostic(|record, function| match record.state {
+        result.provide_context_for_diagnostic(|records, function| match records.last().state {
             // INVALID_STATE_TRANSACTION has been seen with some really old version of unixODBC on
             // a CentOS used to build manylinux wheels, with the preinstalled ODBC version.
             // INVALID_ATTRIBUTE_VALUE is the correct status code to emit for a driver manager if it
@@ -190,8 +190,10 @@ impl Environment {
             // Oracle Linux.
             ODBC_2_INVALID_ATTRIBUTE
             | State::INVALID_STATE_TRANSACTION
-            | State::INVALID_ATTRIBUTE_VALUE => Error::UnsupportedOdbcApiVersion(record),
-            _ => Error::Diagnostics { record, function },
+            | State::INVALID_ATTRIBUTE_VALUE => {
+                Error::UnsupportedOdbcApiVersion(records.into_last())
+            }
+            _ => Error::Diagnostics { records, function },
         })?;
 
         #[cfg(not(feature = "structured_logging"))]
