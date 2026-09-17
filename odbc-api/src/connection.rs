@@ -509,6 +509,15 @@ impl<'c> Connection<'c> {
         Ok(name)
     }
 
+    /// The character used to quote identifiers (a.k.a. delimited identifiers).
+    ///
+    /// Drivers which confrom to SQL 92 standard will always return `Some('"')`.
+    pub fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        self.connection
+            .identifier_quote_char()
+            .into_result(&self.connection)
+    }
+
     /// Maximum length of catalog names.
     pub fn max_catalog_name_len(&self) -> Result<u16, Error> {
         self.connection

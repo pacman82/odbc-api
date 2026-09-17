@@ -2919,6 +2919,17 @@ fn database_management_system_name(profile: &Profile, expected_name: &'static st
     assert_eq!(expected_name, actual_name);
 }
 
+#[test_case(MSSQL, Some('"'); "Microsoft SQL Server")]
+#[test_case(MARIADB, Some('`'); "Maria DB")]
+#[test_case(SQLITE_3, Some('"'); "SQLite 3")]
+#[test_case(POSTGRES, Some('"'); "PostgreSQL")]
+#[test_case(DUCKDB, Some('"'); "DuckDB")]
+fn identifier_quote_char(profile: &Profile, expected: Option<char>) {
+    let conn = profile.connection().unwrap();
+    let actual = conn.identifier_quote_char().unwrap();
+    assert_eq!(expected, actual);
+}
+
 /// Demonstrating how to fill a vector of rows using this crate.
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]

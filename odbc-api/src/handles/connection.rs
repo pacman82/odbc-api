@@ -314,6 +314,33 @@ impl Connection<'_> {
         }
     }
 
+    /// The character used to quote identifiers (a.k.a. delimited identifiers).
+    ///
+    /// Drivers which confrom to SQL 92 standard will always return `Some('"')`.
+    pub fn identifier_quote_char(&self) -> SqlResult<Option<char>> {
+        let mut buf = [0 as SqlChar; 2];
+        let mut string_length_in_bytes: i16 = 0;
+        unsafe {
+            sql_get_info(
+                self.handle,
+                InfoType::IdentifierQuoteChar,
+                mut_buf_ptr(&mut buf) as Pointer,
+                binary_length(&buf).try_into().unwrap(),
+                &mut string_length_in_bytes as *mut i16,
+            )
+            .into_sql_result("SQLGetInfo")
+            .on_success(|| {
+                // We assume a non-zero ASCII character. Otherwise we would need different decoding
+                // for narrow and wide characters.
+                if buf[0] == 0 || buf[1] > 127 {
+                    None
+                } else {
+                    char::from_u32(u32::from(buf[0]))
+                }
+            })
+        }
+    }
+
     fn info_u16(&self, info_type: InfoType) -> SqlResult<u16> {
         unsafe {
             let mut value = 0u16;
