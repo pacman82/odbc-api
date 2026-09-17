@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api"
-version = "29.0.0"
+version = "29.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1140,7 +1140,7 @@ dependencies = [
 
 [[package]]
 name = "odbc-api-derive"
-version = "12.1.1"
+version = "12.2.0"
 dependencies = [
  "odbc-api",
  "proc-macro2",
