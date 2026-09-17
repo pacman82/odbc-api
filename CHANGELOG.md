@@ -3,6 +3,13 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [29.0.1](https://github.com/pacman82/odbc-api/compare/29.0.0...29.0.1) - 2026-09-17
+
+### 🚀 Features
+
+- `Connection::identifier_quote_char` allows querying db specific
+
+
 ## [29.0.0](https://github.com/pacman82/odbc-api/compare/28.2.0...29.0.0) - 2026-07-19
 
 ### 🚀 Features
