@@ -5,7 +5,7 @@ use super::{
     drop_handle,
     sql_char::{
         SqlChar, SqlText, binary_length, is_truncated_bin, resize_to_fit_with_tz,
-        resize_to_fit_without_tz,
+        resize_to_fit_without_tz, WHITESPACE
     },
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
@@ -332,7 +332,10 @@ impl Connection<'_> {
             .on_success(|| {
                 // We assume a non-zero ASCII character. Otherwise we would need different decoding
                 // for narrow and wide characters.
-                if buf[0] == 0 || buf[1] > 127 {
+
+                // If a dbms does not support delemiting identifiers the driver is suppossed to
+                // report a single whitespace.
+                if buf[0] == WHITESPACE {
                     None
                 } else {
                     char::from_u32(u32::from(buf[0]))
