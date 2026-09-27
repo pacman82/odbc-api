@@ -4,8 +4,8 @@ use super::{
     buffer::mut_buf_ptr,
     drop_handle,
     sql_char::{
-        SqlChar, SqlText, binary_length, is_truncated_bin, resize_to_fit_with_tz,
-        resize_to_fit_without_tz, WHITESPACE
+        SqlChar, SqlText, WHITESPACE, binary_length, is_truncated_bin, resize_to_fit_with_tz,
+        resize_to_fit_without_tz,
     },
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
