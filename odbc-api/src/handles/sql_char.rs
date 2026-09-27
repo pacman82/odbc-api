@@ -29,7 +29,7 @@ use std::{
 };
 
 #[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
-use widestring::{U16CStr, Utf16String};
+use widestring::{U16CStr, Utf16String, iter::EncodeUtf16};
 
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 pub type SqlChar = u8;
@@ -65,6 +65,7 @@ fn sz_to_utf8(buffer: &[u16]) -> String {
     let c_str = U16CStr::from_slice_truncate(buffer).unwrap();
     c_str.to_string_lossy()
 }
+
 #[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
 fn sz_to_utf8(buffer: &[u8]) -> String {
     // Truncate slice at first zero.
@@ -77,6 +78,12 @@ fn sz_to_utf8(buffer: &[u8]) -> String {
     let c_str = unsafe { CStr::from_bytes_with_nul_unchecked(&buffer[..=end]) };
     c_str.to_string_lossy().into_owned()
 }
+
+#[cfg(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows")))]
+pub const WHITESPACE: SqlChar = 0x0020;
+
+#[cfg(not(any(feature = "wide", all(not(feature = "narrow"), target_os = "windows"))))]
+pub const WHITESPACE: SqlChar = 0x20;
 
 /// Buffer length in bytes, not characters
 pub fn binary_length(buffer: &[SqlChar]) -> usize {
