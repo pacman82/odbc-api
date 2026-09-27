@@ -3,6 +3,13 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [29.1.1](https://github.com/pacman82/odbc-api/compare/29.0.1...29.1.1) - 2026-09-27
+
+### 🐛 Bug Fixes
+
+- Identifier_quote_char will report `None` if driver reporst a single whitespace.
+
+
 ## [29.0.1](https://github.com/pacman82/odbc-api/compare/29.0.0...29.0.1) - 2026-09-17
 
 ### 🚀 Features
