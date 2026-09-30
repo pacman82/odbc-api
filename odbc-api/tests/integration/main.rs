@@ -9,9 +9,9 @@ mod mdbtools;
 
 use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
-    Cursor, DataType, Error, InOut, InputParameterMapping, IntoParameter, Narrow, Nullability,
-    Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer, TruncationInfo, Utf16Str,
-    Utf16String,
+    Cursor, DataType, Error, IdentifierQuoteChar, InOut, InputParameterMapping, IntoParameter,
+    Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer,
+    TruncationInfo, Utf16Str, Utf16String,
     buffers::{
         BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
     },
@@ -2928,6 +2928,22 @@ fn identifier_quote_char(profile: &Profile, expected: Option<char>) {
     let conn = profile.connection().unwrap();
     let actual = conn.identifier_quote_char().unwrap();
     assert_eq!(expected, actual);
+}
+
+/// Validate that we can use identifier_quote_char in generic code.
+#[test_case(MSSQL, Some('"'); "Microsoft SQL Server")]
+fn identifier_quote_char_in_generic_code(profile: &Profile, expected: Option<char>) {
+    let conn = profile.connection().unwrap();
+    fn use_identifier_quote_char(conn: &impl IdentifierQuoteChar) -> Option<char> {
+        conn.identifier_quote_char().unwrap()
+    }
+
+    assert_eq!(expected, use_identifier_quote_char(&conn));
+    let conn = Arc::new(conn);
+    assert_eq!(expected, use_identifier_quote_char(&conn));
+    let conn = Arc::try_unwrap(conn).unwrap();
+    let conn = Arc::new(Mutex::new(conn));
+    assert_eq!(expected, use_identifier_quote_char(&conn));
 }
 
 /// Demonstrating how to fill a vector of rows using this crate.

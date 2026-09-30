@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    Connection, CursorImpl, Error, OwnedCursor, ParameterCollectionRef, Preallocated, Prepared,
+    Connection, CursorImpl, Error, IdentifierQuoteChar, OwnedCursor, ParameterCollectionRef,
+    Preallocated, Prepared,
     connection::{ConnectionTransitions, FailedStateTransition},
     handles::{StatementConnection, StatementParent},
 };
@@ -75,5 +76,14 @@ impl<'env> ConnectionTransitions for SharedConnection<'env> {
         // `stmt` is valid and in freshly allocated state.
         let preallocated = unsafe { Preallocated::new(stmt) };
         Ok(preallocated)
+    }
+}
+
+impl IdentifierQuoteChar for SharedConnection<'_> {
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        let guard = self
+            .lock()
+            .expect("Shared connection lock must not be poisoned");
+        guard.identifier_quote_char()
     }
 }

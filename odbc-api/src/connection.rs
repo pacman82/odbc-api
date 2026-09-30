@@ -1134,3 +1134,24 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         Ok(preallocated)
     }
 }
+
+/// A trait implemented by Connections which allows querying the character used to quote identifiers
+/// in SQL statements.
+pub trait IdentifierQuoteChar {
+    /// The character used to quote identifiers (a.k.a. delimited identifiers).
+    ///
+    /// Drivers which confrom to SQL 92 standard will always return `Some('"')`.
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error>;
+}
+
+impl IdentifierQuoteChar for Connection<'_> {
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        (*self).identifier_quote_char()
+    }
+}
+
+impl IdentifierQuoteChar for Arc<Connection<'_>> {
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        self.as_ref().identifier_quote_char()
+    }
+}
