@@ -1,12 +1,8 @@
 use crate::{
-    BlockCursorIterator, Cursor, CursorImpl, Error, ParameterCollectionRef, PreallocatedPolling,
-    buffers::RowVec,
-    catalog::{
+    BlockCursorIterator, Connection, Cursor, CursorImpl, Error, IdentifierQuoteChar, ParameterCollectionRef, PreallocatedPolling, buffers::RowVec, catalog::{
         ColumnsRow, ForeignKeysRow, PrimaryKeysRow, TablesRow, execute_columns,
         execute_foreign_keys, execute_primary_keys, execute_tables,
-    },
-    execute::execute_with_parameters,
-    handles::{AsStatementRef, SqlText, Statement, StatementRef},
+    }, execute::execute_with_parameters, handles::{AsStatementRef, SqlText, Statement, StatementConnection, StatementRef},
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See
@@ -577,5 +573,14 @@ where
 {
     fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         self.statement.as_stmt_ref()
+    }
+}
+
+impl IdentifierQuoteChar for Preallocated<StatementConnection<Connection<'_>>> {
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        // Safety:
+        //
+        // Querying identifier quote character does not invalidate the statement handle.
+        unsafe { self.statement.parent().identifier_quote_char() }
     }
 }

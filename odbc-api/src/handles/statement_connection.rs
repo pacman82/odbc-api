@@ -1,13 +1,14 @@
 use odbc_sys::{HStmt, Handle, HandleType};
 
-use crate::handles::{AnyHandle, SqlResult, Statement, StatementRef, drop_handle};
+use crate::{handles::{AnyHandle, SqlResult, Statement, StatementRef, drop_handle}};
 
 /// Statement handle which also takes ownership of Connection
 #[derive(Debug)]
 pub struct StatementConnection<C> {
     handle: HStmt,
-    /// We do not do anything with the parent, besides keeping it alive.
-    _parent: C,
+    /// We keep the parent connection alive. It must not be used for any action which could
+    /// invalidate the statement handle. 
+    parent: C,
 }
 
 impl<C> StatementConnection<C>
@@ -20,13 +21,22 @@ where
     /// lifetime of parent.
     pub(crate) unsafe fn new(handle: HStmt, parent: C) -> Self {
         Self {
-            _parent: parent,
+            parent,
             handle,
         }
     }
 
     pub fn as_stmt_ref(&mut self) -> StatementRef<'_> {
         unsafe { StatementRef::new(self.handle) }
+    }
+
+    /// Access the parent connection.
+    /// 
+    /// # Safety
+    /// 
+    /// The parent must not be used for anything which could invalidate the statement handle.
+    pub unsafe fn parent(&self) -> &C {
+        &self.parent
     }
 }
 
@@ -82,3 +92,4 @@ where
         SqlResult::Success(())
     }
 }
+
