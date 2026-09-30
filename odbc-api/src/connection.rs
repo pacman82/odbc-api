@@ -960,6 +960,10 @@ type ConnectionAndError<'conn> = FailedStateTransition<Connection<'conn>>;
 /// using an `Arc<Mutex<Connection>>` or `Arc<Connection>`. Or a still exclusive ownership using
 /// a plain [`Connection`].
 pub trait ConnectionTransitions: Sized {
+    // On reflection: Maybe this trait is better split in three? IntoPrepared, IntoPreallocated and
+    // IntoCursor?
+
+
     // Note to self. This might eveolve into a `Connection` trait. Which expresses ownership
     // of a connection (shared or not). It could allow to get a dereferened borrowed conection
     // which does not allow for state transtions as of now (like StatementRef). I may not want to
@@ -1132,5 +1136,20 @@ impl<'env> ConnectionTransitions for Arc<Connection<'env>> {
         // Safe: `stmt` is valid and its state is allocated.
         let preallocated = unsafe { Preallocated::new(stmt) };
         Ok(preallocated)
+    }
+}
+
+/// A trait implemented by Connections which allows querying the character used to quote identifiers
+/// in SQL statements.
+pub trait IdentifierQuoteChar {
+    /// The character used to quote identifiers (a.k.a. delimited identifiers).
+    ///
+    /// Drivers which confrom to SQL 92 standard will always return `Some('"')`.
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error>;
+}
+
+impl IdentifierQuoteChar for Connection<'_> {
+    fn identifier_quote_char(&self) -> Result<Option<char>, Error> {
+        (*self).identifier_quote_char()
     }
 }
