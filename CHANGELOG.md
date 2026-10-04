@@ -7,10 +7,9 @@
 
 ### 🚀 Features
 
-- IdentifierQuoteChar trait introduced
+- `IdentifierQuoteChar` trait introduced
 
-
-  for enable correct delemiting in code generic over Connection type
+  Enables correct delimiting in code generic over Connection type
 
 
 ## [29.1.1](https://github.com/pacman82/odbc-api/compare/29.0.1...29.1.1) - 2026-09-27
