@@ -3,6 +3,16 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [29.2.0](https://github.com/pacman82/odbc-api/compare/29.1.1...29.2.0) - 2026-10-04
+
+### 🚀 Features
+
+- IdentifierQuoteChar trait introduced
+
+
+  for enable correct delemiting in code generic over Connection type
+
+
 ## [29.1.1](https://github.com/pacman82/odbc-api/compare/29.0.1...29.1.1) - 2026-09-27
 
 ### 🐛 Bug Fixes
