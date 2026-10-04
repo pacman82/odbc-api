@@ -963,7 +963,6 @@ pub trait ConnectionTransitions: Sized {
     // On reflection: Maybe this trait is better split in three? IntoPrepared, IntoPreallocated and
     // IntoCursor?
 
-
     // Note to self. This might eveolve into a `Connection` trait. Which expresses ownership
     // of a connection (shared or not). It could allow to get a dereferened borrowed conection
     // which does not allow for state transtions as of now (like StatementRef). I may not want to
