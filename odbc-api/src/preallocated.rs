@@ -1,8 +1,13 @@
 use crate::{
-    BlockCursorIterator, Connection, Cursor, CursorImpl, Error, IdentifierQuoteChar, ParameterCollectionRef, PreallocatedPolling, buffers::RowVec, catalog::{
+    BlockCursorIterator, Connection, Cursor, CursorImpl, Error, IdentifierQuoteChar,
+    ParameterCollectionRef, PreallocatedPolling,
+    buffers::RowVec,
+    catalog::{
         ColumnsRow, ForeignKeysRow, PrimaryKeysRow, TablesRow, execute_columns,
         execute_foreign_keys, execute_primary_keys, execute_tables,
-    }, execute::execute_with_parameters, handles::{AsStatementRef, SqlText, Statement, StatementConnection, StatementRef},
+    },
+    execute::execute_with_parameters,
+    handles::{AsStatementRef, SqlText, Statement, StatementConnection, StatementRef},
 };
 
 /// A preallocated SQL statement handle intended for sequential execution of different queries. See

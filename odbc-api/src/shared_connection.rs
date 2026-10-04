@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    Connection, CursorImpl, Error, OwnedCursor, ParameterCollectionRef,
-    Preallocated, Prepared,
+    Connection, CursorImpl, Error, OwnedCursor, ParameterCollectionRef, Preallocated, Prepared,
     connection::{ConnectionTransitions, FailedStateTransition},
     handles::{StatementConnection, StatementParent},
 };
