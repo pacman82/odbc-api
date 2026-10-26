@@ -457,6 +457,8 @@ impl Connection<'_> {
     /// The circumstances under which calling this function is safe depends on the attribute in
     /// question. On top of that, callers must also ensure that the driver would know how to
     /// interpret the attribute, in order for this call to be safe.
+    /// 
+    /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
     pub unsafe fn set_attribute(&self, attribute: impl SetConnectionAttribute) -> SqlResult<()> {
         unsafe {
             sql_set_connect_attr(
