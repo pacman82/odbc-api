@@ -7,6 +7,7 @@
 mod catalog;
 mod columnar_bulk_inserter;
 mod connection;
+mod connection_options;
 mod conversion;
 mod cursor;
 mod driver_complete_option;
@@ -36,9 +37,10 @@ pub use self::{
         BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping,
     },
     connection::{
-        Connection, ConnectionOptions, ConnectionTransitions, IdentifierQuoteChar,
+        Connection, ConnectionTransitions, IdentifierQuoteChar,
         escape_attribute_value,
     },
+    connection_options::ConnectionOptions,
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
         BlockCursor, BlockCursorIterator, BlockCursorPolling, ConcurrentBlockCursor, Cursor,

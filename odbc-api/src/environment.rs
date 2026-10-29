@@ -6,10 +6,7 @@ use std::{
 };
 
 use crate::{
-    Connection, DriverCompleteOption, Error,
-    connection::ConnectionOptions,
-    error::ExtendResult,
-    handles::{
+    Connection, DriverCompleteOption, Error, connection_options::ConnectionOptions, error::ExtendResult, handles::{
         self, OutputStringBuffer, SqlChar, SqlResult, SqlText, State, SzBuffer, log_diagnostics,
         slice_to_utf8,
     },
