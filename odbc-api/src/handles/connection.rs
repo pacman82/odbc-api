@@ -12,8 +12,9 @@ use super::{
 };
 use log::trace;
 use odbc_sys::{
-    CompletionType, ConnectionAttribute as ConnectionAttributeSys, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
-    IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
+    CompletionType, ConnectionAttribute as ConnectionAttributeSys, DriverConnectOption, HDbc, HEnv,
+    HWnd, Handle, HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect,
+    SQLEndTran,
 };
 use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -201,42 +202,6 @@ impl Connection<'_> {
                 .into_sql_result("SQLAllocHandle")
                 .on_success(|| StatementImpl::new(out.as_hstmt()))
         }
-    }
-
-    /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
-    /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
-    /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
-    /// the connection.
-    pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
-        unsafe { self.set_attribute(AutocommitConnectionAttribute(enabled)) }
-    }
-
-    /// Number of seconds to wait for a login request to complete before returning to the
-    /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
-    /// connection attempt will wait indefinitely.
-    ///
-    /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
-    /// substitutes that value and uses the maximum login timeout instead.
-    ///
-    /// This corresponds to the `SQL_ATTR_LOGIN_TIMEOUT` attribute in the ODBC specification.
-    ///
-    /// See:
-    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
-    pub fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
-        unsafe { self.set_attribute(LoginTimeoutConnectionAttribute(timeout)) }
-    }
-
-    /// Specifying the network packet size in bytes. Note: Many data sources either do not support
-    /// this option or only can return but not set the network packet size. If the specified size
-    /// exceeds the maximum packet size or is smaller than the minimum packet size, the driver
-    /// substitutes that value and returns SQLSTATE 01S02 (Option value changed). If the application
-    /// sets packet size after a connection has already been made, the driver will return SQLSTATE
-    /// HY011 (Attribute cannot be set now).
-    ///
-    /// See:
-    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
-    pub fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
-        unsafe { self.set_attribute(PacketSizeConnectionAttribute(packet_size)) }
     }
 
     /// To commit a transaction in manual-commit mode.
@@ -445,32 +410,6 @@ impl Connection<'_> {
         unsafe { self.attribute_u32(ConnectionAttributeSys::PACKET_SIZE) }
     }
 
-    /// Sets a connection attribute.
-    ///
-    /// # Safety
-    ///
-    /// Connection attribute can control all kinds of behavior and change the nature of the
-    /// connection in a fundamental way. This includes wether calls are blocking or asynchronous,
-    /// wether transactions are explicit or auto-committed. On top of that, the ODBC standard allows
-    /// for drivers to specify their own connection attributes.
-    ///
-    /// The circumstances under which calling this function is safe depends on the attribute in
-    /// question. On top of that, callers must also ensure that the driver would know how to
-    /// interpret the attribute, in order for this call to be safe.
-    ///
-    /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
-    pub unsafe fn set_attribute(&self, attribute: impl ConnectionAttribute) -> SqlResult<()> {
-        unsafe {
-            sql_set_connect_attr(
-                self.handle,
-                attribute.attribute(),
-                attribute.value(),
-                attribute.len(),
-            )
-            .into_sql_result("SQLSetConnectAttr")
-        }
-    }
-
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.
@@ -503,6 +442,75 @@ impl Connection<'_> {
             );
             out
         })
+    }
+}
+
+/// Set attributes which change the behavior of the connection.
+pub trait SetConnectionAttribute {
+    /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
+    /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
+    /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
+    /// the connection.
+    fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
+        unsafe { self.set_attribute(AutocommitConnectionAttribute(enabled)) }
+    }
+
+    /// Number of seconds to wait for a login request to complete before returning to the
+    /// application. The default is driver-dependent. If `0` the timeout is dasabled and a
+    /// connection attempt will wait indefinitely.
+    ///
+    /// If the specified timeout exceeds the maximum login timeout in the data source, the driver
+    /// substitutes that value and uses the maximum login timeout instead.
+    ///
+    /// This corresponds to the `SQL_ATTR_LOGIN_TIMEOUT` attribute in the ODBC specification.
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
+        unsafe { self.set_attribute(LoginTimeoutConnectionAttribute(timeout)) }
+    }
+
+    /// Specifying the network packet size in bytes. Note: Many data sources either do not support
+    /// this option or only can return but not set the network packet size. If the specified size
+    /// exceeds the maximum packet size or is smaller than the minimum packet size, the driver
+    /// substitutes that value and returns SQLSTATE 01S02 (Option value changed). If the application
+    /// sets packet size after a connection has already been made, the driver will return SQLSTATE
+    /// HY011 (Attribute cannot be set now).
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
+    fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
+        unsafe { self.set_attribute(PacketSizeConnectionAttribute(packet_size)) }
+    }
+
+    /// Sets a connection attribute.
+    ///
+    /// # Safety
+    ///
+    /// Connection attribute can control all kinds of behavior and change the nature of the
+    /// connection in a fundamental way. This includes wether calls are blocking or asynchronous,
+    /// wether transactions are explicit or auto-committed. On top of that, the ODBC standard allows
+    /// for drivers to specify their own connection attributes.
+    ///
+    /// The circumstances under which calling this function is safe depends on the attribute in
+    /// question. On top of that, callers must also ensure that the driver would know how to
+    /// interpret the attribute, in order for this call to be safe.
+    ///
+    /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
+    unsafe fn set_attribute(&self, attribute: impl ConnectionAttribute) -> SqlResult<()>;
+}
+
+impl SetConnectionAttribute for Connection<'_> {
+    unsafe fn set_attribute(&self, attribute: impl ConnectionAttribute) -> SqlResult<()> {
+        unsafe {
+            sql_set_connect_attr(
+                self.handle,
+                attribute.attribute(),
+                attribute.value(),
+                attribute.len(),
+            )
+            .into_sql_result("SQLSetConnectAttr")
+        }
     }
 }
 
