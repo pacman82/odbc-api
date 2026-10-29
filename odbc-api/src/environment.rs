@@ -6,7 +6,10 @@ use std::{
 };
 
 use crate::{
-    Connection, DriverCompleteOption, Error, connection_options::ConnectionOptions, error::ExtendResult, handles::{
+    Connection, DriverCompleteOption, Error,
+    connection_options::{ApplyConnectionAttributes, ConnectionOptions},
+    error::ExtendResult,
+    handles::{
         self, OutputStringBuffer, SqlChar, SqlResult, SqlText, State, SzBuffer, log_diagnostics,
         slice_to_utf8,
     },
@@ -288,6 +291,28 @@ impl Environment {
         connection_string: &str,
         options: ConnectionOptions,
     ) -> Result<Connection<'_>, Error> {
+        unsafe {
+            self.connect_with_connection_string_and_driver_specific_options(
+                connection_string,
+                options,
+            )
+        }
+    }
+
+    /// Alternative to [`Self::connect_with_connection_string`] with support for driver specific
+    /// connection attributes.
+    ///
+    /// To find out your connection string try: <https://www.connectionstrings.com/>
+    ///
+    /// # Safety
+    ///
+    /// It is the callers responsibility to enusre the attributes applied by `options` are all
+    /// supported by the driver which is used to open the connection.
+    pub unsafe fn connect_with_connection_string_and_driver_specific_options<'a, A>(
+        &'a self,
+        connection_string: &str,
+        options: A,
+    ) -> Result<Connection<'a>, Error> where A: ApplyConnectionAttributes + 'a {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 

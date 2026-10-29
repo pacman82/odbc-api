@@ -36,10 +36,7 @@ pub use self::{
     columnar_bulk_inserter::{
         BoundInputSlice, ColumnarBulkInserter, InOrder, InputParameterMapping,
     },
-    connection::{
-        Connection, ConnectionTransitions, IdentifierQuoteChar,
-        escape_attribute_value,
-    },
+    connection::{Connection, ConnectionTransitions, IdentifierQuoteChar, escape_attribute_value},
     connection_options::ConnectionOptions,
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{

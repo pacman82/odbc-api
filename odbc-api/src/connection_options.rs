@@ -1,4 +1,7 @@
-use crate::{Error, handles::{Diagnostics, SetConnectionAttribute}};
+use crate::{
+    Error,
+    handles::{Diagnostics, SetConnectionAttribute},
+};
 
 /// Options to be passed then opening a connection to a datasource.
 #[derive(Default, Clone, Copy)]
@@ -19,12 +22,22 @@ pub struct ConnectionOptions {
     pub packet_size: Option<u32>,
 }
 
-impl ConnectionOptions {
+/// Apply connection attributes to a connection handle
+///
+/// Application which desire to set driver specific attributes can implement this trait
+/// and pass its implementation to
+/// [`crate::Environment::connect_with_connection_string_and_driver_specific_options`] in order to
+/// apply them.
+pub trait ApplyConnectionAttributes {
     /// Set the attributes corresponding to the connection options to an allocated connection
     /// handle. Usually you would rather provide the options then creating the connection with e.g.
     /// [`crate::Environment::connect_with_connection_string`] rather than calling this method
     /// yourself.
-    pub fn apply(&self, handle: &(impl SetConnectionAttribute + Diagnostics)) -> Result<(), Error> {
+    fn apply(&self, handle: &(impl SetConnectionAttribute + Diagnostics)) -> Result<(), Error>;
+}
+
+impl ApplyConnectionAttributes for ConnectionOptions {
+    fn apply(&self, handle: &(impl SetConnectionAttribute + Diagnostics)) -> Result<(), Error> {
         if let Some(timeout) = self.login_timeout_sec {
             handle.set_login_timeout_sec(timeout).into_result(handle)?;
         }

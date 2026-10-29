@@ -1,6 +1,11 @@
 use crate::{
-    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ForeignKeysRow, OwnedCursor, ParameterCollectionRef, Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow, buffers::BufferDesc, execute::execute_with_parameters_polling, handles::{
-        self, SetConnectionAttribute, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent, slice_to_utf8,
+    BlockCursorIterator, ColumnsRow, CursorImpl, CursorPolling, Error, ForeignKeysRow, OwnedCursor,
+    ParameterCollectionRef, Preallocated, Prepared, PrimaryKeysRow, Sleep, TablesRow,
+    buffers::BufferDesc,
+    execute::execute_with_parameters_polling,
+    handles::{
+        self, SetConnectionAttribute, SqlText, State, Statement, StatementConnection,
+        StatementImpl, StatementParent, slice_to_utf8,
     },
 };
 use log::error;
@@ -810,7 +815,6 @@ unsafe impl StatementParent for Connection<'_> {}
 /// `Arc<Connection>` wraps an open Connection. It keeps the handle alive and valid during its
 /// lifetime.
 unsafe impl StatementParent for Arc<Connection<'_>> {}
-
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
 /// connection string as the value for the `PWD` attribute. This method is only of interest for
