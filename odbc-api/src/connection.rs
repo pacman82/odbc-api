@@ -4,8 +4,8 @@ use crate::{
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
-        self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
-        slice_to_utf8,
+        self, SetConnectionAttribute, SqlText, State, Statement, StatementConnection,
+        StatementImpl, StatementParent, slice_to_utf8,
     },
 };
 use log::error;
