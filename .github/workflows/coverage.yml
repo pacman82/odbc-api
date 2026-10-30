@@ -6,7 +6,11 @@ jobs:
 
   coverage:
     name: Generate & upload coverage report
-    runs-on: ubuntu-latest
+    # Pinned to 24.04, because ubuntu-latest (26.04) ships psqlODBC 17.00.0007. Since 17.00.0005
+    # SQLDriverConnect no longer reports truncation of the output connection string, which breaks
+    # `get_full_connection_string_truncated`. Remove the pin once this is fixed:
+    # https://github.com/postgresql-interfaces/psqlodbc/issues/229
+    runs-on: ubuntu-24.04
 
     # Database services used for testing
     services:
