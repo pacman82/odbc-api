@@ -33,11 +33,28 @@ pub trait ApplyConnectionAttributes {
     /// handle. Usually you would rather provide the options then creating the connection with e.g.
     /// [`crate::Environment::connect_with_connection_string`] rather than calling this method
     /// yourself.
-    fn apply(&self, handle: &(impl SetConnectionAttribute + Diagnostics)) -> Result<(), Error>;
+    ///
+    /// Users should not invoke this method directly. Rather it is invoked indirectly than creating
+    /// a new connection with an environment. E.g. via
+    /// [`crate::Environment::connect_with_connection_string_and_driver_specific_options`] or
+    /// [`crate::Environment::connect_with_connection_string`].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that any driver specific attributes are understood by the connection
+    /// handle references. E.g. attributes specific to Microsoft SQL Server must be applied to a
+    /// connection opened with a Microsoft SQL Server driver.
+    unsafe fn apply(
+        &self,
+        handle: &(impl SetConnectionAttribute + Diagnostics),
+    ) -> Result<(), Error>;
 }
 
 impl ApplyConnectionAttributes for ConnectionOptions {
-    fn apply(&self, handle: &(impl SetConnectionAttribute + Diagnostics)) -> Result<(), Error> {
+    unsafe fn apply(
+        &self,
+        handle: &(impl SetConnectionAttribute + Diagnostics),
+    ) -> Result<(), Error> {
         if let Some(timeout) = self.login_timeout_sec {
             handle.set_login_timeout_sec(timeout).into_result(handle)?;
         }

@@ -250,7 +250,11 @@ impl Environment {
 
         let mut connection = self.allocate_connection()?;
 
-        options.apply(&connection)?;
+        // Safe: The attributes of ConnectionOptions are all part of the ODBC standard and must be\
+        // understood by any ODBC driver.
+        unsafe {
+            options.apply(&connection)?;
+        }
 
         connection
             .connect(&data_source_name, &user, &pwd)
@@ -319,7 +323,11 @@ impl Environment {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        options.apply(&connection)?;
+        // Safety: It s the callers responsibility to ensure that the driver used to open the
+        // connection understands the options.
+        unsafe {
+            options.apply(&connection)?;
+        }
 
         connection
             .connect_with_connection_string(&connection_string)
