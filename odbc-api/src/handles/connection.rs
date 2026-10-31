@@ -497,11 +497,11 @@ pub trait SetConnectionAttribute {
     /// interpret the attribute, in order for this call to be safe.
     ///
     /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
-    unsafe fn set_attribute(&self, attribute: impl ConnectionAttribute) -> SqlResult<()>;
+    unsafe fn set_attribute(&self, attribute: impl AsConnectionAttribute) -> SqlResult<()>;
 }
 
 impl SetConnectionAttribute for Connection<'_> {
-    unsafe fn set_attribute(&self, attribute: impl ConnectionAttribute) -> SqlResult<()> {
+    unsafe fn set_attribute(&self, attribute: impl AsConnectionAttribute) -> SqlResult<()> {
         unsafe {
             sql_set_connect_attr(
                 self.handle,
@@ -532,7 +532,7 @@ impl SetConnectionAttribute for Connection<'_> {
 ///
 /// Implementers must take care that the results of [`Self::value`] and [`Self::len`] match the
 /// expectations of the ODBC driver for the given `attribute`.
-pub unsafe trait ConnectionAttribute {
+pub unsafe trait AsConnectionAttribute {
     /// The Connection Attribute to set.
     fn attribute(&self) -> ConnectionAttributeSys;
 
@@ -551,7 +551,7 @@ pub unsafe trait ConnectionAttribute {
 
 struct PacketSizeConnectionAttribute(pub u32);
 
-unsafe impl ConnectionAttribute for PacketSizeConnectionAttribute {
+unsafe impl AsConnectionAttribute for PacketSizeConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::PACKET_SIZE
     }
@@ -567,7 +567,7 @@ unsafe impl ConnectionAttribute for PacketSizeConnectionAttribute {
 
 struct LoginTimeoutConnectionAttribute(pub u32);
 
-unsafe impl ConnectionAttribute for LoginTimeoutConnectionAttribute {
+unsafe impl AsConnectionAttribute for LoginTimeoutConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::LOGIN_TIMEOUT
     }
@@ -583,7 +583,7 @@ unsafe impl ConnectionAttribute for LoginTimeoutConnectionAttribute {
 
 struct AutocommitConnectionAttribute(pub bool);
 
-unsafe impl ConnectionAttribute for AutocommitConnectionAttribute {
+unsafe impl AsConnectionAttribute for AutocommitConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::AUTOCOMMIT
     }
