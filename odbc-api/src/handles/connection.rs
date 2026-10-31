@@ -507,7 +507,7 @@ impl SetConnectionAttribute for Connection<'_> {
                 self.handle,
                 attribute.attribute(),
                 attribute.value(),
-                attribute.len(),
+                attribute.string_length(),
             )
             .into_sql_result("SQLSetConnectAttr")
         }
@@ -546,7 +546,7 @@ pub unsafe trait AsConnectionAttribute {
     /// Implementers please see
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function> in
     /// order to decide on the correct output for this function
-    fn len(&self) -> i32;
+    fn string_length(&self) -> i32;
 }
 
 struct PacketSizeConnectionAttribute(pub u32);
@@ -560,7 +560,7 @@ unsafe impl AsConnectionAttribute for PacketSizeConnectionAttribute {
         self.0 as Pointer
     }
 
-    fn len(&self) -> i32 {
+    fn string_length(&self) -> i32 {
         IS_UINTEGER // Ignored for integer attributes
     }
 }
@@ -576,7 +576,7 @@ unsafe impl AsConnectionAttribute for LoginTimeoutConnectionAttribute {
         self.0 as Pointer
     }
 
-    fn len(&self) -> i32 {
+    fn string_length(&self) -> i32 {
         IS_UINTEGER // Ignored for integer attributes
     }
 }
@@ -592,7 +592,7 @@ unsafe impl AsConnectionAttribute for AutocommitConnectionAttribute {
         (self.0 as u32) as Pointer
     }
 
-    fn len(&self) -> i32 {
+    fn string_length(&self) -> i32 {
         IS_UINTEGER // Ignored for integer attributes
     }
 }
