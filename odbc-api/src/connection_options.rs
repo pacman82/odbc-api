@@ -44,6 +44,87 @@ impl ConnectionOptions {
 /// [`crate::Environment::connect_with_connection_string_and_driver_specific_options`].
 ///
 /// `'c` is the lifetime of the connection. Memory referenced by the attributes must outlive it.
+///
+/// # Options borrow, they do not own
+///
+/// The driver keeps pointers to the attribute values. Options therefore must borrow the memory
+/// they reference, so the borrow checker can ensure it outlives the connection.
+///
+/// ```
+/// use std::iter;
+///
+/// use odbc_api::{DriverSpecificConnectionOptions, SetConnectionAttributeArgs, sys::SsAccessToken};
+///
+/// struct Borrowing<'t> {
+///     token: &'t SsAccessToken,
+/// }
+///
+/// impl<'c> DriverSpecificConnectionOptions<'c> for Borrowing<'c> {
+///     fn attributes(&self) -> impl Iterator<Item = SetConnectionAttributeArgs<'c>> {
+///         iter::once(SetConnectionAttributeArgs::from(self.token))
+///     }
+/// }
+/// ```
+///
+/// Owning the memory does not compile, since it would be dropped together with the options,
+/// right after connecting.
+///
+/// ```compile_fail
+/// use std::iter;
+///
+/// use odbc_api::{DriverSpecificConnectionOptions, SetConnectionAttributeArgs, sys::SsAccessToken};
+///
+/// struct Owning {
+///     token: Box<SsAccessToken>,
+/// }
+///
+/// impl<'c> DriverSpecificConnectionOptions<'c> for Owning {
+///     fn attributes(&self) -> impl Iterator<Item = SetConnectionAttributeArgs<'c>> {
+///         iter::once(SetConnectionAttributeArgs::from(&*self.token))
+///     }
+/// }
+/// ```
+///
+/// # Referenced memory outlives the connection
+///
+/// The token must outlive the connection. Tying its lifetime to the connection compiles, an
+/// unrelated lifetime does not.
+///
+/// ```
+/// use odbc_api::{
+///     Connection, ConnectionOptions, Environment, Error, MicrosoftConnectionOptions,
+///     sys::SsAccessToken,
+/// };
+///
+/// fn connect<'e>(env: &'e Environment, token: &'e SsAccessToken) -> Result<Connection<'e>, Error> {
+///     let options = MicrosoftConnectionOptions { access_token: Some(token) };
+///     unsafe {
+///         env.connect_with_connection_string_and_driver_specific_options(
+///             "Driver={ODBC Driver 18 for SQL Server};Server=localhost;",
+///             ConnectionOptions::default(),
+///             options,
+///         )
+///     }
+/// }
+/// ```
+///
+/// ```compile_fail
+/// use odbc_api::{
+///     Connection, ConnectionOptions, Environment, Error, MicrosoftConnectionOptions,
+///     sys::SsAccessToken,
+/// };
+///
+/// fn connect<'e>(env: &'e Environment, token: &SsAccessToken) -> Result<Connection<'e>, Error> {
+///     let options = MicrosoftConnectionOptions { access_token: Some(token) };
+///     unsafe {
+///         env.connect_with_connection_string_and_driver_specific_options(
+///             "Driver={ODBC Driver 18 for SQL Server};Server=localhost;",
+///             ConnectionOptions::default(),
+///             options,
+///         )
+///     }
+/// }
+/// ```
 pub trait DriverSpecificConnectionOptions<'c> {
     /// Attributes to set before connecting.
     fn attributes(&self) -> impl Iterator<Item = SetConnectionAttributeArgs<'c>>;
