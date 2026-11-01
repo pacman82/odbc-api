@@ -101,6 +101,22 @@ jobs:
       - name: Test
         run: docker compose --file docker-compose-ci.yml run test_linux
 
+  docs:
+    name: Check documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Build documentation
+        # Same features as docs.rs (see `package.metadata.docs.rs`). Fails on broken links and any
+        # other rustdoc warning.
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --workspace --features derive,odbc_version_3_80
+
   odbc_3_5:
     name: Check build with ODBC 3.5
     runs-on: ubuntu-latest
