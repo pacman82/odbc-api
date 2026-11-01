@@ -10,8 +10,8 @@ mod mdbtools;
 use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
     Cursor, DataType, Error, IdentifierQuoteChar, InOut, InputParameterMapping, IntoParameter,
-    Narrow, Nullability, Nullable, Out, Preallocated, ResultSetMetadata, RowSetBuffer,
-    TruncationInfo, Utf16Str, Utf16String,
+    MicrosoftConnectionOptions, Narrow, Nullability, Nullable, Out, Preallocated,
+    ResultSetMetadata, RowSetBuffer, TruncationInfo, Utf16Str, Utf16String,
     buffers::{
         BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
     },
@@ -25,7 +25,7 @@ use odbc_api::{
     },
     sys::{
         CDataType, FetchOrientation, HandleType, Numeric, Pointer, SQLFreeHandle, SQLPrepareW,
-        SqlDataType, SqlReturn, Timestamp,
+        SqlDataType, SqlReturn, SsAccessToken, Timestamp,
     },
 };
 
@@ -75,6 +75,40 @@ fn bogus_connection_string() {
     } else {
         panic!("Expected Error::Diagnostics")
     };
+}
+
+/// According to Microsoft, combining an access token with credentials in the connection string is
+/// an error. The driver reporting it, shows it recognized the access token attribute.
+///
+/// Since we do not have an instance on azure available, this is the best integration test we have
+/// to see if we can pass a token correctly to the Microsoft driver.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+fn access_token_conflicts_with_credentials(profile: &Profile) {
+    // Given a connection string with credentials (UID, PWD) and an access token
+    let token = SsAccessToken::from_text("not-a-valid-access-token");
+    let options = MicrosoftConnectionOptions {
+        access_token: Some(&*token),
+    };
+
+    // When
+    let result = unsafe {
+        environment()
+            .unwrap()
+            .connect_with_connection_string_and_driver_specific_options(
+                profile.connection_string,
+                ConnectionOptions::default(),
+                options,
+            )
+    };
+
+    // Then
+    let Error::Diagnostics { record, function } = result.err().unwrap() else {
+        panic!("Expected Error::Diagnostics")
+    };
+    assert_eq!("SQLDriverConnect", function);
+    // "Cannot use Access Token with any of the following options: Authentication, Integrated
+    // Security, User, Password."
+    assert_eq!("FA005", record.state.as_str());
 }
 
 #[test_case(MSSQL; "Microsoft SQL Server")]
