@@ -446,7 +446,7 @@ impl Connection<'_> {
 }
 
 /// Set attributes which change the behavior of the connection.
-pub trait SetConnectionAttribute {
+pub trait SetConnectionAttribute<'c> {
     /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
     /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
@@ -497,11 +497,16 @@ pub trait SetConnectionAttribute {
     /// interpret the attribute, in order for this call to be safe.
     ///
     /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
-    unsafe fn set_attribute(&self, attribute: impl AsConnectionAttribute) -> SqlResult<()>;
+    unsafe fn set_attribute<'a>(&self, attribute: impl AsConnectionAttribute<'a>) -> SqlResult<()>
+    where
+        'a: 'c;
 }
 
-impl SetConnectionAttribute for Connection<'_> {
-    unsafe fn set_attribute(&self, attribute: impl AsConnectionAttribute) -> SqlResult<()> {
+impl<'c> SetConnectionAttribute<'c> for Connection<'c> {
+    unsafe fn set_attribute<'a>(&self, attribute: impl AsConnectionAttribute<'a>) -> SqlResult<()>
+    where
+        'a: 'c,
+    {
         unsafe {
             sql_set_connect_attr(
                 self.handle,
@@ -532,7 +537,9 @@ impl SetConnectionAttribute for Connection<'_> {
 ///
 /// Implementers must take care that the results of [`Self::value`] and [`Self::string_length`]
 /// match the expectations of the ODBC driver for the given `attribute`.
-pub unsafe trait AsConnectionAttribute {
+///
+/// In case [`Self::value`] returns an actual pointer, it must be valid for the lifetime `'a`.
+pub unsafe trait AsConnectionAttribute<'a> {
     /// The Connection Attribute to set.
     fn attribute(&self) -> ConnectionAttributeSys;
 
@@ -551,7 +558,7 @@ pub unsafe trait AsConnectionAttribute {
 
 struct PacketSizeConnectionAttribute(pub u32);
 
-unsafe impl AsConnectionAttribute for PacketSizeConnectionAttribute {
+unsafe impl AsConnectionAttribute<'static> for PacketSizeConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::PACKET_SIZE
     }
@@ -567,7 +574,7 @@ unsafe impl AsConnectionAttribute for PacketSizeConnectionAttribute {
 
 struct LoginTimeoutConnectionAttribute(pub u32);
 
-unsafe impl AsConnectionAttribute for LoginTimeoutConnectionAttribute {
+unsafe impl AsConnectionAttribute<'static> for LoginTimeoutConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::LOGIN_TIMEOUT
     }
@@ -583,7 +590,7 @@ unsafe impl AsConnectionAttribute for LoginTimeoutConnectionAttribute {
 
 struct AutocommitConnectionAttribute(pub bool);
 
-unsafe impl AsConnectionAttribute for AutocommitConnectionAttribute {
+unsafe impl AsConnectionAttribute<'static> for AutocommitConnectionAttribute {
     fn attribute(&self) -> ConnectionAttributeSys {
         ConnectionAttributeSys::AUTOCOMMIT
     }
