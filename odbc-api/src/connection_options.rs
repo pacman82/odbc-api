@@ -1,3 +1,5 @@
+use odbc_sys::SsAccessToken;
+
 use crate::{
     Error,
     handles::{Diagnostics, SetConnectionAttribute},
@@ -60,6 +62,36 @@ impl<'a> ApplyConnectionAttributes<'a> for ConnectionOptions {
         }
         if let Some(packet_size) = self.packet_size {
             handle.set_packet_size(packet_size).into_result(handle)?;
+        }
+        Ok(())
+    }
+}
+
+/// Driver specific options for connections opened with the Microsoft ODBC Driver for SQL Server.
+/// Pass them to [`crate::Environment::connect_with_connection_string_and_driver_specific_options`].
+///
+/// These options contain attributes only understood by the Microsoft ODBC Driver for SQL Server.
+/// Applying them to a connection opened with any other driver may cause undefined behavior.
+#[derive(Default, Clone, Copy)]
+pub struct MicrosoftConnectionOptions<'a> {
+    /// Microsoft Entra ID access token used to authenticate. The connection string must not
+    /// contain `UID`, `PWD`, `Authentication` or `Trusted_Connection` if it is set. The token must
+    /// outlive the connection, since the driver keeps a pointer to it.
+    ///
+    /// See:
+    /// <https://learn.microsoft.com/sql/connect/odbc/using-azure-active-directory#authenticating-with-an-access-token>
+    pub access_token: Option<&'a SsAccessToken>,
+}
+
+impl<'a> ApplyConnectionAttributes<'a> for MicrosoftConnectionOptions<'a> {
+    unsafe fn apply(
+        &self,
+        handle: &(impl SetConnectionAttribute<'a> + Diagnostics),
+    ) -> Result<(), Error> {
+        if let Some(access_token) = self.access_token {
+            // Safety: The caller guarantees that `handle` belongs to a Microsoft ODBC Driver for
+            // SQL Server. The lifetime `'a` ensures the token outlives the connection.
+            unsafe { handle.set_attribute(access_token) }.into_result(handle)?;
         }
         Ok(())
     }

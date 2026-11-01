@@ -295,35 +295,44 @@ impl Environment {
         connection_string: &str,
         options: ConnectionOptions,
     ) -> Result<Connection<'_>, Error> {
+        let connection_string = SqlText::new(connection_string);
+        let mut connection = self.allocate_connection()?;
+
+        // Safety: `ConnectionOptions` only sets attributes defined by the ODBC standard.
         unsafe {
-            self.connect_with_connection_string_and_driver_specific_options(
-                connection_string,
-                options,
-            )
+            options.apply(&connection)?;
         }
+
+        connection
+            .connect_with_connection_string(&connection_string)
+            .into_result(&connection)?;
+        Ok(Connection::new(connection))
     }
 
     /// Alternative to [`Self::connect_with_connection_string`] with support for driver specific
-    /// connection attributes.
+    /// connection attributes, e.g. [`crate::MicrosoftConnectionOptions`].
     ///
     /// To find out your connection string try: <https://www.connectionstrings.com/>
     ///
     /// # Safety
     ///
-    /// It is the callers responsibility to ensure the attributes applied by `options` are all
-    /// supported by the driver which is used to open the connection.
+    /// It is the callers responsibility to ensure the attributes applied by `driver_specific` are
+    /// all supported by the driver which is used to open the connection.
     pub unsafe fn connect_with_connection_string_and_driver_specific_options<'a>(
         &'a self,
         connection_string: &str,
-        options: impl ApplyConnectionAttributes<'a>,
+        options: ConnectionOptions,
+        driver_specific: impl ApplyConnectionAttributes<'a>,
     ) -> Result<Connection<'a>, Error> {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        // Safety: It s the callers responsibility to ensure that the driver used to open the
-        // connection understands the options.
+        // Safety: `ConnectionOptions` only sets attributes defined by the ODBC standard. It is the
+        // callers responsibility to ensure that the driver used to open the connection
+        // understands the driver specific options.
         unsafe {
             options.apply(&connection)?;
+            driver_specific.apply(&connection)?;
         }
 
         connection
