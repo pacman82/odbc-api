@@ -38,7 +38,8 @@ pub use self::{
     },
     connection::{Connection, ConnectionTransitions, IdentifierQuoteChar, escape_attribute_value},
     connection_options::{
-        ApplyConnectionAttributes, ConnectionOptions, MicrosoftConnectionOptions,
+        ConnectionOptions, DriverSpecificConnectionOptions, MicrosoftConnectionOptions,
+        SetConnectionAttributeArgs,
     },
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{

@@ -24,7 +24,7 @@ pub use self::{
     any_handle::AnyHandle,
     bind::{CData, CDataMut, DelayedInput, HasDataType},
     column_description::{ColumnDescription, Nullability},
-    connection::{AsConnectionAttribute, Connection, SetConnectionAttribute},
+    connection::Connection,
     data_type::DataType,
     descriptor::Descriptor,
     diagnostics::{DiagnosticResult, DiagnosticStream, Diagnostics, Record, State},

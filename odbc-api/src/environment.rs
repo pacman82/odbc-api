@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     Connection, DriverCompleteOption, Error,
-    connection_options::{ApplyConnectionAttributes, ConnectionOptions},
+    connection_options::{ConnectionOptions, DriverSpecificConnectionOptions},
     error::ExtendResult,
     handles::{
         self, OutputStringBuffer, SqlChar, SqlResult, SqlText, State, SzBuffer, log_diagnostics,
@@ -250,11 +250,7 @@ impl Environment {
 
         let mut connection = self.allocate_connection()?;
 
-        // Safe: The attributes of ConnectionOptions are all part of the ODBC standard and must be\
-        // understood by any ODBC driver.
-        unsafe {
-            options.apply(&connection)?;
-        }
+        options.apply(&connection)?;
 
         connection
             .connect(&data_source_name, &user, &pwd)
@@ -298,10 +294,7 @@ impl Environment {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        // Safety: `ConnectionOptions` only sets attributes defined by the ODBC standard.
-        unsafe {
-            options.apply(&connection)?;
-        }
+        options.apply(&connection)?;
 
         connection
             .connect_with_connection_string(&connection_string)
@@ -322,17 +315,20 @@ impl Environment {
         &'a self,
         connection_string: &str,
         options: ConnectionOptions,
-        driver_specific: impl ApplyConnectionAttributes<'a>,
+        driver_specific: impl DriverSpecificConnectionOptions<'a>,
     ) -> Result<Connection<'a>, Error> {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
-        // Safety: `ConnectionOptions` only sets attributes defined by the ODBC standard. It is the
-        // callers responsibility to ensure that the driver used to open the connection
-        // understands the driver specific options.
-        unsafe {
-            options.apply(&connection)?;
-            driver_specific.apply(&connection)?;
+        options.apply(&connection)?;
+        for args in driver_specific.attributes() {
+            // Safety: It is the callers responsibility to ensure that the driver used to open the
+            // connection understands the driver specific attributes. Referenced memory outlives the
+            // connection, since both share the lifetime `'a`.
+            unsafe {
+                connection.set_attribute(args.attribute(), args.value(), args.string_length())
+            }
+            .into_result(&connection)?;
         }
 
         connection
