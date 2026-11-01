@@ -312,13 +312,11 @@ impl Environment {
     ///
     /// It is the callers responsibility to ensure the attributes applied by `options` are all
     /// supported by the driver which is used to open the connection.
-    pub unsafe fn connect_with_connection_string_and_driver_specific_options<'a, A>(
+    pub unsafe fn connect_with_connection_string_and_driver_specific_options<'a>(
         &'a self,
         connection_string: &str,
-        options: A,
+        options: impl ApplyConnectionAttributes<'a>,
     ) -> Result<Connection<'a>, Error>
-    where
-        A: ApplyConnectionAttributes + 'a,
     {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;

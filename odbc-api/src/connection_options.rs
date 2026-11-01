@@ -28,7 +28,7 @@ pub struct ConnectionOptions {
 /// and pass its implementation to
 /// [`crate::Environment::connect_with_connection_string_and_driver_specific_options`] in order to
 /// apply them.
-pub trait ApplyConnectionAttributes {
+pub trait ApplyConnectionAttributes<'a> {
     /// Set the attributes corresponding to the connection options to an allocated connection
     /// handle. Usually you would rather provide the options then creating the connection with e.g.
     /// [`crate::Environment::connect_with_connection_string`] rather than calling this method
@@ -46,14 +46,14 @@ pub trait ApplyConnectionAttributes {
     /// connection opened with a Microsoft SQL Server driver.
     unsafe fn apply(
         &self,
-        handle: &(impl SetConnectionAttribute + Diagnostics),
+        handle: &(impl SetConnectionAttribute<'a> + Diagnostics),
     ) -> Result<(), Error>;
 }
 
-impl ApplyConnectionAttributes for ConnectionOptions {
+impl<'a> ApplyConnectionAttributes<'a> for ConnectionOptions {
     unsafe fn apply(
         &self,
-        handle: &(impl SetConnectionAttribute + Diagnostics),
+        handle: &(impl SetConnectionAttribute<'a> + Diagnostics),
     ) -> Result<(), Error> {
         if let Some(timeout) = self.login_timeout_sec {
             handle.set_login_timeout_sec(timeout).into_result(handle)?;
