@@ -13,8 +13,8 @@ use super::{
 use log::trace;
 use odbc_sys::{
     CompletionType, ConnectionAttribute as ConnectionAttributeSys, DriverConnectOption, HDbc, HEnv,
-    HWnd, Handle, HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect,
-    SQLEndTran,
+    HWnd, Handle, HandleType, IS_POINTER, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle,
+    SQLDisconnect, SQLEndTran, SsAccessToken,
 };
 use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -601,5 +601,21 @@ unsafe impl AsConnectionAttribute<'static> for AutocommitConnectionAttribute {
 
     fn string_length(&self) -> i32 {
         IS_UINTEGER // Ignored for integer attributes
+    }
+}
+
+/// Microsoft Entra ID access token. Only understood by the Microsoft ODBC Driver for SQL Server.
+/// The token must outlive the connection, since the driver keeps the pointer.
+unsafe impl<'a> AsConnectionAttribute<'a> for &'a SsAccessToken {
+    fn attribute(&self) -> ConnectionAttributeSys {
+        ConnectionAttributeSys::SS_ACCESS_TOKEN
+    }
+
+    fn value(&self) -> Pointer {
+        *self as *const SsAccessToken as Pointer
+    }
+
+    fn string_length(&self) -> i32 {
+        IS_POINTER
     }
 }
