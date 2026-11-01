@@ -316,8 +316,7 @@ impl Environment {
         &'a self,
         connection_string: &str,
         options: impl ApplyConnectionAttributes<'a>,
-    ) -> Result<Connection<'a>, Error>
-    {
+    ) -> Result<Connection<'a>, Error> {
         let connection_string = SqlText::new(connection_string);
         let mut connection = self.allocate_connection()?;
 
