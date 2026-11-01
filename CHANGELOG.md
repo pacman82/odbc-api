@@ -3,6 +3,32 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [29.3.0](https://github.com/pacman82/odbc-api/compare/29.2.0...29.3.0) - 2026-11-01
+
+### 🚀 Features
+
+- MicrosoftConnectionOptions for passing entra ID token
+
+- SsAccessToken implements AsConnectionAttribute
+
+- Compiler catches if implementation of ApplyConnectionAttribute would bind pointers which become invalid during the lifetime of the connection
+
+- AsConnectionAttribute and ApplyConnectionAttributes can now be named by external crates
+
+- Driver specific attributes are supported
+
+
+  For this Environment::connect_with_connection_string_and_driver_specific_options has been introduced
+
+
+
+### 📚 Documentation
+
+- Broken links fixed
+
+- Attribute buffer lifetime mentioned as safety concern for `set_attribute`
+
+
 ## [29.2.0](https://github.com/pacman82/odbc-api/compare/29.1.1...29.2.0) - 2026-10-04
 
 ### 🚀 Features
