@@ -12,9 +12,8 @@ use super::{
 };
 use log::trace;
 use odbc_sys::{
-    CompletionType, ConnectionAttribute as ConnectionAttributeSys, DriverConnectOption, HDbc, HEnv,
-    HWnd, Handle, HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect,
-    SQLEndTran,
+    CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
+    IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
 };
 use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -359,7 +358,7 @@ impl Connection<'_> {
         unsafe {
             let mut res = sql_get_connect_attr(
                 self.handle,
-                ConnectionAttributeSys::CURRENT_CATALOG,
+                ConnectionAttribute::CURRENT_CATALOG,
                 mut_buf_ptr(buffer) as Pointer,
                 binary_length(buffer).try_into().unwrap(),
                 &mut string_length_in_bytes as *mut i32,
@@ -374,7 +373,7 @@ impl Connection<'_> {
                 resize_to_fit_with_tz(buffer, string_length_in_bytes.try_into().unwrap());
                 res = sql_get_connect_attr(
                     self.handle,
-                    ConnectionAttributeSys::CURRENT_CATALOG,
+                    ConnectionAttribute::CURRENT_CATALOG,
                     mut_buf_ptr(buffer) as Pointer,
                     binary_length(buffer).try_into().unwrap(),
                     &mut string_length_in_bytes as *mut i32,
@@ -396,7 +395,7 @@ impl Connection<'_> {
     /// the connection is still active.
     pub fn is_dead(&self) -> SqlResult<bool> {
         unsafe {
-            self.attribute_u32(ConnectionAttributeSys::CONNECTION_DEAD)
+            self.attribute_u32(ConnectionAttribute::CONNECTION_DEAD)
                 .map(|v| match v {
                     0 => false,
                     1 => true,
@@ -407,13 +406,13 @@ impl Connection<'_> {
 
     /// Networ packet size in bytes.
     pub fn packet_size(&self) -> SqlResult<u32> {
-        unsafe { self.attribute_u32(ConnectionAttributeSys::PACKET_SIZE) }
+        unsafe { self.attribute_u32(ConnectionAttribute::PACKET_SIZE) }
     }
 
     /// # Safety
     ///
     /// Caller must ensure connection attribute is numeric.
-    unsafe fn attribute_u32(&self, attribute: ConnectionAttributeSys) -> SqlResult<u32> {
+    unsafe fn attribute_u32(&self, attribute: ConnectionAttribute) -> SqlResult<u32> {
         let mut out: u32 = 0;
         unsafe {
             sql_get_connect_attr(
@@ -453,7 +452,7 @@ impl Connection<'_> {
     pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
         unsafe {
             self.set_attribute(
-                ConnectionAttributeSys::AUTOCOMMIT,
+                ConnectionAttribute::AUTOCOMMIT,
                 (enabled as u32) as Pointer,
                 IS_UINTEGER, // Ignored for integer attributes
             )
@@ -474,7 +473,7 @@ impl Connection<'_> {
     pub fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
         unsafe {
             self.set_attribute(
-                ConnectionAttributeSys::LOGIN_TIMEOUT,
+                ConnectionAttribute::LOGIN_TIMEOUT,
                 timeout as Pointer,
                 IS_UINTEGER, // Ignored for integer attributes
             )
@@ -493,7 +492,7 @@ impl Connection<'_> {
     pub fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
         unsafe {
             self.set_attribute(
-                ConnectionAttributeSys::PACKET_SIZE,
+                ConnectionAttribute::PACKET_SIZE,
                 packet_size as Pointer,
                 IS_UINTEGER, // Ignored for integer attributes
             )
@@ -516,7 +515,7 @@ impl Connection<'_> {
     /// Memory referenced by `value` must stay valid for the lifetime of the connection.
     pub unsafe fn set_attribute(
         &self,
-        attribute: ConnectionAttributeSys,
+        attribute: ConnectionAttribute,
         value: Pointer,
         string_length: i32,
     ) -> SqlResult<()> {
