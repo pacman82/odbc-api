@@ -310,7 +310,7 @@ impl Environment {
     ///
     /// # Safety
     ///
-    /// It is the callers responsibility to enusre the attributes applied by `options` are all
+    /// It is the callers responsibility to ensure the attributes applied by `options` are all
     /// supported by the driver which is used to open the connection.
     pub unsafe fn connect_with_connection_string_and_driver_specific_options<'a, A>(
         &'a self,

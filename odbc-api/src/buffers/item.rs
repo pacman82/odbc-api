@@ -3,11 +3,7 @@ use odbc_sys::{Date, Time, Timestamp};
 use super::BufferDesc;
 use crate::{BindParamDesc, Bit, Pod};
 
-/// Can either be extracted as a slice or a [`NullableSlice`] from an [`AnySlice`]. This allows
-/// the user to avoid matching on all possible variants of an [`AnySlice`] in case the
-/// buffered type is known at compile time.
-///
-/// Usually used in generic code. E.g.:
+/// Used by application which want to bind buffers in generic code based on the element type.
 ///
 /// ```
 /// use odbc_api::{Connection, buffers::Item};

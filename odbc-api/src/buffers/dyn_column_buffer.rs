@@ -147,7 +147,7 @@ unsafe impl Slice for BoxColumnBuffer {
 }
 
 /// Enables reading the valid contents of a column buffer, while it is bound to a block cursor
-/// as [`BoxColumnBuffer>`].
+/// as [`BoxColumnBuffer`].
 #[derive(Clone, Copy)]
 pub struct AnyColumnBufferSlice<'a> {
     buffer: &'a BoxColumnBuffer,
@@ -229,7 +229,7 @@ unsafe impl<'a> BoundInputSlice<'a> for BoxColumnBuffer {
     }
 }
 
-/// Fat reference to a [`BoxColumnBuffer`] that is bound as an array parameter to a [`Statement`].
+/// Fat reference to a [`BoxColumnBuffer`] that is bound as an array parameter to a [`StatementRef`].
 ///
 /// This reference allows mutating the buffer contents, e.g. in order to reuse the same bound buffer
 /// for inserting multiple batches of data. If any operation is performed which would invalidate the
