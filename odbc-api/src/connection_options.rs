@@ -100,8 +100,9 @@ impl<'a> SetConnectionAttributeArgs<'a> {
         self.value
     }
 
-    /// String length argument of `SQLSetConnectAttr`. For pointers and integers it describes the
-    /// kind of value rather than a length, e.g. `IS_POINTER` or `IS_UINTEGER`.
+    /// String length argument of [`crate::handles::Connection::set_attribute`]. For pointers and
+    /// integers it describes the kind of value rather than a length, e.g. `IS_POINTER` or
+    /// `IS_UINTEGER`.
     pub fn string_length(&self) -> i32 {
         self.string_length
     }
