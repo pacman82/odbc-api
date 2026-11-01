@@ -13,8 +13,8 @@ use super::{
 use log::trace;
 use odbc_sys::{
     CompletionType, ConnectionAttribute as ConnectionAttributeSys, DriverConnectOption, HDbc, HEnv,
-    HWnd, Handle, HandleType, IS_POINTER, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle,
-    SQLDisconnect, SQLEndTran, SsAccessToken,
+    HWnd, Handle, HandleType, IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect,
+    SQLEndTran,
 };
 use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -445,14 +445,19 @@ impl Connection<'_> {
     }
 }
 
-/// Set attributes which change the behavior of the connection.
-pub trait SetConnectionAttribute<'c> {
+impl Connection<'_> {
     /// Specify the transaction mode. By default, ODBC transactions are in auto-commit mode (unless
     /// SQLSetConnectAttr and SQLSetConnectOption are not supported, which is unlikely). Switching
     /// from manual-commit mode to auto-commit mode automatically commits any open transaction on
     /// the connection.
-    fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
-        unsafe { self.set_attribute(AutocommitConnectionAttribute(enabled)) }
+    pub fn set_autocommit(&self, enabled: bool) -> SqlResult<()> {
+        unsafe {
+            self.set_attribute(
+                ConnectionAttributeSys::AUTOCOMMIT,
+                (enabled as u32) as Pointer,
+                IS_UINTEGER, // Ignored for integer attributes
+            )
+        }
     }
 
     /// Number of seconds to wait for a login request to complete before returning to the
@@ -466,8 +471,14 @@ pub trait SetConnectionAttribute<'c> {
     ///
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
-    fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
-        unsafe { self.set_attribute(LoginTimeoutConnectionAttribute(timeout)) }
+    pub fn set_login_timeout_sec(&self, timeout: u32) -> SqlResult<()> {
+        unsafe {
+            self.set_attribute(
+                ConnectionAttributeSys::LOGIN_TIMEOUT,
+                timeout as Pointer,
+                IS_UINTEGER, // Ignored for integer attributes
+            )
+        }
     }
 
     /// Specifying the network packet size in bytes. Note: Many data sources either do not support
@@ -479,8 +490,14 @@ pub trait SetConnectionAttribute<'c> {
     ///
     /// See:
     /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function>
-    fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
-        unsafe { self.set_attribute(PacketSizeConnectionAttribute(packet_size)) }
+    pub fn set_packet_size(&self, packet_size: u32) -> SqlResult<()> {
+        unsafe {
+            self.set_attribute(
+                ConnectionAttributeSys::PACKET_SIZE,
+                packet_size as Pointer,
+                IS_UINTEGER, // Ignored for integer attributes
+            )
+        }
     }
 
     /// Sets a connection attribute.
@@ -496,126 +513,16 @@ pub trait SetConnectionAttribute<'c> {
     /// question. On top of that, callers must also ensure that the driver would know how to
     /// interpret the attribute, in order for this call to be safe.
     ///
-    /// Attributes could reference arrays which must be allocated for the lifetime of the connection.
-    unsafe fn set_attribute<'a>(&self, attribute: impl AsConnectionAttribute<'a>) -> SqlResult<()>
-    where
-        'a: 'c;
-}
-
-impl<'c> SetConnectionAttribute<'c> for Connection<'c> {
-    unsafe fn set_attribute<'a>(&self, attribute: impl AsConnectionAttribute<'a>) -> SqlResult<()>
-    where
-        'a: 'c,
-    {
+    /// Memory referenced by `value` must stay valid for the lifetime of the connection.
+    pub unsafe fn set_attribute(
+        &self,
+        attribute: ConnectionAttributeSys,
+        value: Pointer,
+        string_length: i32,
+    ) -> SqlResult<()> {
         unsafe {
-            sql_set_connect_attr(
-                self.handle,
-                attribute.attribute(),
-                attribute.value(),
-                attribute.string_length(),
-            )
-            .into_sql_result("SQLSetConnectAttr")
+            sql_set_connect_attr(self.handle, attribute, value, string_length)
+                .into_sql_result("SQLSetConnectAttr")
         }
-    }
-}
-
-/// Indicates that the implementer is can be set as a Connection Attribute. This trait is
-/// implemented for both, attributes which are set after the connection is created, as well as
-/// attributes which are set before connecting.
-///
-/// Users of `odbc-api` usually would not want to implement this themselves and rather use safe
-/// abstractions around setting connection attributes. E.g. providing [`crate::ConnectionOptions`] on
-/// connecting.
-///
-/// A reason to implement this trait in your applicaction code however, could be that you want to
-/// set an attribute which is not part of the ODBC standard, but only supported by your specific
-/// driver, which you happen to know your application will use.
-///
-/// See: <https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/connection-attributes>
-///
-/// # Safety
-///
-/// Implementers must take care that the results of [`Self::value`] and [`Self::string_length`]
-/// match the expectations of the ODBC driver for the given `attribute`.
-///
-/// In case [`Self::value`] returns an actual pointer, it must be valid for the lifetime `'a`.
-pub unsafe trait AsConnectionAttribute<'a> {
-    /// The Connection Attribute to set.
-    fn attribute(&self) -> ConnectionAttributeSys;
-
-    /// The interpretation of the returned pointer depends on the value returned by `attribute`.
-    ///
-    /// The value to be set. Depending on `attribute` the pointer value might be directly
-    /// interpreted as an integer value without being dereferenced. If `attribute` is represented as
-    /// text then pointer points to a buffer containing the text.
-    fn value(&self) -> Pointer;
-
-    /// Implementers please see
-    /// <https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlsetconnectattr-function> in
-    /// order to decide on the correct output for this function
-    fn string_length(&self) -> i32;
-}
-
-struct PacketSizeConnectionAttribute(pub u32);
-
-unsafe impl AsConnectionAttribute<'static> for PacketSizeConnectionAttribute {
-    fn attribute(&self) -> ConnectionAttributeSys {
-        ConnectionAttributeSys::PACKET_SIZE
-    }
-
-    fn value(&self) -> Pointer {
-        self.0 as Pointer
-    }
-
-    fn string_length(&self) -> i32 {
-        IS_UINTEGER // Ignored for integer attributes
-    }
-}
-
-struct LoginTimeoutConnectionAttribute(pub u32);
-
-unsafe impl AsConnectionAttribute<'static> for LoginTimeoutConnectionAttribute {
-    fn attribute(&self) -> ConnectionAttributeSys {
-        ConnectionAttributeSys::LOGIN_TIMEOUT
-    }
-
-    fn value(&self) -> Pointer {
-        self.0 as Pointer
-    }
-
-    fn string_length(&self) -> i32 {
-        IS_UINTEGER // Ignored for integer attributes
-    }
-}
-
-struct AutocommitConnectionAttribute(pub bool);
-
-unsafe impl AsConnectionAttribute<'static> for AutocommitConnectionAttribute {
-    fn attribute(&self) -> ConnectionAttributeSys {
-        ConnectionAttributeSys::AUTOCOMMIT
-    }
-
-    fn value(&self) -> Pointer {
-        (self.0 as u32) as Pointer
-    }
-
-    fn string_length(&self) -> i32 {
-        IS_UINTEGER // Ignored for integer attributes
-    }
-}
-
-/// Microsoft Entra ID access token. Only understood by the Microsoft ODBC Driver for SQL Server.
-/// The token must outlive the connection, since the driver keeps the pointer.
-unsafe impl<'a> AsConnectionAttribute<'a> for &'a SsAccessToken {
-    fn attribute(&self) -> ConnectionAttributeSys {
-        ConnectionAttributeSys::SS_ACCESS_TOKEN
-    }
-
-    fn value(&self) -> Pointer {
-        *self as *const SsAccessToken as Pointer
-    }
-
-    fn string_length(&self) -> i32 {
-        IS_POINTER
     }
 }
