@@ -29,7 +29,8 @@ pub use self::{
 };
 
 /// A cursor which owns both its statement and its connection. It is generic over the type of
-/// ownership of the connection. E.g. [`SharedConnection`] or just plain [`Connection`].
+/// ownership of the connection. E.g. [`crate::SharedConnection`] or just plain
+/// [`crate::Connection`].
 pub type OwnedCursor<P> = CursorImpl<StatementConnection<P>>;
 
 /// Cursors are used to process and iterate the result sets returned by executing queries.

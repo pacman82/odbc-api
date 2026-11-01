@@ -537,7 +537,7 @@ where
     }
 }
 
-/// Iterator over a text column. See [`TextColumnView::iter`]
+/// Iterator over a text column. See [`TextColumnSlice::iter`]
 #[derive(Debug)]
 pub struct TextColumnIt<'c, C> {
     pos: usize,

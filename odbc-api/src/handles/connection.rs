@@ -530,8 +530,8 @@ impl SetConnectionAttribute for Connection<'_> {
 ///
 /// # Safety
 ///
-/// Implementers must take care that the results of [`Self::value`] and [`Self::len`] match the
-/// expectations of the ODBC driver for the given `attribute`.
+/// Implementers must take care that the results of [`Self::value`] and [`Self::string_length`]
+/// match the expectations of the ODBC driver for the given `attribute`.
 pub unsafe trait AsConnectionAttribute {
     /// The Connection Attribute to set.
     fn attribute(&self) -> ConnectionAttributeSys;
