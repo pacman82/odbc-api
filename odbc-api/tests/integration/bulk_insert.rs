@@ -1019,3 +1019,37 @@ fn insert_vec_column_using_generic_code(profile: &Profile) {
     let actual = table.content_as_string(&conn);
     assert_eq!("1,1,0.5\n2,2,0.25\n3,3,0.125", actual);
 }
+
+/// A failing set in a bulk insert is reported as an error. Which of the other sets end up in the
+/// table depends on the driver.
+#[test_case(MSSQL, "1\n2"; "Microsoft SQL Server")]
+#[test_case(MARIADB, ""; "Maria DB")]
+#[test_case(SQLITE_3, "1"; "SQLite 3")]
+#[test_case(POSTGRES, ""; "PostgreSQL")]
+fn bulk_insert_with_failing_set(profile: &Profile, expected_rows: &str) {
+    // Given a table with a unique column
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER UNIQUE"])
+        .build(profile)
+        .unwrap();
+
+    // When inserting 1, 1 and 2 in one batch
+    let mut inserter = conn
+        .prepare(&table.sql_insert())
+        .unwrap()
+        .into_column_inserter(3, [BindParamDesc::i32(false)])
+        .unwrap();
+    inserter.set_num_rows(3);
+    inserter
+        .column_mut(0)
+        .as_slice::<i32>()
+        .unwrap()
+        .copy_from_slice(&[1, 1, 2]);
+    let result = inserter.execute().map(|_cursor| ());
+    drop(inserter);
+
+    // Then
+    assert!(result.is_err());
+    assert_eq!(expected_rows, table.content_as_string(&conn));
+}
