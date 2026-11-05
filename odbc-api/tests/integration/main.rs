@@ -1919,6 +1919,27 @@ fn manual_commit_mode(profile: &Profile) {
     conn.commit().unwrap();
 }
 
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn is_autocommit_is_true_for_new_connection(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+
+    assert!(conn.is_autocommit().unwrap());
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn is_autocommit_is_false_after_disabling_autocommit(profile: &Profile) {
+    let conn = profile.connection().unwrap();
+    conn.set_autocommit(false).unwrap();
+
+    assert!(!conn.is_autocommit().unwrap());
+}
+
 /// This test checks the behaviour if a connections goes out of scope with a transaction still
 /// open.
 #[test_case(MSSQL; "Microsoft SQL Server")]

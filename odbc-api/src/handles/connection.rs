@@ -399,7 +399,25 @@ impl Connection<'_> {
                 .map(|v| match v {
                     0 => false,
                     1 => true,
-                    other => panic!("Unexpected result value from SQLGetConnectAttr: {other}"),
+                    other => panic!(
+                        "Unexpected result value retrieving SQL_ATTR_CONNECTION_DEAD via \
+                        SQLGetConnectAttr: {other}"
+                    ),
+                })
+        }
+    }
+
+    /// `true` if the connection is in autocommit mode, `false` if it is in manual-commit mode.
+    pub fn is_autocommit(&self) -> SqlResult<bool> {
+        unsafe {
+            self.attribute_u32(ConnectionAttribute::AUTOCOMMIT)
+                .map(|v| match v {
+                    0 => false,
+                    1 => true,
+                    other => panic!(
+                        "Unexpected result value retrieving SQL_ATTR_AUTOCOMMIT via \
+                        SQLGetConnectAttr: {other}"
+                    ),
                 })
         }
     }
