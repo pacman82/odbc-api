@@ -4187,6 +4187,77 @@ fn insert_numeric_struct(profile: &Profile) {
     assert_eq!("12.345", content);
 }
 
+// Parameter status values from sqlext.h. odbc-sys does not define them.
+const SQL_PARAM_SUCCESS: u16 = 0;
+const SQL_PARAM_ERROR: u16 = 5;
+
+/// Learning test to see how drivers report a failing set in an array of parameters, with a
+/// parameter status array bound. The second set violates a unique constraint. Without the status
+/// array SQL Server returns `SQL_ERROR` instead, see `bulk_insert_with_failing_set`. MariaDB sets
+/// every byte of the status array to `SQL_PARAM_DIAG_UNAVAILABLE` (1). SQLite does not write it.
+#[test_case(
+    MSSQL,
+    SqlReturn::SUCCESS_WITH_INFO,
+    [SQL_PARAM_SUCCESS, SQL_PARAM_ERROR, SQL_PARAM_SUCCESS],
+    "1\n2";
+    "Microsoft SQL Server"
+)]
+#[test_case(MARIADB, SqlReturn::ERROR, [0x0101; 3], ""; "Maria DB")]
+#[test_case(SQLITE_3, SqlReturn::ERROR, [u16::MAX; 3], "1"; "SQLite 3")]
+#[test_case(POSTGRES, SqlReturn::ERROR, [SQL_PARAM_ERROR; 3], ""; "PostgreSQL")]
+fn param_status_for_failing_set(
+    profile: &Profile,
+    expected_return: SqlReturn,
+    expected_statuses: [u16; 3],
+    expected_rows: &str,
+) {
+    // Given a table with a unique column
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INTEGER UNIQUE"])
+        .build(profile)
+        .unwrap();
+
+    // When inserting 1, 1 and 2 with one execution, with a parameter status array bound
+    let mut values = [1i32, 1, 2];
+    let mut statuses = [u16::MAX; 3];
+    let stmt = conn.prepare(&table.sql_insert()).unwrap().into_handle();
+    let hstmt = stmt.as_sys();
+    let ret = unsafe {
+        let _ = odbc_sys::SQLBindParameter(
+            hstmt,
+            1,
+            odbc_sys::ParamType::Input,
+            CDataType::SLong,
+            SqlDataType::INTEGER,
+            0,
+            0,
+            values.as_mut_ptr() as Pointer,
+            0,
+            null_mut(),
+        );
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::ParamsetSize,
+            3 as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::ParamStatusPtr,
+            statuses.as_mut_ptr() as Pointer,
+            0,
+        );
+        odbc_sys::SQLExecute(hstmt)
+    };
+    drop(stmt);
+
+    // Then
+    assert_eq!(expected_return, ret);
+    assert_eq!(expected_statuses, statuses);
+    assert_eq!(expected_rows, table.content_as_string(&conn));
+}
+
 /// Learning test to see how scrolling cursors behave
 #[test_case(MSSQL; "Microsoft SQL Server")]
 #[test_case(MARIADB; "Maria DB")]
