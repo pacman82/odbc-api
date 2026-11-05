@@ -4321,3 +4321,129 @@ fn recover_from_truncation(profile: &Profile) {
     // Then
     assert_eq!("123456789", untruncated);
 }
+
+// Row status values from sqlext.h. odbc-sys does not define them.
+const SQL_ROW_SUCCESS: u16 = 0;
+const SQL_ROW_ERROR: u16 = 5;
+const SQL_ROW_SUCCESS_WITH_INFO: u16 = 6;
+
+/// Learning test to see how drivers report a value which does not fit into the bound buffer during
+/// a block fetch. Only SQL Server returns `SQL_SUCCESS_WITH_INFO`, and it does not write the value
+/// (`i8::MIN` stays in the buffer). The others write 300 wrapped around to 44. MariaDB marks the row
+/// as an error, yet returns `SQL_SUCCESS`.
+#[test_case(MSSQL, SqlReturn::SUCCESS_WITH_INFO, SQL_ROW_ERROR, i8::MIN; "Microsoft SQL Server")]
+#[test_case(MARIADB, SqlReturn::SUCCESS, SQL_ROW_ERROR, 44; "Maria DB")]
+#[test_case(SQLITE_3, SqlReturn::SUCCESS, SQL_ROW_SUCCESS, 44; "SQLite 3")]
+#[test_case(POSTGRES, SqlReturn::SUCCESS, SQL_ROW_SUCCESS, 44; "PostgreSQL")]
+fn row_status_for_value_out_of_range(
+    profile: &Profile,
+    expected_return: SqlReturn,
+    expected_status: u16,
+    expected_value: i8,
+) {
+    // Given a value in the second row which does not fit into an i8
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["SMALLINT"])
+        .values_by_column(&[&[Some("10"), Some("300")]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+
+    // When fetching both rows at once into an i8 buffer, with a row status array bound
+    let mut values = [i8::MIN; 2];
+    let mut statuses = [u16::MAX; 2];
+    let stmt = cursor.into_stmt();
+    let hstmt = stmt.as_sys();
+    let ret = unsafe {
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::RowArraySize,
+            2 as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::RowStatusPtr,
+            statuses.as_mut_ptr() as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLBindCol(
+            hstmt,
+            1,
+            CDataType::STinyInt,
+            values.as_mut_ptr() as Pointer,
+            0,
+            null_mut(),
+        );
+        odbc_sys::SQLFetch(hstmt)
+    };
+
+    // Then
+    assert_eq!(expected_return, ret);
+    assert_eq!([SQL_ROW_SUCCESS, expected_status], statuses);
+    assert_eq!([10, expected_value], values);
+}
+
+/// Learning test to see how drivers mark a row with a truncated value in the row status array. The
+/// truncated value is in the second row. SQL Server marks the row as an error, PostgreSQL as a
+/// success. MariaDB returns `SQL_SUCCESS`, so the truncation check in `BlockCursor` does not run.
+#[test_case(MSSQL, SqlReturn::SUCCESS_WITH_INFO, SQL_ROW_ERROR; "Microsoft SQL Server")]
+#[test_case(MARIADB, SqlReturn::SUCCESS, SQL_ROW_SUCCESS_WITH_INFO; "Maria DB")]
+#[test_case(SQLITE_3, SqlReturn::SUCCESS_WITH_INFO, SQL_ROW_SUCCESS_WITH_INFO; "SQLite 3")]
+#[test_case(POSTGRES, SqlReturn::SUCCESS_WITH_INFO, SQL_ROW_SUCCESS; "PostgreSQL")]
+fn row_status_for_truncated_value(
+    profile: &Profile,
+    expected_return: SqlReturn,
+    expected_status: u16,
+) {
+    // Given a value in the second row which does not fit into a buffer for one character
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .values_by_column(&[&[Some("a"), Some("bcd")]])
+        .build(profile)
+        .unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+
+    // When fetching both rows at once into a buffer for one character, with a row status array
+    // bound
+    let mut text = [0u8; 4];
+    let mut indicators = [0isize; 2];
+    let mut statuses = [u16::MAX; 2];
+    let stmt = cursor.into_stmt();
+    let hstmt = stmt.as_sys();
+    let ret = unsafe {
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::RowArraySize,
+            2 as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLSetStmtAttr(
+            hstmt,
+            odbc_sys::StatementAttribute::RowStatusPtr,
+            statuses.as_mut_ptr() as Pointer,
+            0,
+        );
+        let _ = odbc_sys::SQLBindCol(
+            hstmt,
+            1,
+            CDataType::Char,
+            text.as_mut_ptr() as Pointer,
+            2,
+            indicators.as_mut_ptr(),
+        );
+        odbc_sys::SQLFetch(hstmt)
+    };
+
+    // Then
+    assert_eq!(expected_return, ret);
+    assert_eq!([SQL_ROW_SUCCESS, expected_status], statuses);
+}
