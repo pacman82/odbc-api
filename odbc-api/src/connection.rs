@@ -5,7 +5,7 @@ use crate::{
     execute::execute_with_parameters_polling,
     handles::{
         self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
-        slice_to_utf8,
+        TransactionCapable, slice_to_utf8,
     },
 };
 use log::error;
@@ -475,6 +475,25 @@ impl<'c> Connection<'c> {
     pub fn set_autocommit(&self, enabled: bool) -> Result<(), Error> {
         self.connection
             .set_autocommit(enabled)
+            .into_result(&self.connection)
+    }
+
+    /// `true` if the connection is in autocommit mode, `false` if it is in manual-commit mode. New
+    /// connections start in autocommit mode. See [`Connection::set_autocommit`].
+    ///
+    /// This corresponds to the `SQL_ATTR_AUTOCOMMIT` attribute in the ODBC specification.
+    pub fn is_autocommit(&self) -> Result<bool, Error> {
+        self.connection
+            .is_autocommit()
+            .into_result(&self.connection)
+    }
+
+    /// Level of transaction support offered by the data source.
+    ///
+    /// This corresponds to the `SQL_TXN_CAPABLE` information type in the ODBC specification.
+    pub fn transaction_capable(&self) -> Result<TransactionCapable, Error> {
+        self.connection
+            .transaction_capable()
             .into_result(&self.connection)
     }
 

@@ -19,6 +19,7 @@ mod sql_char;
 mod sql_result;
 mod statement;
 mod statement_connection;
+mod transaction_capable;
 
 pub use self::{
     any_handle::AnyHandle,
@@ -34,6 +35,7 @@ pub use self::{
     sql_result::SqlResult,
     statement::{AsStatementRef, ColumnType, Statement, StatementImpl, StatementRef},
     statement_connection::{StatementConnection, StatementParent},
+    transaction_capable::TransactionCapable,
 };
 
 #[allow(deprecated)]
