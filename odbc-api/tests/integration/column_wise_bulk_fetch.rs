@@ -1080,6 +1080,38 @@ fn detect_truncated_output(profile: &Profile) {
     ))
 }
 
+/// A value which the driver can not convert into the buffer is reported as part of a successful
+/// fetch. SQL Server does not write the value at all, so the buffer still holds whatever was there
+/// before, e.g. a value from the previous row set. This test demonstrates a current shortcoming of
+/// `odbc-api`, see <https://github.com/pacman82/odbc-api/issues/951>.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+// #[test_case(SQLITE_3; "SQLite 3")] Writes 300 wrapped around to 44 without reporting anything
+// #[test_case(POSTGRES; "PostgreSQL")] Writes 300 wrapped around to 44 without reporting anything
+#[should_panic(expected = "Value out of range reported as success")]
+fn detect_value_out_of_range(profile: &Profile) {
+    // Given a value in the second row which does not fit into an i8
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["SMALLINT"])
+        .values_by_column(&[&[Some("10"), Some("300")]])
+        .build(profile)
+        .unwrap();
+
+    // When fetching both rows at once into an i8 buffer
+    let buffer =
+        ColumnarDynBuffer::try_from_descs(2, [BufferDesc::I8 { nullable: false }]).unwrap();
+    let cursor = conn
+        .execute(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+    let mut cursor = cursor.bind_buffer(buffer).unwrap();
+    let result = cursor.fetch_with_truncation_check(true);
+
+    // Then
+    assert!(result.is_err(), "Value out of range reported as success");
+}
+
 /// If we want to use two buffers alternating to fetch data (like in the concurrent use case in
 /// the arrow-odbc downstream crate) we may want to generate a second row set buffer from an
 /// existing one. For this it is useful if we can infer the capacity of the block cursor, without
