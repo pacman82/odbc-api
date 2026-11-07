@@ -478,6 +478,16 @@ impl<'c> Connection<'c> {
             .into_result(&self.connection)
     }
 
+    /// `true` if the connection is in autocommit mode, `false` if it is in manual-commit mode. New
+    /// connections start in autocommit mode. See [`Connection::set_autocommit`].
+    ///
+    /// This corresponds to the `SQL_ATTR_AUTOCOMMIT` attribute in the ODBC specification.
+    pub fn is_autocommit(&self) -> Result<bool, Error> {
+        self.connection
+            .is_autocommit()
+            .into_result(&self.connection)
+    }
+
     /// To commit a transaction in manual-commit mode.
     pub fn commit(&self) -> Result<(), Error> {
         self.connection.commit().into_result(&self.connection)
