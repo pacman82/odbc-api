@@ -10,7 +10,7 @@ mod mdbtools;
 use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
     Cursor, DataType, Error, IdentifierQuoteChar, InOut, InputParameterMapping, IntoParameter,
-    MicrosoftConnectionOptions, Narrow, Nullability, Nullable, Out, Preallocated,
+    LockConnection, MicrosoftConnectionOptions, Narrow, Nullability, Nullable, Out, Preallocated,
     ResultSetMetadata, RowSetBuffer, TruncationInfo, Utf16Str, Utf16String,
     buffers::{
         BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
@@ -446,6 +446,43 @@ fn shared_ownership_of_connections_by_statement(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn share_connections_with_statement_in_other_thread(profile: &Profile) {
+    // Given
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["INT"])
+        .values_by_column(&[&[Some("42")]])
+        .build(profile)
+        .unwrap();
+
+    // When
+    let conn = Arc::new(Mutex::new(conn));
+    let mut cursor = conn
+        .lock_connection()
+        .into_cursor(&table.sql_all_ordered_by_id(), (), None)
+        .unwrap()
+        .unwrap();
+    let other_thread = thread::spawn(move || {
+        let mut i = 0i32;
+        cursor
+            .next_row()
+            .unwrap()
+            .unwrap()
+            .get_data(1, &mut i)
+            .unwrap();
+        i
+    });
+    drop(conn);
+    let answer = other_thread.join().unwrap();
+
+    // Then
+    assert_eq!(42, answer);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn share_connections_with_statement_in_other_thread_legacy(profile: &Profile) {
     // Given
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -1099,6 +1136,40 @@ fn into_preallocated_arc(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn into_preallocated_shared(profile: &Profile) {
+    // Allocate the statement once
+    let table_name = table_name!();
+    let (conn, table) = Given::new(&table_name)
+        .column_types(&["VARCHAR(10)"])
+        .build(profile)
+        .unwrap();
+    let conn = Arc::new(Mutex::new(conn));
+    let mut prealloc = conn.lock_connection().into_preallocated().unwrap();
+
+    // Execute it two statements in a row. One INSERT, one SELECT.
+    {
+        let res = prealloc
+            .execute(&table.sql_insert(), &"Hello".into_parameter())
+            .unwrap();
+        assert!(res.is_none());
+    }
+
+    {
+        let cursor = prealloc
+            .execute(&table.sql_all_ordered_by_id(), ())
+            .unwrap()
+            .unwrap();
+        let actual = cursor_to_string(cursor);
+        let expected = "Hello";
+        assert_eq!(expected, actual);
+    }
+}
+
+/// Reuse a preallocated handle, two times in a row.
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn into_preallocated_shared_legacy(profile: &Profile) {
     // Allocate the statement once
     let table_name = table_name!();
     let (conn, table) = Given::new(&table_name)
@@ -3105,6 +3176,41 @@ fn bulk_inserter_owning_arc_connection(profile: &Profile) {
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
 fn bulk_inserter_owning_shared_connection(profile: &Profile) {
+    // Given a table
+    let table_name = table_name!();
+    let conn = profile
+        .setup_empty_table(&table_name, &["INTEGER"])
+        .unwrap();
+
+    // When insert two batches with size one and two.
+    let conn = Arc::new(Mutex::new(conn));
+    let mut prepared = conn
+        .lock_connection()
+        .into_prepared(&format!("INSERT INTO {table_name} (a) VALUES (?)"))
+        .unwrap();
+    let desc = BindParamDesc::i32(false);
+    // Insert a batch
+    let mut prebound = prepared.column_inserter(1, [desc]).unwrap();
+    prebound.set_num_rows(1);
+    let col = prebound.column_mut(0).as_slice::<i32>().unwrap();
+    col[0] = 1;
+    prebound.execute().unwrap();
+
+    // Then
+    let conn = profile.connection().unwrap();
+    let cursor = conn
+        .execute(&format!("SELECT a FROM {table_name} ORDER BY id"), (), None)
+        .unwrap()
+        .unwrap();
+    let actual = cursor_to_string(cursor);
+    assert_eq!("1", actual);
+}
+
+#[test_case(MSSQL; "Microsoft SQL Server")]
+#[test_case(MARIADB; "Maria DB")]
+#[test_case(SQLITE_3; "SQLite 3")]
+#[test_case(POSTGRES; "PostgreSQL")]
+fn bulk_inserter_owning_shared_connection_legacy(profile: &Profile) {
     // Given a table
     let table_name = table_name!();
     let conn = profile

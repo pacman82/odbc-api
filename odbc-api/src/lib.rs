@@ -60,7 +60,7 @@ pub use self::{
     preallocated_polling::PreallocatedPolling,
     prepared::{BindParamDesc, Prepared},
     result_set_metadata::ResultSetMetadata,
-    shared_connection::SharedConnection,
+    shared_connection::{LockConnection, SharedConnection, SharedConnectionGuard},
     sleep::Sleep,
 };
 
