@@ -6,132 +6,81 @@ use crate::{
     handles::{KeepConnectionOpen, StatementConnection},
 };
 
-/// A convinient type alias in case you want to use a connection from multiple threads which share
-/// ownership of it.
-pub type SharedConnection<'env> = Arc<Mutex<Connection<'env>>>;
-
-/// # Safety:
+/// Shared ownership of a connection, which can be used from multiple threads. E.g.
+/// `Shared<Connection<'env>>`.
 ///
-/// Connection is guaranteed to be alive and in connected state for the lifetime of
-/// [`SharedConnection`].
-unsafe impl KeepConnectionOpen for SharedConnection<'_> {}
+/// As opposed to an `Arc<Mutex<C>>` it never grants mutable access to `C`. Otherwise safe code could
+/// replace the connection, while statements are still allocated on it.
+/// 
+/// This allows shared connections to be a shared paren of several prepared statements, because it
+/// is safe to implement [`KeepConnectionOpen`] for it if the underlying type is
+/// [`KeepConnectionOpen`].
+#[derive(Debug)]
+pub struct Shared<C>(Arc<Mutex<C>>);
 
-/// Deprecated: Prefer [`SharedConnectionGuard`]. It allows for performing several operations, while
-/// acquiring the lock only once. Trait implementations can not be annotated with `#[deprecated]`.
-impl<'env> ConnectionTransitions for SharedConnection<'env> {
-    type StatementParent = Self;
-
-    fn into_cursor(
-        self,
-        query: &str,
-        params: impl ParameterCollectionRef,
-        query_timeout_sec: Option<usize>,
-    ) -> Result<Option<OwnedCursor<Self>>, FailedStateTransition<Self>> {
-        let guard = self
-            .lock()
-            .expect("Shared connection lock must not be poisned");
-        // Result borrows the connection. We convert the cursor into a raw pointer, to not confuse
-        // the borrow checker.
-        let result = guard.execute(query, params, query_timeout_sec);
-        let result = result.map(|opt| opt.map(|cursor| cursor.into_stmt().into_sys()));
-        drop(guard);
-        if let Err(error) = result {
-            return Err(FailedStateTransition {
-                error,
-                previous: self,
-            });
-        }
-        let Some(stmt_ptr) = result.unwrap() else {
-            return Ok(None);
-        };
-        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
-        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
-        // Safe: `stmt` is valid and in cursor state.
-        let cursor = unsafe { CursorImpl::new(stmt) };
-        Ok(Some(cursor))
+impl<C> Shared<C> {
+    pub fn new(connection: C) -> Self {
+        Self(Arc::new(Mutex::new(connection)))
     }
 
-    fn into_prepared(self, query: &str) -> Result<Prepared<StatementConnection<Self>>, Error> {
-        let guard = self
-            .lock()
-            .expect("Shared connection lock must not be poisoned");
-        let stmt = guard.prepare(query)?;
-        let stmt_ptr = stmt.into_handle().into_sys();
-        drop(guard);
-        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
-        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
-        // `stmt` is valid and in prepared state.
-        let prepared = Prepared::new(stmt);
-        Ok(prepared)
-    }
-
-    fn into_preallocated(self) -> Result<Preallocated<StatementConnection<Self>>, Error> {
-        let guard = self
-            .lock()
-            .expect("Shared connection lock must not be poisoned");
-        let stmt = guard.preallocate()?;
-        let stmt_ptr = stmt.into_handle().into_sys();
-        drop(guard);
-        // Safe: The connection is the parent of the statement referenced by `stmt_ptr`.
-        let stmt = unsafe { StatementConnection::new(stmt_ptr, self) };
-        // `stmt` is valid and in freshly allocated state.
-        let preallocated = unsafe { Preallocated::new(stmt) };
-        Ok(preallocated)
-    }
-}
-
-/// Acquire exclusive access to a shared connection
-///
-/// Use this instead of a regular `MutexGuard` if you intend to create statements which share
-/// ownership of the connection.
-pub trait LockConnection<'env> {
-    /// Acquires the lock of the shared connection, blocking the current thread until it is able to
-    /// do so.
-    fn lock_connection(&self) -> SharedConnectionGuard<'_, 'env>;
-}
-
-impl<'env> LockConnection<'env> for SharedConnection<'env> {
-    fn lock_connection(&self) -> SharedConnectionGuard<'_, 'env> {
+    /// Acquires exclusive access to the connection, blocking the current thread until it is able
+    /// to do so.
+    pub fn lock(&self) -> SharedGuard<'_, C> {
         let connection = self
+            .0
             .lock()
             .expect("Shared connection lock must not be poisoned");
         // Safe: `connection` is the guard of the mutex inside `self`.
-        unsafe { SharedConnectionGuard::new(self, connection) }
+        unsafe { SharedGuard::new(self, connection) }
     }
 }
 
-/// Exclusive access to a [`SharedConnection`] for as long as the guard lives. Instances are
-/// created using [`LockConnection::lock_connection`].
-///
-/// As opposed to a plain MutexGuard [`SharedConnectionGuard`] can implement
-/// [`crate::ConnectionTransitions`] because it also has a reference to the `Arc`.
-#[derive(Debug)]
-pub struct SharedConnectionGuard<'a, 'env> {
-    shared: &'a SharedConnection<'env>,
-    connection: MutexGuard<'a, Connection<'env>>,
+// Implemented manually, since derive would require `C: Clone`.
+impl<C> Clone for Shared<C> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
 }
 
-impl<'a, 'env> SharedConnectionGuard<'a, 'env> {
+/// # Safety:
+///
+/// `Shared` keeps `C` alive and never grants mutable access to it, so it can not be replaced.
+/// 
+/// Implementing this trait is the "raison d'être" for [`Shared`]. Using `Arc<Mutex<Connection>>`
+/// instead would open a soundness hole, as someone owning a shared reference can not assume no
+/// other owner will simply swap out the implementing Connection with a different one. This would
+/// prevent an `Arc<Mutex<>>` to be a suitable owned parent for a statement handle.
+unsafe impl<C> KeepConnectionOpen for Shared<C> where C: KeepConnectionOpen {}
+
+/// Exclusive access to a [`Shared`] connection for as long as the guard lives. Instances are
+/// created using [`Shared::lock`].
+///
+/// As opposed to a plain `MutexGuard` it can implement [`ConnectionTransitions`], because it also
+/// has a reference to the [`Shared`] connection.
+#[derive(Debug)]
+pub struct SharedGuard<'a, C> {
+    shared: &'a Shared<C>,
+    connection: MutexGuard<'a, C>,
+}
+
+impl<'a, C> SharedGuard<'a, C> {
     /// # Safety
     ///
     /// `connection` must be the guard of the mutex inside `shared`.
-    unsafe fn new(
-        shared: &'a SharedConnection<'env>,
-        connection: MutexGuard<'a, Connection<'env>>,
-    ) -> Self {
+    unsafe fn new(shared: &'a Shared<C>, connection: MutexGuard<'a, C>) -> Self {
         Self { shared, connection }
     }
 
     /// The locked connection, e.g. to query information about it.
-    pub fn connection(&self) -> &Connection<'env> {
+    pub fn connection(&self) -> &C {
         &self.connection
     }
 }
 
 /// Implemented for a reference, so the guard is not consumed. Several statements can be created
 /// while holding the lock only once. Each statement owns a clone of the shared connection.
-impl<'env> ConnectionTransitions for &SharedConnectionGuard<'_, 'env> {
-    type StatementParent = SharedConnection<'env>;
+impl<'env> ConnectionTransitions for &SharedGuard<'_, Connection<'env>> {
+    type StatementParent = Shared<Connection<'env>>;
 
     fn into_cursor(
         self,
@@ -151,7 +100,7 @@ impl<'env> ConnectionTransitions for &SharedConnectionGuard<'_, 'env> {
         };
         let stmt_ptr = cursor.into_stmt().into_sys();
         // Safe: `shared` owns the connection the statement has been allocated on. See
-        // `SharedConnectionGuard::new`.
+        // `SharedGuard::new`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, self.shared.clone()) };
         // Safe: `stmt` is valid and in cursor state.
         let cursor = unsafe { CursorImpl::new(stmt) };
@@ -165,7 +114,7 @@ impl<'env> ConnectionTransitions for &SharedConnectionGuard<'_, 'env> {
         let stmt = self.connection.prepare(query)?;
         let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: `shared` owns the connection the statement has been allocated on. See
-        // `SharedConnectionGuard::new`.
+        // `SharedGuard::new`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, self.shared.clone()) };
         // `stmt` is valid and in prepared state.
         let prepared = Prepared::new(stmt);
@@ -178,7 +127,7 @@ impl<'env> ConnectionTransitions for &SharedConnectionGuard<'_, 'env> {
         let stmt = self.connection.preallocate()?;
         let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: `shared` owns the connection the statement has been allocated on. See
-        // `SharedConnectionGuard::new`.
+        // `SharedGuard::new`.
         let stmt = unsafe { StatementConnection::new(stmt_ptr, self.shared.clone()) };
         // Safe: `stmt` is valid and in freshly allocated state.
         let preallocated = unsafe { Preallocated::new(stmt) };
