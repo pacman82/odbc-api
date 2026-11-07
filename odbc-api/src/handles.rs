@@ -33,7 +33,7 @@ pub use self::{
     sql_char::{OutputStringBuffer, SqlChar, SqlText, SzBuffer, slice_to_cow_utf8, slice_to_utf8},
     sql_result::SqlResult,
     statement::{AsStatementRef, ColumnType, Statement, StatementImpl, StatementRef},
-    statement_connection::{StatementConnection, StatementParent},
+    statement_connection::{KeepConnectionOpen, StatementConnection},
 };
 
 #[allow(deprecated)]
