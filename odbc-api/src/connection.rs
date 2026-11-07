@@ -4,7 +4,7 @@ use crate::{
     buffers::BufferDesc,
     execute::execute_with_parameters_polling,
     handles::{
-        self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
+        self, KeepConnectionOpen, SqlText, State, Statement, StatementConnection, StatementImpl,
         slice_to_utf8,
     },
 };
@@ -798,15 +798,15 @@ impl Debug for Connection<'_> {
     }
 }
 
-/// We need to implement [`StatementParent`] for [`Connection`] in order to express ownership of a
-/// connection for a statement handle. This is e.g. needed for [`Connection::into_cursor`].
+/// We need to implement [`KeepConnectionOpen`] for [`Connection`] in order to express ownership of
+/// a connection for a statement handle. This is e.g. needed for [`Connection::into_cursor`].
 ///
 /// # Safety:
 ///
 /// Connection wraps an open Connection. It keeps the handle alive and valid during its lifetime.
-unsafe impl StatementParent for Connection<'_> {}
+unsafe impl KeepConnectionOpen for Connection<'_> {}
 
-/// We need to implement [`StatementParent`] for `Arc<Connection>` in order to be able to express
+/// We need to implement [`KeepConnectionOpen`] for `Arc<Connection>` in order to be able to express
 /// ownership of a shared connection from a statement handle. This is e.g. needed for
 /// [`ConnectionTransitions::into_cursor`].
 ///
@@ -814,7 +814,7 @@ unsafe impl StatementParent for Connection<'_> {}
 ///
 /// `Arc<Connection>` wraps an open Connection. It keeps the handle alive and valid during its
 /// lifetime.
-unsafe impl StatementParent for Arc<Connection<'_>> {}
+unsafe impl KeepConnectionOpen for Arc<Connection<'_>> {}
 
 /// You can use this method to escape a password so it is suitable to be appended to an ODBC
 /// connection string as the value for the `PWD` attribute. This method is only of interest for
@@ -935,7 +935,7 @@ pub trait ConnectionTransitions: Sized {
 
     /// The type passed to [crate::handles::StatementConnection] to express ownership of the
     /// connection.
-    type StatementParent: StatementParent;
+    type StatementParent: KeepConnectionOpen;
 
     /// Similar to [`crate::Connection::into_cursor`], yet it operates on an
     /// `Arc<Mutex<Connection>>`. `Arc<Connection>` can be used if you want shared ownership of

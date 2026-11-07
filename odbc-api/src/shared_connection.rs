@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::{
     Connection, CursorImpl, Error, OwnedCursor, ParameterCollectionRef, Preallocated, Prepared,
     connection::{ConnectionTransitions, FailedStateTransition},
-    handles::{StatementConnection, StatementParent},
+    handles::{KeepConnectionOpen, StatementConnection},
 };
 
 /// A convinient type alias in case you want to use a connection from multiple threads which share
@@ -14,7 +14,7 @@ pub type SharedConnection<'env> = Arc<Mutex<Connection<'env>>>;
 ///
 /// Connection is guaranteed to be alive and in connected state for the lifetime of
 /// [`SharedConnection`].
-unsafe impl StatementParent for SharedConnection<'_> {}
+unsafe impl KeepConnectionOpen for SharedConnection<'_> {}
 
 impl<'env> ConnectionTransitions for SharedConnection<'env> {
     type StatementParent = Self;

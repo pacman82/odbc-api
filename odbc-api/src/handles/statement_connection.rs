@@ -13,7 +13,7 @@ pub struct StatementConnection<C> {
 
 impl<C> StatementConnection<C>
 where
-    C: StatementParent,
+    C: KeepConnectionOpen,
 {
     /// # Safety
     ///
@@ -48,13 +48,13 @@ impl<C> Drop for StatementConnection<C> {
 /// Implementers of this trait are guaranteed to keep a connection alive and in connected state for
 /// the lifetime of the instance.
 ///
-/// E.g. [`super::Connection`] is not a [`StatementParent`], since it is not guaranteed to keep the
-/// connection alive. Nor would it close the connection at the end of the lifetime on Drop.
+/// E.g. [`super::Connection`] is not a [`KeepConnectionOpen`], since it is not guaranteed to keep
+/// the connection alive. Nor would it close the connection at the end of the lifetime on Drop.
 ///
 /// # Safety
 ///
 /// Instance must keep the connection it owns alive and open.
-pub unsafe trait StatementParent {}
+pub unsafe trait KeepConnectionOpen {}
 
 /// According to the ODBC documentation this is safe. See:
 /// <https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/multithreading>
@@ -62,11 +62,11 @@ pub unsafe trait StatementParent {}
 /// Operations to a statement imply that interior state of the connection might be mutated,
 /// depending on the implementation detail of the ODBC driver. According to the ODBC documentation
 /// this could always be considered save.
-unsafe impl<C> Send for StatementConnection<C> where C: StatementParent + Send {}
+unsafe impl<C> Send for StatementConnection<C> where C: KeepConnectionOpen + Send {}
 
 unsafe impl<C> AnyHandle for StatementConnection<C>
 where
-    C: StatementParent,
+    C: KeepConnectionOpen,
 {
     fn as_handle(&self) -> Handle {
         self.handle.as_handle()
@@ -79,7 +79,7 @@ where
 
 impl<C> Statement for StatementConnection<C>
 where
-    C: StatementParent,
+    C: KeepConnectionOpen,
 {
     fn as_sys(&self) -> HStmt {
         self.handle
