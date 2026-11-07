@@ -5,7 +5,7 @@ use crate::{
     execute::execute_with_parameters_polling,
     handles::{
         self, SqlText, State, Statement, StatementConnection, StatementImpl, StatementParent,
-        TransactionCapable, slice_to_utf8,
+        slice_to_utf8,
     },
 };
 use log::error;
@@ -485,15 +485,6 @@ impl<'c> Connection<'c> {
     pub fn is_autocommit(&self) -> Result<bool, Error> {
         self.connection
             .is_autocommit()
-            .into_result(&self.connection)
-    }
-
-    /// Level of transaction support offered by the data source.
-    ///
-    /// This corresponds to the `SQL_TXN_CAPABLE` information type in the ODBC specification.
-    pub fn transaction_capable(&self) -> Result<TransactionCapable, Error> {
-        self.connection
-            .transaction_capable()
             .into_result(&self.connection)
     }
 

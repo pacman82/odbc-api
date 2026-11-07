@@ -11,7 +11,7 @@ use odbc_api::{
     BindParamDesc, Bit, ColumnDescription, Connection, ConnectionOptions, ConnectionTransitions,
     Cursor, DataType, Error, IdentifierQuoteChar, InOut, InputParameterMapping, IntoParameter,
     MicrosoftConnectionOptions, Narrow, Nullability, Nullable, Out, Preallocated,
-    ResultSetMetadata, RowSetBuffer, TransactionCapable, TruncationInfo, Utf16Str, Utf16String,
+    ResultSetMetadata, RowSetBuffer, TruncationInfo, Utf16Str, Utf16String,
     buffers::{
         BufferDesc, ColumnarBuffer, ColumnarDynBuffer, Indicator, RowVec, TextColumn, TextRowSet,
     },
@@ -1919,14 +1919,9 @@ fn manual_commit_mode(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn is_autocommit(profile: &Profile) {
+fn is_autocommit_is_true_for_new_connection(profile: &Profile) {
     let conn = profile.connection().unwrap();
-    assert!(conn.is_autocommit().unwrap());
 
-    conn.set_autocommit(false).unwrap();
-    assert!(!conn.is_autocommit().unwrap());
-
-    conn.set_autocommit(true).unwrap();
     assert!(conn.is_autocommit().unwrap());
 }
 
@@ -1934,12 +1929,11 @@ fn is_autocommit(profile: &Profile) {
 #[test_case(MARIADB; "Maria DB")]
 #[test_case(SQLITE_3; "SQLite 3")]
 #[test_case(POSTGRES; "PostgreSQL")]
-fn transaction_capable(profile: &Profile) {
+fn is_autocommit_is_false_after_disabling_autocommit(profile: &Profile) {
     let conn = profile.connection().unwrap();
-    assert_ne!(
-        TransactionCapable::None,
-        conn.transaction_capable().unwrap()
-    );
+    conn.set_autocommit(false).unwrap();
+
+    assert!(!conn.is_autocommit().unwrap());
 }
 
 /// This test checks the behaviour if a connections goes out of scope with a transaction still

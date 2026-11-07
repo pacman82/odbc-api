@@ -9,7 +9,6 @@ use super::{
     },
     sql_result::ExtSqlReturn,
     statement::StatementImpl,
-    transaction_capable::TransactionCapable,
 };
 use log::trace;
 use odbc_sys::{
@@ -348,15 +347,6 @@ impl Connection<'_> {
         self.info_u16(InfoType::MaxColumnNameLen)
     }
 
-    /// Level of transaction support of the data source. Corresponds to `SQL_TXN_CAPABLE`.
-    pub fn transaction_capable(&self) -> SqlResult<TransactionCapable> {
-        self.info_u16(InfoType::TransactionCapable)
-            .map(|v| match TransactionCapable::new(v) {
-                Some(capable) => capable,
-                None => panic!("Unexpected result value from SQLGetInfo SQL_TXN_CAPABLE: {v}"),
-            })
-    }
-
     /// Fetch the name of the current catalog being used by the connection and store it into the
     /// provided `buf`.
     pub fn fetch_current_catalog(&self, buffer: &mut Vec<SqlChar>) -> SqlResult<()> {
@@ -409,7 +399,10 @@ impl Connection<'_> {
                 .map(|v| match v {
                     0 => false,
                     1 => true,
-                    other => panic!("Unexpected result value from SQLGetConnectAttr SQL_ATTR_AUTOCOMMIT: {other}"),
+                    other => panic!(
+                        "Unexpected result value retrieving SQL_ATTR_CONNECTION_DEAD via \
+                        SQLGetConnectAttr: {other}"
+                    ),
                 })
         }
     }
@@ -421,7 +414,10 @@ impl Connection<'_> {
                 .map(|v| match v {
                     0 => false,
                     1 => true,
-                    other => panic!("Unexpected result value from SQLGetConnectAttr SQL_ATTR_AUTOCOMMIT: {other}"),
+                    other => panic!(
+                        "Unexpected result value retrieving SQL_ATTR_AUTOCOMMIT via \
+                        SQLGetConnectAttr: {other}"
+                    ),
                 })
         }
     }

@@ -50,7 +50,7 @@ pub use self::{
     environment::{DataSourceInfo, DriverInfo, Environment, environment},
     error::{Error, TooLargeBufferSize},
     fixed_sized::{Bit, Pod},
-    handles::{ColumnDescription, DataType, Nullability, TransactionCapable},
+    handles::{ColumnDescription, DataType, Nullability},
     into_parameter::IntoParameter,
     narrow::Narrow,
     nullable::Nullable,
