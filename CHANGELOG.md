@@ -3,31 +3,31 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ## [30.0.0](https://github.com/pacman82/odbc-api/compare/29.3.0...30.0.0) - 2026-11-07
 
 ### 🚀 Features
 
 - `ConnectionWithState` can be used to bind state to the lifetime of a connection
 
-- Introduce LockConnection
+  While Microsoft Entra Ids are already supported since the last release, managing their lifetime might be tricky in downstream crates. `ConnectionWithState` owns a Connection and state which must be kept alive for the duration of the connection, as for example a Microsoft Entra ID access token.
 
+- Introduced `Shared`
 
   Create multiple prepared statements from the same SharedConnection while only acquiring the lock once.
-
 
 
 ### 🐛 Bug Fixes
 
 - [**breaking**] Soundness hole closed
 
-
-  Statement could be created with Arc<Mutex<Connection>> as their Parent type, relying on their strong reference that the connection does not become invalid. However other owners could acquire a mutable reference to the Connection in safe code and swap it with a different one, leaving the statement without a valid parent. `Shared` has been created as a more restricted wrapper around Arc<Mutex<Connection>> in order to close this soundness hole.
+  Statement could be created with `Arc<Mutex<Connection>>` as their Parent type, relying on their strong reference that the connection does not become invalid. However other owners could acquire a mutable reference to the Connection in safe code and swap it with a different one, leaving the statement without a valid parent. `Shared` has been created as a more restricted wrapper around `Arc<Mutex<Connection>>` in order to close this soundness hole.
 
 
 
 ### 🚜 Refactor
 
-- [**breaking**] StatementParent is now KeepConnectionOpen
+- [**breaking**] `StatementParent` is now `KeepConnectionOpen`
 
 
 
