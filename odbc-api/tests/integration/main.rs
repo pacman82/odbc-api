@@ -43,12 +43,13 @@ use std::{
     num::NonZeroUsize,
     ptr::null_mut,
     str,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
-
-use crate::connection_strings::MSSQL_CONNECTION;
 
 use self::common::{
     DUCKDB, Given, MARIADB, MSSQL, POSTGRES, Profile, SQLITE_3, SingleColumnRowSetBuffer,
@@ -4034,45 +4035,45 @@ async fn async_stream_of_rows_from_other_thread(profile: &Profile) {
     assert_eq!([(42i32,)].as_slice(), rows)
 }
 
-/// Creating a connection which owns the memory allocated for the entra id
-///
-/// This tests is less to cover code, but to verify the api enables downstream crates to sync the
-/// lifetime of connection attributes with that of a Connection. The trigger for this had been:
-/// <https://github.com/pacman82/arrow-odbc-py/issues/247>
-///
-/// Entra IDs are passed by reference into the connection and must be kept alive for the lifetime of
-/// the Connection. So, either there is another data structure owning them which outlives the
-/// connection or we need a struct owning both the open connection handle and the entra id. For
-/// arrow-odbc the latter seems more suitable.
-///
+/// State bound to a shared connection must not be released while statements still use the
+/// connection, even if all other owners of the connection are gone.
 #[test]
-#[should_panic] // This can not work. We do not have access to an azure instance. We want to verify
-// the API compiles.
-fn shared_connection_owns_entra_id() {
-    let access_token = SsAccessToken::from_text("invalid_dummy_token");
-
-    let env = environment().unwrap();
-    let conn = unsafe {
-        let static_ref_access_token: &'static SsAccessToken =
-            &*(access_token.as_ref() as *const SsAccessToken);
-        let ms_options = MicrosoftConnectionOptions {
-            access_token: Some(static_ref_access_token),
-        };
-        let conn = env
-            .connect_with_connection_string_and_driver_specific_options(
-                MSSQL_CONNECTION,
-                ConnectionOptions::default(),
-                ms_options,
-            )
-            .expect("This fails due to entra id and credentials being set, both");
-        conn.with_state(access_token)
-    };
+fn state_outlives_statements_of_shared_connection() {
+    // Given a cursor on a shared connection with state
+    struct StateSpy(Arc<AtomicBool>);
+    impl Drop for StateSpy {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+    let dropped = Arc::new(AtomicBool::new(false));
+    let conn = SQLITE_3
+        .connection()
+        .unwrap()
+        .with_state(StateSpy(dropped.clone()));
     let conn = Shared::new(conn);
-    let guard = conn.lock();
-    let _cursor = guard
+    let mut cursor = conn
+        .lock()
         .into_cursor("SELECT 42", (), None)
         .map_err(Error::from)
+        .unwrap()
         .unwrap();
+
+    // When the cursor is the last owner of the connection
+    drop(conn);
+
+    // Then the state is still alive and the cursor remains usable
+    assert!(!dropped.load(Ordering::SeqCst));
+    let mut i = 0i32;
+    cursor
+        .next_row()
+        .unwrap()
+        .unwrap()
+        .get_data(1, &mut i)
+        .unwrap();
+    assert_eq!(42, i);
+    drop(cursor);
+    assert!(dropped.load(Ordering::SeqCst));
 }
 
 // Learning tests ----------------------------------------------------------------------------------
