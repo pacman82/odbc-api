@@ -229,7 +229,8 @@ unsafe impl<'a> BoundInputSlice<'a> for BoxColumnBuffer {
     }
 }
 
-/// Fat reference to a [`BoxColumnBuffer`] that is bound as an array parameter to a [`StatementRef`].
+/// Fat reference to a [`BoxColumnBuffer`] that is bound as an array parameter to a
+/// [`StatementRef`].
 ///
 /// This reference allows mutating the buffer contents, e.g. in order to reuse the same bound buffer
 /// for inserting multiple batches of data. If any operation is performed which would invalidate the
@@ -242,8 +243,8 @@ pub struct BoxColumBufferRefMut<'a> {
     /// the buffer be invalidated.
     parameter_index: u16,
     /// A handle to the statement to which the column buffer is bound. We need a reference to
-    /// support operations that may invalidate the buffer. Using the statement handle we can re-bind
-    /// after.
+    /// support operations that may invalidate the buffer. Using the statement handle we can
+    /// re-bind after.
     stmt: StatementRef<'a>,
 }
 

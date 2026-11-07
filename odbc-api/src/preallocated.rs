@@ -368,7 +368,8 @@ where
         Ok(cursor.bind_buffer(buffer)?.into_iter())
     }
 
-    /// Same as [`Self::primary_keys_cursor`] but the cursor takes ownership of the statement handle.
+    /// Same as [`Self::primary_keys_cursor`] but the cursor takes ownership of the statement
+    /// handle.
     pub fn into_primary_keys_cursor(
         self,
         catalog_name: Option<&str>,

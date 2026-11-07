@@ -84,10 +84,10 @@ pub struct DiagnosticResult {
     /// Native error code specific to the data source.
     pub native_error: i32,
     /// The length of the diagnostic message reported by ODBC. This is supposed to be the size in
-    /// characters (excluding the terminating zero). For narrow encodings this is the size in bytes;
-    /// For wide encodings this is the size in 16-bit double words. Some drivers however report
-    /// larger values (e.g. they add additional padding `\0` bytes to the message and include the
-    /// padding in the length). Other drivers (IBM i Access ODBC driver, see
+    /// characters (excluding the terminating zero). For narrow encodings this is the size in
+    /// bytes; For wide encodings this is the size in 16-bit double words. Some drivers however
+    /// report larger values (e.g. they add additional padding `\0` bytes to the message and
+    /// include the padding in the length). Other drivers (IBM i Access ODBC driver, see
     /// [issue #898](https://github.com/pacman82/odbc-api/issues/898>) underreport the text length.
     /// They report only one "character" for each UTF-8 code point even if they consist of multiple
     /// bytes.

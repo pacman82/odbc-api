@@ -387,9 +387,9 @@ where
 pub struct BindParamDesc {
     /// Describes the C-Type used to describe values and wether we need a NULL representation.
     pub buffer_desc: BufferDesc,
-    /// The relational type or domain of the parameter. While there is a strong correllation between
-    /// the buffer used and the relational type, it is not always a naive mapping. E.g. a text buffer
-    /// can not only carry VARCHAR but also a DECIMAL or a timestamp.
+    /// The relational type or domain of the parameter. While there is a strong correllation
+    /// between the buffer used and the relational type, it is not always a naive mapping. E.g. a
+    /// text buffer can not only carry VARCHAR but also a DECIMAL or a timestamp.
     pub data_type: DataType,
 }
 
@@ -506,7 +506,6 @@ impl BindParamDesc {
     ///   would be `5`.
     /// * `scale`: The number of digits to the right of the decimal point. E.g. for `123.45` this
     ///   would be `2`.
-    ///
     pub fn decimal_as_text(precision: u8, scale: i8) -> Self {
         // Length of a text representation of a decimal
         let max_str_len = match scale {
