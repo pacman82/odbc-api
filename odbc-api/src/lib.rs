@@ -8,6 +8,7 @@ mod catalog;
 mod columnar_bulk_inserter;
 mod connection;
 mod connection_options;
+mod connection_with_state;
 mod conversion;
 mod cursor;
 mod driver_complete_option;
@@ -41,6 +42,7 @@ pub use self::{
         ConnectionOptions, DriverSpecificConnectionOptions, MicrosoftConnectionOptions,
         SetConnectionAttributeArgs,
     },
+    connection_with_state::ConnectionWithState,
     conversion::{decimal_text_to_i32, decimal_text_to_i64, decimal_text_to_i128},
     cursor::{
         BlockCursor, BlockCursorIterator, BlockCursorPolling, ConcurrentBlockCursor, Cursor,
