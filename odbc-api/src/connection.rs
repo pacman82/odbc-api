@@ -922,7 +922,7 @@ type ConnectionAndError<'conn> = FailedStateTransition<Connection<'conn>>;
 ///
 /// Having this in a trait rather than directly on [`Connection`] allows us to be generic over the
 /// type of ownership we express. E.g. we can express shared ownership of a connection by
-/// using an `Arc<Mutex<Connection>>` or `Arc<Connection>`. Or a still exclusive ownership using
+/// using a [`crate::SharedGuard`] or `Arc<Connection>`. Or a still exclusive ownership using
 /// a plain [`Connection`].
 pub trait ConnectionTransitions: Sized {
     // On reflection: Maybe this trait is better split in three? IntoPrepared, IntoPreallocated and
@@ -937,12 +937,12 @@ pub trait ConnectionTransitions: Sized {
     /// connection.
     type StatementParent: KeepConnectionOpen;
 
-    /// Similar to [`crate::Connection::into_cursor`], yet it operates on an
-    /// `Arc<Mutex<Connection>>`. `Arc<Connection>` can be used if you want shared ownership of
-    /// connections. However, `Arc<Connection>` is not `Send` due to `Connection` not being `Sync`.
-    /// So sometimes you may want to wrap your `Connection` into an `Arc<Mutex<Connection>>` to
-    /// allow shared ownership of the connection across threads. This function allows you to create
-    /// a cursor from such a shared which also holds a strong reference to it.
+    /// Similar to [`crate::Connection::into_cursor`], yet it operates on any type of ownership.
+    /// `Arc<Connection>` can be used if you want shared ownership of connections. However,
+    /// `Arc<Connection>` is not `Send` due to `Connection` not being `Sync`. So sometimes you may
+    /// want to wrap your `Connection` into a [`crate::Shared`] to allow shared ownership of the
+    /// connection across threads. This function allows you to create a cursor from the guard of
+    /// such a shared connection, which also holds a strong reference to it.
     ///
     /// # Parameters
     ///
