@@ -78,12 +78,12 @@ impl Drop for Connection<'_> {
 /// rather than `&mut self`. However, since error handling is done through state changes of the
 /// underlying connection managed by the ODBC driver, this implies that `Connection` must not be
 /// `Sync`.
-pub struct Connection<'c> {
-    connection: handles::Connection<'c>,
+pub struct Connection<'env> {
+    connection: handles::Connection<'env>,
 }
 
-impl<'c> Connection<'c> {
-    pub(crate) fn new(connection: handles::Connection<'c>) -> Self {
+impl<'env> Connection<'env> {
+    pub(crate) fn new(connection: handles::Connection<'env>) -> Self {
         Self { connection }
     }
 
@@ -94,7 +94,7 @@ impl<'c> Connection<'c> {
     /// You should not have a need to call this method if your use case is covered by this library,
     /// but, in case it is not, this may help you to break out of the type structure which might be
     /// to rigid for you, while simultaneously abondoning its safeguards.
-    pub fn into_handle(self) -> handles::Connection<'c> {
+    pub fn into_handle(self) -> handles::Connection<'env> {
         // We do not want the compiler to invoke `Drop`, since drop would disconnect, yet we want to
         // transfer ownership to the connection handle.
         let dont_drop_me = MaybeUninit::new(self);
@@ -283,7 +283,7 @@ impl<'c> Connection<'c> {
         query: &str,
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
-    ) -> Result<Option<OwnedCursor<Connection<'c>>>, ConnectionAndError<'c>> {
+    ) -> Result<Option<OwnedCursor<Connection<'env>>>, ConnectionAndError<'env>> {
         // With the current Rust version the borrow checker needs some convincing, so that it allows
         // us to return the Connection, even though the Result of execute borrows it.
         let mut error = None;
@@ -404,7 +404,7 @@ impl<'c> Connection<'c> {
     pub fn into_prepared(
         self,
         query: &str,
-    ) -> Result<Prepared<StatementConnection<Connection<'c>>>, Error> {
+    ) -> Result<Prepared<StatementConnection<Connection<'env>>>, Error> {
         let query = SqlText::new(query);
         let mut stmt = self.allocate_statement()?;
         stmt.prepare(&query).into_result(&stmt)?;
@@ -452,7 +452,7 @@ impl<'c> Connection<'c> {
     /// also takes ownership of the connection.
     pub fn into_preallocated(
         self,
-    ) -> Result<Preallocated<StatementConnection<Connection<'c>>>, Error> {
+    ) -> Result<Preallocated<StatementConnection<Connection<'env>>>, Error> {
         let stmt = self.allocate_statement()?;
         // Safe: We know `stmt` is a valid statement handle and self is the connection which has
         // been used to allocate it.
