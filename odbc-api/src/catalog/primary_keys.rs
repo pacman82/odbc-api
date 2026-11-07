@@ -16,7 +16,6 @@ pub struct PrimaryKeysRow {
     // `Copy` in order to be suitable for row wise bulk fetchings sensible upper bounds have been
     // chosen. They have been determined by using the maximum lengths reported by PostgreSQL and
     // Microsoft SQL Server, MariaDB and SQLite.
-    //
     /// Binds to the `TABLE_CAT` column. Primary key table catalog name. NULL if not applicable to
     /// the data source. If a driver supports catalogs for some tables but not for others, such as
     /// when the driver retrieves data from different DBMSs, it returns an empty string ("") for
@@ -24,8 +23,8 @@ pub struct PrimaryKeysRow {
     pub catalog: VarCharArray<128>,
     /// Binds to `TABLE_SCHEM`. Primary key table schema name; NULL if not applicable to the data
     /// source. If a driver supports schemas for some tables but not for others, such as when the
-    /// driver retrieves data from different DBMSs, it returns an empty string ("") for those tables
-    /// that do not have schemas.
+    /// driver retrieves data from different DBMSs, it returns an empty string ("") for those
+    /// tables that do not have schemas.
     pub schema: VarCharArray<128>,
     /// Binds to the `TABLE_NAME` column. Primary key table name. Drivers must not return NULL.
     pub table: VarCharArray<255>,
