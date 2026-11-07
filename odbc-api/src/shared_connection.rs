@@ -11,7 +11,7 @@ use crate::{
 ///
 /// As opposed to an `Arc<Mutex<C>>` it never grants mutable access to `C`. Otherwise safe code could
 /// replace the connection, while statements are still allocated on it.
-/// 
+///
 /// This allows shared connections to be a shared paren of several prepared statements, because it
 /// is safe to implement [`KeepConnectionOpen`] for it if the underlying type is
 /// [`KeepConnectionOpen`].
@@ -45,7 +45,7 @@ impl<C> Clone for Shared<C> {
 /// # Safety:
 ///
 /// `Shared` keeps `C` alive and never grants mutable access to it, so it can not be replaced.
-/// 
+///
 /// Implementing this trait is the "raison d'être" for [`Shared`]. Using `Arc<Mutex<Connection>>`
 /// instead would open a soundness hole, as someone owning a shared reference can not assume no
 /// other owner will simply swap out the implementing Connection with a different one. This would
