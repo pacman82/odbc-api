@@ -62,7 +62,7 @@ pub unsafe trait StatementParent {}
 /// Operations to a statement imply that interior state of the connection might be mutated,
 /// depending on the implementation detail of the ODBC driver. According to the ODBC documentation
 /// this could always be considered save.
-unsafe impl<C> Send for StatementConnection<C> where C: StatementParent {}
+unsafe impl<C> Send for StatementConnection<C> where C: StatementParent + Send {}
 
 unsafe impl<C> AnyHandle for StatementConnection<C>
 where
