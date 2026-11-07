@@ -806,6 +806,14 @@ impl Debug for Connection<'_> {
 /// Connection wraps an open Connection. It keeps the handle alive and valid during its lifetime.
 unsafe impl KeepConnectionOpen for Connection<'_> {}
 
+/// Allows code to be generic over types owning a connection, e.g. the transitions of
+/// [`crate::SharedGuard`].
+impl<'env> AsRef<Connection<'env>> for Connection<'env> {
+    fn as_ref(&self) -> &Connection<'env> {
+        self
+    }
+}
+
 /// We need to implement [`KeepConnectionOpen`] for `Arc<Connection>` in order to be able to express
 /// ownership of a shared connection from a statement handle. This is e.g. needed for
 /// [`ConnectionTransitions::into_cursor`].

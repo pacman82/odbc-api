@@ -79,8 +79,11 @@ impl<'a, C> SharedGuard<'a, C> {
 
 /// Implemented for a reference, so the guard is not consumed. Several statements can be created
 /// while holding the lock only once. Each statement owns a clone of the shared connection.
-impl<'env> ConnectionTransitions for &SharedGuard<'_, Connection<'env>> {
-    type StatementParent = Shared<Connection<'env>>;
+impl<'env, C> ConnectionTransitions for &SharedGuard<'_, C>
+where
+    C: AsRef<Connection<'env>> + KeepConnectionOpen,
+{
+    type StatementParent = Shared<C>;
 
     fn into_cursor(
         self,
@@ -88,7 +91,8 @@ impl<'env> ConnectionTransitions for &SharedGuard<'_, Connection<'env>> {
         params: impl ParameterCollectionRef,
         query_timeout_sec: Option<usize>,
     ) -> Result<Option<OwnedCursor<Self::StatementParent>>, FailedStateTransition<Self>> {
-        let cursor = match self.connection.execute(query, params, query_timeout_sec) {
+        let connection = self.connection().as_ref();
+        let cursor = match connection.execute(query, params, query_timeout_sec) {
             Ok(Some(cursor)) => cursor,
             Ok(None) => return Ok(None),
             Err(error) => {
@@ -111,7 +115,7 @@ impl<'env> ConnectionTransitions for &SharedGuard<'_, Connection<'env>> {
         self,
         query: &str,
     ) -> Result<Prepared<StatementConnection<Self::StatementParent>>, Error> {
-        let stmt = self.connection.prepare(query)?;
+        let stmt = self.connection().as_ref().prepare(query)?;
         let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: `shared` owns the connection the statement has been allocated on. See
         // `SharedGuard::new`.
@@ -124,7 +128,7 @@ impl<'env> ConnectionTransitions for &SharedGuard<'_, Connection<'env>> {
     fn into_preallocated(
         self,
     ) -> Result<Preallocated<StatementConnection<Self::StatementParent>>, Error> {
-        let stmt = self.connection.preallocate()?;
+        let stmt = self.connection().as_ref().preallocate()?;
         let stmt_ptr = stmt.into_handle().into_sys();
         // Safe: `shared` owns the connection the statement has been allocated on. See
         // `SharedGuard::new`.
