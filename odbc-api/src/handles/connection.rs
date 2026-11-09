@@ -13,7 +13,7 @@ use super::{
 use log::trace;
 use odbc_sys::{
     CompletionType, ConnectionAttribute, DriverConnectOption, HDbc, HEnv, HWnd, Handle, HandleType,
-    IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran,
+    IS_UINTEGER, InfoType, Pointer, SQLAllocHandle, SQLDisconnect, SQLEndTran, TransactionCapable,
 };
 use std::{cmp::max, ffi::c_void, marker::PhantomData, mem::size_of, ptr::null_mut};
 
@@ -345,6 +345,12 @@ impl Connection<'_> {
     /// Maximum length of column names.
     pub fn max_column_name_len(&self) -> SqlResult<u16> {
         self.info_u16(InfoType::MaxColumnNameLen)
+    }
+
+    /// Level of transaction support of the data source. Corresponds to `SQL_TXN_CAPABLE`.
+    pub fn transaction_capable(&self) -> SqlResult<TransactionCapable> {
+        self.info_u16(InfoType::TransactionCapable)
+            .map(TransactionCapable)
     }
 
     /// Fetch the name of the current catalog being used by the connection and store it into the

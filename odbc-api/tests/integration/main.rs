@@ -25,7 +25,7 @@ use odbc_api::{
     },
     sys::{
         CDataType, FetchOrientation, HandleType, Numeric, Pointer, SQLFreeHandle, SQLPrepareW,
-        SqlDataType, SqlReturn, SsAccessToken, Timestamp,
+        SqlDataType, SqlReturn, SsAccessToken, Timestamp, TransactionCapable,
     },
 };
 
@@ -1938,6 +1938,16 @@ fn is_autocommit_is_false_after_disabling_autocommit(profile: &Profile) {
     conn.set_autocommit(false).unwrap();
 
     assert!(!conn.is_autocommit().unwrap());
+}
+
+#[test_case(MSSQL, TransactionCapable::ALL; "Microsoft SQL Server")]
+#[test_case(MARIADB, TransactionCapable::DDL_COMMIT; "Maria DB")]
+#[test_case(SQLITE_3, TransactionCapable::ALL; "SQLite 3")]
+#[test_case(POSTGRES, TransactionCapable::ALL; "PostgreSQL")]
+fn transaction_capable(profile: &Profile, expected: TransactionCapable) {
+    let conn = profile.connection().unwrap();
+
+    assert_eq!(expected, conn.transaction_capable().unwrap());
 }
 
 /// This test checks the behaviour if a connections goes out of scope with a transaction still
