@@ -9,19 +9,13 @@
 
 - Connection::transaction_capable
 
+  Queries the supported transaction capabilities
 
-  `transaction_capable()` reads `SQL_TXN_CAPABLE` via `SQLGetInfo` and
-  returns `odbc_sys::TransactionCapable`. Requires odbc-sys 0.31.3, which
-  introduced the type.
+- Connection::is_autocommit
 
-- Connection::is_autocommit and Connection::transaction_capable
+  Queries if autocommit mode is on or off.
 
-
-  Adds two read accessors to `Connection`, as discussed in #959:
-
-  - `is_autocommit()` reads `SQL_ATTR_AUTOCOMMIT` via `SQLGetConnectAttr`.
-
-
+Thanks to @alfhellmund for the contributions
 
 ## [30.0.0](https://github.com/pacman82/odbc-api/compare/29.3.0...30.0.0) - 2026-11-07
 
