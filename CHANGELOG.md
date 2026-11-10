@@ -3,6 +3,25 @@
 `odbc-api` adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [30.1.0](https://github.com/pacman82/odbc-api/compare/30.0.0...30.1.0) - 2026-11-10
+
+### 🚀 Features
+
+- Connection::transaction_capable
+
+
+  `transaction_capable()` reads `SQL_TXN_CAPABLE` via `SQLGetInfo` and
+  returns `odbc_sys::TransactionCapable`. Requires odbc-sys 0.31.3, which
+  introduced the type.
+
+- Connection::is_autocommit and Connection::transaction_capable
+
+
+  Adds two read accessors to `Connection`, as discussed in #959:
+
+  - `is_autocommit()` reads `SQL_ATTR_AUTOCOMMIT` via `SQLGetConnectAttr`.
+
+
 
 ## [30.0.0](https://github.com/pacman82/odbc-api/compare/29.3.0...30.0.0) - 2026-11-07
 
