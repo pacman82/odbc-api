@@ -52,7 +52,9 @@ jobs:
       - name: Install llvm-tools-preview
         run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@3f7f2bd74f95d407a45d96b106f26d4f6c238fab # cargo-llvm-cov
+        uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
+        with:
+          tool: cargo-llvm-cov
       - name: Update package repostiory
         run: sudo apt-get update
       - name: Install PostgreSQL Driver
