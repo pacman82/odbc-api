@@ -1,5 +1,5 @@
 use std::{
-    mem::swap,
+    mem::{replace, swap},
     sync::mpsc::{Receiver, SyncSender, sync_channel},
     thread::{self, JoinHandle},
 };
@@ -55,15 +55,19 @@ pub struct ConcurrentBlockCursor<C, B> {
     /// occurs its associated sender is dropped, and receiving batches will return an error (which
     /// we expect during normal operation and cleanup, and is not forwarded to the user).
     receive_batch: Receiver<B>,
-    /// We join with the fetch thread if we stop receiving batches (i.e. receive_batch.recv()
-    /// returns an error) or `into_cursor` is called. `None` if the thread has already been joined.
-    /// In this case either an error has been reported to the user, or the cursor is stored in
-    /// `cursor`.
-    fetch_thread: Option<JoinHandle<Result<C, Error>>>,
-    /// Only `Some`, if the cursor has been consumed succesfully and `fetch_thread` has been
-    /// joined. Can only be `Some` if `fetch_thread` is `None`. If both `fetch_thread` and
-    /// `cursor` are `None`, it is implied that `fetch_thread` returned an error joining.
-    cursor: Option<C>,
+    /// We join the fetching thread after the last batch has been fetched.
+    fetch_thread: FetchThread<C>,
+}
+
+/// Lifecycle of the thread fetching batches, including how it ended.
+enum FetchThread<C> {
+    /// The thread has not been joined yet.
+    Running(JoinHandle<Result<C, Error>>),
+    /// The result set has been consumed completely and the thread has been joined successfully,
+    /// yielding the cursor back.
+    Consumed(C),
+    /// Joining the thread yielded an error, which has already been reported to the user.
+    Failed,
 }
 
 impl<C, B> ConcurrentBlockCursor<C, B>
@@ -123,8 +127,7 @@ where
         Self {
             send_buffer,
             receive_batch,
-            fetch_thread: Some(fetch_thread),
-            cursor: None,
+            fetch_thread: FetchThread::Running(fetch_thread),
         }
     }
 
@@ -135,10 +138,12 @@ where
         // buffer in the channel waiting for the fetch thread. Since we consume the cursor here, it
         // is also impossible for the application to send another buffer.
         drop(self.send_buffer);
-        if let Some(cursor) = self.cursor {
-            Ok(cursor)
-        } else {
-            self.fetch_thread.unwrap().join().unwrap()
+        match self.fetch_thread {
+            FetchThread::Running(join_handle) => join_handle.join().unwrap(),
+            FetchThread::Consumed(cursor) => Ok(cursor),
+            FetchThread::Failed => {
+                panic!("cursor must not be retrieved after fetching it reported an error")
+            }
         }
     }
 }
@@ -156,17 +161,22 @@ impl<C, B> ConcurrentBlockCursor<C, B> {
             // Fetch thread stopped sending batches. Either because we consumed the result set
             // completly or we hit an error.
             Err(_receive_error) => {
-                if let Some(join_handle) = self.fetch_thread.take() {
-                    // If there has been an error returning the batch, or unbinding the buffer `?`
-                    // will raise it.
-                    self.cursor = Some(join_handle.join().unwrap()?);
-                    // We ran out of batches in the result set. End the stream.
-                    Ok(None)
-                } else {
-                    // This only happen if this method is called after it returned either `false` or
-                    // `Err` once. Let us treat this scenario like a result set which is consumed
-                    // completly.
-                    Ok(None)
+                // `Failed` is the right state should `?` return early below.
+                match replace(&mut self.fetch_thread, FetchThread::Failed) {
+                    FetchThread::Running(join_handle) => {
+                        // If there has been an error returning the batch, or unbinding the buffer
+                        // `?` will raise it.
+                        self.fetch_thread = FetchThread::Consumed(join_handle.join().unwrap()?);
+                        // We ran out of batches in the result set. End the stream.
+                        Ok(None)
+                    }
+                    // This only happen if this method is called after it returned either `false`
+                    // or `Err` once. Let us treat this scenario like a result set which is
+                    // consumed completly.
+                    consumed_or_failed => {
+                        self.fetch_thread = consumed_or_failed;
+                        Ok(None)
+                    }
                 }
             }
         }
